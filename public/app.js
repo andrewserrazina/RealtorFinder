@@ -322,11 +322,11 @@ async function handleOfferSubmit(e) {
 
 // Helper functions
 function showSuccess(message) {
-    alert(message); // Replace with a better notification system
+    alert(message);
 }
 
 function showError(message) {
-    alert(message); // Replace with a better notification system
+    alert(message);
 }
 
 // Initialize
