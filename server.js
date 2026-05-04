@@ -169,6 +169,44 @@ app.get('/api/listings/:id/offers', async (req, res) => {
     }
 });
 
+// Upload images for a listing
+app.post('/api/listings/:id/images', upload.array('images', 10), async (req, res) => {
+    try {
+        const listingId = req.params.id;
+        const imageUrls = [];
+        
+        console.log(`Uploading ${req.files.length} images for listing ${listingId}`);
+        
+        // Upload each image to Cloudinary
+        for (const file of req.files) {
+            console.log(`Uploading ${file.originalname}...`);
+            const result = await uploadToCloudinary(file.buffer);
+            imageUrls.push(result.secure_url);
+            console.log(`✅ Uploaded: ${result.secure_url}`);
+        }
+        
+        // Update listing with image URLs in database
+        await db.pool.query(
+            'UPDATE listings SET image_urls = $1 WHERE id = $2',
+            [imageUrls, listingId]
+        );
+        
+        console.log(`✅ Successfully uploaded ${imageUrls.length} images to listing ${listingId}`);
+        
+        res.json({ 
+            success: true, 
+            imageUrls,
+            message: `Successfully uploaded ${imageUrls.length} images`
+        });
+    } catch (error) {
+        console.error('❌ Image upload error:', error);
+        res.status(500).json({ 
+            error: 'Failed to upload images',
+            details: error.message 
+        });
+    }
+});
+
 // Health check
 app.get('/api/health', (req, res) => {
     res.json({ 
