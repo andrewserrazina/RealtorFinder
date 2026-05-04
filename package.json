@@ -19,6 +19,8 @@
     "nodemailer": "^6.9.7",
     "bcrypt": "^5.1.1",
     "jsonwebtoken": "^9.0.2"
+    "cloudinary": "^1.41.0",    ← Added automatically
+    "multer": "^1.4.5-lts.1"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"
