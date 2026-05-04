@@ -1,8 +1,9 @@
-// public/app.js - Frontend JavaScript with API integration
+// public/app.js - Frontend JavaScript with API integration and image uploads
 
 const API_BASE_URL = window.location.origin + '/api';
 
 let currentListingId = null;
+let selectedFiles = []; // For image uploads
 
 // Fetch and render listings
 async function fetchListings() {
@@ -16,7 +17,7 @@ async function fetchListings() {
     }
 }
 
-// Render listings
+// Render listings with image support
 function renderListings(listings) {
     const grid = document.getElementById('listingsGrid');
     
@@ -31,22 +32,31 @@ function renderListings(listings) {
         return;
     }
     
-    grid.innerHTML = listings.map(listing => `
-        <div class="listing-card" onclick="openOfferModal(${listing.id})">
-            <div class="listing-image">🏡</div>
-            <div class="listing-content">
-                <div class="listing-price">${listing.price}</div>
-                <div class="listing-address">${listing.address}</div>
-                <div class="listing-details">
-                    <span>🛏️ ${listing.bedrooms} bd</span>
-                    <span>🛁 ${listing.bathrooms} ba</span>
-                    <span>📏 ${listing.sqft.toLocaleString()} sqft</span>
+    grid.innerHTML = listings.map(listing => {
+        // Get first image or use placeholder
+        const imageUrl = listing.image_urls && listing.image_urls.length > 0 
+            ? listing.image_urls[0] 
+            : null;
+        
+        return `
+            <div class="listing-card" onclick="openOfferModal(${listing.id})">
+                <div class="listing-image" style="${imageUrl ? `background-image: url(${imageUrl}); background-size: cover; background-position: center;` : ''}">
+                    ${!imageUrl ? '🏡' : ''}
                 </div>
-                <div class="listing-description">${listing.description}</div>
-                <div class="listing-date">${listing.date}</div>
+                <div class="listing-content">
+                    <div class="listing-price">${listing.price}</div>
+                    <div class="listing-address">${listing.address}</div>
+                    <div class="listing-details">
+                        <span>🛏️ ${listing.bedrooms} bd</span>
+                        <span>🛁 ${listing.bathrooms} ba</span>
+                        <span>📏 ${listing.sqft.toLocaleString()} sqft</span>
+                    </div>
+                    <div class="listing-description">${listing.description}</div>
+                    <div class="listing-date">${listing.date}</div>
+                </div>
             </div>
-        </div>
-    `).join('');
+        `;
+    }).join('');
 }
 
 // View switching
@@ -62,7 +72,55 @@ function switchView(view) {
     document.querySelector(`[data-view="${view}"]`).classList.add('active');
 }
 
-// Listing form submission
+// Image preview functionality
+function displayImagePreviews(files) {
+    const preview = document.getElementById('imagePreview');
+    preview.innerHTML = '';
+    
+    files.forEach((file, index) => {
+        const reader = new FileReader();
+        
+        reader.onload = (e) => {
+            const div = document.createElement('div');
+            div.className = 'image-preview-item';
+            div.innerHTML = `
+                <img src="${e.target.result}" alt="Preview ${index + 1}">
+                <button 
+                    type="button" 
+                    class="image-preview-remove" 
+                    onclick="removeImage(${index})"
+                    title="Remove image"
+                >×</button>
+            `;
+            preview.appendChild(div);
+        };
+        
+        reader.readAsDataURL(file);
+    });
+}
+
+function removeImage(index) {
+    selectedFiles.splice(index, 1);
+    
+    // Update the file input
+    const dt = new DataTransfer();
+    selectedFiles.forEach(file => dt.items.add(file));
+    const imageInput = document.getElementById('imageInput');
+    if (imageInput) {
+        imageInput.files = dt.files;
+    }
+    
+    // Update display
+    const fileCount = document.getElementById('fileCount');
+    if (fileCount) {
+        fileCount.textContent = selectedFiles.length > 0 
+            ? `${selectedFiles.length} image${selectedFiles.length !== 1 ? 's' : ''} selected`
+            : '';
+    }
+    displayImagePreviews(selectedFiles);
+}
+
+// Listing form submission with image upload
 document.getElementById('listingForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     
@@ -73,6 +131,8 @@ document.getElementById('listingForm').addEventListener('submit', async (e) => {
     
     try {
         const formData = new FormData(e.target);
+        
+        // Step 1: Create the listing (without images)
         const listingData = {
             address: formData.get('address'),
             price: formData.get('price'),
@@ -98,8 +158,40 @@ document.getElementById('listingForm').addEventListener('submit', async (e) => {
             throw new Error('Failed to create listing');
         }
         
+        const listing = await response.json();
+        console.log('✅ Listing created:', listing);
+        
+        // Step 2: Upload images if any were selected
+        if (selectedFiles.length > 0) {
+            submitBtn.textContent = `Uploading ${selectedFiles.length} photo${selectedFiles.length !== 1 ? 's' : ''}...`;
+            
+            const imageFormData = new FormData();
+            selectedFiles.forEach(file => {
+                imageFormData.append('images', file);
+            });
+            
+            const imageResponse = await fetch(`${API_BASE_URL}/listings/${listing.id}/images`, {
+                method: 'POST',
+                body: imageFormData
+            });
+            
+            if (!imageResponse.ok) {
+                console.warn('⚠️ Image upload failed, but listing was created');
+                showError('Listing created but photos failed to upload. You can try adding them later.');
+            } else {
+                const imageResult = await imageResponse.json();
+                console.log('✅ Images uploaded:', imageResult);
+            }
+        }
+        
+        // Success!
         await fetchListings();
         e.target.reset();
+        selectedFiles = [];
+        const imagePreview = document.getElementById('imagePreview');
+        const fileCount = document.getElementById('fileCount');
+        if (imagePreview) imagePreview.innerHTML = '';
+        if (fileCount) fileCount.textContent = '';
         switchView('browse');
         
         showSuccess('🎉 Your listing has been published successfully! Realtors can now submit their offer packages. Check your email for confirmation.');
@@ -120,7 +212,9 @@ async function openOfferModal(listingId) {
         const response = await fetch(`${API_BASE_URL}/listings/${listingId}`);
         const listing = await response.json();
         
-        const fullAddress = `${listing.address}, ${listing.city}, ${listing.state} ${listing.zip}`;
+        const fullAddress = listing.city && listing.state
+            ? `${listing.address}, ${listing.city}, ${listing.state} ${listing.zip || ''}`.trim()
+            : listing.address;
         document.getElementById('modalPropertyAddress').textContent = fullAddress;
         document.getElementById('offerModal').classList.add('active');
     } catch (error) {
@@ -255,4 +349,24 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Setup offer form
     document.getElementById('offerForm').addEventListener('submit', handleOfferSubmit);
+    
+    // Setup image input listener
+    const imageInput = document.getElementById('imageInput');
+    if (imageInput) {
+        imageInput.addEventListener('change', (e) => {
+            const files = Array.from(e.target.files);
+            selectedFiles = files.slice(0, 10); // Max 10 images
+            
+            // Update file count
+            const fileCount = document.getElementById('fileCount');
+            if (fileCount) {
+                fileCount.textContent = selectedFiles.length > 0
+                    ? `${selectedFiles.length} image${selectedFiles.length !== 1 ? 's' : ''} selected`
+                    : '';
+            }
+            
+            // Show previews
+            displayImagePreviews(selectedFiles);
+        });
+    }
 });
