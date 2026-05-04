@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 require('dotenv').config();
+const { upload, uploadToCloudinary } = require('./config/cloudinary');
 
 const { db } = require('./db');
 const emailService = require('./email');
