@@ -621,6 +621,29 @@
                         <label>Property Description *</label>
                         <textarea name="description" placeholder="Describe your property's best features, recent updates, neighborhood amenities..." required></textarea>
                     </div>
+
+                    <div class="form-group">
+                        <label>Property Photos (up to 10 images)</label>
+                        <div class="file-upload-wrapper">
+                            <input 
+                                type="file" 
+                                id="imageInput" 
+                                name="images" 
+                                accept="image/*" 
+                                multiple 
+                                style="display: none;"
+                            >
+                            <button 
+                                type="button" 
+                                class="btn btn-outline" 
+                                onclick="document.getElementById('imageInput').click()"
+                            >
+                                📷 Choose Photos
+                            </button>
+                            <span id="fileCount" style="margin-left: 1rem; color: var(--text-light);"></span>
+                        </div>
+                        <div id="imagePreview" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 0.5rem; margin-top: 1rem;"></div>
+                    </div>
                     
                     <div class="form-row">
                         <div class="form-group">
