@@ -1,4 +1,4 @@
-// server-production.js - Production-ready Express backend with database
+// server.js - Production-ready Express backend with database
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
@@ -27,42 +27,7 @@ function formatDate(date) {
     return `Posted ${diffDays} days ago`;
 }
 
-// ===== MARKETING PAGES ROUTES =====
-
-// Seller landing page
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'landing.html'));
-});
-
-// Realtor landing page  
-app.get('/realtors', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'realtors.html'));
-});
-
-// Main app (your existing application)
-app.get('/app', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-// Waitlist API endpoint
-app.post('/api/waitlist', async (req, res) => {
-    try {
-        const { email, type } = req.body;
-        
-        if (!email || !email.includes('@')) {
-            return res.status(400).json({ error: 'Valid email required' });
-        }
-        
-        console.log(`📧 Waitlist signup: ${email} (${type})`);
-        
-        res.json({ success: true, message: 'Added to waitlist' });
-    } catch (error) {
-        console.error('Waitlist error:', error);
-        res.status(500).json({ error: 'Failed to add to waitlist' });
-    }
-});
-
-// ===== API ROUTES (Existing) =====
+// ===== API ROUTES =====
 
 // Get all listings
 app.get('/api/listings', async (req, res) => {
@@ -242,8 +207,6 @@ app.post('/api/listings/:id/images', upload.array('images', 10), async (req, res
     }
 });
 
-// ===== WAITLIST API (New) =====
-
 // Waitlist signup endpoint
 app.post('/api/waitlist', async (req, res) => {
     try {
@@ -253,11 +216,10 @@ app.post('/api/waitlist', async (req, res) => {
             return res.status(400).json({ error: 'Valid email required' });
         }
         
-        // TODO: Connect to your email service (Mailchimp, ConvertKit, etc.)
-        // For now, we'll just log it
+        // Log the signup
         console.log(`📧 Waitlist signup: ${email} (${type})`);
         
-        // You could also save to database:
+        // TODO: Save to database
         // await db.pool.query(
         //     'INSERT INTO waitlist (email, user_type, created_at) VALUES ($1, $2, NOW())',
         //     [email, type]
@@ -279,6 +241,25 @@ app.get('/api/health', (req, res) => {
     });
 });
 
+// ===== PAGE ROUTES (Must come AFTER API routes) =====
+
+// Seller landing page (homepage)
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'landing.html'));
+});
+
+// Realtor landing page
+app.get('/realtors', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'realtors.html'));
+});
+
+// Main application
+app.get('/app', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// ===== ERROR HANDLING =====
+
 // Error handling middleware
 app.use((err, req, res, next) => {
     console.error('Server error:', err);
@@ -288,8 +269,13 @@ app.use((err, req, res, next) => {
     });
 });
 
+// Start server
 app.listen(PORT, () => {
     console.log(`🏠 RealtorFinder server running on port ${PORT}`);
     console.log(`📍 http://localhost:${PORT}`);
     console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`\n📄 Routes:`);
+    console.log(`   / → Seller landing page`);
+    console.log(`   /realtors → Realtor landing page`);
+    console.log(`   /app → Main application`);
 });
