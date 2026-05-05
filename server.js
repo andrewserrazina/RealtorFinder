@@ -14,7 +14,7 @@ const PORT = process.env.PORT || 3000;
 // Middleware
 app.use(cors());
 app.use(express.json());
-app.use(express.static('public'));
+// Static files will be added AFTER page routes
 
 // Helper function to format date
 function formatDate(date) {
@@ -241,15 +241,19 @@ app.get('/api/health', (req, res) => {
     });
 });
 
-// ===== PAGE ROUTES (Must come AFTER API routes) =====
+// ===== PAGE ROUTES (Must come AFTER API routes, BEFORE static files) =====
 
 // Seller landing page (homepage)
 app.get('/', (req, res) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
     res.sendFile(path.join(__dirname, 'public', 'landing.html'));
 });
 
 // Realtor landing page
 app.get('/realtors', (req, res) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.sendFile(path.join(__dirname, 'public', 'realtors.html'));
 });
 
@@ -257,6 +261,11 @@ app.get('/realtors', (req, res) => {
 app.get('/app', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
+
+// Serve static files (CSS, JS, images) AFTER page routes
+app.use(express.static('public', {
+    index: false  // Don't serve index.html automatically
+}));
 
 // ===== ERROR HANDLING =====
 
