@@ -27,14 +27,14 @@ function formatDate(date) {
     return `Posted ${diffDays} days ago`;
 }
 
-// ===== MARKETING PAGES ROUTES (New) =====
+// ===== MARKETING PAGES ROUTES =====
 
 // Seller landing page
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'landing.html'));
 });
 
-// Realtor landing page
+// Realtor landing page  
 app.get('/realtors', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'realtors.html'));
 });
@@ -42,6 +42,24 @@ app.get('/realtors', (req, res) => {
 // Main app (your existing application)
 app.get('/app', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// Waitlist API endpoint
+app.post('/api/waitlist', async (req, res) => {
+    try {
+        const { email, type } = req.body;
+        
+        if (!email || !email.includes('@')) {
+            return res.status(400).json({ error: 'Valid email required' });
+        }
+        
+        console.log(`📧 Waitlist signup: ${email} (${type})`);
+        
+        res.json({ success: true, message: 'Added to waitlist' });
+    } catch (error) {
+        console.error('Waitlist error:', error);
+        res.status(500).json({ error: 'Failed to add to waitlist' });
+    }
 });
 
 // ===== API ROUTES (Existing) =====
