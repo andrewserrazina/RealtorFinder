@@ -27,7 +27,24 @@ function formatDate(date) {
     return `Posted ${diffDays} days ago`;
 }
 
-// Routes
+// ===== MARKETING PAGES ROUTES (New) =====
+
+// Seller landing page
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'landing.html'));
+});
+
+// Realtor landing page
+app.get('/realtors', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'realtors.html'));
+});
+
+// Main app (your existing application)
+app.get('/app', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// ===== API ROUTES (Existing) =====
 
 // Get all listings
 app.get('/api/listings', async (req, res) => {
@@ -207,6 +224,34 @@ app.post('/api/listings/:id/images', upload.array('images', 10), async (req, res
     }
 });
 
+// ===== WAITLIST API (New) =====
+
+// Waitlist signup endpoint
+app.post('/api/waitlist', async (req, res) => {
+    try {
+        const { email, type } = req.body; // type = 'seller' or 'realtor'
+        
+        if (!email || !email.includes('@')) {
+            return res.status(400).json({ error: 'Valid email required' });
+        }
+        
+        // TODO: Connect to your email service (Mailchimp, ConvertKit, etc.)
+        // For now, we'll just log it
+        console.log(`📧 Waitlist signup: ${email} (${type})`);
+        
+        // You could also save to database:
+        // await db.pool.query(
+        //     'INSERT INTO waitlist (email, user_type, created_at) VALUES ($1, $2, NOW())',
+        //     [email, type]
+        // );
+        
+        res.json({ success: true, message: 'Added to waitlist' });
+    } catch (error) {
+        console.error('Waitlist error:', error);
+        res.status(500).json({ error: 'Failed to add to waitlist' });
+    }
+});
+
 // Health check
 app.get('/api/health', (req, res) => {
     res.json({ 
@@ -214,11 +259,6 @@ app.get('/api/health', (req, res) => {
         timestamp: new Date(),
         environment: process.env.NODE_ENV || 'development'
     });
-});
-
-// Serve frontend
-app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 // Error handling middleware
@@ -231,7 +271,7 @@ app.use((err, req, res, next) => {
 });
 
 app.listen(PORT, () => {
-    console.log(`🏠 HomeDirect server running on port ${PORT}`);
+    console.log(`🏠 RealtorFinder server running on port ${PORT}`);
     console.log(`📍 http://localhost:${PORT}`);
     console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
 });
