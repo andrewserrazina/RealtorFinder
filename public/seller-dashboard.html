@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seller Dashboard - RealtorFinder</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --ink: #1a1a1a;
+            --paper: #faf9f7;
+            --accent: #d4523e;
+            --soft-accent: #e8ded8;
+            --border: #e1ddd7;
+            --success: #2d6e4f;
+            --warning: #c77029;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--paper);
+            color: var(--ink);
+            line-height: 1.6;
+        }
+
+        /* Header */
+        header {
+            background: white;
+            border-bottom: 1px solid var(--border);
+            padding: 1.5rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.95);
+        }
+
+        .header-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: var(--ink);
+            letter-spacing: -0.5px;
+        }
+
+        .logo span {
+            color: var(--accent);
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent), var(--ink));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            font-size: 0.9rem;
+        }
+
+        /* Main Layout */
+        .dashboard-layout {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 3rem 2rem;
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            gap: 3rem;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            position: sticky;
+            top: 100px;
+            height: fit-content;
+        }
+
+        .nav-section {
+            margin-bottom: 2rem;
+        }
+
+        .nav-title {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #999;
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+
+        .nav-item {
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-weight: 500;
+            color: var(--ink);
+            margin-bottom: 0.5rem;
+        }
+
+        .nav-item:hover {
+            background: var(--soft-accent);
+        }
+
+        .nav-item.active {
+            background: var(--accent);
+            color: white;
+        }
+
+        .nav-icon {
+            font-size: 1.2rem;
+        }
+
+        .badge {
+            background: var(--accent);
+            color: white;
+            padding: 0.2rem 0.6rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-left: auto;
+        }
+
+        /* Main Content */
+        .main-content {
+            min-height: 80vh;
+        }
+
+        .view-section {
+            display: none;
+        }
+
+        .view-section.active {
+            display: block;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .page-header {
+            margin-bottom: 2.5rem;
+        }
+
+        .page-title {
+            font-family: 'Crimson Pro', serif;
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            color: var(--ink);
+        }
+
+        .page-subtitle {
+            color: #666;
+            font-size: 1.1rem;
+        }
+
+        /* Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-family: 'Crimson Pro', serif;
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--ink);
+        }
+
+        .stat-change {
+            font-size: 0.85rem;
+            margin-top: 0.5rem;
+            color: var(--success);
+        }
+
+        /* Listings */
+        .listings-grid {
+            display: grid;
+            gap: 1.5rem;
+        }
+
+        .listing-card {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            display: grid;
+            grid-template-columns: 200px 1fr auto;
+            transition: all 0.2s;
+        }
+
+        .listing-card:hover {
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+        }
+
+        .listing-image {
+            background: var(--soft-accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+        }
+
+        .listing-details {
+            padding: 2rem;
+        }
+
+        .listing-address {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .listing-price {
+            color: var(--accent);
+            font-weight: 700;
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+        }
+
+        .listing-meta {
+            display: flex;
+            gap: 1.5rem;
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .listing-actions {
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 0.75rem;
+            border-left: 1px solid var(--border);
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.95rem;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #c04533;
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: var(--soft-accent);
+            color: var(--ink);
+        }
+
+        .btn-secondary:hover {
+            background: #d4cdc5;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--ink);
+        }
+
+        .btn-outline:hover {
+            background: var(--soft-accent);
+        }
+
+        /* Offers Section */
+        .offers-list {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .offer-card {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        .offer-info h3 {
+            font-size: 1.1rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .offer-brokerage {
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .offer-details {
+            display: flex;
+            gap: 2rem;
+            font-size: 0.9rem;
+        }
+
+        .offer-detail strong {
+            color: var(--accent);
+            font-weight: 700;
+        }
+
+        .offer-actions {
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        /* Form */
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: var(--ink);
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 0.875rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 1rem;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 120px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: #999;
+        }
+
+        .empty-state-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+
+        .empty-state h3 {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.5rem;
+            color: #666;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            max-width: 700px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 2.5rem;
+        }
+
+        .modal-header {
+            margin-bottom: 2rem;
+        }
+
+        .modal-header h2 {
+            font-family: 'Crimson Pro', serif;
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .modal-close {
+            float: right;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #999;
+        }
+
+        @media (max-width: 1024px) {
+            .dashboard-layout {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar {
+                position: static;
+            }
+
+            .listing-card {
+                grid-template-columns: 1fr;
+            }
+
+            .listing-actions {
+                border-left: none;
+                border-top: 1px solid var(--border);
+                flex-direction: row;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-container">
+            <div class="logo">Realtor<span>Finder</span></div>
+            <div class="user-info">
+                <span id="userEmail">Loading...</span>
+                <div class="user-avatar">S</div>
+            </div>
+        </div>
+    </header>
+
+    <div class="dashboard-layout">
+        <aside class="sidebar">
+            <nav>
+                <div class="nav-section">
+                    <div class="nav-title">Dashboard</div>
+                    <div class="nav-item active" data-view="overview">
+                        <span class="nav-icon">📊</span>
+                        <span>Overview</span>
+                    </div>
+                    <div class="nav-item" data-view="listings">
+                        <span class="nav-icon">🏠</span>
+                        <span>My Listings</span>
+                        <span class="badge" id="listingCount">0</span>
+                    </div>
+                    <div class="nav-item" data-view="offers">
+                        <span class="nav-icon">📬</span>
+                        <span>Offers Received</span>
+                        <span class="badge" id="offerCount">0</span>
+                    </div>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-title">Actions</div>
+                    <div class="nav-item" onclick="openNewListingModal()">
+                        <span class="nav-icon">➕</span>
+                        <span>Create Listing</span>
+                    </div>
+                </div>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <!-- Overview View -->
+            <section id="overview-view" class="view-section active">
+                <div class="page-header">
+                    <h1 class="page-title">Welcome Back</h1>
+                    <p class="page-subtitle">Here's what's happening with your listings</p>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-label">Active Listings</div>
+                        <div class="stat-value" id="statActiveListings">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Total Offers</div>
+                        <div class="stat-value" id="statTotalOffers">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Pending Review</div>
+                        <div class="stat-value" id="statPendingOffers">0</div>
+                    </div>
+                </div>
+
+                <h2 style="font-family: 'Crimson Pro', serif; font-size: 1.8rem; margin-bottom: 1.5rem;">Recent Activity</h2>
+                <div id="recentActivity"></div>
+            </section>
+
+            <!-- Listings View -->
+            <section id="listings-view" class="view-section">
+                <div class="page-header">
+                    <h1 class="page-title">My Listings</h1>
+                    <p class="page-subtitle">Manage your property listings and track performance</p>
+                </div>
+                <div class="listings-grid" id="myListingsGrid"></div>
+            </section>
+
+            <!-- Offers View -->
+            <section id="offers-view" class="view-section">
+                <div class="page-header">
+                    <h1 class="page-title">Offers Received</h1>
+                    <p class="page-subtitle">Review and manage realtor proposals</p>
+                </div>
+                <div id="offersContainer"></div>
+            </section>
+        </main>
+    </div>
+
+    <!-- New Listing Modal -->
+    <div id="newListingModal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeNewListingModal()">&times;</span>
+            <div class="modal-header">
+                <h2>Create New Listing</h2>
+                <p style="color: #666;">List your property and start receiving offers from qualified realtors</p>
+            </div>
+            <form id="newListingForm">
+                <div class="form-group">
+                    <label>Property Address *</label>
+                    <input type="text" name="address" placeholder="123 Main St, Boston, MA 02101" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Price *</label>
+                        <input type="text" name="price" placeholder="$500,000" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Property Type *</label>
+                        <select name="type" required>
+                            <option value="">Select type</option>
+                            <option value="Single Family">Single Family</option>
+                            <option value="Condo">Condo</option>
+                            <option value="Townhouse">Townhouse</option>
+                            <option value="Multi-Family">Multi-Family</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Bedrooms *</label>
+                        <input type="number" name="bedrooms" placeholder="3" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Bathrooms *</label>
+                        <input type="number" step="0.5" name="bathrooms" placeholder="2.5" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Square Feet *</label>
+                    <input type="number" name="sqft" placeholder="2000" required>
+                </div>
+                <div class="form-group">
+                    <label>Description *</label>
+                    <textarea name="description" placeholder="Describe your property..." required></textarea>
+                </div>
+                <h3 style="margin: 2rem 0 1rem; font-size: 1.2rem;">Contact Information</h3>
+                <div class="form-group">
+                    <label>Your Name *</label>
+                    <input type="text" name="ownerName" placeholder="John Smith" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Email *</label>
+                        <input type="email" name="ownerEmail" placeholder="john@email.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Phone *</label>
+                        <input type="tel" name="ownerPhone" placeholder="(555) 123-4567" required>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%; padding: 1rem; margin-top: 1rem;">Create Listing</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = window.location.origin + '/api';
+        let currentUser = null;
+
+        // Navigation
+        document.querySelectorAll('.nav-item[data-view]').forEach(item => {
+            item.addEventListener('click', () => {
+                const view = item.dataset.view;
+                document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+                item.classList.add('active');
+                document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
+                document.getElementById(`${view}-view`).classList.add('active');
+                
+                if (view === 'offers') loadOffers();
+            });
+        });
+
+        // Modal Functions
+        function openNewListingModal() {
+            document.getElementById('newListingModal').classList.add('active');
+        }
+
+        function closeNewListingModal() {
+            document.getElementById('newListingModal').classList.remove('active');
+            document.getElementById('newListingForm').reset();
+        }
+
+        // Create Listing
+        document.getElementById('newListingForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData);
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/listings`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                
+                if (!response.ok) throw new Error('Failed to create listing');
+                
+                closeNewListingModal();
+                loadDashboard();
+                alert('✅ Listing created successfully!');
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to create listing. Please try again.');
+            }
+        });
+
+        // Load Dashboard Data
+        async function loadDashboard() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/listings`);
+                const listings = await response.json();
+                
+                // Update stats
+                document.getElementById('statActiveListings').textContent = listings.length;
+                document.getElementById('listingCount').textContent = listings.length;
+                
+                let totalOffers = 0;
+                listings.forEach(l => totalOffers += (l.offerCount || 0));
+                document.getElementById('statTotalOffers').textContent = totalOffers;
+                document.getElementById('statPendingOffers').textContent = totalOffers;
+                document.getElementById('offerCount').textContent = totalOffers;
+                
+                // Render listings
+                renderMyListings(listings);
+                renderRecentActivity(listings);
+            } catch (error) {
+                console.error('Error loading dashboard:', error);
+            }
+        }
+
+        function renderMyListings(listings) {
+            const container = document.getElementById('myListingsGrid');
+            if (listings.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🏠</div>
+                        <h3>No listings yet</h3>
+                        <p>Create your first listing to start receiving offers from realtors</p>
+                        <button class="btn btn-primary" onclick="openNewListingModal()" style="margin-top: 1rem;">Create Listing</button>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = listings.map(listing => `
+                <div class="listing-card">
+                    <div class="listing-image">🏡</div>
+                    <div class="listing-details">
+                        <div class="listing-address">${listing.address}</div>
+                        <div class="listing-price">${listing.price}</div>
+                        <div class="listing-meta">
+                            <span>🛏️ ${listing.bedrooms} bd</span>
+                            <span>🛁 ${listing.bathrooms} ba</span>
+                            <span>📏 ${listing.sqft.toLocaleString()} sqft</span>
+                        </div>
+                        <p style="margin-top: 1rem; color: #666;">${listing.description}</p>
+                        <p style="margin-top: 0.5rem; font-size: 0.9rem; color: #999;">${listing.date}</p>
+                    </div>
+                    <div class="listing-actions">
+                        <button class="btn btn-primary" onclick="viewOffers(${listing.id})">${listing.offerCount || 0} Offers</button>
+                        <button class="btn btn-outline">Edit</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderRecentActivity(listings) {
+            const container = document.getElementById('recentActivity');
+            if (listings.length === 0) {
+                container.innerHTML = '<p style="color: #999;">No recent activity</p>';
+                return;
+            }
+            
+            container.innerHTML = listings.slice(0, 3).map(listing => `
+                <div class="listing-card" style="margin-bottom: 1rem;">
+                    <div class="listing-image">🏡</div>
+                    <div class="listing-details">
+                        <div class="listing-address">${listing.address}</div>
+                        <div class="listing-meta">
+                            <span>${listing.offerCount || 0} offers received</span>
+                            <span>${listing.date}</span>
+                        </div>
+                    </div>
+                    <div class="listing-actions">
+                        <button class="btn btn-secondary" onclick="viewOffers(${listing.id})">View Details</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function viewOffers(listingId) {
+            // Switch to offers view and filter by listing
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.querySelector('[data-view="offers"]').classList.add('active');
+            document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
+            document.getElementById('offers-view').classList.add('active');
+            await loadOffers(listingId);
+        }
+
+        async function loadOffers(listingId = null) {
+            try {
+                const listings = await (await fetch(`${API_BASE_URL}/listings`)).json();
+                const container = document.getElementById('offersContainer');
+                let allOffers = [];
+                
+                for (const listing of listings) {
+                    if (listingId && listing.id !== listingId) continue;
+                    
+                    const offersResponse = await fetch(`${API_BASE_URL}/listings/${listing.id}/offers`);
+                    const offers = await offersResponse.json();
+                    
+                    offers.forEach(offer => {
+                        allOffers.push({ ...offer, listing });
+                    });
+                }
+                
+                if (allOffers.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">📬</div>
+                            <h3>No offers yet</h3>
+                            <p>You'll see realtor proposals here once they start coming in</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                container.innerHTML = allOffers.map(offer => `
+                    <div class="offer-card">
+                        <div class="offer-info">
+                            <h3>${offer.realtor_name}</h3>
+                            <div class="offer-brokerage">${offer.brokerage}</div>
+                            <div class="offer-details">
+                                <div class="offer-detail">
+                                    <strong>${offer.commission || 'N/A'}%</strong> Commission
+                                </div>
+                                <div class="offer-detail">
+                                    For: <strong>${offer.listing.address}</strong>
+                                </div>
+                            </div>
+                            <p style="margin-top: 1rem; color: #666;">${offer.offer_details}</p>
+                        </div>
+                        <div class="offer-actions">
+                            <a href="mailto:${offer.realtor_email}" class="btn btn-primary">Contact</a>
+                            <a href="tel:${offer.realtor_phone}" class="btn btn-outline">Call</a>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Error loading offers:', error);
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadDashboard();
+        });
+    </script>
+</body>
+</html>

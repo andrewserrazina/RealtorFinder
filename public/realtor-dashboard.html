@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Realtor Dashboard - RealtorFinder</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --ink: #0a2540;
+            --paper: #f8f9fa;
+            --accent: #ff6b35;
+            --accent-dark: #e55a2b;
+            --border: #e1e8ed;
+            --success: #10b981;
+            --card-bg: white;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--paper);
+            color: var(--ink);
+            line-height: 1.6;
+        }
+
+        /* Header */
+        header {
+            background: var(--ink);
+            color: white;
+            padding: 1.5rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.6rem;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .logo span {
+            color: var(--accent);
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 1.5rem;
+            align-items: center;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.9rem;
+        }
+
+        /* Tabs */
+        .tabs-container {
+            background: white;
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 77px;
+            z-index: 99;
+        }
+
+        .tabs {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            display: flex;
+            gap: 2rem;
+        }
+
+        .tab {
+            padding: 1.25rem 0;
+            cursor: pointer;
+            font-weight: 600;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .tab:hover {
+            color: var(--ink);
+        }
+
+        .tab.active {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+        }
+
+        /* Main Layout */
+        .dashboard-container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 2.5rem 2rem;
+        }
+
+        .view-section {
+            display: none;
+        }
+
+        .view-section.active {
+            display: block;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Stats */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2.5rem;
+        }
+
+        .stat-card {
+            background: var(--card-bg);
+            padding: 1.75rem;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+
+        .stat-value {
+            font-family: 'Crimson Pro', serif;
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: var(--ink);
+        }
+
+        .stat-trend {
+            font-size: 0.85rem;
+            color: var(--success);
+            margin-top: 0.5rem;
+        }
+
+        /* Listings Grid */
+        .listings-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 2rem;
+        }
+
+        .listing-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .listing-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+            border-color: var(--accent);
+        }
+
+        .listing-image {
+            height: 220px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 4rem;
+            position: relative;
+        }
+
+        .listing-badge {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: white;
+            color: var(--ink);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 700;
+        }
+
+        .listing-content {
+            padding: 1.75rem;
+        }
+
+        .listing-price {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 0.5rem;
+        }
+
+        .listing-address {
+            font-weight: 600;
+            font-size: 1.1rem;
+            color: var(--ink);
+            margin-bottom: 1rem;
+        }
+
+        .listing-specs {
+            display: flex;
+            gap: 1.5rem;
+            margin-bottom: 1rem;
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .listing-description {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 1.25rem;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .listing-action {
+            width: 100%;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 0.875rem 1.75rem;
+            border-radius: 10px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 1rem;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-dark);
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: var(--ink);
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #0d3659;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 2px solid var(--border);
+            color: var(--ink);
+        }
+
+        .btn-outline:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        /* My Bids */
+        .bids-list {
+            display: grid;
+            gap: 1.5rem;
+        }
+
+        .bid-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 2rem;
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        .bid-info h3 {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.4rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .bid-price {
+            color: var(--accent);
+            font-weight: 700;
+            font-size: 1.2rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .bid-details {
+            display: flex;
+            gap: 2rem;
+            color: #666;
+            font-size: 0.95rem;
+        }
+
+        .bid-status {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            background: #fef3c7;
+            color: #92400e;
+            margin-top: 0.75rem;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 16px;
+            max-width: 700px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 3rem;
+        }
+
+        .modal-header {
+            margin-bottom: 2rem;
+        }
+
+        .modal-header h2 {
+            font-family: 'Crimson Pro', serif;
+            font-size: 2.2rem;
+            margin-bottom: 0.5rem;
+            color: var(--ink);
+        }
+
+        .modal-subtitle {
+            color: #666;
+            font-size: 1.1rem;
+        }
+
+        .modal-close {
+            float: right;
+            font-size: 2rem;
+            cursor: pointer;
+            color: #999;
+            line-height: 1;
+            margin-top: -0.5rem;
+        }
+
+        /* Form */
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: var(--ink);
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 0.875rem;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 1rem;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 150px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 5rem 2rem;
+            color: #999;
+        }
+
+        .empty-state-icon {
+            font-size: 5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .empty-state h3 {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.8rem;
+            color: #666;
+            margin-bottom: 0.75rem;
+        }
+
+        @media (max-width: 1024px) {
+            .listings-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .bid-card {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-container">
+            <div class="logo">Realtor<span>Finder</span></div>
+            <div class="header-actions">
+                <div class="user-info">
+                    <span id="realtorName">Agent Dashboard</span>
+                    <div class="user-avatar">R</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="tabs-container">
+        <div class="tabs">
+            <div class="tab active" data-view="browse">Browse Listings</div>
+            <div class="tab" data-view="mybids">My Bids</div>
+            <div class="tab" data-view="won">Won Listings</div>
+        </div>
+    </div>
+
+    <div class="dashboard-container">
+        <!-- Browse Listings View -->
+        <section id="browse-view" class="view-section active">
+            <div class="stats-row">
+                <div class="stat-card">
+                    <div class="stat-label">Available Listings</div>
+                    <div class="stat-value" id="statAvailable">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">My Active Bids</div>
+                    <div class="stat-value" id="statMyBids">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Avg. Commission</div>
+                    <div class="stat-value" id="statAvgCommission">4.5%</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Win Rate</div>
+                    <div class="stat-value" id="statWinRate">--</div>
+                </div>
+            </div>
+
+            <h2 style="font-family: 'Crimson Pro', serif; font-size: 2rem; margin-bottom: 2rem;">Available Properties</h2>
+            <div class="listings-grid" id="availableListings"></div>
+        </section>
+
+        <!-- My Bids View -->
+        <section id="mybids-view" class="view-section">
+            <h2 style="font-family: 'Crimson Pro', serif; font-size: 2rem; margin-bottom: 2rem;">My Active Bids</h2>
+            <div class="bids-list" id="myBidsList"></div>
+        </section>
+
+        <!-- Won Listings View -->
+        <section id="won-view" class="view-section">
+            <h2 style="font-family: 'Crimson Pro', serif; font-size: 2rem; margin-bottom: 2rem;">Won Listings</h2>
+            <div class="empty-state">
+                <div class="empty-state-icon">🏆</div>
+                <h3>No won listings yet</h3>
+                <p>Keep bidding! Your successful listings will appear here.</p>
+            </div>
+        </section>
+    </div>
+
+    <!-- Bid Modal -->
+    <div id="bidModal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeBidModal()">&times;</span>
+            <div class="modal-header">
+                <h2>Submit Your Proposal</h2>
+                <p class="modal-subtitle" id="modalPropertyAddress"></p>
+            </div>
+            <form id="bidForm">
+                <div class="form-group">
+                    <label>Your Name *</label>
+                    <input type="text" name="realtorName" placeholder="Jane Smith" required>
+                </div>
+                <div class="form-group">
+                    <label>Brokerage *</label>
+                    <input type="text" name="brokerage" placeholder="Premier Realty Group" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Email *</label>
+                        <input type="email" name="realtorEmail" placeholder="jane@premierrealty.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Phone *</label>
+                        <input type="tel" name="realtorPhone" placeholder="(555) 987-6543" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Commission Rate (%) *</label>
+                    <input type="number" name="commission" step="0.1" placeholder="4.5" required>
+                </div>
+                <div class="form-group">
+                    <label>Your Proposal *</label>
+                    <textarea name="offerDetails" placeholder="Describe your marketing strategy, experience, and why you're the best choice for this seller..." required></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%; padding: 1rem; margin-top: 1rem;">Submit Proposal</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = window.location.origin + '/api';
+        let currentListingId = null;
+        let myBids = []; // Store locally for demo
+
+        // Tab Navigation
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                const view = tab.dataset.view;
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
+                document.getElementById(`${view}-view`).classList.add('active');
+            });
+        });
+
+        // Modal Functions
+        function openBidModal(listingId, address) {
+            currentListingId = listingId;
+            document.getElementById('modalPropertyAddress').textContent = address;
+            document.getElementById('bidModal').classList.add('active');
+        }
+
+        function closeBidModal() {
+            document.getElementById('bidModal').classList.remove('active');
+            document.getElementById('bidForm').reset();
+        }
+
+        // Submit Bid
+        document.getElementById('bidForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData);
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/listings/${currentListingId}/offers`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                
+                if (!response.ok) throw new Error('Failed to submit bid');
+                
+                // Store bid locally
+                myBids.push({
+                    listingId: currentListingId,
+                    ...data,
+                    submittedAt: new Date()
+                });
+                
+                closeBidModal();
+                loadDashboard();
+                alert('✅ Proposal submitted successfully!');
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to submit proposal. Please try again.');
+            }
+        });
+
+        // Load Dashboard
+        async function loadDashboard() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/listings`);
+                const listings = await response.json();
+                
+                // Update stats
+                document.getElementById('statAvailable').textContent = listings.length;
+                document.getElementById('statMyBids').textContent = myBids.length;
+                
+                // Render listings
+                renderListings(listings);
+                renderMyBids(listings);
+            } catch (error) {
+                console.error('Error loading dashboard:', error);
+            }
+        }
+
+        function renderListings(listings) {
+            const container = document.getElementById('availableListings');
+            if (listings.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🏠</div>
+                        <h3>No listings available</h3>
+                        <p>Check back soon for new opportunities</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = listings.map(listing => `
+                <div class="listing-card" onclick="openBidModal(${listing.id}, '${listing.address}')">
+                    <div class="listing-image">
+                        🏡
+                        <div class="listing-badge">${listing.offerCount || 0} Bids</div>
+                    </div>
+                    <div class="listing-content">
+                        <div class="listing-price">${listing.price}</div>
+                        <div class="listing-address">${listing.address}</div>
+                        <div class="listing-specs">
+                            <span>🛏️ ${listing.bedrooms} bd</span>
+                            <span>🛁 ${listing.bathrooms} ba</span>
+                            <span>📏 ${listing.sqft.toLocaleString()} sqft</span>
+                        </div>
+                        <div class="listing-description">${listing.description}</div>
+                        <button class="btn btn-primary listing-action">Submit Proposal</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderMyBids(listings) {
+            const container = document.getElementById('myBidsList');
+            if (myBids.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📬</div>
+                        <h3>No active bids</h3>
+                        <p>Start bidding on listings to build your business</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = myBids.map(bid => {
+                const listing = listings.find(l => l.id === bid.listingId);
+                if (!listing) return '';
+                
+                return `
+                    <div class="bid-card">
+                        <div class="bid-info">
+                            <h3>${listing.address}</h3>
+                            <div class="bid-price">${listing.price}</div>
+                            <div class="bid-details">
+                                <span><strong>${bid.commission}%</strong> commission</span>
+                                <span>${bid.brokerage}</span>
+                            </div>
+                            <div class="bid-status">⏳ Pending Review</div>
+                        </div>
+                        <div>
+                            <button class="btn btn-outline">View Details</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadDashboard();
+        });
+    </script>
+</body>
+</html>
