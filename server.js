@@ -22,20 +22,35 @@ app.use(cors({
 app.use(express.json());
 
 // Session configuration
+const sessionStore = new pgSession({
+    pool: pool,
+    tableName: 'session',
+    createTableIfMissing: true
+});
+
 app.use(session({
-    store: new pgSession({
-        pool: pool,
-        tableName: 'session'
-    }),
-    secret: process.env.SESSION_SECRET || 'your-secret-key-change-in-production',
+    store: sessionStore,
+    secret: process.env.SESSION_SECRET || 'realtorfinder-temp-secret-change-in-production',
     resave: false,
     saveUninitialized: false,
+    rolling: true,
+    name: 'sessionId', // Custom cookie name
     cookie: {
         maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production' // HTTPS in production
+        secure: true,
+        sameSite: 'none' // Changed from 'lax' for cross-origin cookies
     }
 }));
+
+// Debug logging - remove after fixing
+app.use((req, res, next) => {
+    console.log('📍 Request:', req.method, req.path);
+    console.log('🍪 Session ID:', req.sessionID);
+    console.log('👤 Session User:', req.session ? req.session.userId : 'none');
+    console.log('🍪 Cookies received:', req.headers.cookie);
+    next();
+});
 
 // Attach user to all requests
 app.use(auth.attachUser);
