@@ -14,6 +14,9 @@ const auth = require('./auth');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Trust proxy - important for Render
+app.set('trust proxy', 1);
+
 // Middleware
 app.use(cors({
     origin: true,
@@ -34,12 +37,12 @@ app.use(session({
     resave: false,
     saveUninitialized: false,
     rolling: true,
-    name: 'sessionId', // Custom cookie name
+    proxy: true, // Trust the reverse proxy
     cookie: {
         maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
         httpOnly: true,
         secure: true,
-        sameSite: 'none' // Changed from 'lax' for cross-origin cookies
+        sameSite: 'lax' // Back to lax since same domain
     }
 }));
 
@@ -49,6 +52,16 @@ app.use((req, res, next) => {
     console.log('🍪 Session ID:', req.sessionID);
     console.log('👤 Session User:', req.session ? req.session.userId : 'none');
     console.log('🍪 Cookies received:', req.headers.cookie);
+    
+    // Log response headers
+    const originalSetHeader = res.setHeader;
+    res.setHeader = function(name, value) {
+        if (name.toLowerCase() === 'set-cookie') {
+            console.log('📤 Setting cookie:', value);
+        }
+        return originalSetHeader.apply(this, arguments);
+    };
+    
     next();
 });
 
@@ -112,6 +125,8 @@ app.post('/api/auth/signup', async (req, res) => {
 // Login
 app.post('/api/auth/login', async (req, res) => {
     try {
+        console.log('🔑 Login attempt for:', req.body.email);
+        
         const { email, password } = req.body;
         
         if (!email || !password) {
@@ -121,21 +136,39 @@ app.post('/api/auth/login', async (req, res) => {
         const user = await auth.verifyUser(email, password);
         
         if (!user) {
+            console.log('❌ Invalid credentials');
             return res.status(401).json({ error: 'Invalid email or password' });
         }
+        
+        console.log('✅ User verified:', user.id, user.userType);
         
         // Create session
         req.session.userId = user.id;
         req.session.userType = user.userType;
         
-        res.json({
-            success: true,
-            userId: user.id,
-            email: user.email,
-            userType: user.userType
+        console.log('💾 Attempting to save session...');
+        
+        // Force save the session
+        req.session.save((err) => {
+            if (err) {
+                console.error('❌ Session save error:', err);
+                return res.status(500).json({ error: 'Session save failed' });
+            }
+            
+            console.log('✅ Session saved successfully!');
+            console.log('   Session ID:', req.sessionID);
+            console.log('   User ID:', req.session.userId);
+            console.log('   User Type:', req.session.userType);
+            
+            res.json({
+                success: true,
+                userId: user.id,
+                email: user.email,
+                userType: user.userType
+            });
         });
     } catch (error) {
-        console.error('Login error:', error);
+        console.error('💥 Login error:', error);
         res.status(500).json({ error: 'Login failed' });
     }
 });
