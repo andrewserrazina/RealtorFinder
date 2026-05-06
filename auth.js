@@ -4,17 +4,17 @@ const { pool } = require('./db');
 
 const auth = {
     // Create user account
-    async createUser(email, password, userType) {
+    async createUser(email, password, userType, firstName, lastName, zipCode) {
         try {
             // Hash password
             const hashedPassword = await bcrypt.hash(password, 10);
             
             // Insert user
             const result = await pool.query(
-                `INSERT INTO users (email, password_hash, user_type, created_at) 
-                 VALUES ($1, $2, $3, NOW()) 
-                 RETURNING id, email, user_type, created_at`,
-                [email, hashedPassword, userType]
+                `INSERT INTO users (email, password_hash, user_type, first_name, last_name, zip_code, created_at) 
+                 VALUES ($1, $2, $3, $4, $5, $6, NOW()) 
+                 RETURNING id, email, user_type, first_name, last_name, zip_code, created_at`,
+                [email, hashedPassword, userType, firstName, lastName, zipCode]
             );
             
             return result.rows[0];
@@ -30,7 +30,7 @@ const auth = {
     async verifyUser(email, password) {
         try {
             const result = await pool.query(
-                'SELECT id, email, password_hash, user_type FROM users WHERE email = $1',
+                'SELECT id, email, password_hash, user_type, first_name, last_name, zip_code FROM users WHERE email = $1',
                 [email]
             );
             
@@ -49,7 +49,10 @@ const auth = {
             return {
                 id: user.id,
                 email: user.email,
-                userType: user.user_type
+                userType: user.user_type,
+                firstName: user.first_name,
+                lastName: user.last_name,
+                zipCode: user.zip_code
             };
         } catch (error) {
             throw error;
@@ -59,7 +62,7 @@ const auth = {
     // Get user by ID
     async getUserById(userId) {
         const result = await pool.query(
-            'SELECT id, email, user_type, created_at FROM users WHERE id = $1',
+            'SELECT id, email, user_type, first_name, last_name, zip_code, created_at FROM users WHERE id = $1',
             [userId]
         );
         return result.rows[0];

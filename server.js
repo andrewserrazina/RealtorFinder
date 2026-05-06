@@ -87,9 +87,9 @@ function formatDate(date) {
 // Signup
 app.post('/api/auth/signup', async (req, res) => {
     try {
-        const { email, password, userType } = req.body;
+        const { email, password, userType, firstName, lastName, zipCode } = req.body;
         
-        if (!email || !password || !userType) {
+        if (!email || !password || !userType || !firstName || !lastName || !zipCode) {
             return res.status(400).json({ error: 'All fields required' });
         }
         
@@ -101,17 +101,23 @@ app.post('/api/auth/signup', async (req, res) => {
             return res.status(400).json({ error: 'Password must be at least 8 characters' });
         }
         
-        const user = await auth.createUser(email, password, userType);
+        const user = await auth.createUser(email, password, userType, firstName, lastName, zipCode);
         
         // Create session
         req.session.userId = user.id;
         req.session.userType = user.user_type;
+        req.session.firstName = user.first_name;
+        req.session.lastName = user.last_name;
+        req.session.zipCode = user.zip_code;
         
         res.json({
             success: true,
             userId: user.id,
             email: user.email,
-            userType: user.user_type
+            userType: user.user_type,
+            firstName: user.first_name,
+            lastName: user.last_name,
+            zipCode: user.zip_code
         });
     } catch (error) {
         console.error('Signup error:', error);
@@ -145,6 +151,9 @@ app.post('/api/auth/login', async (req, res) => {
         // Create session
         req.session.userId = user.id;
         req.session.userType = user.userType;
+        req.session.firstName = user.firstName;
+        req.session.lastName = user.lastName;
+        req.session.zipCode = user.zipCode;
         
         console.log('💾 Attempting to save session...');
         
@@ -164,7 +173,10 @@ app.post('/api/auth/login', async (req, res) => {
                 success: true,
                 userId: user.id,
                 email: user.email,
-                userType: user.userType
+                userType: user.userType,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                zipCode: user.zipCode
             });
         });
     } catch (error) {
@@ -191,7 +203,10 @@ app.get('/api/auth/me', (req, res) => {
     res.json({
         id: req.user.id,
         email: req.user.email,
-        userType: req.user.user_type
+        userType: req.user.user_type,
+        firstName: req.user.first_name,
+        lastName: req.user.last_name,
+        zipCode: req.user.zip_code
     });
 });
 
