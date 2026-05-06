@@ -5,7 +5,7 @@ const path = require('path');
 require('dotenv').config();
 const { upload, uploadToCloudinary } = require('./config/cloudinary');
 
-const { db } = require('./db');
+const { db, pool } = require('./db');
 const emailService = require('./email');
 
 const app = express();
@@ -217,7 +217,7 @@ app.post('/api/waitlist', async (req, res) => {
         }
         
         // Save to database
-        const result = await db.pool.query(
+        const result = await pool.query(
             'INSERT INTO waitlist (email, user_type) VALUES ($1, $2) ON CONFLICT (email) DO NOTHING RETURNING *',
             [email, type]
         );
