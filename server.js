@@ -29,17 +29,6 @@ function formatDate(date) {
 
 // ===== API ROUTES =====
 
-async function initializeDatabase() {
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS waitlist (
-      id SERIAL PRIMARY KEY,
-      email VARCHAR(255) UNIQUE NOT NULL,
-      created_at TIMESTAMP DEFAULT NOW()
-    )
-  `);
-  console.log('Database tables ready');
-}
-
 // Get all listings
 app.get('/api/listings', async (req, res) => {
     try {
@@ -221,7 +210,7 @@ app.post('/api/listings/:id/images', upload.array('images', 10), async (req, res
 // Waitlist signup endpoint
 app.post('/api/waitlist', async (req, res) => {
     try {
-        const { email } = req.body;
+        const { email, type } = req.body; // type = 'seller' or 'realtor'
         
         if (!email || !email.includes('@')) {
             return res.status(400).json({ error: 'Valid email required' });
@@ -229,17 +218,17 @@ app.post('/api/waitlist', async (req, res) => {
         
         // Save to database
         const result = await pool.query(
-            'INSERT INTO waitlist (email) VALUES ($1) ON CONFLICT (email) DO NOTHING RETURNING *',
-            [email]
+            'INSERT INTO waitlist (email, user_type) VALUES ($1, $2) ON CONFLICT (email) DO NOTHING RETURNING *',
+            [email, type]
         );
         
         // Log the signup
-        console.log(`📧 Waitlist signup: ${email}`);
+        console.log(`📧 Waitlist signup: ${email} (${type})`);
         
         // Send confirmation email (only if it's a new signup, not a duplicate)
         if (result.rows.length > 0) {
             try {
-                await emailService.sendWaitlistConfirmation(email);
+                await emailService.sendWaitlistConfirmation(email, type);
             } catch (emailError) {
                 console.error('Email send failed, but signup successful:', emailError);
                 // Don't fail the API call if email fails
@@ -278,7 +267,17 @@ app.get('/realtors', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'realtors.html'));
 });
 
-// Main application
+// Seller Dashboard
+app.get('/dashboard/seller', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'seller-dashboard.html'));
+});
+
+// Realtor Dashboard
+app.get('/dashboard/realtor', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'realtor-dashboard.html'));
+});
+
+// Main application (legacy)
 app.get('/app', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
@@ -300,13 +299,14 @@ app.use((err, req, res, next) => {
 });
 
 // Start server
-initializeDatabase().then(() => {
-  app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => {
     console.log(`🏠 RealtorFinder server running on port ${PORT}`);
     console.log(`📍 http://localhost:${PORT}`);
     console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
     console.log(`\n📄 Routes:`);
     console.log(`   / → Seller landing page`);
     console.log(`   /realtors → Realtor landing page`);
-    console.log(`   /app → Main application`);
+    console.log(`   /dashboard/seller → Seller dashboard`);
+    console.log(`   /dashboard/realtor → Realtor dashboard`);
+    console.log(`   /app → Main application (legacy)`);
 });
