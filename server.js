@@ -2,11 +2,14 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const session = require('express-session');
+const pgSession = require('connect-pg-simple')(session);
 require('dotenv').config();
 const { upload, uploadToCloudinary } = require('./config/cloudinary');
 
 const { db, pool } = require('./db');
 const emailService = require('./email');
+const auth = require('./auth');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -14,6 +17,25 @@ const PORT = process.env.PORT || 3000;
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+// Session configuration
+app.use(session({
+    store: new pgSession({
+        pool: pool,
+        tableName: 'session'
+    }),
+    secret: process.env.SESSION_SECRET || 'your-secret-key-change-in-production',
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production' // HTTPS in production
+    }
+}));
+
+// Attach user to all requests
+app.use(auth.attachUser);
 // Static files will be added AFTER page routes
 
 // Helper function to format date
@@ -28,6 +50,101 @@ function formatDate(date) {
 }
 
 // ===== API ROUTES =====
+
+// ===== AUTHENTICATION ROUTES =====
+
+// Signup
+app.post('/api/auth/signup', async (req, res) => {
+    try {
+        const { email, password, userType } = req.body;
+        
+        if (!email || !password || !userType) {
+            return res.status(400).json({ error: 'All fields required' });
+        }
+        
+        if (!['seller', 'realtor'].includes(userType)) {
+            return res.status(400).json({ error: 'Invalid user type' });
+        }
+        
+        if (password.length < 8) {
+            return res.status(400).json({ error: 'Password must be at least 8 characters' });
+        }
+        
+        const user = await auth.createUser(email, password, userType);
+        
+        // Create session
+        req.session.userId = user.id;
+        req.session.userType = user.user_type;
+        
+        res.json({
+            success: true,
+            userId: user.id,
+            email: user.email,
+            userType: user.user_type
+        });
+    } catch (error) {
+        console.error('Signup error:', error);
+        if (error.message === 'Email already registered') {
+            return res.status(400).json({ error: 'Email already registered' });
+        }
+        res.status(500).json({ error: 'Failed to create account' });
+    }
+});
+
+// Login
+app.post('/api/auth/login', async (req, res) => {
+    try {
+        const { email, password } = req.body;
+        
+        if (!email || !password) {
+            return res.status(400).json({ error: 'Email and password required' });
+        }
+        
+        const user = await auth.verifyUser(email, password);
+        
+        if (!user) {
+            return res.status(401).json({ error: 'Invalid email or password' });
+        }
+        
+        // Create session
+        req.session.userId = user.id;
+        req.session.userType = user.userType;
+        
+        res.json({
+            success: true,
+            userId: user.id,
+            email: user.email,
+            userType: user.userType
+        });
+    } catch (error) {
+        console.error('Login error:', error);
+        res.status(500).json({ error: 'Login failed' });
+    }
+});
+
+// Logout
+app.post('/api/auth/logout', (req, res) => {
+    req.session.destroy((err) => {
+        if (err) {
+            return res.status(500).json({ error: 'Logout failed' });
+        }
+        res.json({ success: true });
+    });
+});
+
+// Get current user
+app.get('/api/auth/me', (req, res) => {
+    if (!req.user) {
+        return res.status(401).json({ error: 'Not authenticated' });
+    }
+    res.json({
+        id: req.user.id,
+        email: req.user.email,
+        userType: req.user.user_type
+    });
+});
+
+// ===== LISTINGS ROUTES =====
 
 // Get all listings
 app.get('/api/listings', async (req, res) => {
@@ -253,6 +370,16 @@ app.get('/api/health', (req, res) => {
 
 // ===== PAGE ROUTES (Must come AFTER API routes, BEFORE static files) =====
 
+// Login page
+app.get('/login', (req, res) => {
+    // If already logged in, redirect to dashboard
+    if (req.session && req.session.userId) {
+        const dashboardPath = req.session.userType === 'seller' ? '/dashboard/seller' : '/dashboard/realtor';
+        return res.redirect(dashboardPath);
+    }
+    res.sendFile(path.join(__dirname, 'public', 'login.html'));
+});
+
 // Seller landing page (homepage)
 app.get('/', (req, res) => {
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
@@ -267,13 +394,25 @@ app.get('/realtors', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'realtors.html'));
 });
 
-// Seller Dashboard
+// Seller Dashboard (PROTECTED)
 app.get('/dashboard/seller', (req, res) => {
+    if (!req.session || !req.session.userId) {
+        return res.redirect('/login');
+    }
+    if (req.session.userType !== 'seller') {
+        return res.redirect('/dashboard/realtor');
+    }
     res.sendFile(path.join(__dirname, 'public', 'seller-dashboard.html'));
 });
 
-// Realtor Dashboard
+// Realtor Dashboard (PROTECTED)
 app.get('/dashboard/realtor', (req, res) => {
+    if (!req.session || !req.session.userId) {
+        return res.redirect('/login');
+    }
+    if (req.session.userType !== 'realtor') {
+        return res.redirect('/dashboard/seller');
+    }
     res.sendFile(path.join(__dirname, 'public', 'realtor-dashboard.html'));
 });
 
