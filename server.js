@@ -29,6 +29,17 @@ function formatDate(date) {
 
 // ===== API ROUTES =====
 
+async function initializeDatabase() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS waitlist (
+      id SERIAL PRIMARY KEY,
+      email VARCHAR(255) UNIQUE NOT NULL,
+      created_at TIMESTAMP DEFAULT NOW()
+    )
+  `);
+  console.log('Database tables ready');
+}
+
 // Get all listings
 app.get('/api/listings', async (req, res) => {
     try {
@@ -289,7 +300,8 @@ app.use((err, req, res, next) => {
 });
 
 // Start server
-app.listen(PORT, () => {
+initializeDatabase().then(() => {
+  app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
     console.log(`🏠 RealtorFinder server running on port ${PORT}`);
     console.log(`📍 http://localhost:${PORT}`);
     console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
