@@ -1,44 +1,17 @@
-// email.js - Email notification service
-const nodemailer = require('nodemailer');
+// email.js - Email notification service using SendGrid HTTP API
+const sgMail = require('@sendgrid/mail');
 require('dotenv').config();
 
-// Create transporter based on environment
-const createTransporter = () => {
-    if (process.env.SENDGRID_API_KEY) {
-        // SendGrid configuration
-        return nodemailer.createTransport({
-            host: 'smtp.sendgrid.net',
-            port: 587,
-            auth: {
-                user: 'apikey',
-                pass: process.env.SENDGRID_API_KEY
-            }
-        });
-    } else {
-        // Gmail or generic SMTP configuration
-        return nodemailer.createTransport({
-            host: process.env.EMAIL_HOST,
-            port: process.env.EMAIL_PORT,
-            secure: false,
-            auth: {
-                user: process.env.EMAIL_USER,
-                pass: process.env.EMAIL_PASSWORD
-            }
-        });
-    }
-};
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
-const transporter = createTransporter();
-
-// Email templates
+const FROM = process.env.EMAIL_FROM;
 
 const emailService = {
     // Send waitlist confirmation
-    async sendWaitlistConfirmation(email, userType) {
-        const isSeller = userType === 'seller';
-        const mailOptions = {
-            from: process.env.EMAIL_FROM,
+    async sendWaitlistConfirmation(email) {
+        const msg = {
             to: email,
+            from: FROM,
             subject: `You're on the RealtorFinder Waitlist! 🎉`,
             html: `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -48,31 +21,13 @@ const emailService = {
                     
                     <div style="background: linear-gradient(135deg, #FF6B35 0%, #0A2540 100%); padding: 30px; border-radius: 10px; margin: 30px 0; color: white;">
                         <h2 style="color: white; margin-top: 0;">🚀 Launching Q2 2026</h2>
-                        ${isSeller ? `
-                            <p style="font-size: 16px;">As a seller, you'll be able to:</p>
-                            <ul style="font-size: 15px; line-height: 1.8;">
-                                <li>List your home for free</li>
-                                <li>Receive competing proposals from qualified realtors</li>
-                                <li>Compare commission rates and marketing strategies</li>
-                                <li>Choose the best agent for your needs</li>
-                            </ul>
-                        ` : `
-                            <p style="font-size: 16px;">As a realtor, you'll be able to:</p>
-                            <ul style="font-size: 15px; line-height: 1.8;">
-                                <li>Access motivated sellers actively seeking representation</li>
-                                <li>Submit competitive bids with your rates and strategy</li>
-                                <li>Win quality listings without cold calling</li>
-                                <li>Build your business with verified performance metrics</li>
-                            </ul>
-                        `}
+                        <p style="font-size: 16px;">As an early member, you'll get:</p>
+                        <ul style="font-size: 15px; line-height: 1.8;">
+                            <li>Early access before the public launch</li>
+                            <li>Free listings when we go live</li>
+                            <li>Updates as we get closer to launch</li>
+                        </ul>
                     </div>
-                    
-                    <p><strong>What happens next?</strong></p>
-                    <ul style="line-height: 1.8;">
-                        <li>You'll receive early access before the public launch</li>
-                        <li>We'll send you updates as we get closer to launch</li>
-                        <li>You'll be the first to know when we go live</li>
-                    </ul>
                     
                     <p>Have questions? Just reply to this email—we'd love to hear from you!</p>
                     
@@ -90,20 +45,15 @@ const emailService = {
             `
         };
 
-        try {
-            await transporter.sendMail(mailOptions);
-            console.log(`✅ Waitlist confirmation email sent to ${email} (${userType})`);
-        } catch (error) {
-            console.error('❌ Error sending waitlist confirmation email:', error);
-            throw error; // Re-throw so the API can handle it
-        }
+        await sgMail.send(msg);
+        console.log(`✅ Waitlist confirmation email sent to ${email}`);
     },
 
     // Send listing confirmation to homeowner
     async sendListingConfirmation(listing) {
-        const mailOptions = {
-            from: process.env.EMAIL_FROM,
+        const msg = {
             to: listing.owner_email,
+            from: FROM,
             subject: 'Your Property is Now Listed on RealtorFinder',
             html: `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -120,8 +70,6 @@ const emailService = {
                     
                     <p>Qualified realtors can now submit offer packages. We'll notify you immediately when you receive an offer.</p>
                     
-                    <p>Questions? Reply to this email or contact our support team.</p>
-                    
                     <p style="color: #666; font-size: 14px; margin-top: 30px;">
                         Best regards,<br>
                         The RealtorFinder Team
@@ -131,7 +79,7 @@ const emailService = {
         };
 
         try {
-            await transporter.sendMail(mailOptions);
+            await sgMail.send(msg);
             console.log(`✅ Listing confirmation email sent to ${listing.owner_email}`);
         } catch (error) {
             console.error('❌ Error sending listing confirmation email:', error);
@@ -140,9 +88,9 @@ const emailService = {
 
     // Send offer notification to homeowner
     async sendOfferNotification(listing, offer) {
-        const mailOptions = {
-            from: process.env.EMAIL_FROM,
+        const msg = {
             to: listing.owner_email,
+            from: FROM,
             subject: `New Offer Package Received for ${listing.address}`,
             html: `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -163,7 +111,7 @@ const emailService = {
                         <p style="white-space: pre-wrap;">${offer.offer_details}</p>
                     </div>
                     
-                    <p>Review this offer and reach out to ${offer.realtor_name} directly if you're interested in learning more.</p>
+                    <p>Review this offer and reach out to ${offer.realtor_name} directly if you're interested.</p>
                     
                     <p style="color: #666; font-size: 14px; margin-top: 30px;">
                         Best regards,<br>
@@ -174,7 +122,7 @@ const emailService = {
         };
 
         try {
-            await transporter.sendMail(mailOptions);
+            await sgMail.send(msg);
             console.log(`✅ Offer notification email sent to ${listing.owner_email}`);
         } catch (error) {
             console.error('❌ Error sending offer notification email:', error);
@@ -183,15 +131,15 @@ const emailService = {
 
     // Send offer confirmation to realtor
     async sendOfferConfirmation(listing, offer) {
-        const mailOptions = {
-            from: process.env.EMAIL_FROM,
+        const msg = {
             to: offer.realtor_email,
+            from: FROM,
             subject: `Your Offer Package for ${listing.address} Has Been Submitted`,
             html: `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
                     <h1 style="color: #0A2540;">✅ Offer Package Submitted</h1>
                     <p>Hi ${offer.realtor_name},</p>
-                    <p>Your offer package has been successfully submitted for the property at <strong>${listing.address}</strong>.</p>
+                    <p>Your offer package has been successfully submitted for <strong>${listing.address}</strong>.</p>
                     
                     <div style="background: #f5f5f5; padding: 20px; border-radius: 10px; margin: 20px 0;">
                         <h2 style="color: #0A2540; margin-top: 0;">${listing.address}</h2>
@@ -211,7 +159,7 @@ const emailService = {
         };
 
         try {
-            await transporter.sendMail(mailOptions);
+            await sgMail.send(msg);
             console.log(`✅ Offer confirmation email sent to ${offer.realtor_email}`);
         } catch (error) {
             console.error('❌ Error sending offer confirmation email:', error);
