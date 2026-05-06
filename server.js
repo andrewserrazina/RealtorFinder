@@ -30,7 +30,9 @@ app.use(session({
     cookie: {
         maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production' // HTTPS in production
+        secure: true, // Always true for HTTPS
+        sameSite: 'lax', // Important for custom domains
+        domain: '.realtorfinder.net' // Works for both www and non-www
     }
 }));
 
