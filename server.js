@@ -216,14 +216,24 @@ app.post('/api/waitlist', async (req, res) => {
             return res.status(400).json({ error: 'Valid email required' });
         }
         
+        // Save to database
+        const result = await db.pool.query(
+            'INSERT INTO waitlist (email, user_type) VALUES ($1, $2) ON CONFLICT (email) DO NOTHING RETURNING *',
+            [email, type]
+        );
+        
         // Log the signup
         console.log(`📧 Waitlist signup: ${email} (${type})`);
         
-        // TODO: Save to database
-        // await db.pool.query(
-        //     'INSERT INTO waitlist (email, user_type, created_at) VALUES ($1, $2, NOW())',
-        //     [email, type]
-        // );
+        // Send confirmation email (only if it's a new signup, not a duplicate)
+        if (result.rows.length > 0) {
+            try {
+                await emailService.sendWaitlistConfirmation(email, type);
+            } catch (emailError) {
+                console.error('Email send failed, but signup successful:', emailError);
+                // Don't fail the API call if email fails
+            }
+        }
         
         res.json({ success: true, message: 'Added to waitlist' });
     } catch (error) {

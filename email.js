@@ -33,17 +33,83 @@ const transporter = createTransporter();
 // Email templates
 
 const emailService = {
+    // Send waitlist confirmation
+    async sendWaitlistConfirmation(email, userType) {
+        const isSeller = userType === 'seller';
+        const mailOptions = {
+            from: process.env.EMAIL_FROM,
+            to: email,
+            subject: `You're on the RealtorFinder Waitlist! 🎉`,
+            html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                    <h1 style="color: #0A2540;">Welcome to RealtorFinder!</h1>
+                    <p>Hi there,</p>
+                    <p>Thanks for joining our waitlist! You're among the first to know about our upcoming launch.</p>
+                    
+                    <div style="background: linear-gradient(135deg, #FF6B35 0%, #0A2540 100%); padding: 30px; border-radius: 10px; margin: 30px 0; color: white;">
+                        <h2 style="color: white; margin-top: 0;">🚀 Launching Q2 2026</h2>
+                        ${isSeller ? `
+                            <p style="font-size: 16px;">As a seller, you'll be able to:</p>
+                            <ul style="font-size: 15px; line-height: 1.8;">
+                                <li>List your home for free</li>
+                                <li>Receive competing proposals from qualified realtors</li>
+                                <li>Compare commission rates and marketing strategies</li>
+                                <li>Choose the best agent for your needs</li>
+                            </ul>
+                        ` : `
+                            <p style="font-size: 16px;">As a realtor, you'll be able to:</p>
+                            <ul style="font-size: 15px; line-height: 1.8;">
+                                <li>Access motivated sellers actively seeking representation</li>
+                                <li>Submit competitive bids with your rates and strategy</li>
+                                <li>Win quality listings without cold calling</li>
+                                <li>Build your business with verified performance metrics</li>
+                            </ul>
+                        `}
+                    </div>
+                    
+                    <p><strong>What happens next?</strong></p>
+                    <ul style="line-height: 1.8;">
+                        <li>You'll receive early access before the public launch</li>
+                        <li>We'll send you updates as we get closer to launch</li>
+                        <li>You'll be the first to know when we go live</li>
+                    </ul>
+                    
+                    <p>Have questions? Just reply to this email—we'd love to hear from you!</p>
+                    
+                    <div style="background: #f8f6f3; padding: 20px; border-radius: 10px; margin-top: 30px;">
+                        <p style="margin: 0; color: #666; font-size: 14px;">
+                            <strong>RealtorFinder</strong><br>
+                            The reverse marketplace where sellers list once and agents compete for their business.
+                        </p>
+                    </div>
+                    
+                    <p style="color: #999; font-size: 12px; margin-top: 30px;">
+                        You're receiving this email because you signed up for the RealtorFinder waitlist at realtorfinder.net
+                    </p>
+                </div>
+            `
+        };
+
+        try {
+            await transporter.sendMail(mailOptions);
+            console.log(`✅ Waitlist confirmation email sent to ${email} (${userType})`);
+        } catch (error) {
+            console.error('❌ Error sending waitlist confirmation email:', error);
+            throw error; // Re-throw so the API can handle it
+        }
+    },
+
     // Send listing confirmation to homeowner
     async sendListingConfirmation(listing) {
         const mailOptions = {
             from: process.env.EMAIL_FROM,
             to: listing.owner_email,
-            subject: 'Your Property is Now Listed on HomeDirect',
+            subject: 'Your Property is Now Listed on RealtorFinder',
             html: `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
                     <h1 style="color: #0A2540;">🏠 Your Listing is Live!</h1>
                     <p>Hi ${listing.owner_name},</p>
-                    <p>Great news! Your property has been successfully listed on HomeDirect.</p>
+                    <p>Great news! Your property has been successfully listed on RealtorFinder.</p>
                     
                     <div style="background: #f5f5f5; padding: 20px; border-radius: 10px; margin: 20px 0;">
                         <h2 style="color: #0A2540; margin-top: 0;">${listing.address}</h2>
@@ -58,7 +124,7 @@ const emailService = {
                     
                     <p style="color: #666; font-size: 14px; margin-top: 30px;">
                         Best regards,<br>
-                        The HomeDirect Team
+                        The RealtorFinder Team
                     </p>
                 </div>
             `
@@ -101,7 +167,7 @@ const emailService = {
                     
                     <p style="color: #666; font-size: 14px; margin-top: 30px;">
                         Best regards,<br>
-                        The HomeDirect Team
+                        The RealtorFinder Team
                     </p>
                 </div>
             `
@@ -138,7 +204,7 @@ const emailService = {
                     
                     <p style="color: #666; font-size: 14px; margin-top: 30px;">
                         Best regards,<br>
-                        The HomeDirect Team
+                        The RealtorFinder Team
                     </p>
                 </div>
             `
