@@ -221,7 +221,7 @@ app.post('/api/listings/:id/images', upload.array('images', 10), async (req, res
 // Waitlist signup endpoint
 app.post('/api/waitlist', async (req, res) => {
     try {
-        const { email, type } = req.body; // type = 'seller' or 'realtor'
+        const { email } = req.body;
         
         if (!email || !email.includes('@')) {
             return res.status(400).json({ error: 'Valid email required' });
@@ -229,17 +229,17 @@ app.post('/api/waitlist', async (req, res) => {
         
         // Save to database
         const result = await pool.query(
-            'INSERT INTO waitlist (email, user_type) VALUES ($1, $2) ON CONFLICT (email) DO NOTHING RETURNING *',
-            [email, type]
+            'INSERT INTO waitlist (email) VALUES ($1) ON CONFLICT (email) DO NOTHING RETURNING *',
+            [email]
         );
         
         // Log the signup
-        console.log(`📧 Waitlist signup: ${email} (${type})`);
+        console.log(`📧 Waitlist signup: ${email}`);
         
         // Send confirmation email (only if it's a new signup, not a duplicate)
         if (result.rows.length > 0) {
             try {
-                await emailService.sendWaitlistConfirmation(email, type);
+                await emailService.sendWaitlistConfirmation(email);
             } catch (emailError) {
                 console.error('Email send failed, but signup successful:', emailError);
                 // Don't fail the API call if email fails
