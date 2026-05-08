@@ -30,15 +30,6 @@ function logSendgridError(context, error) {
     });
 }
 
-function assertEmailConfig() {
-    if (!SENDGRID_API_KEY || !SENDGRID_API_KEY.startsWith('SG.')) {
-        throw new Error('SENDGRID_API_KEY is missing/invalid');
-    }
-    if (!FROM || !FROM.includes('@')) {
-        throw new Error('EMAIL_FROM is missing/invalid');
-    }
-}
-
 const emailService = {
     // Send waitlist confirmation
     async sendWaitlistConfirmation(email) {

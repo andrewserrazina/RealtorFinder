@@ -419,19 +419,19 @@ app.post('/api/waitlist', async (req, res) => {
         // Log the signup
         console.log(`📧 Waitlist signup: ${email} (${type})`);
         
-        // Send confirmation email (only if it's a new signup, not a duplicate)
+        // Send confirmation email for both new and existing signups.
+        // This ensures users who retry signup still receive confirmation.
         let emailSent = false;
         let emailErrorMessage = null;
         const isNewSignup = result.rows.length > 0;
 
-        if (isNewSignup) {
-            try {
-                await emailService.sendWaitlistConfirmation(email.trim().toLowerCase(), normalizedType);
-            } catch (emailError) {
-                console.error('Email send failed, but signup successful:', emailError);
-                emailErrorMessage = emailError.message;
-                // Don't fail the API call if email fails
-            }
+        try {
+            await emailService.sendWaitlistConfirmation(email.trim().toLowerCase(), normalizedType);
+            emailSent = true;
+        } catch (emailError) {
+            console.error('Email send failed, but signup successful:', emailError);
+            emailErrorMessage = emailError.message;
+            // Don't fail the API call if email fails
         }
         
         res.json({
