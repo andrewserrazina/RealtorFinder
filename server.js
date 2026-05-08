@@ -69,15 +69,6 @@ app.use((req, res, next) => {
 app.use(auth.attachUser);
 // Static files will be added AFTER page routes
 
-function isAdminUser(user) {
-    if (!user || !user.email) return false;
-    const adminEmails = (process.env.ADMIN_EMAILS || '')
-        .split(',')
-        .map((value) => value.trim().toLowerCase())
-        .filter(Boolean);
-    return adminEmails.includes(user.email.toLowerCase());
-}
-
 // Helper function to format date
 function formatDate(date) {
     const now = new Date();
@@ -224,7 +215,16 @@ app.get('/api/auth/me', (req, res) => {
 // Get all listings
 app.get('/api/listings', async (req, res) => {
     try {
-        const listings = await db.getAllListings();
+        let listings;
+        
+        // If user is logged in and is a seller, show only their listings
+        if (req.user && req.user.user_type === 'seller') {
+            listings = await db.getUserListings(req.user.id);
+        } else {
+            // Realtors and public users see all listings
+            listings = await db.getAllListings();
+        }
+        
         const formattedListings = listings.map(listing => ({
             id: listing.id,
             address: `${listing.address}, ${listing.city}, ${listing.state} ${listing.zip}`,
@@ -235,7 +235,8 @@ app.get('/api/listings', async (req, res) => {
             sqft: listing.sqft,
             description: listing.description,
             date: formatDate(listing.created_at),
-            offerCount: listing.offer_count
+            offerCount: listing.offer_count,
+            userId: listing.user_id
         }));
         res.json(formattedListings);
     } catch (error) {
@@ -261,8 +262,8 @@ app.get('/api/listings/:id', async (req, res) => {
     }
 });
 
-// Create new listing
-app.post('/api/listings', async (req, res) => {
+// Create new listing (requires authentication)
+app.post('/api/listings', auth.requireAuth, async (req, res) => {
     try {
         const { address, price, type, bedrooms, bathrooms, sqft, description, ownerName, ownerEmail, ownerPhone } = req.body;
         
@@ -290,7 +291,8 @@ app.post('/api/listings', async (req, res) => {
             description,
             ownerName,
             ownerEmail,
-            ownerPhone
+            ownerPhone,
+            userId: req.session.userId  // Associate listing with logged-in user
         };
         
         const newListing = await db.createListing(listingData);
@@ -308,8 +310,8 @@ app.post('/api/listings', async (req, res) => {
     }
 });
 
-// Submit offer for a listing
-app.post('/api/listings/:id/offers', async (req, res) => {
+// Submit offer for a listing (requires authentication)
+app.post('/api/listings/:id/offers', auth.requireAuth, async (req, res) => {
     try {
         const listingId = parseInt(req.params.id);
         const listing = await db.getListingById(listingId);
@@ -331,7 +333,8 @@ app.post('/api/listings/:id/offers', async (req, res) => {
             realtorEmail,
             realtorPhone,
             commission: commission || null,
-            offerDetails
+            offerDetails,
+            userId: req.session.userId  // Associate offer with logged-in realtor
         };
         
         const newOffer = await db.createOffer(listingId, offerData);
@@ -347,6 +350,17 @@ app.post('/api/listings/:id/offers', async (req, res) => {
     } catch (error) {
         console.error('Error submitting offer:', error);
         res.status(500).json({ error: 'Failed to submit offer' });
+    }
+});
+
+// Get current user's offers (for realtors)
+app.get('/api/my-offers', auth.requireAuth, async (req, res) => {
+    try {
+        const offers = await db.getUserOffers(req.session.userId);
+        res.json(offers);
+    } catch (error) {
+        console.error('Error fetching user offers:', error);
+        res.status(500).json({ error: 'Failed to fetch offers' });
     }
 });
 
@@ -408,70 +422,29 @@ app.post('/api/waitlist', async (req, res) => {
             return res.status(400).json({ error: 'Valid email required' });
         }
         
-        const normalizedType = ['seller', 'realtor'].includes(type) ? type : 'seller';
-
         // Save to database
         const result = await pool.query(
             'INSERT INTO waitlist (email, user_type) VALUES ($1, $2) ON CONFLICT (email) DO NOTHING RETURNING *',
-            [email.trim().toLowerCase(), normalizedType]
+            [email, type]
         );
         
         // Log the signup
         console.log(`📧 Waitlist signup: ${email} (${type})`);
         
-        // Send confirmation email for both new and existing signups.
-        // This ensures users who retry signup still receive confirmation.
-        let emailSent = false;
-        let emailErrorMessage = null;
-        const isNewSignup = result.rows.length > 0;
-
-        try {
-            await emailService.sendWaitlistConfirmation(email.trim().toLowerCase(), normalizedType);
-            emailSent = true;
-        } catch (emailError) {
-            console.error('Email send failed, but signup successful:', emailError);
-            emailErrorMessage = emailError.message;
-            // Don't fail the API call if email fails
+        // Send confirmation email (only if it's a new signup, not a duplicate)
+        if (result.rows.length > 0) {
+            try {
+                await emailService.sendWaitlistConfirmation(email, type);
+            } catch (emailError) {
+                console.error('Email send failed, but signup successful:', emailError);
+                // Don't fail the API call if email fails
+            }
         }
         
-        res.json({
-            success: true,
-            message: isNewSignup ? 'Added to waitlist' : 'Already on waitlist',
-            isNewSignup,
-            emailSent,
-            emailError: emailErrorMessage
-        });
+        res.json({ success: true, message: 'Added to waitlist' });
     } catch (error) {
         console.error('Waitlist error:', error);
         res.status(500).json({ error: 'Failed to add to waitlist' });
-    }
-});
-
-// Admin-only waitlist panel data
-app.get('/api/admin/waitlist', async (req, res) => {
-    try {
-        if (!req.user) {
-            return res.status(401).json({ error: 'Not authenticated' });
-        }
-
-        if (!isAdminUser(req.user)) {
-            return res.status(403).json({ error: 'Admin access required' });
-        }
-
-        const result = await pool.query(`
-            SELECT id, email, user_type, created_at
-            FROM waitlist
-            ORDER BY created_at DESC
-        `);
-
-        res.json({
-            success: true,
-            count: result.rows.length,
-            waitlist: result.rows
-        });
-    } catch (error) {
-        console.error('Admin waitlist fetch error:', error);
-        res.status(500).json({ error: 'Failed to fetch waitlist' });
     }
 });
 
@@ -530,17 +503,6 @@ app.get('/dashboard/realtor', (req, res) => {
         return res.redirect('/dashboard/seller');
     }
     res.sendFile(path.join(__dirname, 'public', 'realtor-dashboard.html'));
-});
-
-// Admin Waitlist Dashboard (PROTECTED)
-app.get('/dashboard/admin/waitlist', (req, res) => {
-    if (!req.user) {
-        return res.redirect('/login');
-    }
-    if (!isAdminUser(req.user)) {
-        return res.status(403).send('Admin access required');
-    }
-    res.sendFile(path.join(__dirname, 'public', 'admin-waitlist.html'));
 });
 
 // Main application (legacy)

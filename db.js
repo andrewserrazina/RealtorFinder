@@ -24,11 +24,24 @@ const db = {
     async getAllListings() {
         const result = await pool.query(
             `SELECT id, address, city, state, zip, price, property_type, bedrooms, bathrooms, sqft, 
-                    description, created_at,
+                    description, created_at, user_id,
                     (SELECT COUNT(*) FROM offers WHERE listing_id = listings.id) as offer_count
              FROM listings 
-             WHERE status = 'active' 
              ORDER BY created_at DESC`
+        );
+        return result.rows;
+    },
+
+    // Get listings for a specific user
+    async getUserListings(userId) {
+        const result = await pool.query(
+            `SELECT id, address, city, state, zip, price, property_type, bedrooms, bathrooms, sqft, 
+                    description, created_at, user_id,
+                    (SELECT COUNT(*) FROM offers WHERE listing_id = listings.id) as offer_count
+             FROM listings 
+             WHERE user_id = $1
+             ORDER BY created_at DESC`,
+            [userId]
         );
         return result.rows;
     },
@@ -44,26 +57,26 @@ const db = {
 
     // Create new listing
     async createListing(listingData) {
-        const { address, city, state, zip, price, type, bedrooms, bathrooms, sqft, description, ownerName, ownerEmail, ownerPhone } = listingData;
+        const { address, city, state, zip, price, type, bedrooms, bathrooms, sqft, description, ownerName, ownerEmail, ownerPhone, userId } = listingData;
         
         const result = await pool.query(
-            `INSERT INTO listings (address, city, state, zip, price, property_type, bedrooms, bathrooms, sqft, description, owner_name, owner_email, owner_phone)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+            `INSERT INTO listings (address, city, state, zip, price, property_type, bedrooms, bathrooms, sqft, description, owner_name, owner_email, owner_phone, user_id)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
              RETURNING *`,
-            [address, city, state, zip, price, type, bedrooms, bathrooms, sqft, description, ownerName, ownerEmail, ownerPhone]
+            [address, city, state, zip, price, type, bedrooms, bathrooms, sqft, description, ownerName, ownerEmail, ownerPhone, userId]
         );
         return result.rows[0];
     },
 
     // Create offer for a listing
     async createOffer(listingId, offerData) {
-        const { realtorName, brokerage, realtorEmail, realtorPhone, commission, offerDetails } = offerData;
+        const { realtorName, brokerage, realtorEmail, realtorPhone, commission, offerDetails, userId } = offerData;
         
         const result = await pool.query(
-            `INSERT INTO offers (listing_id, realtor_name, brokerage, realtor_email, realtor_phone, commission, offer_details)
-             VALUES ($1, $2, $3, $4, $5, $6, $7)
+            `INSERT INTO offers (listing_id, realtor_name, brokerage, realtor_email, realtor_phone, commission, offer_details, user_id)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
              RETURNING *`,
-            [listingId, realtorName, brokerage, realtorEmail, realtorPhone, commission, offerDetails]
+            [listingId, realtorName, brokerage, realtorEmail, realtorPhone, commission, offerDetails, userId]
         );
         return result.rows[0];
     },
@@ -71,8 +84,21 @@ const db = {
     // Get offers for a listing
     async getOffersByListingId(listingId) {
         const result = await pool.query(
-            `SELECT * FROM offers WHERE listing_id = $1 ORDER BY submitted_at DESC`,
+            `SELECT * FROM offers WHERE listing_id = $1 ORDER BY created_at DESC`,
             [listingId]
+        );
+        return result.rows;
+    },
+
+    // Get offers made by a specific user (realtor)
+    async getUserOffers(userId) {
+        const result = await pool.query(
+            `SELECT o.*, l.address, l.city, l.state, l.zip, l.price 
+             FROM offers o
+             JOIN listings l ON o.listing_id = l.id
+             WHERE o.user_id = $1 
+             ORDER BY o.created_at DESC`,
+            [userId]
         );
         return result.rows;
     },
@@ -91,6 +117,17 @@ const db = {
         const result = await pool.query(
             `UPDATE offers SET status = $1 WHERE id = $2 RETURNING *`,
             [status, id]
+        );
+        return result.rows[0];
+    },
+
+    // Add to waitlist
+    async addToWaitlist(email, userType) {
+        const result = await pool.query(
+            `INSERT INTO waitlist (email, user_type) VALUES ($1, $2) 
+             ON CONFLICT (email) DO UPDATE SET user_type = $2
+             RETURNING *`,
+            [email, userType]
         );
         return result.rows[0];
     }

@@ -1,42 +1,58 @@
-// email.js - Email notification service using SendGrid HTTP API
-const sgMail = require('@sendgrid/mail');
+// email.js - Email notification service
+const nodemailer = require('nodemailer');
 require('dotenv').config();
 
-const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
-if (SENDGRID_API_KEY && SENDGRID_API_KEY.startsWith('SG.')) {
-    sgMail.setApiKey(SENDGRID_API_KEY);
-} else {
-    console.warn('⚠️ SENDGRID_API_KEY missing or invalid. Email sending is disabled.');
-}
-
-const FROM = process.env.SENDGRID_FROM_EMAIL || process.env.EMAIL_FROM;
-
-function assertEmailConfig() {
-    if (!SENDGRID_API_KEY || !SENDGRID_API_KEY.startsWith('SG.')) {
-        throw new Error('SENDGRID_API_KEY is missing/invalid');
+// Create transporter based on environment
+const createTransporter = () => {
+    // Check if email is configured
+    if (!process.env.EMAIL_FROM) {
+        console.log('⚠️  Email not configured - emails will not be sent');
+        return null;
     }
-    if (!FROM || !FROM.includes('@')) {
-        throw new Error('EMAIL_FROM/SENDGRID_FROM_EMAIL is missing/invalid');
-    }
-}
 
-function logSendgridError(context, error) {
-    const statusCode = error?.code || error?.response?.statusCode;
-    const responseBody = error?.response?.body;
-    console.error(`❌ ${context} failed`, {
-        message: error?.message,
-        statusCode,
-        responseBody
-    });
-}
+    if (process.env.SENDGRID_API_KEY) {
+        // SendGrid configuration
+        return nodemailer.createTransport({
+            host: 'smtp.sendgrid.net',
+            port: 587,
+            auth: {
+                user: 'apikey',
+                pass: process.env.SENDGRID_API_KEY
+            }
+        });
+    } else if (process.env.EMAIL_HOST && process.env.EMAIL_USER) {
+        // Gmail or generic SMTP configuration
+        return nodemailer.createTransport({
+            host: process.env.EMAIL_HOST,
+            port: process.env.EMAIL_PORT || 587,
+            secure: false,
+            auth: {
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_PASSWORD
+            }
+        });
+    } else {
+        console.log('⚠️  Email credentials not configured - emails will not be sent');
+        return null;
+    }
+};
+
+const transporter = createTransporter();
+
+// Email templates
 
 const emailService = {
     // Send waitlist confirmation
-    async sendWaitlistConfirmation(email) {
-        assertEmailConfig();
-        const msg = {
+    async sendWaitlistConfirmation(email, userType) {
+        if (!transporter) {
+            console.log(`📧 Email not configured - would have sent waitlist confirmation to ${email}`);
+            return; // Silently skip if email not configured
+        }
+
+        const isSeller = userType === 'seller';
+        const mailOptions = {
+            from: process.env.EMAIL_FROM,
             to: email,
-            from: FROM,
             subject: `You're on the RealtorFinder Waitlist! 🎉`,
             html: `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -46,13 +62,31 @@ const emailService = {
                     
                     <div style="background: linear-gradient(135deg, #FF6B35 0%, #0A2540 100%); padding: 30px; border-radius: 10px; margin: 30px 0; color: white;">
                         <h2 style="color: white; margin-top: 0;">🚀 Launching Q2 2026</h2>
-                        <p style="font-size: 16px;">As an early member, you'll get:</p>
-                        <ul style="font-size: 15px; line-height: 1.8;">
-                            <li>Early access before the public launch</li>
-                            <li>Free listings when we go live</li>
-                            <li>Updates as we get closer to launch</li>
-                        </ul>
+                        ${isSeller ? `
+                            <p style="font-size: 16px;">As a seller, you'll be able to:</p>
+                            <ul style="font-size: 15px; line-height: 1.8;">
+                                <li>List your home for free</li>
+                                <li>Receive competing proposals from qualified realtors</li>
+                                <li>Compare commission rates and marketing strategies</li>
+                                <li>Choose the best agent for your needs</li>
+                            </ul>
+                        ` : `
+                            <p style="font-size: 16px;">As a realtor, you'll be able to:</p>
+                            <ul style="font-size: 15px; line-height: 1.8;">
+                                <li>Access motivated sellers actively seeking representation</li>
+                                <li>Submit competitive bids with your rates and strategy</li>
+                                <li>Win quality listings without cold calling</li>
+                                <li>Build your business with verified performance metrics</li>
+                            </ul>
+                        `}
                     </div>
+                    
+                    <p><strong>What happens next?</strong></p>
+                    <ul style="line-height: 1.8;">
+                        <li>You'll receive early access before the public launch</li>
+                        <li>We'll send you updates as we get closer to launch</li>
+                        <li>You'll be the first to know when we go live</li>
+                    </ul>
                     
                     <p>Have questions? Just reply to this email—we'd love to hear from you!</p>
                     
@@ -70,17 +104,25 @@ const emailService = {
             `
         };
 
-        const [response] = await sgMail.send(msg);
-        console.log(`📬 SendGrid waitlist response: ${response?.statusCode || 'unknown'}`);
-        console.log(`✅ Waitlist confirmation email sent to ${email}`);
+        try {
+            await transporter.sendMail(mailOptions);
+            console.log(`✅ Waitlist confirmation email sent to ${email} (${userType})`);
+        } catch (error) {
+            console.error('❌ Error sending waitlist confirmation email:', error);
+            throw error; // Re-throw so the API can handle it
+        }
     },
 
     // Send listing confirmation to homeowner
     async sendListingConfirmation(listing) {
-        assertEmailConfig();
-        const msg = {
+        if (!transporter) {
+            console.log(`📧 Email not configured - would have sent listing confirmation to ${listing.owner_email}`);
+            return;
+        }
+
+        const mailOptions = {
+            from: process.env.EMAIL_FROM,
             to: listing.owner_email,
-            from: FROM,
             subject: 'Your Property is Now Listed on RealtorFinder',
             html: `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -97,6 +139,8 @@ const emailService = {
                     
                     <p>Qualified realtors can now submit offer packages. We'll notify you immediately when you receive an offer.</p>
                     
+                    <p>Questions? Reply to this email or contact our support team.</p>
+                    
                     <p style="color: #666; font-size: 14px; margin-top: 30px;">
                         Best regards,<br>
                         The RealtorFinder Team
@@ -106,20 +150,23 @@ const emailService = {
         };
 
         try {
-            const [response] = await sgMail.send(msg);
-            console.log(`📬 SendGrid listing confirmation response: ${response?.statusCode || 'unknown'}`);
+            await transporter.sendMail(mailOptions);
             console.log(`✅ Listing confirmation email sent to ${listing.owner_email}`);
         } catch (error) {
-            logSendgridError('Listing confirmation email', error);
+            console.error('❌ Error sending listing confirmation email:', error);
         }
     },
 
     // Send offer notification to homeowner
     async sendOfferNotification(listing, offer) {
-        assertEmailConfig();
-        const msg = {
+        if (!transporter) {
+            console.log(`📧 Email not configured - would have sent offer notification to ${listing.owner_email}`);
+            return;
+        }
+
+        const mailOptions = {
+            from: process.env.EMAIL_FROM,
             to: listing.owner_email,
-            from: FROM,
             subject: `New Offer Package Received for ${listing.address}`,
             html: `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -140,7 +187,7 @@ const emailService = {
                         <p style="white-space: pre-wrap;">${offer.offer_details}</p>
                     </div>
                     
-                    <p>Review this offer and reach out to ${offer.realtor_name} directly if you're interested.</p>
+                    <p>Review this offer and reach out to ${offer.realtor_name} directly if you're interested in learning more.</p>
                     
                     <p style="color: #666; font-size: 14px; margin-top: 30px;">
                         Best regards,<br>
@@ -151,26 +198,29 @@ const emailService = {
         };
 
         try {
-            const [response] = await sgMail.send(msg);
-            console.log(`📬 SendGrid offer notification response: ${response?.statusCode || 'unknown'}`);
+            await transporter.sendMail(mailOptions);
             console.log(`✅ Offer notification email sent to ${listing.owner_email}`);
         } catch (error) {
-            logSendgridError('Offer notification email', error);
+            console.error('❌ Error sending offer notification email:', error);
         }
     },
 
     // Send offer confirmation to realtor
     async sendOfferConfirmation(listing, offer) {
-        assertEmailConfig();
-        const msg = {
+        if (!transporter) {
+            console.log(`📧 Email not configured - would have sent offer confirmation to ${offer.realtor_email}`);
+            return;
+        }
+
+        const mailOptions = {
+            from: process.env.EMAIL_FROM,
             to: offer.realtor_email,
-            from: FROM,
             subject: `Your Offer Package for ${listing.address} Has Been Submitted`,
             html: `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
                     <h1 style="color: #0A2540;">✅ Offer Package Submitted</h1>
                     <p>Hi ${offer.realtor_name},</p>
-                    <p>Your offer package has been successfully submitted for <strong>${listing.address}</strong>.</p>
+                    <p>Your offer package has been successfully submitted for the property at <strong>${listing.address}</strong>.</p>
                     
                     <div style="background: #f5f5f5; padding: 20px; border-radius: 10px; margin: 20px 0;">
                         <h2 style="color: #0A2540; margin-top: 0;">${listing.address}</h2>
@@ -190,11 +240,10 @@ const emailService = {
         };
 
         try {
-            const [response] = await sgMail.send(msg);
-            console.log(`📬 SendGrid offer confirmation response: ${response?.statusCode || 'unknown'}`);
+            await transporter.sendMail(mailOptions);
             console.log(`✅ Offer confirmation email sent to ${offer.realtor_email}`);
         } catch (error) {
-            logSendgridError('Offer confirmation email', error);
+            console.error('❌ Error sending offer confirmation email:', error);
         }
     }
 };
