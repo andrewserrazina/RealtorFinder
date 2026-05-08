@@ -69,6 +69,15 @@ app.use((req, res, next) => {
 app.use(auth.attachUser);
 // Static files will be added AFTER page routes
 
+function isAdminUser(user) {
+    if (!user || !user.email) return false;
+    const adminEmails = (process.env.ADMIN_EMAILS || '')
+        .split(',')
+        .map((value) => value.trim().toLowerCase())
+        .filter(Boolean);
+    return adminEmails.includes(user.email.toLowerCase());
+}
+
 // Helper function to format date
 function formatDate(date) {
     const now = new Date();
@@ -399,10 +408,12 @@ app.post('/api/waitlist', async (req, res) => {
             return res.status(400).json({ error: 'Valid email required' });
         }
         
+        const normalizedType = ['seller', 'realtor'].includes(type) ? type : 'seller';
+
         // Save to database
         const result = await pool.query(
             'INSERT INTO waitlist (email, user_type) VALUES ($1, $2) ON CONFLICT (email) DO NOTHING RETURNING *',
-            [email, type]
+            [email.trim().toLowerCase(), normalizedType]
         );
         
         // Log the signup
@@ -411,7 +422,7 @@ app.post('/api/waitlist', async (req, res) => {
         // Send confirmation email (only if it's a new signup, not a duplicate)
         if (result.rows.length > 0) {
             try {
-                await emailService.sendWaitlistConfirmation(email, type);
+                await emailService.sendWaitlistConfirmation(email.trim().toLowerCase(), normalizedType);
             } catch (emailError) {
                 console.error('Email send failed, but signup successful:', emailError);
                 // Don't fail the API call if email fails
@@ -422,6 +433,34 @@ app.post('/api/waitlist', async (req, res) => {
     } catch (error) {
         console.error('Waitlist error:', error);
         res.status(500).json({ error: 'Failed to add to waitlist' });
+    }
+});
+
+// Admin-only waitlist panel data
+app.get('/api/admin/waitlist', async (req, res) => {
+    try {
+        if (!req.user) {
+            return res.status(401).json({ error: 'Not authenticated' });
+        }
+
+        if (!isAdminUser(req.user)) {
+            return res.status(403).json({ error: 'Admin access required' });
+        }
+
+        const result = await pool.query(`
+            SELECT id, email, user_type, created_at
+            FROM waitlist
+            ORDER BY created_at DESC
+        `);
+
+        res.json({
+            success: true,
+            count: result.rows.length,
+            waitlist: result.rows
+        });
+    } catch (error) {
+        console.error('Admin waitlist fetch error:', error);
+        res.status(500).json({ error: 'Failed to fetch waitlist' });
     }
 });
 

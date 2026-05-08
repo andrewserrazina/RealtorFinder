@@ -2,13 +2,28 @@
 const sgMail = require('@sendgrid/mail');
 require('dotenv').config();
 
-sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
+if (SENDGRID_API_KEY && SENDGRID_API_KEY.startsWith('SG.')) {
+    sgMail.setApiKey(SENDGRID_API_KEY);
+} else {
+    console.warn('⚠️ SENDGRID_API_KEY missing or invalid. Email sending is disabled.');
+}
 
 const FROM = process.env.EMAIL_FROM;
+
+function assertEmailConfig() {
+    if (!SENDGRID_API_KEY || !SENDGRID_API_KEY.startsWith('SG.')) {
+        throw new Error('SENDGRID_API_KEY is missing/invalid');
+    }
+    if (!FROM || !FROM.includes('@')) {
+        throw new Error('EMAIL_FROM is missing/invalid');
+    }
+}
 
 const emailService = {
     // Send waitlist confirmation
     async sendWaitlistConfirmation(email) {
+        assertEmailConfig();
         const msg = {
             to: email,
             from: FROM,
@@ -51,6 +66,7 @@ const emailService = {
 
     // Send listing confirmation to homeowner
     async sendListingConfirmation(listing) {
+        assertEmailConfig();
         const msg = {
             to: listing.owner_email,
             from: FROM,
@@ -88,6 +104,7 @@ const emailService = {
 
     // Send offer notification to homeowner
     async sendOfferNotification(listing, offer) {
+        assertEmailConfig();
         const msg = {
             to: listing.owner_email,
             from: FROM,
@@ -131,6 +148,7 @@ const emailService = {
 
     // Send offer confirmation to realtor
     async sendOfferConfirmation(listing, offer) {
+        assertEmailConfig();
         const msg = {
             to: offer.realtor_email,
             from: FROM,
