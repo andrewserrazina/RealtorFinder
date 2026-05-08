@@ -722,10 +722,10 @@
             <div class="hero-content">
                 <h1>Sell Your Home.<br><span class="highlight">Let Agents Compete</span> for You.</h1>
                 <p>List your property once and receive competing proposals from qualified realtors. Compare commission rates, marketing plans, and experience—all in one place.</p>
-                <p class="subtext"><strong>Coming Soon</strong> • Be the first to know when we launch</p>
+                <p class="subtext"><strong>Launching Q2 2026</strong> • Join the waitlist for early seller access</p>
                 
                 <form id="waitlistForm" class="search-box">
-                    <input type="email" id="emailInput" placeholder="Enter your email address" required>
+                    <input type="email" id="emailInput" placeholder="Enter your best email for launch updates" required>
                     <button type="submit">Join Waitlist</button>
                 </form>
                 <div id="successMessage" class="success-message">✓ Thanks! You're on the waitlist. We'll email you when we launch.</div>
@@ -858,7 +858,7 @@
         <div class="cta-container">
             <h2>Join Our Launch Waitlist</h2>
             <p>Be among the first sellers to experience the future of real estate. Get early access and exclusive launch benefits.</p>
-            <a href="#" class="cta-button">Reserve Your Spot</a>
+            <a href="#waitlistForm" class="cta-button">Reserve Your Spot</a>
         </div>
     </section>
 
@@ -871,7 +871,7 @@
             <div>
                 <div class="footer-title">For Sellers</div>
                 <ul class="footer-links">
-                    <li><a href="#">Join Waitlist</a></li>
+                    <li><a href="#waitlistForm">Join Waitlist</a></li>
                     <li><a href="#how-it-works">How It Works</a></li>
                     <li><a href="#">Why Choose Us</a></li>
                     <li><a href="#">FAQs</a></li>
@@ -933,18 +933,25 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email: email, type: 'seller' })
                 });
-                
-                if (!response.ok) throw new Error('Signup failed');
-                
-                // Show success message
-                successMessage.classList.add('show');
-                emailInput.value = '';
+
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || 'Signup failed');
+
+                if (data.emailSent) {
+                    successMessage.textContent = data.isNewSignup
+                        ? '✓ Thanks! You are on the seller waitlist. Check your inbox for confirmation.'
+                        : '✓ You are already on the waitlist. We sent another confirmation email.';
+                    successMessage.classList.add('show');
+                    emailInput.value = '';
+                } else {
+                    throw new Error(data.emailError || 'We saved your signup, but could not send the confirmation email yet.');
+                }
                 
                 // Optional: Track conversion with Google Analytics
                 // gtag('event', 'waitlist_signup', { user_type: 'seller' });
                 
             } catch (error) {
-                errorMessage.textContent = 'Something went wrong. Please try again.';
+                errorMessage.textContent = error.message || 'Something went wrong. Please try again.';
                 errorMessage.classList.add('show');
             } finally {
                 submitButton.disabled = false;

@@ -59,11 +59,20 @@ CREATE TABLE IF NOT EXISTS offers (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Waitlist table
+CREATE TABLE IF NOT EXISTS waitlist (
+    id SERIAL PRIMARY KEY,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    user_type VARCHAR(20) NOT NULL CHECK (user_type IN ('seller', 'realtor')),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Create indexes for better query performance
 CREATE INDEX idx_listings_status ON listings(status);
 CREATE INDEX idx_listings_created_at ON listings(created_at DESC);
 CREATE INDEX idx_offers_listing_id ON offers(listing_id);
 CREATE INDEX idx_offers_status ON offers(status);
+CREATE INDEX idx_waitlist_created_at ON waitlist(created_at DESC);
 
 -- Create updated_at trigger function
 CREATE OR REPLACE FUNCTION update_updated_at_column()

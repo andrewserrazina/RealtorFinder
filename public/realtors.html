@@ -894,7 +894,7 @@
             <div class="nav-links">
                 <a href="#benefits">How It Works</a>
                 <a href="#pricing">Pricing</a>
-                <a href="#" class="nav-cta">Register Interest</a>
+                <a href="#realtorWaitlistForm" class="nav-cta">Register Interest</a>
             </div>
         </div>
     </nav>
@@ -904,10 +904,10 @@
             <div class="hero-content">
                 <h1>Win More Listings by <span class="highlight">Bidding</span> on Them</h1>
                 <p>Stop cold calling sellers. Access exclusive listing opportunities where motivated home sellers are actively seeking representation.</p>
-                <p class="launch-tag"><strong>Launching Q2 2026</strong> • Register now for early platform access</p>
+                <p class="launch-tag"><strong>Launching Q2 2026</strong> • Join now for early access and founding-agent perks</p>
                 
                 <form id="realtorWaitlistForm" class="email-form">
-                    <input type="email" id="realtorEmailInput" placeholder="Enter your email address" required>
+                    <input type="email" id="realtorEmailInput" placeholder="Enter your business email" required>
                     <button type="submit">Register</button>
                 </form>
                 <div id="realtorSuccessMessage" class="success-message">✓ Registered! We'll contact you before launch with early access details.</div>
@@ -1085,7 +1085,7 @@
         <div class="cta-container">
             <h2>Join the Waitlist for Early Access</h2>
             <p>Register now and be among the first agents to access listing opportunities when we launch in Q2 2026.</p>
-            <a href="#" class="cta-button">Register Your Interest</a>
+            <a href="#realtorWaitlistForm" class="cta-button">Register Your Interest</a>
         </div>
     </section>
 
@@ -1109,7 +1109,7 @@
                 <ul class="footer-links">
                     <li><a href="#benefits">Platform Benefits</a></li>
                     <li><a href="#pricing">Pricing</a></li>
-                    <li><a href="#">Register Interest</a></li>
+                    <li><a href="#realtorWaitlistForm">Register Interest</a></li>
                 </ul>
             </div>
             <div>
@@ -1159,18 +1159,25 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email: email, type: 'realtor' })
                 });
-                
-                if (!response.ok) throw new Error('Signup failed');
-                
-                // Show success message
-                successMessage.classList.add('show');
-                emailInput.value = '';
+
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || 'Signup failed');
+
+                if (data.emailSent) {
+                    successMessage.textContent = data.isNewSignup
+                        ? '✓ Registered! Check your inbox for your launch confirmation.'
+                        : '✓ You are already registered. We just sent another confirmation email.';
+                    successMessage.classList.add('show');
+                    emailInput.value = '';
+                } else {
+                    throw new Error(data.emailError || 'Signup saved, but we could not send a confirmation email yet.');
+                }
                 
                 // Optional: Track conversion with Google Analytics
                 // gtag('event', 'waitlist_signup', { user_type: 'realtor' });
                 
             } catch (error) {
-                errorMessage.textContent = 'Something went wrong. Please try again.';
+                errorMessage.textContent = error.message || 'Something went wrong. Please try again.';
                 errorMessage.classList.add('show');
             } finally {
                 submitButton.disabled = false;

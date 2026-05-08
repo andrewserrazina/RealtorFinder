@@ -2,13 +2,38 @@
 const sgMail = require('@sendgrid/mail');
 require('dotenv').config();
 
-sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
+if (SENDGRID_API_KEY && SENDGRID_API_KEY.startsWith('SG.')) {
+    sgMail.setApiKey(SENDGRID_API_KEY);
+} else {
+    console.warn('⚠️ SENDGRID_API_KEY missing or invalid. Email sending is disabled.');
+}
 
-const FROM = process.env.EMAIL_FROM;
+const FROM = process.env.SENDGRID_FROM_EMAIL || process.env.EMAIL_FROM;
+
+function assertEmailConfig() {
+    if (!SENDGRID_API_KEY || !SENDGRID_API_KEY.startsWith('SG.')) {
+        throw new Error('SENDGRID_API_KEY is missing/invalid');
+    }
+    if (!FROM || !FROM.includes('@')) {
+        throw new Error('EMAIL_FROM/SENDGRID_FROM_EMAIL is missing/invalid');
+    }
+}
+
+function logSendgridError(context, error) {
+    const statusCode = error?.code || error?.response?.statusCode;
+    const responseBody = error?.response?.body;
+    console.error(`❌ ${context} failed`, {
+        message: error?.message,
+        statusCode,
+        responseBody
+    });
+}
 
 const emailService = {
     // Send waitlist confirmation
     async sendWaitlistConfirmation(email) {
+        assertEmailConfig();
         const msg = {
             to: email,
             from: FROM,
@@ -45,12 +70,14 @@ const emailService = {
             `
         };
 
-        await sgMail.send(msg);
+        const [response] = await sgMail.send(msg);
+        console.log(`📬 SendGrid waitlist response: ${response?.statusCode || 'unknown'}`);
         console.log(`✅ Waitlist confirmation email sent to ${email}`);
     },
 
     // Send listing confirmation to homeowner
     async sendListingConfirmation(listing) {
+        assertEmailConfig();
         const msg = {
             to: listing.owner_email,
             from: FROM,
@@ -79,15 +106,17 @@ const emailService = {
         };
 
         try {
-            await sgMail.send(msg);
+            const [response] = await sgMail.send(msg);
+            console.log(`📬 SendGrid listing confirmation response: ${response?.statusCode || 'unknown'}`);
             console.log(`✅ Listing confirmation email sent to ${listing.owner_email}`);
         } catch (error) {
-            console.error('❌ Error sending listing confirmation email:', error);
+            logSendgridError('Listing confirmation email', error);
         }
     },
 
     // Send offer notification to homeowner
     async sendOfferNotification(listing, offer) {
+        assertEmailConfig();
         const msg = {
             to: listing.owner_email,
             from: FROM,
@@ -122,15 +151,17 @@ const emailService = {
         };
 
         try {
-            await sgMail.send(msg);
+            const [response] = await sgMail.send(msg);
+            console.log(`📬 SendGrid offer notification response: ${response?.statusCode || 'unknown'}`);
             console.log(`✅ Offer notification email sent to ${listing.owner_email}`);
         } catch (error) {
-            console.error('❌ Error sending offer notification email:', error);
+            logSendgridError('Offer notification email', error);
         }
     },
 
     // Send offer confirmation to realtor
     async sendOfferConfirmation(listing, offer) {
+        assertEmailConfig();
         const msg = {
             to: offer.realtor_email,
             from: FROM,
@@ -159,10 +190,11 @@ const emailService = {
         };
 
         try {
-            await sgMail.send(msg);
+            const [response] = await sgMail.send(msg);
+            console.log(`📬 SendGrid offer confirmation response: ${response?.statusCode || 'unknown'}`);
             console.log(`✅ Offer confirmation email sent to ${offer.realtor_email}`);
         } catch (error) {
-            console.error('❌ Error sending offer confirmation email:', error);
+            logSendgridError('Offer confirmation email', error);
         }
     }
 };

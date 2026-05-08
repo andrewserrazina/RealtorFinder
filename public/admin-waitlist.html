@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Waitlist | RealtorFinder</title>
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --card: #ffffff;
+      --text: #0f172a;
+      --muted: #64748b;
+      --accent: #2563eb;
+      --border: #e2e8f0;
+      --success: #16a34a;
+    }
+    body { margin: 0; font-family: Inter, Arial, sans-serif; background: var(--bg); color: var(--text); }
+    .container { max-width: 1100px; margin: 32px auto; padding: 0 20px; }
+    .header { display:flex; justify-content:space-between; align-items:center; margin-bottom: 18px; }
+    .title { font-size: 28px; font-weight: 700; }
+    .subtitle { color: var(--muted); margin-top: 6px; }
+    .pill { background: #dbeafe; color: #1e3a8a; border-radius: 999px; padding: 8px 14px; font-weight: 600; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; box-shadow: 0 8px 24px rgba(15,23,42,0.06); }
+    .toolbar { padding: 16px; display:flex; gap:12px; align-items:center; border-bottom: 1px solid var(--border); }
+    input, select { border:1px solid var(--border); border-radius:10px; padding:10px 12px; font-size:14px; }
+    table { width:100%; border-collapse: collapse; }
+    th, td { text-align:left; padding: 14px 16px; border-bottom: 1px solid var(--border); font-size: 14px; }
+    th { background:#f8fafc; color:#334155; font-weight: 700; }
+    tr:hover td { background:#f8fbff; }
+    .tag { background:#f1f5f9; border-radius:999px; padding:4px 10px; font-weight:600; font-size:12px; text-transform: capitalize; }
+    .empty, .error, .loading { padding: 24px 16px; color: var(--muted); }
+    .error { color: #b91c1c; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div>
+        <div class="title">Waitlist Admin</div>
+        <div class="subtitle">View and filter all launch waitlist submissions.</div>
+      </div>
+      <div id="countPill" class="pill">0 Signups</div>
+    </div>
+
+    <div class="card">
+      <div class="toolbar">
+        <input id="searchInput" placeholder="Search by email..." />
+        <select id="typeFilter">
+          <option value="all">All types</option>
+          <option value="seller">Seller</option>
+          <option value="realtor">Realtor</option>
+        </select>
+      </div>
+
+      <div id="tableWrap"></div>
+    </div>
+  </div>
+
+  <script>
+    const tableWrap = document.getElementById('tableWrap');
+    const countPill = document.getElementById('countPill');
+    const searchInput = document.getElementById('searchInput');
+    const typeFilter = document.getElementById('typeFilter');
+
+    let rows = [];
+
+    function formatDate(value) {
+      const d = new Date(value);
+      return Number.isNaN(d.getTime()) ? '-' : d.toLocaleString();
+    }
+
+    function renderTable(filteredRows) {
+      countPill.textContent = `${filteredRows.length} Signup${filteredRows.length === 1 ? '' : 's'}`;
+
+      if (!filteredRows.length) {
+        tableWrap.innerHTML = '<div class="empty">No waitlist entries match your filters.</div>';
+        return;
+      }
+
+      const body = filteredRows.map((row) => `
+        <tr>
+          <td>${row.id}</td>
+          <td>${row.email}</td>
+          <td><span class="tag">${row.user_type}</span></td>
+          <td>${formatDate(row.created_at)}</td>
+        </tr>
+      `).join('');
+
+      tableWrap.innerHTML = `
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Email</th>
+              <th>User Type</th>
+              <th>Created</th>
+            </tr>
+          </thead>
+          <tbody>${body}</tbody>
+        </table>
+      `;
+    }
+
+    function applyFilters() {
+      const query = searchInput.value.trim().toLowerCase();
+      const type = typeFilter.value;
+
+      const filtered = rows.filter((row) => {
+        const matchesEmail = row.email.toLowerCase().includes(query);
+        const matchesType = type === 'all' || row.user_type === type;
+        return matchesEmail && matchesType;
+      });
+
+      renderTable(filtered);
+    }
+
+    async function loadWaitlist() {
+      tableWrap.innerHTML = '<div class="loading">Loading waitlist…</div>';
+      try {
+        const response = await fetch('/api/admin/waitlist', { credentials: 'include' });
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to load waitlist');
+        }
+
+        rows = data.waitlist || [];
+        applyFilters();
+      } catch (error) {
+        tableWrap.innerHTML = `<div class="error">${error.message}</div>`;
+      }
+    }
+
+    searchInput.addEventListener('input', applyFilters);
+    typeFilter.addEventListener('change', applyFilters);
+
+    loadWaitlist();
+  </script>
+</body>
+</html>
