@@ -427,7 +427,6 @@ app.post('/api/waitlist', async (req, res) => {
         if (isNewSignup) {
             try {
                 await emailService.sendWaitlistConfirmation(email.trim().toLowerCase(), normalizedType);
-                emailSent = true;
             } catch (emailError) {
                 console.error('Email send failed, but signup successful:', emailError);
                 emailErrorMessage = emailError.message;
