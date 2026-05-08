@@ -422,26 +422,41 @@ app.post('/api/waitlist', async (req, res) => {
             return res.status(400).json({ error: 'Valid email required' });
         }
         
+        const normalizedType = ['seller', 'realtor'].includes(type) ? type : 'seller';
+
         // Save to database
         const result = await pool.query(
-            'INSERT INTO waitlist (email, user_type) VALUES ($1, $2) ON CONFLICT (email) DO NOTHING RETURNING *',
-            [email, type]
+            'INSERT INTO waitlist (email, user_type) VALUES ($1, $2) ON CONFLICT (email) DO UPDATE SET user_type = $2 RETURNING *',
+            [email.trim().toLowerCase(), normalizedType]
         );
         
         // Log the signup
         console.log(`📧 Waitlist signup: ${email} (${type})`);
         
-        // Send confirmation email (only if it's a new signup, not a duplicate)
-        if (result.rows.length > 0) {
-            try {
-                await emailService.sendWaitlistConfirmation(email, type);
-            } catch (emailError) {
-                console.error('Email send failed, but signup successful:', emailError);
-                // Don't fail the API call if email fails
-            }
+        // Send confirmation email for both new and existing signups
+        let emailSent = false;
+        let emailErrorMessage = null;
+        const isNewSignup = result.rows.length > 0;
+
+        try {
+            console.log('📤 Attempting to send email via emailService...');
+            await emailService.sendWaitlistConfirmation(email.trim().toLowerCase(), normalizedType);
+            emailSent = true;
+            console.log('✅ Email sent successfully');
+        } catch (emailError) {
+            console.error('❌ EMAIL ERROR:', emailError.message);
+            console.error('❌ FULL ERROR:', emailError);
+            emailErrorMessage = emailError.message;
+            // Don't fail the API call if email fails
         }
         
-        res.json({ success: true, message: 'Added to waitlist' });
+        res.json({
+            success: true,
+            message: isNewSignup ? 'Added to waitlist' : 'Already on waitlist',
+            isNewSignup,
+            emailSent,
+            emailError: emailErrorMessage
+        });
     } catch (error) {
         console.error('Waitlist error:', error);
         res.status(500).json({ error: 'Failed to add to waitlist' });
