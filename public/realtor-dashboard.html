@@ -482,8 +482,9 @@
             <div class="logo">Realtor<span>Finder</span></div>
             <div class="header-actions">
                 <div class="user-info">
-                    <span id="realtorName">Agent Dashboard</span>
-                    <div class="user-avatar">R</div>
+                    <span id="userName">Loading...</span>
+                    <div class="user-avatar" id="userAvatar">R</div>
+                    <button onclick="logout()" class="btn btn-secondary" style="margin-left: 1rem; padding: 0.5rem 1rem;">Log Out</button>
                 </div>
             </div>
         </div>
@@ -584,6 +585,48 @@
         const API_BASE_URL = window.location.origin + '/api';
         let currentListingId = null;
         let myBids = []; // Store locally for demo
+        let currentUser = null;
+
+        // Load current user
+        async function loadCurrentUser() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/auth/me`, {
+                    credentials: 'include'
+                });
+                
+                if (!response.ok) {
+                    window.location.href = '/login';
+                    return null;
+                }
+                
+                const user = await response.json();
+                currentUser = user;
+                
+                // Update header
+                document.getElementById('userName').textContent = `${user.firstName} ${user.lastName}`;
+                document.getElementById('userAvatar').textContent = user.firstName.charAt(0).toUpperCase();
+                
+                return user;
+            } catch (error) {
+                console.error('Error loading user:', error);
+                window.location.href = '/login';
+                return null;
+            }
+        }
+
+        // Logout
+        async function logout() {
+            try {
+                await fetch(`${API_BASE_URL}/auth/logout`, {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+                window.location.href = '/login';
+            } catch (error) {
+                console.error('Logout error:', error);
+                window.location.href = '/login';
+            }
+        }
 
         // Tab Navigation
         document.querySelectorAll('.tab').forEach(tab => {
@@ -618,17 +661,13 @@
                 const response = await fetch(`${API_BASE_URL}/listings/${currentListingId}/offers`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',  // Important for sending session cookie
                     body: JSON.stringify(data)
                 });
                 
                 if (!response.ok) throw new Error('Failed to submit bid');
                 
-                // Store bid locally
-                myBids.push({
-                    listingId: currentListingId,
-                    ...data,
-                    submittedAt: new Date()
-                });
+                const result = await response.json();
                 
                 closeBidModal();
                 loadDashboard();
@@ -642,16 +681,24 @@
         // Load Dashboard
         async function loadDashboard() {
             try {
-                const response = await fetch(`${API_BASE_URL}/listings`);
+                const response = await fetch(`${API_BASE_URL}/listings`, {
+                    credentials: 'include'
+                });
                 const listings = await response.json();
+                
+                // Load user's bids
+                const bidsResponse = await fetch(`${API_BASE_URL}/my-offers`, {
+                    credentials: 'include'
+                });
+                const myBidsData = await bidsResponse.json();
                 
                 // Update stats
                 document.getElementById('statAvailable').textContent = listings.length;
-                document.getElementById('statMyBids').textContent = myBids.length;
+                document.getElementById('statMyBids').textContent = myBidsData.length;
                 
                 // Render listings
                 renderListings(listings);
-                renderMyBids(listings);
+                renderMyBids(myBidsData);
             } catch (error) {
                 console.error('Error loading dashboard:', error);
             }
@@ -691,9 +738,9 @@
             `).join('');
         }
 
-        function renderMyBids(listings) {
+        function renderMyBids(myBidsData) {
             const container = document.getElementById('myBidsList');
-            if (myBids.length === 0) {
+            if (!myBidsData || myBidsData.length === 0) {
                 container.innerHTML = `
                     <div class="empty-state">
                         <div class="empty-state-icon">📬</div>
@@ -704,15 +751,14 @@
                 return;
             }
             
-            container.innerHTML = myBids.map(bid => {
-                const listing = listings.find(l => l.id === bid.listingId);
-                if (!listing) return '';
+            container.innerHTML = myBidsData.map(bid => {
+                const fullAddress = `${bid.address}, ${bid.city}, ${bid.state} ${bid.zip}`;
                 
                 return `
                     <div class="bid-card">
                         <div class="bid-info">
-                            <h3>${listing.address}</h3>
-                            <div class="bid-price">${listing.price}</div>
+                            <h3>${fullAddress}</h3>
+                            <div class="bid-price">${bid.price}</div>
                             <div class="bid-details">
                                 <span><strong>${bid.commission}%</strong> commission</span>
                                 <span>${bid.brokerage}</span>
@@ -729,6 +775,7 @@
 
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
+            loadCurrentUser();
             loadDashboard();
         });
     </script>

@@ -496,8 +496,9 @@
         <div class="header-container">
             <div class="logo">Realtor<span>Finder</span></div>
             <div class="user-info">
-                <span id="userEmail">Loading...</span>
-                <div class="user-avatar">S</div>
+                <span id="userName">Loading...</span>
+                <div class="user-avatar" id="userAvatar">S</div>
+                <button onclick="logout()" class="btn btn-secondary" style="margin-left: 1rem; padding: 0.5rem 1rem;">Log Out</button>
             </div>
         </div>
     </header>
@@ -650,6 +651,47 @@
         const API_BASE_URL = window.location.origin + '/api';
         let currentUser = null;
 
+        // Load current user
+        async function loadCurrentUser() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/auth/me`, {
+                    credentials: 'include'
+                });
+                
+                if (!response.ok) {
+                    window.location.href = '/login';
+                    return null;
+                }
+                
+                const user = await response.json();
+                currentUser = user;
+                
+                // Update header
+                document.getElementById('userName').textContent = `${user.firstName} ${user.lastName}`;
+                document.getElementById('userAvatar').textContent = user.firstName.charAt(0).toUpperCase();
+                
+                return user;
+            } catch (error) {
+                console.error('Error loading user:', error);
+                window.location.href = '/login';
+                return null;
+            }
+        }
+
+        // Logout
+        async function logout() {
+            try {
+                await fetch(`${API_BASE_URL}/auth/logout`, {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+                window.location.href = '/login';
+            } catch (error) {
+                console.error('Logout error:', error);
+                window.location.href = '/login';
+            }
+        }
+
         // Navigation
         document.querySelectorAll('.nav-item[data-view]').forEach(item => {
             item.addEventListener('click', () => {
@@ -683,6 +725,7 @@
                 const response = await fetch(`${API_BASE_URL}/listings`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',  // Important for sending session cookie
                     body: JSON.stringify(data)
                 });
                 
@@ -700,7 +743,9 @@
         // Load Dashboard Data
         async function loadDashboard() {
             try {
-                const response = await fetch(`${API_BASE_URL}/listings`);
+                const response = await fetch(`${API_BASE_URL}/listings`, {
+                    credentials: 'include'  // Important for sending session cookie
+                });
                 const listings = await response.json();
                 
                 // Update stats
@@ -846,6 +891,7 @@
 
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
+            loadCurrentUser();
             loadDashboard();
         });
     </script>
