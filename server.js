@@ -532,6 +532,17 @@ app.get('/dashboard/realtor', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'realtor-dashboard.html'));
 });
 
+// Admin Waitlist Dashboard (PROTECTED)
+app.get('/dashboard/admin/waitlist', (req, res) => {
+    if (!req.user) {
+        return res.redirect('/login');
+    }
+    if (!isAdminUser(req.user)) {
+        return res.status(403).send('Admin access required');
+    }
+    res.sendFile(path.join(__dirname, 'public', 'admin-waitlist.html'));
+});
+
 // Main application (legacy)
 app.get('/app', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
