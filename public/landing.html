@@ -687,7 +687,7 @@
             }
 
             .features-grid {
-                grid-template-columns: 1fr;
+                grid-template-columns: repeat(2, 1fr);
             }
 
             .steps {
@@ -703,12 +703,162 @@
                 gap: 2rem;
             }
         }
+
+        @media (max-width: 768px) {
+            .nav-container {
+                padding: 1rem 1.5rem;
+            }
+            .nav-links a:not(.nav-cta) {
+                display: none;
+            }
+            .hero {
+                margin-top: 70px;
+            }
+            .hero-container {
+                padding: 2.5rem 1.5rem;
+                grid-template-columns: 1fr;
+                gap: 2.5rem;
+            }
+            .hero h1 {
+                font-size: 2.6rem;
+                letter-spacing: -1px;
+            }
+            .hero p {
+                font-size: 1.1rem;
+            }
+            .search-box {
+                flex-direction: column;
+                border-radius: 20px;
+                padding: 1rem;
+                gap: 0.75rem;
+            }
+            .search-box input {
+                padding: 0.85rem 1.25rem;
+                font-size: 1rem;
+            }
+            .search-box button {
+                border-radius: 12px;
+                padding: 0.85rem 1.5rem;
+                font-size: 1rem;
+            }
+            .trust-badges {
+                gap: 1.5rem;
+                flex-wrap: wrap;
+            }
+            .badge-number {
+                font-size: 2rem;
+            }
+            .features {
+                padding: 5rem 1.5rem;
+            }
+            .features-grid {
+                grid-template-columns: 1fr;
+                gap: 2rem;
+            }
+            .section-header h2 {
+                font-size: 2.5rem;
+            }
+            .how-it-works {
+                padding: 5rem 1.5rem;
+            }
+            .steps {
+                grid-template-columns: 1fr;
+                gap: 2rem;
+            }
+            .cta {
+                padding: 5rem 1.5rem;
+            }
+            .cta h2 {
+                font-size: 2.5rem;
+            }
+            .cta-inline-form {
+                flex-direction: column;
+                gap: 0.75rem;
+            }
+            .cta-inline-form input {
+                border-radius: 12px;
+            }
+            .cta-inline-form button {
+                border-radius: 12px;
+                padding: 1rem;
+            }
+            footer {
+                padding: 3rem 1.5rem 2rem;
+            }
+            .footer-container {
+                grid-template-columns: 1fr;
+                gap: 2rem;
+            }
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        .cta-inline-form {
+            display: flex;
+            gap: 1rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .cta-inline-form input {
+            flex: 1;
+            padding: 1.1rem 1.75rem;
+            border-radius: 50px;
+            border: 2px solid rgba(255,255,255,0.3);
+            background: rgba(255,255,255,0.12);
+            color: white;
+            font-size: 1.1rem;
+            font-family: 'Work Sans', sans-serif;
+            outline: none;
+        }
+        .cta-inline-form input::placeholder { color: rgba(255,255,255,0.6); }
+        .cta-inline-form input:focus { border-color: rgba(255,255,255,0.7); background: rgba(255,255,255,0.18); }
+        .cta-inline-form button {
+            padding: 1.1rem 2.5rem;
+            border-radius: 50px;
+            background: var(--accent);
+            color: white;
+            border: none;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: 'Work Sans', sans-serif;
+            white-space: nowrap;
+        }
+        .cta-inline-form button:hover { background: white; color: var(--primary); transform: translateY(-2px); }
+        .cta-inline-form button:disabled { opacity: 0.6; cursor: not-allowed; }
     </style>
+<!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-BRGVVNKT65"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-BRGVVNKT65');
+    </script>
+<!-- Meta Pixel Code -->
+    <script>
+        !function(f,b,e,v,n,t,s)
+        {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+        n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+        if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+        n.queue=[];t=b.createElement(e);t.async=!0;
+        t.src=v;s=b.getElementsByTagName(e)[0];
+        s.parentNode.insertBefore(t,s)}(window, document,'script',
+        'https://connect.facebook.net/en_US/fbevents.js');
+        fbq('init', '1189752893170212');
+        fbq('track', 'PageView');
+    </script>
+    <noscript><img height="1" width="1" style="display:none"
+    src="https://www.facebook.com/tr?id=1189752893170212&ev=PageView&noscript=1"
+    /></noscript>
+    <!-- End Meta Pixel Code -->
 </head>
-<body>
+<body id="top">
     <nav>
         <div class="nav-container">
-            <div class="logo">Realtor<span>Finder</span></div>
+            <a href="/" class="logo" style="text-decoration:none;">Realtor<span>Finder</span></a>
             <div class="nav-links">
                 <a href="#how-it-works">Why Us</a>
                 <a href="#features">How It Works</a>
@@ -722,10 +872,10 @@
             <div class="hero-content">
                 <h1>Sell Your Home.<br><span class="highlight">Let Agents Compete</span> for You.</h1>
                 <p>List your property once and receive competing proposals from qualified realtors. Compare commission rates, marketing plans, and experience—all in one place.</p>
-                <p class="subtext"><strong>Launching Q2 2026</strong> • Join the waitlist for early seller access</p>
+                <p class="subtext"><strong>Coming Soon</strong> • Be the first to know when we launch</p>
                 
                 <form id="waitlistForm" class="search-box">
-                    <input type="email" id="emailInput" placeholder="Enter your best email for launch updates" required>
+                    <input type="email" id="emailInput" placeholder="Enter your email address" required>
                     <button type="submit">Join Waitlist</button>
                 </form>
                 <div id="successMessage" class="success-message">✓ Thanks! You're on the waitlist. We'll email you when we launch.</div>
@@ -856,9 +1006,14 @@
 
     <section class="cta">
         <div class="cta-container">
-            <h2>Join Our Launch Waitlist</h2>
-            <p>Be among the first sellers to experience the future of real estate. Get early access and exclusive launch benefits.</p>
-            <a href="#waitlistForm" class="cta-button">Reserve Your Spot</a>
+            <h2>Ready to Sell Smarter?</h2>
+            <p>Join thousands of homeowners getting early access. Be first in line when we launch Q2 2026.</p>
+            <form id="ctaWaitlistForm" class="cta-inline-form">
+                <input type="email" id="ctaEmailInput" placeholder="Enter your email address" required>
+                <button type="submit">Reserve Your Spot</button>
+            </form>
+            <div id="ctaSuccessMessage" class="success-message" style="color:white; background: rgba(16,185,129,0.2); border: 1px solid rgba(255,255,255,0.3); margin-top: 1rem;">✓ You're on the list! We'll email you at launch.</div>
+            <div id="ctaErrorMessage" class="error-message" style="color:white; background: rgba(239,68,68,0.2); border: 1px solid rgba(255,255,255,0.3); margin-top: 1rem;">Please enter a valid email address.</div>
         </div>
     </section>
 
@@ -871,10 +1026,10 @@
             <div>
                 <div class="footer-title">For Sellers</div>
                 <ul class="footer-links">
-                    <li><a href="#waitlistForm">Join Waitlist</a></li>
+                    <li><a href="#top">Join Waitlist</a></li>
                     <li><a href="#how-it-works">How It Works</a></li>
-                    <li><a href="#">Why Choose Us</a></li>
-                    <li><a href="#">FAQs</a></li>
+                    <li><a href="#features">Why Choose Us</a></li>
+                    <li><a href="#features">FAQs</a></li>
                 </ul>
             </div>
             <div>
@@ -933,29 +1088,52 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email: email, type: 'seller' })
                 });
-
-                const data = await response.json();
-                if (!response.ok) throw new Error(data.error || 'Signup failed');
-
-                if (data.emailSent) {
-                    successMessage.textContent = data.isNewSignup
-                        ? '✓ Thanks! You are on the seller waitlist. Check your inbox for confirmation.'
-                        : '✓ You are already on the waitlist. We sent another confirmation email.';
-                    successMessage.classList.add('show');
-                    emailInput.value = '';
-                } else {
-                    throw new Error(data.emailError || 'We saved your signup, but could not send the confirmation email yet.');
-                }
+                
+                if (!response.ok) throw new Error('Signup failed');
+                
+                // Show success message
+                successMessage.classList.add('show');
+                emailInput.value = '';
                 
                 // Optional: Track conversion with Google Analytics
                 // gtag('event', 'waitlist_signup', { user_type: 'seller' });
                 
             } catch (error) {
-                errorMessage.textContent = error.message || 'Something went wrong. Please try again.';
+                errorMessage.textContent = 'Something went wrong. Please try again.';
                 errorMessage.classList.add('show');
             } finally {
                 submitButton.disabled = false;
                 submitButton.textContent = 'Join Waitlist';
+            }
+        });
+
+        // CTA section form
+        document.getElementById('ctaWaitlistForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const emailInput = document.getElementById('ctaEmailInput');
+            const submitButton = this.querySelector('button[type="submit"]');
+            const successMessage = document.getElementById('ctaSuccessMessage');
+            const errorMessage = document.getElementById('ctaErrorMessage');
+            successMessage.classList.remove('show');
+            errorMessage.classList.remove('show');
+            const email = emailInput.value.trim();
+            if (!email || !email.includes('@')) { errorMessage.classList.add('show'); return; }
+            submitButton.disabled = true;
+            submitButton.textContent = 'Joining...';
+            try {
+                const response = await fetch('/api/waitlist', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email })
+                });
+                if (!response.ok) throw new Error('Signup failed');
+                successMessage.classList.add('show');
+                emailInput.value = '';
+            } catch (error) {
+                errorMessage.classList.add('show');
+            } finally {
+                submitButton.disabled = false;
+                submitButton.textContent = 'Reserve Your Spot';
             }
         });
     </script>

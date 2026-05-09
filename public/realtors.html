@@ -885,7 +885,166 @@
                 gap: 2rem;
             }
         }
+
+        @media (max-width: 768px) {
+            .nav-container {
+                padding: 1rem 1.5rem;
+            }
+            .nav-links a:not(.nav-cta) {
+                display: none;
+            }
+            .hero {
+                margin-top: 70px;
+            }
+            .hero-container {
+                padding: 2.5rem 1.5rem;
+                grid-template-columns: 1fr;
+                gap: 2.5rem;
+            }
+            .hero h1 {
+                font-size: 2.6rem;
+                letter-spacing: -1px;
+            }
+            .hero p {
+                font-size: 1.1rem;
+            }
+            .email-form {
+                flex-direction: column;
+                gap: 0.75rem;
+            }
+            .email-form input {
+                border-radius: 12px;
+            }
+            .email-form button {
+                border-radius: 12px;
+                padding: 1rem;
+            }
+            .hero-stats {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+            .benefits {
+                padding: 5rem 1.5rem;
+            }
+            .benefits-grid {
+                grid-template-columns: 1fr;
+                gap: 2rem;
+            }
+            .benefit-card {
+                flex-direction: column;
+                gap: 1rem;
+            }
+            .section-header h2 {
+                font-size: 2.5rem;
+            }
+            .pricing {
+                padding: 5rem 1.5rem;
+            }
+            .pricing-grid {
+                grid-template-columns: 1fr;
+            }
+            .pricing-card.featured {
+                transform: scale(1);
+            }
+            .testimonials {
+                padding: 5rem 1.5rem;
+            }
+            .testimonials-grid {
+                grid-template-columns: 1fr;
+            }
+            .cta {
+                padding: 5rem 1.5rem;
+            }
+            .cta h2 {
+                font-size: 2.5rem;
+            }
+            .cta-inline-form {
+                flex-direction: column;
+                gap: 0.75rem;
+            }
+            .cta-inline-form input {
+                border-radius: 12px;
+            }
+            .cta-inline-form button {
+                border-radius: 12px;
+                padding: 1rem;
+            }
+            footer {
+                padding: 3rem 1.5rem 2rem;
+            }
+            .footer-container {
+                grid-template-columns: 1fr;
+                gap: 2rem;
+            }
+            .metrics-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+            .cta-buttons {
+                flex-direction: column;
+                gap: 1rem;
+            }
+        }
+
+        .cta-inline-form {
+            display: flex;
+            gap: 1rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .cta-inline-form input {
+            flex: 1;
+            padding: 1.1rem 1.75rem;
+            border-radius: 50px;
+            border: 2px solid rgba(255,255,255,0.3);
+            background: rgba(255,255,255,0.12);
+            color: white;
+            font-size: 1.1rem;
+            font-family: 'Work Sans', sans-serif;
+            outline: none;
+        }
+        .cta-inline-form input::placeholder { color: rgba(255,255,255,0.6); }
+        .cta-inline-form input:focus { border-color: rgba(255,255,255,0.7); background: rgba(255,255,255,0.18); }
+        .cta-inline-form button {
+            padding: 1.1rem 2.5rem;
+            border-radius: 50px;
+            background: var(--accent);
+            color: white;
+            border: none;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: 'Work Sans', sans-serif;
+            white-space: nowrap;
+        }
+        .cta-inline-form button:hover { background: white; color: var(--primary); transform: translateY(-2px); }
+        .cta-inline-form button:disabled { opacity: 0.6; cursor: not-allowed; }
     </style>
+<!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-BRGVVNKT65"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-BRGVVNKT65');
+    </script>
+<!-- Meta Pixel Code -->
+    <script>
+        !function(f,b,e,v,n,t,s)
+        {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+        n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+        if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+        n.queue=[];t=b.createElement(e);t.async=!0;
+        t.src=v;s=b.getElementsByTagName(e)[0];
+        s.parentNode.insertBefore(t,s)}(window, document,'script',
+        'https://connect.facebook.net/en_US/fbevents.js');
+        fbq('init', '1189752893170212');
+        fbq('track', 'PageView');
+    </script>
+    <noscript><img height="1" width="1" style="display:none"
+    src="https://www.facebook.com/tr?id=1189752893170212&ev=PageView&noscript=1"
+    /></noscript>
+    <!-- End Meta Pixel Code -->
 </head>
 <body>
     <nav>
@@ -904,10 +1063,10 @@
             <div class="hero-content">
                 <h1>Win More Listings by <span class="highlight">Bidding</span> on Them</h1>
                 <p>Stop cold calling sellers. Access exclusive listing opportunities where motivated home sellers are actively seeking representation.</p>
-                <p class="launch-tag"><strong>Launching Q2 2026</strong> • Join now for early access and founding-agent perks</p>
+                <p class="launch-tag"><strong>Launching Q2 2026</strong> • Register now for early platform access</p>
                 
                 <form id="realtorWaitlistForm" class="email-form">
-                    <input type="email" id="realtorEmailInput" placeholder="Enter your business email" required>
+                    <input type="email" id="realtorEmailInput" placeholder="Enter your email address" required>
                     <button type="submit">Register</button>
                 </form>
                 <div id="realtorSuccessMessage" class="success-message">✓ Registered! We'll contact you before launch with early access details.</div>
@@ -1083,9 +1242,14 @@
 
     <section class="cta">
         <div class="cta-container">
-            <h2>Join the Waitlist for Early Access</h2>
+            <h2>Get Early Platform Access</h2>
             <p>Register now and be among the first agents to access listing opportunities when we launch in Q2 2026.</p>
-            <a href="#realtorWaitlistForm" class="cta-button">Register Your Interest</a>
+            <form id="ctaRealtorForm" class="cta-inline-form">
+                <input type="email" id="ctaRealtorEmail" placeholder="Enter your email address" required>
+                <button type="submit">Register Interest</button>
+            </form>
+            <div id="ctaRealtorSuccess" class="success-message" style="margin-top:1rem;">✓ Registered! We'll reach out before launch with early access details.</div>
+            <div id="ctaRealtorError" class="error-message" style="margin-top:1rem;">Please enter a valid email address.</div>
         </div>
     </section>
 
@@ -1098,9 +1262,9 @@
             <div>
                 <div class="footer-title">For Sellers</div>
                 <ul class="footer-links">
-                    <li><a href="index.html">Join Waitlist</a></li>
-                    <li><a href="index.html#how-it-works">How It Works</a></li>
-                    <li><a href="index.html#features">Why Choose Us</a></li>
+                    <li><a href="/">Join Waitlist</a></li>
+                    <li><a href="/#how-it-works">How It Works</a></li>
+                    <li><a href="/#features">Why Choose Us</a></li>
                     <li><a href="#">FAQs</a></li>
                 </ul>
             </div>
@@ -1109,7 +1273,7 @@
                 <ul class="footer-links">
                     <li><a href="#benefits">Platform Benefits</a></li>
                     <li><a href="#pricing">Pricing</a></li>
-                    <li><a href="#realtorWaitlistForm">Register Interest</a></li>
+                    <li><a href="#">Register Interest</a></li>
                 </ul>
             </div>
             <div>
@@ -1159,29 +1323,52 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email: email, type: 'realtor' })
                 });
-
-                const data = await response.json();
-                if (!response.ok) throw new Error(data.error || 'Signup failed');
-
-                if (data.emailSent) {
-                    successMessage.textContent = data.isNewSignup
-                        ? '✓ Registered! Check your inbox for your launch confirmation.'
-                        : '✓ You are already registered. We just sent another confirmation email.';
-                    successMessage.classList.add('show');
-                    emailInput.value = '';
-                } else {
-                    throw new Error(data.emailError || 'Signup saved, but we could not send a confirmation email yet.');
-                }
+                
+                if (!response.ok) throw new Error('Signup failed');
+                
+                // Show success message
+                successMessage.classList.add('show');
+                emailInput.value = '';
                 
                 // Optional: Track conversion with Google Analytics
                 // gtag('event', 'waitlist_signup', { user_type: 'realtor' });
                 
             } catch (error) {
-                errorMessage.textContent = error.message || 'Something went wrong. Please try again.';
+                errorMessage.textContent = 'Something went wrong. Please try again.';
                 errorMessage.classList.add('show');
             } finally {
                 submitButton.disabled = false;
                 submitButton.textContent = 'Register';
+            }
+        });
+
+        // CTA section form
+        document.getElementById('ctaRealtorForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const emailInput = document.getElementById('ctaRealtorEmail');
+            const submitButton = this.querySelector('button[type="submit"]');
+            const successMessage = document.getElementById('ctaRealtorSuccess');
+            const errorMessage = document.getElementById('ctaRealtorError');
+            successMessage.classList.remove('show');
+            errorMessage.classList.remove('show');
+            const email = emailInput.value.trim();
+            if (!email || !email.includes('@')) { errorMessage.classList.add('show'); return; }
+            submitButton.disabled = true;
+            submitButton.textContent = 'Registering...';
+            try {
+                const response = await fetch('/api/waitlist', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email })
+                });
+                if (!response.ok) throw new Error('Signup failed');
+                successMessage.classList.add('show');
+                emailInput.value = '';
+            } catch (error) {
+                errorMessage.classList.add('show');
+            } finally {
+                submitButton.disabled = false;
+                submitButton.textContent = 'Register Interest';
             }
         });
     </script>
