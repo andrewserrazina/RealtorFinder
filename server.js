@@ -380,7 +380,11 @@ app.post('/api/listings/:id/images', upload.array('images', 10), async (req, res
     try {
         const listingId = req.params.id;
         const imageUrls = [];
-        
+
+        if (!req.files || req.files.length === 0) {
+            return res.status(400).json({ error: 'No images provided' });
+        }
+
         console.log(`Uploading ${req.files.length} images for listing ${listingId}`);
         
         // Upload each image to Cloudinary
@@ -392,7 +396,7 @@ app.post('/api/listings/:id/images', upload.array('images', 10), async (req, res
         }
         
         // Update listing with image URLs in database
-        await db.pool.query(
+        await pool.query(
             'UPDATE listings SET image_urls = $1 WHERE id = $2',
             [imageUrls, listingId]
         );

@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS users (
     password_hash VARCHAR(255),
     name VARCHAR(255) NOT NULL,
     phone VARCHAR(50),
-    user_type VARCHAR(20) CHECK (user_type IN ('homeowner', 'realtor')),
+    user_type VARCHAR(20) CHECK (user_type IN ('seller', 'realtor')),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
