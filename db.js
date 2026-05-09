@@ -23,10 +23,10 @@ const db = {
     // Get all active listings
     async getAllListings() {
         const result = await pool.query(
-            `SELECT id, address, city, state, zip, price, property_type, bedrooms, bathrooms, sqft, 
-                    description, created_at, user_id,
+            `SELECT id, address, city, state, zip, price, property_type, bedrooms, bathrooms, sqft,
+                    description, image_urls, created_at, user_id,
                     (SELECT COUNT(*) FROM offers WHERE listing_id = listings.id) as offer_count
-             FROM listings 
+             FROM listings
              ORDER BY created_at DESC`
         );
         return result.rows;
@@ -35,10 +35,10 @@ const db = {
     // Get listings for a specific user
     async getUserListings(userId) {
         const result = await pool.query(
-            `SELECT id, address, city, state, zip, price, property_type, bedrooms, bathrooms, sqft, 
-                    description, created_at, user_id,
+            `SELECT id, address, city, state, zip, price, property_type, bedrooms, bathrooms, sqft,
+                    description, image_urls, created_at, user_id,
                     (SELECT COUNT(*) FROM offers WHERE listing_id = listings.id) as offer_count
-             FROM listings 
+             FROM listings
              WHERE user_id = $1
              ORDER BY created_at DESC`,
             [userId]
