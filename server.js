@@ -5,6 +5,7 @@ const path = require('path');
 const session = require('express-session');
 const pgSession = require('connect-pg-simple')(session);
 require('dotenv').config();
+const https = require('https');
 const { upload, uploadToCloudinary } = require('./config/cloudinary');
 
 const { db, pool } = require('./db');
@@ -78,6 +79,32 @@ function formatDate(date) {
     if (diffDays === 0) return 'Posted today';
     if (diffDays === 1) return 'Posted 1 day ago';
     return `Posted ${diffDays} days ago`;
+}
+
+// Geocode a full address string using Nominatim (OpenStreetMap)
+function geocodeAddress(address) {
+    return new Promise((resolve) => {
+        const query = encodeURIComponent(address + ', USA');
+        const options = {
+            hostname: 'nominatim.openstreetmap.org',
+            path: `/search?format=json&q=${query}&limit=1`,
+            headers: { 'User-Agent': 'RealtorFinder/1.0' }
+        };
+        https.get(options, (res) => {
+            let data = '';
+            res.on('data', chunk => data += chunk);
+            res.on('end', () => {
+                try {
+                    const results = JSON.parse(data);
+                    if (results.length > 0) {
+                        resolve({ latitude: parseFloat(results[0].lat), longitude: parseFloat(results[0].lon) });
+                    } else {
+                        resolve(null);
+                    }
+                } catch { resolve(null); }
+            });
+        }).on('error', () => resolve(null));
+    });
 }
 
 // ===== API ROUTES =====
@@ -228,12 +255,16 @@ app.get('/api/listings', async (req, res) => {
         const formattedListings = listings.map(listing => ({
             id: listing.id,
             address: `${listing.address}, ${listing.city}, ${listing.state} ${listing.zip}`,
+            zip: listing.zip,
             price: listing.price,
             type: listing.property_type,
             bedrooms: listing.bedrooms,
             bathrooms: listing.bathrooms,
             sqft: listing.sqft,
             description: listing.description,
+            image_urls: listing.image_urls,
+            lat: listing.latitude ? parseFloat(listing.latitude) : null,
+            lng: listing.longitude ? parseFloat(listing.longitude) : null,
             date: formatDate(listing.created_at),
             offerCount: listing.offer_count,
             userId: listing.user_id
@@ -278,6 +309,9 @@ app.post('/api/listings', auth.requireAuth, async (req, res) => {
             return res.status(400).json({ error: 'All fields are required' });
         }
         
+        const fullAddress = `${addressParts[0]}, ${city}, ${state || ''} ${zip || ''}`.trim();
+        const coords = await geocodeAddress(fullAddress);
+
         const listingData = {
             address: addressParts[0],
             city,
@@ -292,9 +326,11 @@ app.post('/api/listings', auth.requireAuth, async (req, res) => {
             ownerName,
             ownerEmail,
             ownerPhone,
-            userId: req.session.userId  // Associate listing with logged-in user
+            userId: req.session.userId,
+            latitude: coords?.latitude || null,
+            longitude: coords?.longitude || null
         };
-        
+
         const newListing = await db.createListing(listingData);
         
         // Send confirmation email
