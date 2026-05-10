@@ -90,6 +90,19 @@ const db = {
         return result.rows;
     },
 
+    // Get all offers across a seller's own listings
+    async getSellerOffers(userId) {
+        const result = await pool.query(
+            `SELECT o.*, l.address, l.city, l.state, l.zip, l.price, l.id AS listing_id_ref
+             FROM offers o
+             JOIN listings l ON o.listing_id = l.id
+             WHERE l.user_id = $1
+             ORDER BY o.created_at DESC`,
+            [userId]
+        );
+        return result.rows;
+    },
+
     // Get offers made by a specific user (realtor)
     async getUserOffers(userId) {
         const result = await pool.query(
@@ -101,6 +114,19 @@ const db = {
             [userId]
         );
         return result.rows;
+    },
+
+    // Update listing fields
+    async updateListing(id, data) {
+        const { price, type, bedrooms, bathrooms, sqft, description } = data;
+        const result = await pool.query(
+            `UPDATE listings
+             SET price=$1, property_type=$2, bedrooms=$3, bathrooms=$4, sqft=$5, description=$6, updated_at=NOW()
+             WHERE id=$7
+             RETURNING *`,
+            [price, type, parseInt(bedrooms), parseFloat(bathrooms), parseInt(sqft), description, id]
+        );
+        return result.rows[0];
     },
 
     // Update listing status

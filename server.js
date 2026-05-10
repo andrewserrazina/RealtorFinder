@@ -346,6 +346,26 @@ app.post('/api/listings', auth.requireAuth, async (req, res) => {
     }
 });
 
+// Update a listing (owner only)
+app.put('/api/listings/:id', auth.requireAuth, async (req, res) => {
+    try {
+        const listing = await db.getListingById(req.params.id);
+        if (!listing) return res.status(404).json({ error: 'Listing not found' });
+        if (listing.user_id !== req.session.userId) return res.status(403).json({ error: 'Forbidden' });
+
+        const { price, type, bedrooms, bathrooms, sqft, description } = req.body;
+        if (!price || !type || !bedrooms || !bathrooms || !sqft || !description) {
+            return res.status(400).json({ error: 'All fields are required' });
+        }
+
+        const updated = await db.updateListing(req.params.id, { price, type, bedrooms, bathrooms, sqft, description });
+        res.json({ ...updated, date: formatDate(updated.created_at) });
+    } catch (error) {
+        console.error('Error updating listing:', error);
+        res.status(500).json({ error: 'Failed to update listing' });
+    }
+});
+
 // Submit offer for a listing (requires authentication)
 app.post('/api/listings/:id/offers', auth.requireAuth, async (req, res) => {
     try {
@@ -386,6 +406,17 @@ app.post('/api/listings/:id/offers', auth.requireAuth, async (req, res) => {
     } catch (error) {
         console.error('Error submitting offer:', error);
         res.status(500).json({ error: 'Failed to submit offer' });
+    }
+});
+
+// Get all offers received across a seller's listings (seller only)
+app.get('/api/seller/offers', auth.requireAuth, async (req, res) => {
+    try {
+        const offers = await db.getSellerOffers(req.session.userId);
+        res.json(offers);
+    } catch (error) {
+        console.error('Error fetching seller offers:', error);
+        res.status(500).json({ error: 'Failed to fetch offers' });
     }
 });
 
