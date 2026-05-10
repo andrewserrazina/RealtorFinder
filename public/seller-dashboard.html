@@ -495,6 +495,37 @@
             }
         }
 
+        /* Status badges */
+        .status-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+        }
+        .status-active    { background: #d1fae5; color: #065f46; }
+        .status-under-contract { background: #fef3c7; color: #92400e; }
+        .status-sold      { background: #e5e7eb; color: #374151; }
+        .status-pending   { background: #fef3c7; color: #92400e; }
+        .status-accepted  { background: #d1fae5; color: #065f46; }
+        .status-declined  { background: #fee2e2; color: #991b1b; }
+
+        /* Verification banner */
+        .verification-banner {
+            background: #fffbeb;
+            border: 1px solid #fcd34d;
+            border-radius: 10px;
+            padding: 1rem 1.5rem;
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+        .verification-banner p { font-size: 0.95rem; color: #92400e; }
+
         @media (max-width: 640px) {
             .header-container {
                 flex-wrap: wrap;
@@ -763,25 +794,48 @@
         let currentUser = null;
         let cachedListings = [];
 
+        // Verification banner
+        function renderVerificationBanner(user) {
+            const existing = document.getElementById('verificationBanner');
+            if (existing) existing.remove();
+            if (user.emailVerified) return;
+            const banner = document.createElement('div');
+            banner.id = 'verificationBanner';
+            banner.className = 'verification-banner';
+            banner.innerHTML = `
+                <p>📧 <strong>Verify your email</strong> — Check your inbox for a verification link to enable listing creation.</p>
+                <button class="btn btn-secondary" onclick="resendVerification()" style="padding:0.5rem 1rem;white-space:nowrap;">Resend Email</button>
+            `;
+            document.querySelector('.main-content').prepend(banner);
+        }
+
+        async function resendVerification() {
+            try {
+                await fetch(`${API_BASE_URL}/auth/resend-verification`, { method: 'POST', credentials: 'include' });
+                alert('Verification email sent! Check your inbox.');
+            } catch { alert('Failed to send email. Please try again.'); }
+        }
+
         // Load current user
         async function loadCurrentUser() {
             try {
-                const response = await fetch(`${API_BASE_URL}/auth/me`, {
-                    credentials: 'include'
-                });
-                
-                if (!response.ok) {
-                    window.location.href = '/login';
-                    return null;
-                }
-                
+                const response = await fetch(`${API_BASE_URL}/auth/me`, { credentials: 'include' });
+                if (!response.ok) { window.location.href = '/login'; return null; }
                 const user = await response.json();
                 currentUser = user;
-                
-                // Update header
                 document.getElementById('userName').textContent = `${user.firstName} ${user.lastName}`;
                 document.getElementById('userAvatar').textContent = user.firstName.charAt(0).toUpperCase();
-                
+                renderVerificationBanner(user);
+
+                // Show verified toast if redirected from email verification
+                if (new URLSearchParams(window.location.search).get('verified') === '1') {
+                    history.replaceState({}, '', window.location.pathname);
+                    const toast = document.createElement('div');
+                    toast.style.cssText = 'position:fixed;top:20px;right:20px;background:#d1fae5;color:#065f46;padding:1rem 1.5rem;border-radius:10px;font-weight:600;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,0.15)';
+                    toast.textContent = '✓ Email verified successfully!';
+                    document.body.appendChild(toast);
+                    setTimeout(() => toast.remove(), 4000);
+                }
                 return user;
             } catch (error) {
                 console.error('Error loading user:', error);
@@ -863,9 +917,10 @@
                 cachedListings = listings;
 
                 // Update stats
-                document.getElementById('statActiveListings').textContent = listings.length;
+                const activeCount = listings.filter(l => (l.status || 'active') === 'active').length;
+                document.getElementById('statActiveListings').textContent = activeCount;
                 document.getElementById('listingCount').textContent = listings.length;
-                
+
                 let totalOffers = 0;
                 listings.forEach(l => totalOffers += (l.offerCount || 0));
                 document.getElementById('statTotalOffers').textContent = totalOffers;
@@ -896,23 +951,30 @@
             
             container.innerHTML = listings.map(listing => {
                 const img = listing.image_urls && listing.image_urls.length > 0 ? listing.image_urls[0] : null;
+                const status = listing.status || 'active';
+                const statusLabel = { active: 'Active', under_contract: 'Under Contract', sold: 'Sold' }[status] || status;
+                const statusClass = 'status-' + status.replace('_', '-');
                 return `
                 <div class="listing-card">
                     <div class="listing-image" style="${img ? `background-image:url('${img}')` : ''}">${img ? '' : '🏡'}</div>
                     <div class="listing-details">
-                        <div class="listing-address">${listing.address}</div>
+                        <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.5rem;">
+                            <div class="listing-address" style="margin-bottom:0;">${listing.address}</div>
+                            <span class="status-badge ${statusClass}">${statusLabel}</span>
+                        </div>
                         <div class="listing-price">${listing.price}</div>
                         <div class="listing-meta">
                             <span>🛏️ ${listing.bedrooms} bd</span>
                             <span>🛁 ${listing.bathrooms} ba</span>
                             <span>📏 ${listing.sqft.toLocaleString()} sqft</span>
                         </div>
-                        <p style="margin-top: 1rem; color: #666;">${listing.description}</p>
-                        <p style="margin-top: 0.5rem; font-size: 0.9rem; color: #999;">${listing.date}</p>
+                        <p style="margin-top:1rem;color:#666;">${listing.description}</p>
+                        <p style="margin-top:0.5rem;font-size:0.9rem;color:#999;">${listing.date}</p>
                     </div>
                     <div class="listing-actions">
                         <button class="btn btn-primary" onclick="viewOffers(${listing.id})">${listing.offerCount || 0} Offers</button>
                         <button class="btn btn-outline" onclick="openEditModal(${listing.id})">Edit</button>
+                        ${status !== 'sold' ? `<button class="btn btn-outline" onclick="markListingSold(${listing.id})" style="font-size:0.85rem;">Mark Sold</button>` : ''}
                     </div>
                 </div>
             `}).join('');
@@ -974,10 +1036,16 @@
 
                 container.innerHTML = offers.map(offer => {
                     const fullAddress = `${offer.address}, ${offer.city}, ${offer.state} ${offer.zip}`;
+                    const offerStatus = offer.status || 'pending';
+                    const statusLabel = { pending: '⏳ Pending', accepted: '✓ Accepted', declined: '✗ Declined' }[offerStatus] || offerStatus;
+                    const statusClass = 'status-' + offerStatus;
                     return `
-                    <div class="offer-card">
+                    <div class="offer-card" style="${offerStatus === 'accepted' ? 'border-color:#10b981;' : offerStatus === 'declined' ? 'opacity:0.65;' : ''}">
                         <div class="offer-info">
-                            <h3>${offer.realtor_name}</h3>
+                            <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.25rem;">
+                                <h3 style="margin:0;">${offer.realtor_name}</h3>
+                                <span class="status-badge ${statusClass}">${statusLabel}</span>
+                            </div>
                             <div class="offer-brokerage">${offer.brokerage}</div>
                             <div class="offer-details">
                                 <div class="offer-detail"><strong>${offer.commission || 'N/A'}%</strong> Commission</div>
@@ -985,9 +1053,13 @@
                             </div>
                             <p style="margin-top:1rem;color:#666;">${offer.offer_details}</p>
                         </div>
-                        <div class="offer-actions">
-                            <a href="mailto:${offer.realtor_email}" class="btn btn-primary">Contact</a>
-                            <a href="tel:${offer.realtor_phone}" class="btn btn-outline">Call</a>
+                        <div class="offer-actions" style="flex-direction:column;">
+                            ${offerStatus === 'pending' ? `
+                                <button class="btn btn-primary" onclick="acceptOffer(${offer.id}, ${offer.listing_id})">Accept</button>
+                                <button class="btn btn-outline" onclick="declineOffer(${offer.id})">Decline</button>
+                            ` : ''}
+                            <a href="mailto:${offer.realtor_email}" class="btn btn-secondary" style="font-size:0.85rem;text-align:center;">Contact</a>
+                            <a href="tel:${offer.realtor_phone}" class="btn btn-outline" style="font-size:0.85rem;text-align:center;">Call</a>
                         </div>
                     </div>`;
                 }).join('');
@@ -995,6 +1067,53 @@
                 console.error('Error loading offers:', error);
                 container.innerHTML = '<p style="color:#999;padding:2rem;">Failed to load offers.</p>';
             }
+        }
+
+        // Accept an offer
+        async function acceptOffer(offerId, listingId) {
+            if (!confirm('Accept this offer? All other pending offers will be automatically declined and the listing marked as Under Contract.')) return;
+            try {
+                const res = await fetch(`${API_BASE_URL}/offers/${offerId}/status`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ action: 'accept' })
+                });
+                if (!res.ok) throw new Error('Failed');
+                loadDashboard();
+                loadOffers();
+                alert('✅ Offer accepted! The realtor has been notified.');
+            } catch { alert('Failed to accept offer. Please try again.'); }
+        }
+
+        // Decline an offer
+        async function declineOffer(offerId) {
+            if (!confirm('Decline this offer?')) return;
+            try {
+                const res = await fetch(`${API_BASE_URL}/offers/${offerId}/status`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ action: 'decline' })
+                });
+                if (!res.ok) throw new Error('Failed');
+                loadOffers();
+            } catch { alert('Failed to decline offer. Please try again.'); }
+        }
+
+        // Mark listing as sold
+        async function markListingSold(listingId) {
+            if (!confirm('Mark this listing as Sold? It will be removed from active listings.')) return;
+            try {
+                const res = await fetch(`${API_BASE_URL}/listings/${listingId}/status`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ status: 'sold' })
+                });
+                if (!res.ok) throw new Error('Failed');
+                loadDashboard();
+            } catch { alert('Failed to update listing. Please try again.'); }
         }
 
         // Edit listing

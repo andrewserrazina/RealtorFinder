@@ -215,6 +215,154 @@ const emailService = {
         }
     },
 
+    // Send password reset email
+    async sendPasswordResetEmail(email, resetUrl) {
+        try {
+            assertEmailConfig();
+        } catch (configError) {
+            console.error('❌ Email config error:', configError.message);
+            throw configError;
+        }
+
+        const msg = {
+            to: email,
+            from: FROM,
+            subject: 'Reset Your RealtorFinder Password',
+            html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                    <h1 style="color: #0A2540;">Reset Your Password</h1>
+                    <p>We received a request to reset your RealtorFinder password. Click the button below to set a new password:</p>
+                    <div style="text-align: center; margin: 30px 0;">
+                        <a href="${resetUrl}" style="background: #FF6B35; color: white; padding: 14px 32px; border-radius: 50px; text-decoration: none; font-weight: 600; font-size: 16px; display: inline-block;">Reset Password</a>
+                    </div>
+                    <p style="color: #666; font-size: 14px;">This link expires in 1 hour. If you didn't request a password reset, you can safely ignore this email.</p>
+                    <p style="color: #999; font-size: 12px; margin-top: 30px;">
+                        Or copy this link: <a href="${resetUrl}" style="color: #FF6B35;">${resetUrl}</a>
+                    </p>
+                </div>
+            `
+        };
+
+        try {
+            const [response] = await sgMail.send(msg);
+            console.log(`✅ Password reset email sent to ${email} (${response?.statusCode})`);
+        } catch (error) {
+            logSendgridError('Password reset email', error);
+            throw error;
+        }
+    },
+
+    // Send email verification link
+    async sendEmailVerification(email, verifyUrl) {
+        try {
+            assertEmailConfig();
+        } catch (configError) {
+            console.error('❌ Email config error:', configError.message);
+            throw configError;
+        }
+
+        const msg = {
+            to: email,
+            from: FROM,
+            subject: 'Verify Your RealtorFinder Email',
+            html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                    <h1 style="color: #0A2540;">Verify Your Email</h1>
+                    <p>Thanks for signing up for RealtorFinder! Please verify your email address to unlock all features.</p>
+                    <div style="text-align: center; margin: 30px 0;">
+                        <a href="${verifyUrl}" style="background: #FF6B35; color: white; padding: 14px 32px; border-radius: 50px; text-decoration: none; font-weight: 600; font-size: 16px; display: inline-block;">Verify Email</a>
+                    </div>
+                    <p style="color: #666; font-size: 14px;">This link expires in 48 hours.</p>
+                    <div style="background: #f8f6f3; padding: 20px; border-radius: 10px; margin-top: 30px;">
+                        <p style="margin: 0; color: #666; font-size: 14px;"><strong>RealtorFinder</strong> — The reverse marketplace where sellers list once and agents compete.</p>
+                    </div>
+                </div>
+            `
+        };
+
+        try {
+            const [response] = await sgMail.send(msg);
+            console.log(`✅ Verification email sent to ${email} (${response?.statusCode})`);
+        } catch (error) {
+            logSendgridError('Email verification', error);
+            throw error;
+        }
+    },
+
+    // Notify winning realtor that their offer was accepted
+    async sendOfferAcceptedEmail(offer, listing) {
+        try {
+            assertEmailConfig();
+        } catch (configError) {
+            console.error('❌ Email config error:', configError.message);
+            return;
+        }
+
+        const msg = {
+            to: offer.realtor_email,
+            from: FROM,
+            subject: `🏆 Your Offer Was Accepted — ${listing.address}`,
+            html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                    <h1 style="color: #0A2540;">🏆 Congratulations! Your Offer Was Accepted</h1>
+                    <p>Hi ${offer.realtor_name},</p>
+                    <p>Great news! The seller has selected your proposal for <strong>${listing.address}</strong>.</p>
+                    <div style="background: #f5f5f5; padding: 20px; border-radius: 10px; margin: 20px 0;">
+                        <h2 style="color: #0A2540; margin-top: 0;">${listing.address}</h2>
+                        <p><strong>Listed Price:</strong> ${listing.price}</p>
+                        <p><strong>Seller:</strong> ${listing.owner_name}</p>
+                        <p><strong>Seller Email:</strong> <a href="mailto:${listing.owner_email}">${listing.owner_email}</a></p>
+                        <p><strong>Seller Phone:</strong> ${listing.owner_phone}</p>
+                    </div>
+                    <p>The seller is expecting you to reach out. Contact them directly to move forward.</p>
+                    <p style="color: #666; font-size: 14px; margin-top: 30px;">Best regards,<br>The RealtorFinder Team</p>
+                </div>
+            `
+        };
+
+        try {
+            const [response] = await sgMail.send(msg);
+            console.log(`✅ Offer accepted email sent to ${offer.realtor_email} (${response?.statusCode})`);
+        } catch (error) {
+            logSendgridError('Offer accepted email', error);
+        }
+    },
+
+    // Notify a realtor that their offer was not selected
+    async sendOfferDeclinedEmail(offer, listing) {
+        try {
+            assertEmailConfig();
+        } catch (configError) {
+            console.error('❌ Email config error:', configError.message);
+            return;
+        }
+
+        const msg = {
+            to: offer.realtor_email,
+            from: FROM,
+            subject: `Update on Your Offer for ${listing.address}`,
+            html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                    <h1 style="color: #0A2540;">Update on Your Proposal</h1>
+                    <p>Hi ${offer.realtor_name},</p>
+                    <p>The seller at <strong>${listing.address}</strong> has selected another agent. Your proposal was not chosen for this listing.</p>
+                    <p>Don't be discouraged — there are plenty of other opportunities on the platform. Keep submitting competitive proposals!</p>
+                    <div style="text-align: center; margin: 30px 0;">
+                        <a href="${process.env.FRONTEND_URL || 'https://realtorfinder.net'}/dashboard/realtor" style="background: #FF6B35; color: white; padding: 14px 32px; border-radius: 50px; text-decoration: none; font-weight: 600; font-size: 16px; display: inline-block;">Browse Listings</a>
+                    </div>
+                    <p style="color: #666; font-size: 14px; margin-top: 30px;">Best regards,<br>The RealtorFinder Team</p>
+                </div>
+            `
+        };
+
+        try {
+            const [response] = await sgMail.send(msg);
+            console.log(`✅ Offer declined email sent to ${offer.realtor_email} (${response?.statusCode})`);
+        } catch (error) {
+            logSendgridError('Offer declined email', error);
+        }
+    },
+
     // Send offer confirmation to realtor
     async sendOfferConfirmation(listing, offer) {
         try {
