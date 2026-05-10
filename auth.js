@@ -30,7 +30,7 @@ const auth = {
     async verifyUser(email, password) {
         try {
             const result = await pool.query(
-                'SELECT id, email, password_hash, user_type, first_name, last_name, zip_code FROM users WHERE email = $1',
+                'SELECT id, email, password_hash, user_type, first_name, last_name, zip_code, email_verified FROM users WHERE email = $1',
                 [email]
             );
             
@@ -52,7 +52,8 @@ const auth = {
                 userType: user.user_type,
                 firstName: user.first_name,
                 lastName: user.last_name,
-                zipCode: user.zip_code
+                zipCode: user.zip_code,
+                emailVerified: user.email_verified
             };
         } catch (error) {
             throw error;
@@ -62,7 +63,7 @@ const auth = {
     // Get user by ID
     async getUserById(userId) {
         const result = await pool.query(
-            'SELECT id, email, user_type, first_name, last_name, zip_code, created_at FROM users WHERE id = $1',
+            'SELECT id, email, user_type, first_name, last_name, zip_code, email_verified, created_at FROM users WHERE id = $1',
             [userId]
         );
         return result.rows[0];

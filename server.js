@@ -6,6 +6,8 @@ const session = require('express-session');
 const pgSession = require('connect-pg-simple')(session);
 require('dotenv').config();
 const https = require('https');
+const crypto = require('crypto');
+const bcrypt = require('bcrypt');
 const { upload, uploadToCloudinary } = require('./config/cloudinary');
 
 const { db, pool } = require('./db');
@@ -129,14 +131,23 @@ app.post('/api/auth/signup', authLimiter, async (req, res) => {
         }
         
         const user = await auth.createUser(email, password, userType, firstName, lastName, zipCode);
-        
+
+        // Send verification email (non-blocking)
+        const verifyToken = crypto.randomBytes(32).toString('hex');
+        const verifyExpiry = new Date(Date.now() + 48 * 60 * 60 * 1000);
+        await db.setVerificationToken(user.id, verifyToken, verifyExpiry);
+        const baseUrl = process.env.FRONTEND_URL || `http://localhost:${PORT}`;
+        emailService.sendEmailVerification(user.email, `${baseUrl}/api/auth/verify-email?token=${verifyToken}`)
+            .catch(err => console.error('Verification email failed:', err.message));
+
         // Create session
         req.session.userId = user.id;
         req.session.userType = user.user_type;
         req.session.firstName = user.first_name;
         req.session.lastName = user.last_name;
         req.session.zipCode = user.zip_code;
-        
+        req.session.emailVerified = false;
+
         res.json({
             success: true,
             userId: user.id,
@@ -144,7 +155,8 @@ app.post('/api/auth/signup', authLimiter, async (req, res) => {
             userType: user.user_type,
             firstName: user.first_name,
             lastName: user.last_name,
-            zipCode: user.zip_code
+            zipCode: user.zip_code,
+            emailVerified: false
         });
     } catch (error) {
         console.error('Signup error:', error);
@@ -233,43 +245,140 @@ app.get('/api/auth/me', (req, res) => {
         userType: req.user.user_type,
         firstName: req.user.first_name,
         lastName: req.user.last_name,
-        zipCode: req.user.zip_code
+        zipCode: req.user.zip_code,
+        emailVerified: req.user.email_verified || false
     });
+});
+
+// Verify email via token link
+app.get('/api/auth/verify-email', async (req, res) => {
+    const { token } = req.query;
+    if (!token) return res.redirect('/login?error=missing_token');
+    try {
+        const user = await db.verifyEmailToken(token);
+        if (!user) return res.redirect('/login?error=invalid_token');
+        if (req.session?.userId === user.id) req.session.emailVerified = true;
+        const dash = user.user_type === 'seller' ? '/dashboard/seller' : '/dashboard/realtor';
+        res.redirect(`${dash}?verified=1`);
+    } catch (error) {
+        console.error('Email verification error:', error);
+        res.redirect('/login?error=verification_failed');
+    }
+});
+
+// Resend verification email
+app.post('/api/auth/resend-verification', auth.requireAuth, authLimiter, async (req, res) => {
+    try {
+        const token = crypto.randomBytes(32).toString('hex');
+        const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000);
+        await db.setVerificationToken(req.session.userId, token, expiresAt);
+        const baseUrl = process.env.FRONTEND_URL || `http://localhost:${PORT}`;
+        const verifyUrl = `${baseUrl}/api/auth/verify-email?token=${token}`;
+        await emailService.sendEmailVerification(req.user.email, verifyUrl);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Resend verification error:', error);
+        res.status(500).json({ error: 'Failed to send verification email' });
+    }
+});
+
+// Forgot password
+app.post('/api/auth/forgot-password', authLimiter, async (req, res) => {
+    const { email } = req.body;
+    if (!email || !email.includes('@')) {
+        return res.status(400).json({ error: 'Valid email required' });
+    }
+    try {
+        const user = await db.getUserByEmail(email);
+        // Always return success to prevent email enumeration
+        if (user) {
+            const token = crypto.randomBytes(32).toString('hex');
+            const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+            await db.createPasswordResetToken(user.id, token, expiresAt);
+            const baseUrl = process.env.FRONTEND_URL || `http://localhost:${PORT}`;
+            const resetUrl = `${baseUrl}/reset-password?token=${token}`;
+            await emailService.sendPasswordResetEmail(user.email, resetUrl).catch(err =>
+                console.error('Reset email send failed:', err.message)
+            );
+        }
+        res.json({ success: true, message: 'If that email is registered, a reset link has been sent.' });
+    } catch (error) {
+        console.error('Forgot password error:', error);
+        res.status(500).json({ error: 'Failed to process request' });
+    }
+});
+
+// Reset password
+app.post('/api/auth/reset-password', authLimiter, async (req, res) => {
+    const { token, newPassword } = req.body;
+    if (!token || !newPassword || newPassword.length < 8) {
+        return res.status(400).json({ error: 'Token and a password of at least 8 characters are required' });
+    }
+    try {
+        const row = await db.getUserByResetToken(token);
+        if (!row) return res.status(400).json({ error: 'Invalid or expired reset link' });
+        if (row.used) return res.status(400).json({ error: 'This reset link has already been used' });
+        if (new Date(row.expires_at) < new Date()) return res.status(400).json({ error: 'This reset link has expired' });
+
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        await db.updateUserPassword(row.id, hashedPassword);
+        await db.markResetTokenUsed(token);
+        res.json({ success: true, message: 'Password updated. You can now log in.' });
+    } catch (error) {
+        console.error('Reset password error:', error);
+        res.status(500).json({ error: 'Failed to reset password' });
+    }
 });
 
 // ===== LISTINGS ROUTES =====
 
+function formatListing(listing) {
+    return {
+        id: listing.id,
+        address: `${listing.address}, ${listing.city}, ${listing.state} ${listing.zip}`,
+        zip: listing.zip,
+        price: listing.price,
+        type: listing.property_type,
+        bedrooms: listing.bedrooms,
+        bathrooms: listing.bathrooms,
+        sqft: listing.sqft,
+        description: listing.description,
+        image_urls: listing.image_urls,
+        lat: listing.latitude ? parseFloat(listing.latitude) : null,
+        lng: listing.longitude ? parseFloat(listing.longitude) : null,
+        date: formatDate(listing.created_at),
+        offerCount: parseInt(listing.offer_count) || 0,
+        userId: listing.user_id,
+        status: listing.status || 'active'
+    };
+}
+
 // Get all listings
 app.get('/api/listings', async (req, res) => {
     try {
-        let listings;
-        
-        // If user is logged in and is a seller, show only their listings
+        // Sellers see only their own listings (all statuses)
         if (req.user && req.user.user_type === 'seller') {
-            listings = await db.getUserListings(req.user.id);
-        } else {
-            // Realtors and public users see all listings
-            listings = await db.getAllListings();
+            const listings = await db.getUserListings(req.user.id);
+            return res.json(listings.map(formatListing));
         }
-        
-        const formattedListings = listings.map(listing => ({
-            id: listing.id,
-            address: `${listing.address}, ${listing.city}, ${listing.state} ${listing.zip}`,
-            zip: listing.zip,
-            price: listing.price,
-            type: listing.property_type,
-            bedrooms: listing.bedrooms,
-            bathrooms: listing.bathrooms,
-            sqft: listing.sqft,
-            description: listing.description,
-            image_urls: listing.image_urls,
-            lat: listing.latitude ? parseFloat(listing.latitude) : null,
-            lng: listing.longitude ? parseFloat(listing.longitude) : null,
-            date: formatDate(listing.created_at),
-            offerCount: listing.offer_count,
-            userId: listing.user_id
-        }));
-        res.json(formattedListings);
+
+        // Realtors/public: filtered, paginated, active only
+        const { city, type, minPrice, maxPrice, minBeds, page = 1, limit = 20 } = req.query;
+        const filters = {};
+        if (city) filters.city = city;
+        if (type) filters.type = type;
+        if (minPrice) filters.minPrice = minPrice;
+        if (maxPrice) filters.maxPrice = maxPrice;
+        if (minBeds) filters.minBeds = minBeds;
+
+        const result = await db.getFilteredListings(filters, parseInt(page), Math.min(parseInt(limit), 50));
+        res.json({
+            listings: result.listings.map(formatListing),
+            total: result.total,
+            page: result.page,
+            limit: result.limit,
+            totalPages: Math.ceil(result.total / result.limit)
+        });
     } catch (error) {
         console.error('Error fetching listings:', error);
         res.status(500).json({ error: 'Failed to fetch listings' });
@@ -406,6 +515,72 @@ app.post('/api/listings/:id/offers', auth.requireAuth, async (req, res) => {
     } catch (error) {
         console.error('Error submitting offer:', error);
         res.status(500).json({ error: 'Failed to submit offer' });
+    }
+});
+
+// Accept or decline an offer (listing owner only)
+app.put('/api/offers/:id/status', auth.requireAuth, async (req, res) => {
+    try {
+        const offerId = parseInt(req.params.id);
+        const { action } = req.body; // 'accept' or 'decline'
+        if (!['accept', 'decline'].includes(action)) {
+            return res.status(400).json({ error: 'action must be accept or decline' });
+        }
+
+        // Verify the offer exists and belongs to the current seller's listing
+        const offerRows = await pool.query(
+            `SELECT o.*, l.user_id as listing_owner_id, l.address, l.city, l.state, l.zip, l.price,
+                    l.owner_name, l.owner_email, l.owner_phone
+             FROM offers o JOIN listings l ON o.listing_id = l.id WHERE o.id = $1`,
+            [offerId]
+        );
+        if (!offerRows.rows.length) return res.status(404).json({ error: 'Offer not found' });
+        const offerRow = offerRows.rows[0];
+        if (offerRow.listing_owner_id !== req.session.userId) return res.status(403).json({ error: 'Forbidden' });
+
+        if (action === 'accept') {
+            const declinedOffers = await db.acceptOffer(offerId, offerRow.listing_id);
+            // Notify winning realtor
+            emailService.sendOfferAcceptedEmail(offerRow, offerRow).catch(err =>
+                console.error('Offer accepted email failed:', err.message)
+            );
+            // Notify each losing realtor
+            declinedOffers.forEach(declined => {
+                emailService.sendOfferDeclinedEmail(declined, offerRow).catch(err =>
+                    console.error('Offer declined email failed:', err.message)
+                );
+            });
+            return res.json({ success: true, status: 'accepted' });
+        }
+
+        // decline single offer
+        await db.declineOffer(offerId);
+        emailService.sendOfferDeclinedEmail(offerRow, offerRow).catch(err =>
+            console.error('Offer declined email failed:', err.message)
+        );
+        res.json({ success: true, status: 'declined' });
+    } catch (error) {
+        console.error('Error updating offer status:', error);
+        res.status(500).json({ error: 'Failed to update offer status' });
+    }
+});
+
+// Update listing status (seller only: active | sold)
+app.put('/api/listings/:id/status', auth.requireAuth, async (req, res) => {
+    try {
+        const listing = await db.getListingById(req.params.id);
+        if (!listing) return res.status(404).json({ error: 'Listing not found' });
+        if (listing.user_id !== req.session.userId) return res.status(403).json({ error: 'Forbidden' });
+
+        const { status } = req.body;
+        if (!['active', 'under_contract', 'sold'].includes(status)) {
+            return res.status(400).json({ error: 'Invalid status' });
+        }
+        const updated = await db.updateListingStatus(req.params.id, status);
+        res.json({ success: true, status: updated.status });
+    } catch (error) {
+        console.error('Error updating listing status:', error);
+        res.status(500).json({ error: 'Failed to update listing status' });
     }
 });
 
@@ -551,6 +726,11 @@ app.get('/api/health', (req, res) => {
 });
 
 // ===== PAGE ROUTES (Must come AFTER API routes, BEFORE static files) =====
+
+// Password reset page
+app.get('/reset-password', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'reset-password.html'));
+});
 
 // Login page
 app.get('/login', (req, res) => {

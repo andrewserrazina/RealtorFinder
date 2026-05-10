@@ -497,6 +497,80 @@
             color: var(--accent);
         }
 
+        /* Status badges */
+        .status-badge {
+            display: inline-block;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        .status-pending  { background: #fef3c7; color: #92400e; }
+        .status-accepted { background: #d1fae5; color: #065f46; }
+        .status-declined { background: #fee2e2; color: #991b1b; }
+
+        /* Filter bar */
+        .filter-bar {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.25rem 1.5rem;
+            margin-bottom: 2rem;
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            align-items: flex-end;
+        }
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+        .filter-group label {
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .filter-group input, .filter-group select {
+            padding: 0.55rem 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.9rem;
+            min-width: 110px;
+        }
+
+        /* Pagination */
+        .pagination {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+            margin-top: 2.5rem;
+        }
+        .pagination .btn {
+            padding: 0.6rem 1.25rem;
+            font-size: 0.9rem;
+        }
+        .page-info { color: #666; font-size: 0.9rem; }
+
+        /* Verification banner */
+        .verification-banner {
+            background: #fffbeb;
+            border: 1px solid #fcd34d;
+            border-radius: 10px;
+            padding: 1rem 1.5rem;
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+        .verification-banner p { font-size: 0.9rem; color: #92400e; }
+
         @media (max-width: 1024px) {
             .listings-grid {
                 grid-template-columns: 1fr;
@@ -607,8 +681,52 @@
                 </div>
             </div>
 
+            <div class="filter-bar" id="filterBar">
+                <div class="filter-group">
+                    <label>City</label>
+                    <input type="text" id="filterCity" placeholder="Any city">
+                </div>
+                <div class="filter-group">
+                    <label>Type</label>
+                    <select id="filterType">
+                        <option value="">All Types</option>
+                        <option value="Single Family">Single Family</option>
+                        <option value="Condo">Condo</option>
+                        <option value="Townhouse">Townhouse</option>
+                        <option value="Multi-Family">Multi-Family</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Min Price ($)</label>
+                    <input type="number" id="filterMinPrice" placeholder="0" step="50000" style="min-width:120px;">
+                </div>
+                <div class="filter-group">
+                    <label>Max Price ($)</label>
+                    <input type="number" id="filterMaxPrice" placeholder="Any" step="50000" style="min-width:120px;">
+                </div>
+                <div class="filter-group">
+                    <label>Min Beds</label>
+                    <select id="filterMinBeds">
+                        <option value="">Any</option>
+                        <option value="2">2+</option>
+                        <option value="3">3+</option>
+                        <option value="4">4+</option>
+                        <option value="5">5+</option>
+                    </select>
+                </div>
+                <div class="filter-group" style="flex-direction:row;gap:0.5rem;">
+                    <button class="btn btn-primary" onclick="applyFilters()" style="padding:0.55rem 1.25rem;font-size:0.9rem;">Filter</button>
+                    <button class="btn btn-outline" onclick="clearFilters()" style="padding:0.55rem 1rem;font-size:0.9rem;">Clear</button>
+                </div>
+            </div>
+
             <h2 style="font-family: 'Crimson Pro', serif; font-size: 2rem; margin-bottom: 2rem;">Available Properties</h2>
             <div class="listings-grid" id="availableListings"></div>
+            <div class="pagination" id="listingPagination" style="display:none;">
+                <button class="btn btn-outline" id="prevPage" onclick="changePage(-1)">← Prev</button>
+                <span class="page-info" id="pageInfo">Page 1 of 1</span>
+                <button class="btn btn-outline" id="nextPage" onclick="changePage(1)">Next →</button>
+            </div>
         </section>
 
         <!-- Map View -->
@@ -628,19 +746,14 @@
 
         <!-- My Bids View -->
         <section id="mybids-view" class="view-section">
-            <h2 style="font-family: 'Crimson Pro', serif; font-size: 2rem; margin-bottom: 2rem;">My Active Bids</h2>
+            <h2 style="font-family: 'Crimson Pro', serif; font-size: 2rem; margin-bottom: 2rem;">My Bids</h2>
             <div class="bids-list" id="myBidsList"></div>
         </section>
 
         <!-- Won Listings View -->
         <section id="won-view" class="view-section">
             <h2 style="font-family: 'Crimson Pro', serif; font-size: 2rem; margin-bottom: 2rem;">Won Listings</h2>
-            <div class="empty-state">
-                <div class="empty-state-icon">🏆</div>
-                <h3>Coming soon</h3>
-                <p>Once a seller selects you as their agent, your won listings will appear here.<br>In the meantime, keep submitting proposals!</p>
-                <button class="btn btn-primary" style="margin-top: 1.5rem;" onclick="document.querySelector('[data-view=browse]').click()">Browse Listings</button>
-            </div>
+            <div class="bids-list" id="wonListingsList"></div>
         </section>
     </div>
 
@@ -694,25 +807,53 @@
         const RADIUS_MILES = 25;
         const RADIUS_METERS = RADIUS_MILES * 1609.34;
 
+        // Filter & pagination state
+        let currentPage = 1;
+        let totalPages = 1;
+        let currentFilters = {};
+
+        // Verification banner
+        function renderVerificationBanner(user) {
+            const existing = document.getElementById('verificationBanner');
+            if (existing) existing.remove();
+            if (user.emailVerified) return;
+            const banner = document.createElement('div');
+            banner.id = 'verificationBanner';
+            banner.className = 'verification-banner';
+            banner.innerHTML = `
+                <p>📧 <strong>Verify your email</strong> — Check your inbox for a verification link to enable proposal submissions.</p>
+                <button class="btn btn-secondary" onclick="resendVerification()" style="padding:0.5rem 1rem;white-space:nowrap;font-size:0.85rem;">Resend Email</button>
+            `;
+            document.querySelector('.dashboard-container').prepend(banner);
+        }
+
+        async function resendVerification() {
+            try {
+                await fetch(`${API_BASE_URL}/auth/resend-verification`, { method: 'POST', credentials: 'include' });
+                alert('Verification email sent! Check your inbox.');
+            } catch { alert('Failed to send email. Please try again.'); }
+        }
+
         // Load current user
         async function loadCurrentUser() {
             try {
-                const response = await fetch(`${API_BASE_URL}/auth/me`, {
-                    credentials: 'include'
-                });
-                
-                if (!response.ok) {
-                    window.location.href = '/login';
-                    return null;
-                }
-                
+                const response = await fetch(`${API_BASE_URL}/auth/me`, { credentials: 'include' });
+                if (!response.ok) { window.location.href = '/login'; return null; }
                 const user = await response.json();
                 currentUser = user;
-                
-                // Update header
                 document.getElementById('userName').textContent = `${user.firstName} ${user.lastName}`;
                 document.getElementById('userAvatar').textContent = user.firstName.charAt(0).toUpperCase();
-                
+                renderVerificationBanner(user);
+
+                // Verified toast
+                if (new URLSearchParams(window.location.search).get('verified') === '1') {
+                    history.replaceState({}, '', window.location.pathname);
+                    const toast = document.createElement('div');
+                    toast.style.cssText = 'position:fixed;top:20px;right:20px;background:#d1fae5;color:#065f46;padding:1rem 1.5rem;border-radius:10px;font-weight:600;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,0.15)';
+                    toast.textContent = '✓ Email verified successfully!';
+                    document.body.appendChild(toast);
+                    setTimeout(() => toast.remove(), 4000);
+                }
                 return user;
             } catch (error) {
                 console.error('Error loading user:', error);
@@ -796,23 +937,84 @@
             }
         });
 
+        // Filter functions
+        function applyFilters() {
+            const f = {};
+            const city = document.getElementById('filterCity').value.trim();
+            const type = document.getElementById('filterType').value;
+            const minPrice = document.getElementById('filterMinPrice').value;
+            const maxPrice = document.getElementById('filterMaxPrice').value;
+            const minBeds = document.getElementById('filterMinBeds').value;
+            if (city) f.city = city;
+            if (type) f.type = type;
+            if (minPrice) f.minPrice = minPrice;
+            if (maxPrice) f.maxPrice = maxPrice;
+            if (minBeds) f.minBeds = minBeds;
+            currentFilters = f;
+            currentPage = 1;
+            loadListings();
+        }
+
+        function clearFilters() {
+            document.getElementById('filterCity').value = '';
+            document.getElementById('filterType').value = '';
+            document.getElementById('filterMinPrice').value = '';
+            document.getElementById('filterMaxPrice').value = '';
+            document.getElementById('filterMinBeds').value = '';
+            currentFilters = {};
+            currentPage = 1;
+            loadListings();
+        }
+
+        function changePage(delta) {
+            const next = currentPage + delta;
+            if (next < 1 || next > totalPages) return;
+            currentPage = next;
+            loadListings();
+        }
+
+        // Load & render listings with current filters + page
+        async function loadListings() {
+            try {
+                const params = new URLSearchParams({ page: currentPage, limit: 20, ...currentFilters });
+                const listingsRes = await fetch(`${API_BASE_URL}/listings?${params}`, { credentials: 'include' });
+                const data = await listingsRes.json();
+
+                // API returns { listings, total, page, totalPages } for realtors
+                const listings = data.listings || data;
+                allListings = listings;
+
+                totalPages = data.totalPages || 1;
+                document.getElementById('statAvailable').textContent = data.total ?? listings.length;
+                renderListings(listings);
+
+                // Pagination controls
+                const pagination = document.getElementById('listingPagination');
+                if (totalPages > 1) {
+                    pagination.style.display = 'flex';
+                    document.getElementById('pageInfo').textContent = `Page ${currentPage} of ${totalPages}`;
+                    document.getElementById('prevPage').disabled = currentPage <= 1;
+                    document.getElementById('nextPage').disabled = currentPage >= totalPages;
+                } else {
+                    pagination.style.display = 'none';
+                }
+            } catch (error) {
+                console.error('Error loading listings:', error);
+            }
+        }
+
         // Load Dashboard
         async function loadDashboard() {
             try {
-                const [listingsRes, bidsRes] = await Promise.all([
-                    fetch(`${API_BASE_URL}/listings`, { credentials: 'include' }),
-                    fetch(`${API_BASE_URL}/my-offers`, { credentials: 'include' })
-                ]);
-                const listings = await listingsRes.json();
+                const bidsRes = await fetch(`${API_BASE_URL}/my-offers`, { credentials: 'include' });
                 const myBidsData = await bidsRes.json();
 
-                allListings = listings; // cache for map
+                const activeBids = myBidsData.filter(b => b.status === 'pending' || !b.status);
+                document.getElementById('statMyBids').textContent = activeBids.length;
 
-                document.getElementById('statAvailable').textContent = listings.length;
-                document.getElementById('statMyBids').textContent = myBidsData.length;
-
-                renderListings(listings);
                 renderMyBids(myBidsData);
+                renderWonListings(myBidsData);
+                await loadListings();
             } catch (error) {
                 console.error('Error loading dashboard:', error);
             }
@@ -856,22 +1058,30 @@
 
         function renderMyBids(myBidsData) {
             const container = document.getElementById('myBidsList');
-            if (!myBidsData || myBidsData.length === 0) {
+            // My Bids shows everything except accepted (those go to Won Listings)
+            const bids = (myBidsData || []).filter(b => b.status !== 'accepted');
+
+            if (!bids.length) {
                 container.innerHTML = `
                     <div class="empty-state">
                         <div class="empty-state-icon">📬</div>
-                        <h3>No active bids</h3>
+                        <h3>No bids yet</h3>
                         <p>Start bidding on listings to build your business</p>
                     </div>
                 `;
                 return;
             }
-            
-            container.innerHTML = myBidsData.map(bid => {
+
+            container.innerHTML = bids.map(bid => {
                 const fullAddress = `${bid.address}, ${bid.city}, ${bid.state} ${bid.zip}`;
-                
+                const status = bid.status || 'pending';
+                const statusInfo = {
+                    pending:  { cls: 'status-pending',  label: '⏳ Pending Review' },
+                    declined: { cls: 'status-declined', label: '✗ Not Selected' }
+                }[status] || { cls: 'status-pending', label: '⏳ Pending Review' };
+
                 return `
-                    <div class="bid-card">
+                    <div class="bid-card" style="${status === 'declined' ? 'opacity:0.7;' : ''}">
                         <div class="bid-info">
                             <h3>${fullAddress}</h3>
                             <div class="bid-price">${bid.price}</div>
@@ -879,11 +1089,47 @@
                                 <span><strong>${bid.commission}%</strong> commission</span>
                                 <span>${bid.brokerage}</span>
                             </div>
-                            <div class="bid-status">⏳ Pending Review</div>
+                            <span class="status-badge ${statusInfo.cls}" style="margin-top:0.75rem;display:inline-block;">${statusInfo.label}</span>
                         </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderWonListings(myBidsData) {
+            const container = document.getElementById('wonListingsList');
+            const won = (myBidsData || []).filter(b => b.status === 'accepted');
+
+            if (!won.length) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🏆</div>
+                        <h3>No won listings yet</h3>
+                        <p>Once a seller accepts your proposal, your won listings appear here.</p>
+                        <button class="btn btn-primary" style="margin-top:1.5rem;" onclick="document.querySelector('[data-view=browse]').click()">Browse Listings</button>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = won.map(bid => {
+                const fullAddress = `${bid.address}, ${bid.city}, ${bid.state} ${bid.zip}`;
+                return `
+                    <div class="bid-card" style="border-color: var(--success); border-width: 2px;">
+                        <div class="bid-info">
+                            <h3>${fullAddress}</h3>
+                            <div class="bid-price">${bid.price}</div>
+                            <div class="bid-details">
+                                <span><strong>${bid.commission}%</strong> commission</span>
+                                <span>${bid.brokerage}</span>
+                            </div>
+                            <span class="status-badge status-accepted" style="margin-top:0.75rem;display:inline-block;">🏆 You're the agent!</span>
+                            ${bid.owner_name ? `<div style="margin-top:0.75rem;font-size:0.9rem;color:#444;"><strong>Seller:</strong> ${bid.owner_name} · <a href="mailto:${bid.owner_email}">${bid.owner_email}</a> · <a href="tel:${bid.owner_phone}">${bid.owner_phone}</a></div>` : ''}
+                        </div>
+                        ${bid.owner_email ? `
                         <div>
-                            <button class="btn btn-outline">View Details</button>
-                        </div>
+                            <a href="mailto:${bid.owner_email}" class="btn btn-primary" style="text-align:center;">Contact Seller</a>
+                        </div>` : ''}
                     </div>
                 `;
             }).join('');
