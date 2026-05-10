@@ -4,6 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>For Realtors - RealtorFinder.net</title>
+    <meta name="description" content="Access motivated home sellers actively seeking representation. Submit competitive proposals, win quality listings, and grow your business without cold calling.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://realtorfinder.net/realtors.html">
+    <meta property="og:title" content="RealtorFinder for Realtors — Win Listings by Bidding on Them">
+    <meta property="og:description" content="Stop cold calling. Access exclusive listing opportunities where motivated sellers are actively seeking representation. Register for early access.">
+    <meta property="og:image" content="https://realtorfinder.net/og-image-realtors.png">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="RealtorFinder for Realtors — Win Listings by Bidding on Them">
+    <meta name="twitter:description" content="Stop cold calling. Access exclusive listing opportunities where motivated sellers are actively seeking representation. Register for early access.">
+    <meta name="twitter:image" content="https://realtorfinder.net/og-image-realtors.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Work+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -1063,7 +1073,7 @@
             <div class="hero-content">
                 <h1>Win More Listings by <span class="highlight">Bidding</span> on Them</h1>
                 <p>Stop cold calling sellers. Access exclusive listing opportunities where motivated home sellers are actively seeking representation.</p>
-                <p class="launch-tag"><strong>Launching Q2 2026</strong> • Register now for early platform access</p>
+                <p class="launch-tag"><strong>Launching Late Q3 2026</strong> • Register now for early platform access</p>
                 
                 <form id="realtorWaitlistForm" class="email-form">
                     <input type="email" id="realtorEmailInput" placeholder="Enter your email address" required>
@@ -1074,7 +1084,7 @@
 
                 <div class="hero-stats">
                     <div class="stat-box">
-                        <div class="stat-number">Q2</div>
+                        <div class="stat-number">Late Q3</div>
                         <div class="stat-label">2026 Launch</div>
                     </div>
                     <div class="stat-box">
@@ -1243,7 +1253,7 @@
     <section class="cta">
         <div class="cta-container">
             <h2>Get Early Platform Access</h2>
-            <p>Register now and be among the first agents to access listing opportunities when we launch in Q2 2026.</p>
+            <p>Register now and be among the first agents to access listing opportunities when we launch in late Q3 2026.</p>
             <form id="ctaRealtorForm" class="cta-inline-form">
                 <input type="email" id="ctaRealtorEmail" placeholder="Enter your email address" required>
                 <button type="submit">Register Interest</button>
@@ -1329,10 +1339,10 @@
                 // Show success message
                 successMessage.classList.add('show');
                 emailInput.value = '';
-                
-                // Optional: Track conversion with Google Analytics
-                // gtag('event', 'waitlist_signup', { user_type: 'realtor' });
-                
+
+                gtag('event', 'waitlist_signup', { user_type: 'realtor' });
+                fbq('track', 'Lead', { user_type: 'realtor' });
+
             } catch (error) {
                 errorMessage.textContent = 'Something went wrong. Please try again.';
                 errorMessage.classList.add('show');
@@ -1359,11 +1369,13 @@
                 const response = await fetch('/api/waitlist', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email })
+                    body: JSON.stringify({ email, type: 'realtor' })
                 });
                 if (!response.ok) throw new Error('Signup failed');
                 successMessage.classList.add('show');
                 emailInput.value = '';
+                gtag('event', 'waitlist_signup', { user_type: 'realtor' });
+                fbq('track', 'Lead', { user_type: 'realtor' });
             } catch (error) {
                 errorMessage.classList.add('show');
             } finally {

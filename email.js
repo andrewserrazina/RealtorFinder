@@ -64,7 +64,7 @@ const emailService = {
                     <p>Thanks for joining our waitlist! You're among the first to know about our upcoming launch.</p>
                     
                     <div style="background: linear-gradient(135deg, #FF6B35 0%, #0A2540 100%); padding: 30px; border-radius: 10px; margin: 30px 0; color: white;">
-                        <h2 style="color: white; margin-top: 0;">🚀 Launching Q2 2026</h2>
+                        <h2 style="color: white; margin-top: 0;">🚀 Launching Late Q3 2026</h2>
                         ${isSeller ? `
                             <p style="font-size: 16px;">As a seller, you'll be able to:</p>
                             <ul style="font-size: 15px; line-height: 1.8;">
