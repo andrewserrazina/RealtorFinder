@@ -19,8 +19,9 @@ const PORT = process.env.PORT || 3000;
 app.set('trust proxy', 1);
 
 // Middleware
+const allowedOrigin = process.env.FRONTEND_URL || true; // set FRONTEND_URL=https://yourdomain.com in production
 app.use(cors({
-    origin: true,
+    origin: allowedOrigin,
     credentials: true
 }));
 app.use(express.json());
@@ -46,25 +47,6 @@ app.use(session({
         sameSite: 'lax' // Back to lax since same domain
     }
 }));
-
-// Debug logging - remove after fixing
-app.use((req, res, next) => {
-    console.log('📍 Request:', req.method, req.path);
-    console.log('🍪 Session ID:', req.sessionID);
-    console.log('👤 Session User:', req.session ? req.session.userId : 'none');
-    console.log('🍪 Cookies received:', req.headers.cookie);
-    
-    // Log response headers
-    const originalSetHeader = res.setHeader;
-    res.setHeader = function(name, value) {
-        if (name.toLowerCase() === 'set-cookie') {
-            console.log('📤 Setting cookie:', value);
-        }
-        return originalSetHeader.apply(this, arguments);
-    };
-    
-    next();
-});
 
 // Attach user to all requests
 app.use(auth.attachUser);
@@ -107,12 +89,30 @@ function geocodeAddress(address) {
     });
 }
 
+// Simple in-memory rate limiter (windowMs = window in ms, max = max requests per window per IP)
+function createRateLimiter(windowMs, max, message) {
+    const hits = new Map();
+    setInterval(() => hits.clear(), windowMs).unref();
+    return (req, res, next) => {
+        const key = req.ip;
+        const count = (hits.get(key) || 0) + 1;
+        hits.set(key, count);
+        if (count > max) {
+            return res.status(429).json({ error: message || 'Too many requests. Please try again later.' });
+        }
+        next();
+    };
+}
+
+const authLimiter     = createRateLimiter(15 * 60 * 1000, 20, 'Too many attempts. Please try again in 15 minutes.');
+const waitlistLimiter = createRateLimiter(60 * 60 * 1000, 5,  'Too many signups from this IP. Please try again later.');
+
 // ===== API ROUTES =====
 
 // ===== AUTHENTICATION ROUTES =====
 
 // Signup
-app.post('/api/auth/signup', async (req, res) => {
+app.post('/api/auth/signup', authLimiter, async (req, res) => {
     try {
         const { email, password, userType, firstName, lastName, zipCode } = req.body;
         
@@ -156,7 +156,7 @@ app.post('/api/auth/signup', async (req, res) => {
 });
 
 // Login
-app.post('/api/auth/login', async (req, res) => {
+app.post('/api/auth/login', authLimiter, async (req, res) => {
     try {
         console.log('🔑 Login attempt for:', req.body.email);
         
@@ -400,9 +400,16 @@ app.get('/api/my-offers', auth.requireAuth, async (req, res) => {
     }
 });
 
-// Get offers for a listing (owner only - in production, add auth)
-app.get('/api/listings/:id/offers', async (req, res) => {
+// Get offers for a listing (listing owner only)
+app.get('/api/listings/:id/offers', auth.requireAuth, async (req, res) => {
     try {
+        const listing = await db.getListingById(req.params.id);
+        if (!listing) {
+            return res.status(404).json({ error: 'Listing not found' });
+        }
+        if (listing.user_id !== req.session.userId) {
+            return res.status(403).json({ error: 'Forbidden' });
+        }
         const offers = await db.getOffersByListingId(req.params.id);
         res.json(offers);
     } catch (error) {
@@ -454,7 +461,7 @@ app.post('/api/listings/:id/images', upload.array('images', 10), async (req, res
 });
 
 // Waitlist signup endpoint
-app.post('/api/waitlist', async (req, res) => {
+app.post('/api/waitlist', waitlistLimiter, async (req, res) => {
     try {
         const { email, type } = req.body; // type = 'seller' or 'realtor'
         
@@ -572,7 +579,15 @@ app.use(express.static('public', {
 
 // ===== ERROR HANDLING =====
 
-// Error handling middleware
+// 404 — no route matched
+app.use((req, res) => {
+    if (req.path.startsWith('/api/')) {
+        return res.status(404).json({ error: 'Not found' });
+    }
+    res.status(404).sendFile(require('path').join(__dirname, 'public', 'landing.html'));
+});
+
+// Unhandled errors
 app.use((err, req, res, next) => {
     console.error('Server error:', err);
     res.status(500).json({ 
