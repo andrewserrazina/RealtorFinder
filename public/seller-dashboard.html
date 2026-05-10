@@ -837,14 +837,15 @@
 
         async function loadOffers(listingId = null) {
             try {
-                const listings = await (await fetch(`${API_BASE_URL}/listings`)).json();
+                const listings = await (await fetch(`${API_BASE_URL}/listings`, { credentials: 'include' })).json();
                 const container = document.getElementById('offersContainer');
                 let allOffers = [];
-                
+
                 for (const listing of listings) {
                     if (listingId && listing.id !== listingId) continue;
-                    
-                    const offersResponse = await fetch(`${API_BASE_URL}/listings/${listing.id}/offers`);
+
+                    const offersResponse = await fetch(`${API_BASE_URL}/listings/${listing.id}/offers`, { credentials: 'include' });
+                    if (!offersResponse.ok) continue;
                     const offers = await offersResponse.json();
                     
                     offers.forEach(offer => {
