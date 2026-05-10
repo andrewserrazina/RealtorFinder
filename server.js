@@ -246,7 +246,8 @@ app.get('/api/auth/me', (req, res) => {
         firstName: req.user.first_name,
         lastName: req.user.last_name,
         zipCode: req.user.zip_code,
-        emailVerified: req.user.email_verified || false
+        emailVerified: req.user.email_verified || false,
+        isAdmin: req.user.is_admin || false
     });
 });
 
@@ -606,6 +607,28 @@ app.get('/api/my-offers', auth.requireAuth, async (req, res) => {
     }
 });
 
+// Withdraw a pending offer (realtor only — must be own offer, must be pending)
+app.delete('/api/offers/:id', auth.requireAuth, async (req, res) => {
+    try {
+        const offerId = parseInt(req.params.id);
+        const offerRow = await pool.query(
+            `SELECT * FROM offers WHERE id = $1`,
+            [offerId]
+        );
+        if (!offerRow.rows.length) return res.status(404).json({ error: 'Offer not found' });
+        const offer = offerRow.rows[0];
+        if (offer.user_id !== req.session.userId) return res.status(403).json({ error: 'Forbidden' });
+        if (offer.status && offer.status !== 'pending') {
+            return res.status(400).json({ error: 'Only pending offers can be withdrawn' });
+        }
+        await db.deleteOffer(offerId);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error withdrawing offer:', error);
+        res.status(500).json({ error: 'Failed to withdraw offer' });
+    }
+});
+
 // Get offers for a listing (listing owner only)
 app.get('/api/listings/:id/offers', auth.requireAuth, async (req, res) => {
     try {
@@ -621,6 +644,22 @@ app.get('/api/listings/:id/offers', auth.requireAuth, async (req, res) => {
     } catch (error) {
         console.error('Error fetching offers:', error);
         res.status(500).json({ error: 'Failed to fetch offers' });
+    }
+});
+
+// Replace/update image list for a listing (seller only) — used to remove images
+app.put('/api/listings/:id/images', auth.requireAuth, async (req, res) => {
+    try {
+        const listing = await db.getListingById(req.params.id);
+        if (!listing) return res.status(404).json({ error: 'Listing not found' });
+        if (listing.user_id !== req.session.userId) return res.status(403).json({ error: 'Forbidden' });
+        const { imageUrls } = req.body;
+        if (!Array.isArray(imageUrls)) return res.status(400).json({ error: 'imageUrls must be an array' });
+        await db.updateListingImages(req.params.id, imageUrls);
+        res.json({ success: true, imageUrls });
+    } catch (error) {
+        console.error('Error updating listing images:', error);
+        res.status(500).json({ error: 'Failed to update images' });
     }
 });
 
@@ -663,6 +702,113 @@ app.post('/api/listings/:id/images', upload.array('images', 10), async (req, res
             error: 'Failed to upload images',
             details: error.message 
         });
+    }
+});
+
+// Soft-delete a listing (seller only)
+app.delete('/api/listings/:id', auth.requireAuth, async (req, res) => {
+    try {
+        const listing = await db.getListingById(req.params.id);
+        if (!listing) return res.status(404).json({ error: 'Listing not found' });
+        if (listing.user_id !== req.session.userId) return res.status(403).json({ error: 'Forbidden' });
+        await db.softDeleteListing(req.params.id);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error deleting listing:', error);
+        res.status(500).json({ error: 'Failed to delete listing' });
+    }
+});
+
+// Get user profile
+app.get('/api/profile', auth.requireAuth, async (req, res) => {
+    try {
+        const profile = await db.getProfile(req.session.userId);
+        res.json(profile);
+    } catch (error) {
+        console.error('Error fetching profile:', error);
+        res.status(500).json({ error: 'Failed to fetch profile' });
+    }
+});
+
+// Update user profile
+app.put('/api/profile', auth.requireAuth, async (req, res) => {
+    try {
+        const updated = await db.updateProfile(req.session.userId, req.body);
+        res.json(updated);
+    } catch (error) {
+        console.error('Error updating profile:', error);
+        res.status(500).json({ error: 'Failed to update profile' });
+    }
+});
+
+// ===== ADMIN ROUTES =====
+
+function requireAdmin(req, res, next) {
+    if (!req.user) return res.status(401).json({ error: 'Authentication required' });
+    if (!req.user.is_admin) return res.status(403).json({ error: 'Admin access required' });
+    next();
+}
+
+app.get('/api/admin/stats', requireAdmin, async (req, res) => {
+    try {
+        const stats = await db.getAdminStats();
+        res.json(stats);
+    } catch (error) {
+        console.error('Admin stats error:', error);
+        res.status(500).json({ error: 'Failed to fetch stats' });
+    }
+});
+
+app.get('/api/admin/users', requireAdmin, async (req, res) => {
+    try {
+        const users = await db.getAllUsersAdmin();
+        res.json(users);
+    } catch (error) {
+        console.error('Admin users error:', error);
+        res.status(500).json({ error: 'Failed to fetch users' });
+    }
+});
+
+app.get('/api/admin/listings', requireAdmin, async (req, res) => {
+    try {
+        const listings = await db.getAllListingsAdmin();
+        res.json(listings);
+    } catch (error) {
+        console.error('Admin listings error:', error);
+        res.status(500).json({ error: 'Failed to fetch listings' });
+    }
+});
+
+app.put('/api/admin/users/:id/deactivate', requireAdmin, async (req, res) => {
+    try {
+        const user = await db.deactivateUser(parseInt(req.params.id));
+        if (!user) return res.status(404).json({ error: 'User not found' });
+        res.json({ success: true, user });
+    } catch (error) {
+        console.error('Admin deactivate error:', error);
+        res.status(500).json({ error: 'Failed to deactivate user' });
+    }
+});
+
+app.put('/api/admin/users/:id/reactivate', requireAdmin, async (req, res) => {
+    try {
+        const user = await db.reactivateUser(parseInt(req.params.id));
+        if (!user) return res.status(404).json({ error: 'User not found' });
+        res.json({ success: true, user });
+    } catch (error) {
+        console.error('Admin reactivate error:', error);
+        res.status(500).json({ error: 'Failed to reactivate user' });
+    }
+});
+
+app.delete('/api/admin/listings/:id', requireAdmin, async (req, res) => {
+    try {
+        const listing = await db.adminDeleteListing(parseInt(req.params.id));
+        if (!listing) return res.status(404).json({ error: 'Listing not found' });
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Admin delete listing error:', error);
+        res.status(500).json({ error: 'Failed to delete listing' });
     }
 });
 
@@ -776,6 +922,19 @@ app.get('/dashboard/realtor', (req, res) => {
         return res.redirect('/dashboard/seller');
     }
     res.sendFile(path.join(__dirname, 'public', 'realtor-dashboard.html'));
+});
+
+// Legal pages
+app.get('/privacy', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'privacy.html'));
+});
+app.get('/terms', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'terms.html'));
+});
+
+// Admin panel
+app.get('/admin', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'admin.html'));
 });
 
 // Main application (legacy)

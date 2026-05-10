@@ -656,6 +656,7 @@
             <div class="tab" data-view="map">Map View</div>
             <div class="tab" data-view="mybids">My Bids</div>
             <div class="tab" data-view="won">Won Listings</div>
+            <div class="tab" data-view="profile">My Profile</div>
         </div>
     </div>
 
@@ -754,6 +755,41 @@
         <section id="won-view" class="view-section">
             <h2 style="font-family: 'Crimson Pro', serif; font-size: 2rem; margin-bottom: 2rem;">Won Listings</h2>
             <div class="bids-list" id="wonListingsList"></div>
+        </section>
+
+        <!-- Profile View -->
+        <section id="profile-view" class="view-section">
+            <h2 style="font-family: 'Crimson Pro', serif; font-size: 2rem; margin-bottom: 2rem;">My Profile</h2>
+            <div style="max-width:600px;">
+                <div id="profileMessage" style="display:none;padding:0.875rem 1rem;border-radius:8px;margin-bottom:1rem;font-weight:500;font-size:0.9rem;"></div>
+                <form id="profileForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Phone</label>
+                            <input type="tel" name="phone" placeholder="(555) 555-5555">
+                        </div>
+                        <div class="form-group">
+                            <label>License Number</label>
+                            <input type="text" name="licenseNumber" placeholder="RE-123456">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Years of Experience</label>
+                            <input type="number" name="yearsExperience" placeholder="5" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label>Service Areas</label>
+                            <input type="text" name="serviceAreas" placeholder="Boston, Cambridge, Brookline">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Bio</label>
+                        <textarea name="bio" rows="4" style="width:100%;padding:0.875rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:1rem;resize:vertical;" placeholder="Tell sellers about yourself and your experience…"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="padding:1rem 2rem;">Save Profile</button>
+                </form>
+            </div>
         </section>
     </div>
 
@@ -1091,6 +1127,7 @@
                             </div>
                             <span class="status-badge ${statusInfo.cls}" style="margin-top:0.75rem;display:inline-block;">${statusInfo.label}</span>
                         </div>
+                        ${status === 'pending' ? `<div><button class="btn btn-outline" onclick="withdrawOffer(${bid.id})" style="font-size:0.85rem;border-color:#ef4444;color:#ef4444;">Withdraw</button></div>` : ''}
                     </div>
                 `;
             }).join('');
@@ -1276,10 +1313,67 @@
 
         // ===== END MAP FUNCTIONS =====
 
+        // ===== OFFER WITHDRAWAL =====
+        async function withdrawOffer(offerId) {
+            if (!confirm('Withdraw this offer? It will be permanently removed.')) return;
+            try {
+                const res = await fetch(`${API_BASE_URL}/offers/${offerId}`, {
+                    method: 'DELETE',
+                    credentials: 'include'
+                });
+                if (!res.ok) throw new Error((await res.json()).error);
+                loadDashboard();
+            } catch (err) { alert(`Failed to withdraw offer: ${err.message}`); }
+        }
+
+        // ===== PROFILE =====
+        async function loadProfile() {
+            try {
+                const res = await fetch(`${API_BASE_URL}/profile`, { credentials: 'include' });
+                if (!res.ok) return;
+                const p = await res.json();
+                const form = document.getElementById('profileForm');
+                form.elements.phone.value = p.phone || '';
+                form.elements.licenseNumber.value = p.license_number || '';
+                form.elements.yearsExperience.value = p.years_experience || '';
+                form.elements.serviceAreas.value = p.service_areas || '';
+                form.elements.bio.value = p.bio || '';
+            } catch {}
+        }
+
+        document.getElementById('profileForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const form = e.target;
+            const msgEl = document.getElementById('profileMessage');
+            const data = {
+                phone: form.elements.phone.value.trim(),
+                licenseNumber: form.elements.licenseNumber.value.trim(),
+                yearsExperience: form.elements.yearsExperience.value,
+                serviceAreas: form.elements.serviceAreas.value.trim(),
+                bio: form.elements.bio.value.trim()
+            };
+            try {
+                const res = await fetch(`${API_BASE_URL}/profile`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify(data)
+                });
+                if (!res.ok) throw new Error((await res.json()).error);
+                msgEl.textContent = 'Profile saved!';
+                msgEl.style.cssText = 'display:block;background:rgba(16,185,129,0.1);color:#065f46;';
+            } catch (err) {
+                msgEl.textContent = err.message || 'Failed to save profile.';
+                msgEl.style.cssText = 'display:block;background:rgba(239,68,68,0.1);color:#991b1b;';
+            }
+            setTimeout(() => { msgEl.style.display = 'none'; }, 4000);
+        });
+
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
             loadCurrentUser();
             loadDashboard();
+            loadProfile();
         });
     </script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>

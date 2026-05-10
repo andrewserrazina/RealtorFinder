@@ -786,6 +786,15 @@
                 </div>
                 <button type="submit" class="btn btn-primary" style="width:100%;padding:1rem;margin-top:1rem;">Save Changes</button>
             </form>
+            <div style="margin-top:1.5rem;border-top:1px solid #e5e1db;padding-top:1.5rem;">
+                <h3 style="font-size:1rem;font-weight:600;color:#0a2540;margin-bottom:1rem;">Photos</h3>
+                <div id="editImagePreviews" style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-bottom:1rem;"></div>
+                <div style="display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap;">
+                    <input type="file" id="editImageInput" accept="image/*" multiple style="flex:1;font-size:0.9rem;">
+                    <button type="button" class="btn btn-outline" onclick="uploadEditImages()" style="font-size:0.85rem;padding:0.5rem 1rem;">Upload</button>
+                </div>
+                <p id="editImageStatus" style="margin-top:0.5rem;font-size:0.85rem;color:#666;"></p>
+            </div>
         </div>
     </div>
 
@@ -975,6 +984,7 @@
                         <button class="btn btn-primary" onclick="viewOffers(${listing.id})">${listing.offerCount || 0} Offers</button>
                         <button class="btn btn-outline" onclick="openEditModal(${listing.id})">Edit</button>
                         ${status !== 'sold' ? `<button class="btn btn-outline" onclick="markListingSold(${listing.id})" style="font-size:0.85rem;">Mark Sold</button>` : ''}
+                        <button class="btn btn-outline" onclick="deleteListing(${listing.id})" style="font-size:0.85rem;border-color:#ef4444;color:#ef4444;">Delete</button>
                     </div>
                 </div>
             `}).join('');
@@ -1116,6 +1126,19 @@
             } catch { alert('Failed to update listing. Please try again.'); }
         }
 
+        // Delete listing
+        async function deleteListing(listingId) {
+            if (!confirm('Delete this listing? This cannot be undone.')) return;
+            try {
+                const res = await fetch(`${API_BASE_URL}/listings/${listingId}`, {
+                    method: 'DELETE',
+                    credentials: 'include'
+                });
+                if (!res.ok) throw new Error('Failed to delete');
+                loadDashboard();
+            } catch { alert('Failed to delete listing. Please try again.'); }
+        }
+
         // Edit listing
         function openEditModal(listingId) {
             const listing = cachedListings.find(l => l.id === listingId);
@@ -1129,6 +1152,57 @@
             form.elements.sqft.value = listing.sqft;
             form.elements.description.value = listing.description;
             document.getElementById('editListingModal').classList.add('active');
+            document.getElementById('editImageStatus').textContent = '';
+            document.getElementById('editImageInput').value = '';
+            // Show current images with remove buttons
+            const previews = document.getElementById('editImagePreviews');
+            const imgs = listing.image_urls || [];
+            previews.innerHTML = imgs.map((url, i) => `
+                <div style="position:relative;">
+                    <img src="${url}" style="width:80px;height:60px;object-fit:cover;border-radius:6px;border:1px solid #e5e1db;">
+                    <button type="button" onclick="removeEditImage(${listingId},'${url}')" style="position:absolute;top:-6px;right:-6px;background:#ef4444;color:white;border:none;border-radius:50%;width:18px;height:18px;font-size:11px;cursor:pointer;line-height:1;display:flex;align-items:center;justify-content:center;">✕</button>
+                </div>`).join('');
+        }
+
+        async function removeEditImage(listingId, urlToRemove) {
+            const listing = cachedListings.find(l => l.id === listingId);
+            if (!listing) return;
+            const newUrls = (listing.image_urls || []).filter(u => u !== urlToRemove);
+            try {
+                const res = await fetch(`${API_BASE_URL}/listings/${listingId}/images`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ imageUrls: newUrls })
+                });
+                if (!res.ok) throw new Error('Failed to remove image');
+                listing.image_urls = newUrls;
+                openEditModal(listingId);
+            } catch { alert('Failed to remove image.'); }
+        }
+
+        async function uploadEditImages() {
+            const form = document.getElementById('editListingForm');
+            const listingId = form.id_value;
+            const input = document.getElementById('editImageInput');
+            const status = document.getElementById('editImageStatus');
+            if (!input.files.length) { status.textContent = 'Please select images first.'; return; }
+            status.textContent = 'Uploading…';
+            const fd = new FormData();
+            for (const f of input.files) fd.append('images', f);
+            try {
+                const res = await fetch(`${API_BASE_URL}/listings/${listingId}/images`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    body: fd
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error);
+                status.textContent = `✓ ${data.imageUrls.length} photo(s) uploaded`;
+                input.value = '';
+                const listing = cachedListings.find(l => l.id === listingId);
+                if (listing) { listing.image_urls = data.imageUrls; openEditModal(listingId); }
+            } catch (err) { status.textContent = `Upload failed: ${err.message}`; }
         }
 
         function closeEditModal() {

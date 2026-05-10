@@ -1,0 +1,979 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - RealtorFinder</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@600;700;900&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #0A2540;
+            --accent: #FF6B35;
+            --soft-bg: #F8F6F3;
+            --border: #E5E1DB;
+            --success: #10B981;
+            --text: #1A1A1A;
+            --text-muted: #6B7280;
+            --white: #FFFFFF;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--soft-bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        /* ── Header ── */
+        header {
+            background: var(--primary);
+            padding: 0 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 64px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+        }
+
+        .header-logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+        }
+
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: var(--accent);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        .logo-text {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--white);
+            line-height: 1;
+        }
+
+        .logo-text span {
+            color: var(--accent);
+        }
+
+        .header-badge {
+            background: rgba(255,107,53,0.18);
+            color: var(--accent);
+            font-size: 0.7rem;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            padding: 2px 8px;
+            border-radius: 4px;
+            border: 1px solid rgba(255,107,53,0.3);
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .header-user {
+            color: rgba(255,255,255,0.7);
+            font-size: 0.875rem;
+        }
+
+        .btn-logout {
+            background: rgba(255,255,255,0.08);
+            color: var(--white);
+            border: 1px solid rgba(255,255,255,0.2);
+            padding: 7px 16px;
+            border-radius: 8px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s, border-color 0.2s;
+        }
+
+        .btn-logout:hover {
+            background: rgba(255,255,255,0.15);
+            border-color: rgba(255,255,255,0.35);
+        }
+
+        /* ── Loading overlay ── */
+        #loading-overlay {
+            position: fixed;
+            inset: 0;
+            background: var(--soft-bg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        /* ── Main content ── */
+        main {
+            max-width: 1300px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem 4rem;
+        }
+
+        .page-title {
+            font-family: 'Crimson Pro', serif;
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 0.25rem;
+        }
+
+        .page-subtitle {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-bottom: 2rem;
+        }
+
+        /* ── Stats row ── */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 1rem;
+            margin-bottom: 2.5rem;
+        }
+
+        @media (max-width: 1100px) {
+            .stats-grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+
+        @media (max-width: 640px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        .stat-card {
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.25rem 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+            transition: box-shadow 0.2s;
+        }
+
+        .stat-card:hover {
+            box-shadow: 0 4px 16px rgba(10,37,64,0.08);
+        }
+
+        .stat-icon {
+            font-size: 1.3rem;
+            line-height: 1;
+        }
+
+        .stat-value {
+            font-family: 'Crimson Pro', serif;
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary);
+            line-height: 1;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* ── Tabs ── */
+        .tabs {
+            display: flex;
+            gap: 0;
+            border-bottom: 2px solid var(--border);
+            margin-bottom: 1.5rem;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            cursor: pointer;
+            position: relative;
+            transition: color 0.2s;
+        }
+
+        .tab-btn::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--accent);
+            transform: scaleX(0);
+            transition: transform 0.2s;
+        }
+
+        .tab-btn.active {
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .tab-btn.active::after {
+            transform: scaleX(1);
+        }
+
+        .tab-btn:hover:not(.active) {
+            color: var(--text);
+        }
+
+        /* ── Tab panels ── */
+        .tab-panel {
+            display: none;
+        }
+
+        .tab-panel.active {
+            display: block;
+        }
+
+        /* ── Table container ── */
+        .table-wrapper {
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .table-header {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+
+        .table-title {
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: var(--primary);
+        }
+
+        .table-count {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            background: var(--soft-bg);
+            padding: 3px 10px;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+        }
+
+        .table-scroll {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 700px;
+        }
+
+        thead th {
+            background: var(--soft-bg);
+            padding: 0.75rem 1rem;
+            text-align: left;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            border-bottom: 1px solid var(--border);
+            white-space: nowrap;
+        }
+
+        tbody tr {
+            border-bottom: 1px solid var(--border);
+            transition: background 0.15s;
+        }
+
+        tbody tr:last-child {
+            border-bottom: none;
+        }
+
+        tbody tr:hover {
+            background: rgba(248,246,243,0.7);
+        }
+
+        tbody td {
+            padding: 0.85rem 1rem;
+            font-size: 0.875rem;
+            color: var(--text);
+            vertical-align: middle;
+        }
+
+        .td-muted {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+        }
+
+        /* ── Badges ── */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .badge-seller {
+            background: #EFF6FF;
+            color: #1D4ED8;
+            border: 1px solid #BFDBFE;
+        }
+
+        .badge-realtor {
+            background: #FFF7ED;
+            color: #C2410C;
+            border: 1px solid #FED7AA;
+        }
+
+        .badge-buyer {
+            background: #F0FDF4;
+            color: #166534;
+            border: 1px solid #BBF7D0;
+        }
+
+        .badge-admin {
+            background: #FAF5FF;
+            color: #7C3AED;
+            border: 1px solid #DDD6FE;
+        }
+
+        .badge-active {
+            background: #ECFDF5;
+            color: #065F46;
+            border: 1px solid #A7F3D0;
+        }
+
+        .badge-deactivated {
+            background: #FEF2F2;
+            color: #991B1B;
+            border: 1px solid #FECACA;
+        }
+
+        .badge-status-active {
+            background: #ECFDF5;
+            color: #065F46;
+            border: 1px solid #A7F3D0;
+        }
+
+        .badge-status-under_contract {
+            background: #FEFCE8;
+            color: #854D0E;
+            border: 1px solid #FDE68A;
+        }
+
+        .badge-status-sold {
+            background: #F3F4F6;
+            color: #4B5563;
+            border: 1px solid #D1D5DB;
+        }
+
+        .badge-status-deleted {
+            background: #FEF2F2;
+            color: #991B1B;
+            border: 1px solid #FECACA;
+            text-decoration: line-through;
+        }
+
+        /* ── Verified icons ── */
+        .verified-yes {
+            color: var(--success);
+            font-size: 1rem;
+        }
+
+        .verified-no {
+            color: #EF4444;
+            font-size: 1rem;
+        }
+
+        /* ── Action buttons ── */
+        .btn-action {
+            padding: 5px 12px;
+            border-radius: 7px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.78rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            transition: opacity 0.2s, transform 0.1s;
+        }
+
+        .btn-action:hover {
+            opacity: 0.85;
+        }
+
+        .btn-action:active {
+            transform: scale(0.97);
+        }
+
+        .btn-action:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-deactivate {
+            background: #FEF2F2;
+            color: #991B1B;
+            border: 1px solid #FECACA;
+        }
+
+        .btn-reactivate {
+            background: #ECFDF5;
+            color: #065F46;
+            border: 1px solid #A7F3D0;
+        }
+
+        .btn-delete {
+            background: #FEF2F2;
+            color: #991B1B;
+            border: 1px solid #FECACA;
+        }
+
+        /* ── Toast ── */
+        #toast {
+            position: fixed;
+            bottom: 1.5rem;
+            right: 1.5rem;
+            background: var(--primary);
+            color: var(--white);
+            padding: 0.75rem 1.25rem;
+            border-radius: 10px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            box-shadow: 0 8px 24px rgba(10,37,64,0.25);
+            z-index: 9999;
+            transform: translateY(10px);
+            opacity: 0;
+            transition: opacity 0.3s, transform 0.3s;
+            pointer-events: none;
+            max-width: 320px;
+        }
+
+        #toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        #toast.toast-success {
+            background: #065F46;
+        }
+
+        #toast.toast-error {
+            background: #991B1B;
+        }
+
+        /* ── Empty state ── */
+        .empty-state {
+            padding: 3rem;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        /* ── Address cell ── */
+        .address-cell {
+            max-width: 220px;
+        }
+
+        .address-main {
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .address-sub {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+        }
+
+        .name-cell {
+            font-weight: 500;
+        }
+
+        .id-cell {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Loading overlay -->
+<div id="loading-overlay">
+    <div class="spinner"></div>
+    <p class="loading-text">Checking authentication…</p>
+</div>
+
+<!-- Header -->
+<header>
+    <a class="header-logo" href="/admin.html">
+        <div class="logo-icon">🏠</div>
+        <span class="logo-text">Realtor<span>Finder</span></span>
+        <span class="header-badge">Admin</span>
+    </a>
+    <div class="header-right">
+        <span class="header-user" id="header-email"></span>
+        <button class="btn-logout" onclick="logout()">Log out</button>
+    </div>
+</header>
+
+<!-- Main -->
+<main id="main-content" style="display:none;">
+    <h1 class="page-title">Admin Panel</h1>
+    <p class="page-subtitle">Manage users, listings, and platform activity.</p>
+
+    <!-- Stats row -->
+    <div class="stats-grid" id="stats-grid">
+        <div class="stat-card">
+            <span class="stat-icon">👥</span>
+            <span class="stat-value" id="stat-total-users">—</span>
+            <span class="stat-label">Total Users</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-icon">🏡</span>
+            <span class="stat-value" id="stat-sellers">—</span>
+            <span class="stat-label">Sellers</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-icon">🤝</span>
+            <span class="stat-value" id="stat-realtors">—</span>
+            <span class="stat-label">Realtors</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-icon">📋</span>
+            <span class="stat-value" id="stat-total-listings">—</span>
+            <span class="stat-label">Total Listings</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-icon">✅</span>
+            <span class="stat-value" id="stat-active-listings">—</span>
+            <span class="stat-label">Active Listings</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-icon">💬</span>
+            <span class="stat-value" id="stat-offers">—</span>
+            <span class="stat-label">Offers</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-icon">⏳</span>
+            <span class="stat-value" id="stat-waitlist">—</span>
+            <span class="stat-label">Waitlist</span>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('users', this)">Users</button>
+        <button class="tab-btn" onclick="switchTab('listings', this)">Listings</button>
+    </div>
+
+    <!-- Users tab -->
+    <div class="tab-panel active" id="tab-users">
+        <div class="table-wrapper">
+            <div class="table-header">
+                <span class="table-title">All Users</span>
+                <span class="table-count" id="users-count">Loading…</span>
+            </div>
+            <div class="table-scroll">
+                <table id="users-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Type</th>
+                            <th>Verified</th>
+                            <th>Status</th>
+                            <th>Joined</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="users-tbody">
+                        <tr><td colspan="8" class="empty-state">Loading users…</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Listings tab -->
+    <div class="tab-panel" id="tab-listings">
+        <div class="table-wrapper">
+            <div class="table-header">
+                <span class="table-title">All Listings</span>
+                <span class="table-count" id="listings-count">Loading…</span>
+            </div>
+            <div class="table-scroll">
+                <table id="listings-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Address</th>
+                            <th>Price</th>
+                            <th>Type</th>
+                            <th>Status</th>
+                            <th>Offers</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="listings-tbody">
+                        <tr><td colspan="8" class="empty-state">Loading listings…</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</main>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+    // ── Helpers ──────────────────────────────────────────────────────────────
+
+    function showToast(msg, type = 'success') {
+        const t = document.getElementById('toast');
+        t.textContent = msg;
+        t.className = 'show toast-' + type;
+        clearTimeout(t._timer);
+        t._timer = setTimeout(() => { t.className = ''; }, 3200);
+    }
+
+    function fmtDate(iso) {
+        if (!iso) return '—';
+        return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+
+    function fmtPrice(n) {
+        if (n == null) return '—';
+        return '$' + Number(n).toLocaleString('en-US');
+    }
+
+    function escHtml(str) {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    // ── Auth ─────────────────────────────────────────────────────────────────
+
+    async function checkAuth() {
+        try {
+            const res = await fetch('/api/auth/me', { credentials: 'include' });
+            if (!res.ok) {
+                window.location.href = '/login.html';
+                return;
+            }
+            const user = await res.json();
+
+            // Not logged in (no emailVerified field)
+            if (user.emailVerified === undefined && user.email_verified === undefined) {
+                window.location.href = '/login.html';
+                return;
+            }
+
+            // Logged in but not admin
+            if (!user.is_admin) {
+                window.location.href = '/';
+                return;
+            }
+
+            // All good
+            document.getElementById('header-email').textContent = user.email || '';
+            document.getElementById('loading-overlay').style.display = 'none';
+            document.getElementById('main-content').style.display = 'block';
+
+            loadStats();
+            loadUsers();
+            loadListings();
+        } catch (err) {
+            window.location.href = '/login.html';
+        }
+    }
+
+    async function logout() {
+        try {
+            await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+        } catch (_) {}
+        window.location.href = '/login.html';
+    }
+
+    // ── Stats ─────────────────────────────────────────────────────────────────
+
+    async function loadStats() {
+        try {
+            const res = await fetch('/api/admin/stats', { credentials: 'include' });
+            const d = await res.json();
+            document.getElementById('stat-total-users').textContent = d.total_users ?? '—';
+            document.getElementById('stat-sellers').textContent = d.total_sellers ?? '—';
+            document.getElementById('stat-realtors').textContent = d.total_realtors ?? '—';
+            document.getElementById('stat-total-listings').textContent = d.total_listings ?? '—';
+            document.getElementById('stat-active-listings').textContent = d.active_listings ?? '—';
+            document.getElementById('stat-offers').textContent = d.total_offers ?? '—';
+            document.getElementById('stat-waitlist').textContent = d.waitlist_count ?? '—';
+        } catch (err) {
+            console.error('Stats error', err);
+        }
+    }
+
+    // ── Tab switching ─────────────────────────────────────────────────────────
+
+    function switchTab(name, btn) {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('tab-' + name).classList.add('active');
+    }
+
+    // ── Users ─────────────────────────────────────────────────────────────────
+
+    let usersData = [];
+
+    async function loadUsers() {
+        try {
+            const res = await fetch('/api/admin/users', { credentials: 'include' });
+            usersData = await res.json();
+            renderUsers();
+        } catch (err) {
+            document.getElementById('users-tbody').innerHTML =
+                '<tr><td colspan="8" class="empty-state">Failed to load users.</td></tr>';
+        }
+    }
+
+    function typeBadge(type) {
+        const map = {
+            seller: 'badge-seller',
+            realtor: 'badge-realtor',
+            buyer: 'badge-buyer',
+            admin: 'badge-admin',
+        };
+        const cls = map[type] || 'badge-buyer';
+        return `<span class="badge ${cls}">${escHtml(type || 'unknown')}</span>`;
+    }
+
+    function renderUsers() {
+        const tbody = document.getElementById('users-tbody');
+        document.getElementById('users-count').textContent = usersData.length + ' users';
+
+        if (!usersData.length) {
+            tbody.innerHTML = '<tr><td colspan="8" class="empty-state">No users found.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = usersData.map(u => {
+            const name = [u.first_name, u.last_name].filter(Boolean).join(' ') || '—';
+            const verified = (u.email_verified || u.emailVerified)
+                ? '<span class="verified-yes" title="Verified">✓</span>'
+                : '<span class="verified-no" title="Not verified">✗</span>';
+            const active = u.is_active !== false;
+            const statusBadge = active
+                ? '<span class="badge badge-active">Active</span>'
+                : '<span class="badge badge-deactivated">Deactivated</span>';
+            const actionBtn = active
+                ? `<button class="btn-action btn-deactivate" onclick="deactivateUser(${u.id}, this)">Deactivate</button>`
+                : `<button class="btn-action btn-reactivate" onclick="reactivateUser(${u.id}, this)">Reactivate</button>`;
+
+            return `<tr>
+                <td class="id-cell">#${u.id}</td>
+                <td class="name-cell">${escHtml(name)}</td>
+                <td>${escHtml(u.email)}</td>
+                <td>${typeBadge(u.user_type)}</td>
+                <td style="text-align:center">${verified}</td>
+                <td>${statusBadge}</td>
+                <td class="td-muted">${fmtDate(u.created_at)}</td>
+                <td>${actionBtn}</td>
+            </tr>`;
+        }).join('');
+    }
+
+    async function deactivateUser(id, btn) {
+        if (!confirm('Deactivate this user?')) return;
+        btn.disabled = true;
+        try {
+            const res = await fetch(`/api/admin/users/${id}/deactivate`, {
+                method: 'PUT',
+                credentials: 'include'
+            });
+            if (!res.ok) throw new Error();
+            const idx = usersData.findIndex(u => u.id === id);
+            if (idx !== -1) usersData[idx].is_active = false;
+            renderUsers();
+            showToast('User deactivated.', 'success');
+        } catch {
+            showToast('Failed to deactivate user.', 'error');
+            btn.disabled = false;
+        }
+    }
+
+    async function reactivateUser(id, btn) {
+        if (!confirm('Reactivate this user?')) return;
+        btn.disabled = true;
+        try {
+            const res = await fetch(`/api/admin/users/${id}/reactivate`, {
+                method: 'PUT',
+                credentials: 'include'
+            });
+            if (!res.ok) throw new Error();
+            const idx = usersData.findIndex(u => u.id === id);
+            if (idx !== -1) usersData[idx].is_active = true;
+            renderUsers();
+            showToast('User reactivated.', 'success');
+        } catch {
+            showToast('Failed to reactivate user.', 'error');
+            btn.disabled = false;
+        }
+    }
+
+    // ── Listings ──────────────────────────────────────────────────────────────
+
+    let listingsData = [];
+
+    async function loadListings() {
+        try {
+            const res = await fetch('/api/admin/listings', { credentials: 'include' });
+            listingsData = await res.json();
+            renderListings();
+        } catch (err) {
+            document.getElementById('listings-tbody').innerHTML =
+                '<tr><td colspan="8" class="empty-state">Failed to load listings.</td></tr>';
+        }
+    }
+
+    function listingStatusBadge(listing) {
+        const isDeleted = !!listing.deleted_at;
+        if (isDeleted) {
+            return '<span class="badge badge-status-deleted">Deleted</span>';
+        }
+        const status = listing.status || 'active';
+        const labelMap = {
+            active: 'Active',
+            under_contract: 'Under Contract',
+            sold: 'Sold',
+        };
+        const label = labelMap[status] || status;
+        const cls = 'badge-status-' + status;
+        return `<span class="badge ${cls}">${escHtml(label)}</span>`;
+    }
+
+    function renderListings() {
+        const tbody = document.getElementById('listings-tbody');
+        document.getElementById('listings-count').textContent = listingsData.length + ' listings';
+
+        if (!listingsData.length) {
+            tbody.innerHTML = '<tr><td colspan="8" class="empty-state">No listings found.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = listingsData.map(l => {
+            const addressLine = escHtml(l.address || '—');
+            const cityStateZip = [l.city, l.state, l.zip].filter(Boolean).join(', ');
+            const isDeleted = !!l.deleted_at;
+            const actionBtn = isDeleted
+                ? '<span class="td-muted" style="font-size:0.78rem">Removed</span>'
+                : `<button class="btn-action btn-delete" onclick="deleteListing(${l.id}, this)">Delete</button>`;
+
+            return `<tr>
+                <td class="id-cell">#${l.id}</td>
+                <td class="address-cell">
+                    <div class="address-main">${addressLine}</div>
+                    ${cityStateZip ? `<div class="address-sub">${escHtml(cityStateZip)}</div>` : ''}
+                </td>
+                <td style="white-space:nowrap">${fmtPrice(l.price)}</td>
+                <td class="td-muted">${escHtml(l.property_type || '—')}</td>
+                <td>${listingStatusBadge(l)}</td>
+                <td style="text-align:center">${l.offer_count ?? 0}</td>
+                <td class="td-muted">${fmtDate(l.created_at)}</td>
+                <td>${actionBtn}</td>
+            </tr>`;
+        }).join('');
+    }
+
+    async function deleteListing(id, btn) {
+        if (!confirm('Permanently delete this listing? This cannot be undone.')) return;
+        btn.disabled = true;
+        try {
+            const res = await fetch(`/api/admin/listings/${id}`, {
+                method: 'DELETE',
+                credentials: 'include'
+            });
+            if (!res.ok) throw new Error();
+            const idx = listingsData.findIndex(l => l.id === id);
+            if (idx !== -1) listingsData[idx].deleted_at = new Date().toISOString();
+            renderListings();
+            showToast('Listing deleted.', 'success');
+        } catch {
+            showToast('Failed to delete listing.', 'error');
+            btn.disabled = false;
+        }
+    }
+
+    // ── Boot ──────────────────────────────────────────────────────────────────
+    checkAuth();
+</script>
+</body>
+</html>

@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terms of Service - RealtorFinder.net</title>
+    <meta name="description" content="Read the Terms of Service governing your use of RealtorFinder.net, the reverse real estate marketplace.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Work+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #0A2540;
+            --accent: #FF6B35;
+            --soft-bg: #F8F6F3;
+            --text: #1A1A1A;
+            --text-light: #5A5A5A;
+            --border: #E5E1DB;
+            --success: #10B981;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Work Sans', sans-serif;
+            background: var(--soft-bg);
+            color: var(--text);
+            line-height: 1.7;
+            overflow-x: hidden;
+        }
+
+        /* Navigation */
+        nav {
+            position: sticky;
+            top: 0;
+            width: 100%;
+            background: rgba(248, 246, 243, 0.96);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border);
+            z-index: 1000;
+        }
+
+        .nav-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1.25rem 3rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.8rem;
+            font-weight: 900;
+            color: var(--primary);
+            letter-spacing: -0.5px;
+            text-decoration: none;
+        }
+
+        .logo span {
+            color: var(--accent);
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2.5rem;
+            align-items: center;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: var(--text);
+            font-weight: 500;
+            font-size: 0.95rem;
+            transition: color 0.2s;
+        }
+
+        .nav-links a:hover {
+            color: var(--accent);
+        }
+
+        .nav-cta {
+            background: var(--primary);
+            color: #fff !important;
+            padding: 0.55rem 1.4rem;
+            border-radius: 6px;
+            font-weight: 600 !important;
+            transition: background 0.2s !important;
+        }
+
+        .nav-cta:hover {
+            background: var(--accent) !important;
+            color: #fff !important;
+        }
+
+        /* Page Header */
+        .page-header {
+            background: var(--primary);
+            color: #fff;
+            padding: 5rem 2rem 3.5rem;
+            text-align: center;
+        }
+
+        .page-header h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(2rem, 5vw, 3rem);
+            font-weight: 900;
+            margin-bottom: 0.75rem;
+        }
+
+        .page-header p {
+            font-size: 1.05rem;
+            opacity: 0.75;
+            font-weight: 300;
+        }
+
+        /* Content */
+        .content-wrapper {
+            max-width: 860px;
+            margin: 0 auto;
+            padding: 3.5rem 2rem 5rem;
+        }
+
+        .meta-note {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-left: 4px solid var(--accent);
+            border-radius: 8px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 3rem;
+            font-size: 0.9rem;
+            color: var(--text-light);
+        }
+
+        .meta-note strong {
+            color: var(--text);
+        }
+
+        section {
+            margin-bottom: 3rem;
+        }
+
+        h2 {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--border);
+        }
+
+        p {
+            margin-bottom: 1rem;
+            color: var(--text);
+        }
+
+        ul, ol {
+            padding-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+            color: var(--text);
+        }
+
+        a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        .highlight-box {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1.5rem 1.75rem;
+            margin: 1.5rem 0;
+        }
+
+        .highlight-box h3 {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 0.75rem;
+        }
+
+        .highlight-box p:last-child,
+        .highlight-box ul:last-child {
+            margin-bottom: 0;
+        }
+
+        .warning-box {
+            background: #fff8f5;
+            border: 1px solid #ffd5c2;
+            border-left: 4px solid var(--accent);
+            border-radius: 8px;
+            padding: 1.25rem 1.5rem;
+            margin: 1.5rem 0;
+        }
+
+        .warning-box p {
+            margin-bottom: 0;
+            font-size: 0.95rem;
+        }
+
+        /* Footer */
+        footer {
+            background: var(--primary);
+            color: rgba(255, 255, 255, 0.7);
+            padding: 3rem 2rem;
+            text-align: center;
+        }
+
+        .footer-logo {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.6rem;
+            font-weight: 900;
+            color: #fff;
+            text-decoration: none;
+            display: inline-block;
+            margin-bottom: 1.25rem;
+        }
+
+        .footer-logo span {
+            color: var(--accent);
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            flex-wrap: wrap;
+            margin-bottom: 1.5rem;
+        }
+
+        .footer-links a {
+            color: rgba(255, 255, 255, 0.65);
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        .footer-links a:hover {
+            color: var(--accent);
+        }
+
+        .footer-bottom {
+            font-size: 0.82rem;
+            opacity: 0.5;
+            margin-bottom: 0;
+        }
+
+        @media (max-width: 768px) {
+            .nav-container {
+                padding: 1rem 1.5rem;
+            }
+
+            .nav-links {
+                gap: 1.25rem;
+            }
+
+            .nav-links a:not(.nav-cta) {
+                display: none;
+            }
+
+            .content-wrapper {
+                padding: 2.5rem 1.25rem 4rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Navigation -->
+    <nav>
+        <div class="nav-container">
+            <a href="/" class="logo">Realtor<span>Finder</span>.net</a>
+            <div class="nav-links">
+                <a href="/">For Sellers</a>
+                <a href="/realtors">For Realtors</a>
+                <a href="/" class="nav-cta">Get Started</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Page Header -->
+    <div class="page-header">
+        <h1>Terms of Service</h1>
+        <p>The rules and expectations that govern your use of RealtorFinder.net</p>
+    </div>
+
+    <!-- Content -->
+    <div class="content-wrapper">
+
+        <div class="meta-note">
+            <strong>Effective Date:</strong> May 2026 &nbsp;&bull;&nbsp; <strong>Last Updated:</strong> May 2026
+        </div>
+
+        <section>
+            <h2>About RealtorFinder.net</h2>
+            <p>RealtorFinder.net ("RealtorFinder," "we," "our," or "us") is a reverse real estate marketplace operated as an online platform that connects home sellers with licensed real estate professionals. Unlike traditional real estate search tools, our model puts sellers in control: sellers post their property and situation, and interested licensed realtors submit proposals to earn their business. Sellers review competing proposals and choose the agent that best fits their needs.</p>
+            <p>By creating an account or using any part of our platform, you ("you," "your," or "user") agree to be bound by these Terms of Service ("Terms"). Please read them carefully. If you do not agree, you may not use RealtorFinder.net.</p>
+            <p>These Terms constitute a legally binding agreement between you and RealtorFinder.net. We may update them from time to time; your continued use of the platform after changes are posted constitutes acceptance of the revised Terms.</p>
+        </section>
+
+        <section>
+            <h2>User Eligibility</h2>
+            <p>To use RealtorFinder.net, you must meet all of the following eligibility requirements:</p>
+            <ul>
+                <li><strong>Age:</strong> You must be at least 18 years of age. By using the platform, you represent and warrant that you are 18 or older.</li>
+                <li><strong>Geography:</strong> RealtorFinder.net is available exclusively to users located in the United States. The platform is designed to facilitate real estate transactions subject to U.S. law, and we do not serve users outside the United States.</li>
+                <li><strong>Legal capacity:</strong> You must have the legal authority to enter into binding contracts. If you are using the platform on behalf of a business entity, you represent that you have the authority to bind that entity to these Terms.</li>
+                <li><strong>Realtor licensing (for agent accounts):</strong> If you register as a real estate professional, you must hold a valid, active real estate license issued by the licensing authority of the state(s) in which you intend to represent clients. By creating a realtor account, you represent that your license is current and in good standing. You agree to provide accurate license information during registration and to promptly notify us if your license status changes.</li>
+            </ul>
+            <p>We reserve the right to verify your eligibility at any time and to suspend or terminate accounts that do not meet these requirements.</p>
+        </section>
+
+        <section>
+            <h2>Seller Responsibilities</h2>
+            <p>If you use RealtorFinder.net as a home seller, you agree to the following:</p>
+
+            <div class="highlight-box">
+                <h3>Accurate Listing Information</h3>
+                <p>You must provide truthful, accurate, and complete information about your property and your situation. This includes but is not limited to: property address, property type, approximate market value, number of bedrooms and bathrooms, your desired timeline for selling, and any material facts about the property's condition that could affect an agent's ability to represent you or a buyer's decision to purchase.</p>
+                <p>Providing false or misleading listing information is a violation of these Terms and may result in immediate account termination.</p>
+            </div>
+
+            <div class="highlight-box">
+                <h3>Genuine Intent to Sell</h3>
+                <p>By creating a listing, you represent that you have a genuine, good-faith intention to sell the property described. RealtorFinder.net is not to be used for market research, soliciting realtor bids for negotiation leverage without intent to sell, or any other purpose that misleads realtors into investing time and effort on your listing.</p>
+            </div>
+
+            <ul>
+                <li>You are responsible for ensuring you have the legal right to sell or to seek representation for the listed property.</li>
+                <li>You may only list one property per listing. Creating duplicate listings for the same property is prohibited.</li>
+                <li>You agree to respond to realtor proposals in good faith and within a reasonable timeframe.</li>
+                <li>Once you have selected a realtor and entered into a separate representation agreement with them, you should update or remove your active listing on RealtorFinder.net.</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2>Realtor Responsibilities</h2>
+            <p>If you use RealtorFinder.net as a licensed real estate professional, you agree to the following:</p>
+
+            <div class="highlight-box">
+                <h3>Licensing and Credentials</h3>
+                <p>You must maintain a valid, active real estate license in every state where you submit proposals to sellers. You agree to accurately represent your license number, brokerage affiliation, years of experience, geographic areas of expertise, and any professional designations or certifications you claim to hold. Misrepresenting your credentials is a serious violation that will result in permanent account termination and may be reported to state licensing authorities.</p>
+            </div>
+
+            <div class="highlight-box">
+                <h3>Professional Conduct</h3>
+                <p>You agree to interact with sellers on our platform with professionalism, honesty, and respect. Proposals must accurately represent the services you intend to provide, your commission rate, your marketing strategy, and your relevant experience. You may not submit proposals to listings you have no genuine capacity or intention to service.</p>
+            </div>
+
+            <ul>
+                <li>You may not submit proposals to sellers outside your licensed area unless you have a valid co-brokerage arrangement with a licensed agent in that jurisdiction.</li>
+                <li>You agree that any representation agreement you enter into with a seller through our platform is a private agreement between you and the seller. RealtorFinder.net is not a party to that agreement and bears no responsibility for its terms or execution.</li>
+                <li>You are solely responsible for complying with all applicable state and federal real estate laws, MLS rules, and NAR (National Association of Realtors) ethics standards in your interactions with sellers.</li>
+                <li>You agree not to contact sellers through means outside the platform (e.g., direct calls or texts) unless the seller has explicitly shared their contact information with you through the platform's connection process.</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2>No Guarantee of Sale or Agent Match</h2>
+            <div class="warning-box">
+                <p><strong>RealtorFinder.net is a marketplace platform, not a real estate brokerage.</strong> We do not represent buyers, sellers, or agents in any real estate transaction. We make no guarantee that a seller will receive any proposals, that a realtor will win any listings, or that any property will ultimately be sold. The quality, suitability, and performance of any realtor you engage through our platform is entirely your responsibility to evaluate. We expressly disclaim any responsibility for the outcome of transactions facilitated through connections made on RealtorFinder.net.</p>
+            </div>
+            <p>Seller listings are made available to realtors based on geographic proximity and platform matching logic, but we do not control which realtors view or respond to any given listing. Realtors are not guaranteed any minimum number of listing opportunities. Past performance or ratings of realtors displayed on the platform are informational only and are not a guarantee of future results.</p>
+        </section>
+
+        <section>
+            <h2>Platform Fees</h2>
+            <p>RealtorFinder.net operates the following fee structure:</p>
+
+            <div class="highlight-box">
+                <h3>For Sellers</h3>
+                <p>Creating a seller account and posting a property listing on RealtorFinder.net is completely free. Sellers are never charged a fee to use our platform, receive proposals from realtors, or connect with an agent.</p>
+            </div>
+
+            <div class="highlight-box">
+                <h3>For Realtors</h3>
+                <p>Access to seller listings and the ability to submit proposals is available to licensed realtors through a paid subscription. Specific subscription tiers, pricing, and billing terms will be disclosed at the time of launch and during the realtor registration process. By subscribing, realtors agree to the pricing and billing terms presented at signup.</p>
+                <p>All subscription fees are non-refundable except as required by applicable law or as expressly stated in our refund policy at the time of purchase. We reserve the right to change subscription pricing with reasonable advance notice.</p>
+            </div>
+
+            <p>RealtorFinder.net does not collect any commission, referral fee, or transaction-based payment from either party. Any commission or fee arrangement between a seller and their chosen realtor is strictly between those two parties and is governed by their private representation agreement.</p>
+        </section>
+
+        <section>
+            <h2>Prohibited Conduct</h2>
+            <p>The following actions are strictly prohibited on RealtorFinder.net. Violation of any of these may result in immediate suspension or permanent termination of your account, and may expose you to legal liability.</p>
+            <ul>
+                <li><strong>Fake or fraudulent listings:</strong> Creating listings for properties you do not own or have no authority over, or listings that contain knowingly false information about a property.</li>
+                <li><strong>Misrepresentation:</strong> Falsely claiming to be a licensed realtor, misrepresenting your license status or credentials, or impersonating another person or entity.</li>
+                <li><strong>Spam and unsolicited outreach:</strong> Sending mass, irrelevant, or unsolicited messages to sellers or other users through the platform's messaging system. Each proposal submitted must be tailored to the specific listing.</li>
+                <li><strong>Harvesting contact information:</strong> Collecting or storing the personal contact information of sellers or other users for purposes outside the platform without their explicit consent.</li>
+                <li><strong>Platform manipulation:</strong> Attempting to game platform matching algorithms, artificially inflate profile ratings, post fake reviews, or otherwise manipulate the platform's ranking or recommendation systems.</li>
+                <li><strong>Circumventing fees:</strong> Attempting to use the platform to identify listing opportunities and then contact sellers outside the platform to avoid subscription fees.</li>
+                <li><strong>Automated scraping:</strong> Using bots, crawlers, scrapers, or any automated means to access, extract, or collect data from the platform without our express written permission.</li>
+                <li><strong>Illegal activity:</strong> Using the platform to facilitate any activity that violates applicable law, including fair housing laws, anti-discrimination laws, and state real estate regulations.</li>
+                <li><strong>Harassment or abuse:</strong> Engaging in any harassing, threatening, defamatory, or abusive conduct toward other users, realtors, sellers, or RealtorFinder.net staff.</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2>Intellectual Property</h2>
+            <p>All content on RealtorFinder.net that is not submitted by users — including the platform design, logo, branding, software, text, graphics, and underlying code — is the exclusive property of RealtorFinder.net and is protected by applicable copyright, trademark, and intellectual property laws. You may not copy, reproduce, distribute, modify, or create derivative works from our proprietary content without our express written consent.</p>
+            <p>By submitting content to the platform — including property descriptions, photos, realtor bios, and profile images — you grant RealtorFinder.net a non-exclusive, royalty-free, worldwide license to use, display, reproduce, and distribute that content for the purpose of operating and promoting the platform. You represent that you have the right to grant this license and that your content does not infringe the intellectual property rights of any third party.</p>
+            <p>You retain ownership of your own content. You may remove your content from the platform at any time by deleting your listing or account, subject to any retention obligations described in our Privacy Policy.</p>
+        </section>
+
+        <section>
+            <h2>Limitation of Liability</h2>
+            <div class="warning-box">
+                <p><strong>To the fullest extent permitted by applicable law, RealtorFinder.net and its officers, directors, employees, and agents shall not be liable for any indirect, incidental, consequential, special, or punitive damages arising out of or related to your use of the platform, even if we have been advised of the possibility of such damages.</strong></p>
+            </div>
+            <p>This includes, without limitation, damages for lost profits, lost listings, failed real estate transactions, reliance on information provided by realtors or sellers on the platform, or any unauthorized access to or alteration of your account or data.</p>
+            <p>Our total cumulative liability to you for any claim arising out of or related to these Terms or your use of the platform shall not exceed the greater of (a) the total fees you paid to RealtorFinder.net in the 12 months preceding the claim, or (b) one hundred U.S. dollars ($100).</p>
+            <p>RealtorFinder.net provides the platform "as is" and "as available," without warranties of any kind, express or implied, including but not limited to implied warranties of merchantability, fitness for a particular purpose, or non-infringement. We do not warrant that the platform will be uninterrupted, error-free, or free of viruses or other harmful components.</p>
+        </section>
+
+        <section>
+            <h2>Account Termination</h2>
+            <p>You may close your RealtorFinder.net account at any time by contacting us at <a href="mailto:legal@realtorfinder.net">legal@realtorfinder.net</a> or through your account settings. Upon closure, your public-facing profile and listings will be removed from the platform.</p>
+            <p>We reserve the right to suspend or permanently terminate your account, without prior notice, if we determine in our sole discretion that you have violated these Terms, engaged in fraudulent or abusive behavior, or if your continued access poses a risk to other users or the integrity of the platform.</p>
+            <p>For realtor accounts with active paid subscriptions, termination for cause does not entitle you to a refund of any prepaid subscription fees. If we terminate your account without cause, we will provide a pro-rated refund of any unused prepaid subscription period.</p>
+            <p>Sections of these Terms that by their nature should survive termination — including Intellectual Property, Limitation of Liability, Indemnification, and Governing Law — will remain in full force after your account is closed.</p>
+        </section>
+
+        <section>
+            <h2>Indemnification</h2>
+            <p>You agree to indemnify, defend, and hold harmless RealtorFinder.net and its officers, directors, employees, agents, and successors from and against any claims, damages, losses, liabilities, costs, and expenses (including reasonable attorneys' fees) arising out of or related to: (a) your use of the platform; (b) your violation of these Terms; (c) your violation of any applicable law or third-party right; or (d) any content you submit to the platform.</p>
+        </section>
+
+        <section>
+            <h2>Governing Law and Dispute Resolution</h2>
+            <p>These Terms shall be governed by and construed in accordance with the laws of the State of Delaware, without regard to its conflict of law provisions. You agree that any dispute, claim, or controversy arising out of or relating to these Terms or your use of RealtorFinder.net shall be subject to the exclusive jurisdiction of the state and federal courts located in Delaware.</p>
+            <p>Before initiating any formal legal proceeding, you agree to contact us at <a href="mailto:legal@realtorfinder.net">legal@realtorfinder.net</a> and give us 30 days to attempt to resolve the dispute informally. Nothing in this section prevents either party from seeking emergency injunctive relief in a court of competent jurisdiction where necessary to prevent irreparable harm.</p>
+        </section>
+
+        <section>
+            <h2>Contact Us</h2>
+            <p>If you have questions about these Terms of Service, wish to report a violation, or need to contact our legal team for any reason, please reach out to us:</p>
+            <div class="highlight-box">
+                <p><strong>RealtorFinder.net &mdash; Legal Team</strong><br>
+                Email: <a href="mailto:legal@realtorfinder.net">legal@realtorfinder.net</a><br>
+                We aim to respond to all legal inquiries within 5 business days.</p>
+            </div>
+        </section>
+
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <a href="/" class="footer-logo">Realtor<span>Finder</span>.net</a>
+        <div class="footer-links">
+            <a href="/">For Sellers</a>
+            <a href="/realtors">For Realtors</a>
+            <a href="/privacy">Privacy Policy</a>
+            <a href="/terms">Terms of Service</a>
+        </div>
+        <p class="footer-bottom">&copy; 2026 RealtorFinder.net. All rights reserved.</p>
+    </footer>
+
+</body>
+</html>
