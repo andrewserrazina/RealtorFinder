@@ -251,6 +251,9 @@
             align-items: center;
             justify-content: center;
             font-size: 3rem;
+            background-size: cover;
+            background-position: center;
+            min-height: 160px;
         }
 
         .listing-details {
@@ -473,6 +476,8 @@
         @media (max-width: 1024px) {
             .dashboard-layout {
                 grid-template-columns: 1fr;
+                padding: 1.5rem 1rem;
+                gap: 1.5rem;
             }
 
             .sidebar {
@@ -487,6 +492,64 @@
                 border-left: none;
                 border-top: 1px solid var(--border);
                 flex-direction: row;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .header-container {
+                flex-wrap: wrap;
+                gap: 0.75rem;
+            }
+
+            .user-info {
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+
+            .nav-section .nav-title {
+                display: none;
+            }
+
+            nav {
+                display: flex;
+                gap: 0.25rem;
+                overflow-x: auto;
+                padding-bottom: 0.25rem;
+            }
+
+            .nav-section {
+                display: contents;
+            }
+
+            .nav-item {
+                white-space: nowrap;
+                font-size: 0.85rem;
+                padding: 0.6rem 0.75rem;
+            }
+
+            .page-title {
+                font-size: 1.8rem;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .listing-image {
+                min-height: 120px;
+            }
+
+            .offer-card {
+                grid-template-columns: 1fr;
+            }
+
+            .offer-actions {
+                display: flex;
+                gap: 0.5rem;
             }
         }
     </style>
@@ -647,9 +710,58 @@
         </div>
     </div>
 
+    <!-- Edit Listing Modal -->
+    <div id="editListingModal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeEditModal()">&times;</span>
+            <div class="modal-header">
+                <h2>Edit Listing</h2>
+                <p style="color:#666;">Update your property details</p>
+            </div>
+            <form id="editListingForm">
+                <input type="hidden" name="id">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Price *</label>
+                        <input type="text" name="price" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Property Type *</label>
+                        <select name="type" required>
+                            <option value="Single Family">Single Family</option>
+                            <option value="Condo">Condo</option>
+                            <option value="Townhouse">Townhouse</option>
+                            <option value="Multi-Family">Multi-Family</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Bedrooms *</label>
+                        <input type="number" name="bedrooms" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Bathrooms *</label>
+                        <input type="number" step="0.5" name="bathrooms" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Square Feet *</label>
+                    <input type="number" name="sqft" required>
+                </div>
+                <div class="form-group">
+                    <label>Description *</label>
+                    <textarea name="description" required></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width:100%;padding:1rem;margin-top:1rem;">Save Changes</button>
+            </form>
+        </div>
+    </div>
+
     <script>
         const API_BASE_URL = window.location.origin + '/api';
         let currentUser = null;
+        let cachedListings = [];
 
         // Load current user
         async function loadCurrentUser() {
@@ -748,6 +860,8 @@
                 });
                 const listings = await response.json();
                 
+                cachedListings = listings;
+
                 // Update stats
                 document.getElementById('statActiveListings').textContent = listings.length;
                 document.getElementById('listingCount').textContent = listings.length;
@@ -780,9 +894,11 @@
                 return;
             }
             
-            container.innerHTML = listings.map(listing => `
+            container.innerHTML = listings.map(listing => {
+                const img = listing.image_urls && listing.image_urls.length > 0 ? listing.image_urls[0] : null;
+                return `
                 <div class="listing-card">
-                    <div class="listing-image">🏡</div>
+                    <div class="listing-image" style="${img ? `background-image:url('${img}')` : ''}">${img ? '' : '🏡'}</div>
                     <div class="listing-details">
                         <div class="listing-address">${listing.address}</div>
                         <div class="listing-price">${listing.price}</div>
@@ -796,10 +912,10 @@
                     </div>
                     <div class="listing-actions">
                         <button class="btn btn-primary" onclick="viewOffers(${listing.id})">${listing.offerCount || 0} Offers</button>
-                        <button class="btn btn-outline">Edit</button>
+                        <button class="btn btn-outline" onclick="openEditModal(${listing.id})">Edit</button>
                     </div>
                 </div>
-            `).join('');
+            `}).join('');
         }
 
         function renderRecentActivity(listings) {
@@ -809,9 +925,11 @@
                 return;
             }
             
-            container.innerHTML = listings.slice(0, 3).map(listing => `
+            container.innerHTML = listings.slice(0, 3).map(listing => {
+                const img = listing.image_urls && listing.image_urls.length > 0 ? listing.image_urls[0] : null;
+                return `
                 <div class="listing-card" style="margin-bottom: 1rem;">
-                    <div class="listing-image">🏡</div>
+                    <div class="listing-image" style="${img ? `background-image:url('${img}')` : ''}">${img ? '' : '🏡'}</div>
                     <div class="listing-details">
                         <div class="listing-address">${listing.address}</div>
                         <div class="listing-meta">
@@ -823,7 +941,7 @@
                         <button class="btn btn-secondary" onclick="viewOffers(${listing.id})">View Details</button>
                     </div>
                 </div>
-            `).join('');
+            `}).join('');
         }
 
         async function viewOffers(listingId) {
@@ -836,59 +954,94 @@
         }
 
         async function loadOffers(listingId = null) {
+            const container = document.getElementById('offersContainer');
             try {
-                const listings = await (await fetch(`${API_BASE_URL}/listings`, { credentials: 'include' })).json();
-                const container = document.getElementById('offersContainer');
-                let allOffers = [];
+                const res = await fetch(`${API_BASE_URL}/seller/offers`, { credentials: 'include' });
+                if (!res.ok) throw new Error('Failed to fetch offers');
+                let offers = await res.json();
 
-                for (const listing of listings) {
-                    if (listingId && listing.id !== listingId) continue;
+                if (listingId) offers = offers.filter(o => o.listing_id === listingId);
 
-                    const offersResponse = await fetch(`${API_BASE_URL}/listings/${listing.id}/offers`, { credentials: 'include' });
-                    if (!offersResponse.ok) continue;
-                    const offers = await offersResponse.json();
-                    
-                    offers.forEach(offer => {
-                        allOffers.push({ ...offer, listing });
-                    });
-                }
-                
-                if (allOffers.length === 0) {
+                if (offers.length === 0) {
                     container.innerHTML = `
                         <div class="empty-state">
                             <div class="empty-state-icon">📬</div>
                             <h3>No offers yet</h3>
                             <p>You'll see realtor proposals here once they start coming in</p>
-                        </div>
-                    `;
+                        </div>`;
                     return;
                 }
-                
-                container.innerHTML = allOffers.map(offer => `
+
+                container.innerHTML = offers.map(offer => {
+                    const fullAddress = `${offer.address}, ${offer.city}, ${offer.state} ${offer.zip}`;
+                    return `
                     <div class="offer-card">
                         <div class="offer-info">
                             <h3>${offer.realtor_name}</h3>
                             <div class="offer-brokerage">${offer.brokerage}</div>
                             <div class="offer-details">
-                                <div class="offer-detail">
-                                    <strong>${offer.commission || 'N/A'}%</strong> Commission
-                                </div>
-                                <div class="offer-detail">
-                                    For: <strong>${offer.listing.address}</strong>
-                                </div>
+                                <div class="offer-detail"><strong>${offer.commission || 'N/A'}%</strong> Commission</div>
+                                <div class="offer-detail">For: <strong>${fullAddress}</strong></div>
                             </div>
-                            <p style="margin-top: 1rem; color: #666;">${offer.offer_details}</p>
+                            <p style="margin-top:1rem;color:#666;">${offer.offer_details}</p>
                         </div>
                         <div class="offer-actions">
                             <a href="mailto:${offer.realtor_email}" class="btn btn-primary">Contact</a>
                             <a href="tel:${offer.realtor_phone}" class="btn btn-outline">Call</a>
                         </div>
-                    </div>
-                `).join('');
+                    </div>`;
+                }).join('');
             } catch (error) {
                 console.error('Error loading offers:', error);
+                container.innerHTML = '<p style="color:#999;padding:2rem;">Failed to load offers.</p>';
             }
         }
+
+        // Edit listing
+        function openEditModal(listingId) {
+            const listing = cachedListings.find(l => l.id === listingId);
+            if (!listing) return;
+            const form = document.getElementById('editListingForm');
+            form.id_value = listingId;
+            form.elements.price.value = listing.price;
+            form.elements.type.value = listing.type;
+            form.elements.bedrooms.value = listing.bedrooms;
+            form.elements.bathrooms.value = listing.bathrooms;
+            form.elements.sqft.value = listing.sqft;
+            form.elements.description.value = listing.description;
+            document.getElementById('editListingModal').classList.add('active');
+        }
+
+        function closeEditModal() {
+            document.getElementById('editListingModal').classList.remove('active');
+        }
+
+        document.getElementById('editListingForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const form = e.target;
+            const id = form.id_value;
+            const data = {
+                price:       form.elements.price.value,
+                type:        form.elements.type.value,
+                bedrooms:    form.elements.bedrooms.value,
+                bathrooms:   form.elements.bathrooms.value,
+                sqft:        form.elements.sqft.value,
+                description: form.elements.description.value
+            };
+            try {
+                const res = await fetch(`${API_BASE_URL}/listings/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify(data)
+                });
+                if (!res.ok) throw new Error('Failed to update');
+                closeEditModal();
+                loadDashboard();
+            } catch {
+                alert('Failed to save changes. Please try again.');
+            }
+        });
 
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
