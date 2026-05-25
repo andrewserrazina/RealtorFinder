@@ -888,8 +888,12 @@ app.get('/login', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'login.html'));
 });
 
-// Seller landing page (homepage)
+// Seller landing page (homepage) — also serves realtors.html on realtors.realtorfinder.net
 app.get('/', (req, res) => {
+    if ((req.hostname || '').startsWith('realtors.')) {
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        return res.sendFile(path.join(__dirname, 'public', 'realtors.html'));
+    }
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
