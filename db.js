@@ -27,6 +27,7 @@ const db = {
                     description, image_urls, created_at, user_id,
                     (SELECT COUNT(*) FROM offers WHERE listing_id = listings.id) as offer_count
              FROM listings
+             WHERE deleted_at IS NULL
              ORDER BY created_at DESC`
         );
         return result.rows;
@@ -36,10 +37,10 @@ const db = {
     async getUserListings(userId) {
         const result = await pool.query(
             `SELECT id, address, city, state, zip, price, property_type, bedrooms, bathrooms, sqft,
-                    description, image_urls, created_at, user_id,
+                    description, image_urls, created_at, user_id, status,
                     (SELECT COUNT(*) FROM offers WHERE listing_id = listings.id) as offer_count
              FROM listings
-             WHERE user_id = $1
+             WHERE user_id = $1 AND deleted_at IS NULL
              ORDER BY created_at DESC`,
             [userId]
         );
@@ -164,7 +165,7 @@ const db = {
         const { city, type, minPrice, maxPrice, minBeds } = filters;
         const offset = (page - 1) * limit;
         const params = [];
-        const conditions = ["(l.status = 'active' OR l.status IS NULL)"];
+        const conditions = ["(l.status = 'active' OR l.status IS NULL)", "l.deleted_at IS NULL"];
 
         if (city) {
             params.push(`%${city.trim()}%`);
@@ -304,6 +305,123 @@ const db = {
             [userId]
         );
         return result.rows[0]?.email_verified ?? false;
+    },
+
+    // Get realtor profile fields
+    async getProfile(userId) {
+        const result = await pool.query(
+            `SELECT id, email, user_type, first_name, last_name, zip_code,
+                    phone, license_number, bio, years_experience, service_areas
+             FROM users WHERE id = $1`,
+            [userId]
+        );
+        return result.rows[0];
+    },
+
+    // Update realtor profile fields
+    async updateProfile(userId, data) {
+        const { phone, licenseNumber, bio, yearsExperience, serviceAreas } = data;
+        const result = await pool.query(
+            `UPDATE users SET phone=$1, license_number=$2, bio=$3, years_experience=$4, service_areas=$5
+             WHERE id=$6 RETURNING id, email, user_type, first_name, last_name, zip_code,
+                    phone, license_number, bio, years_experience, service_areas`,
+            [phone || null, licenseNumber || null, bio || null,
+             yearsExperience ? parseInt(yearsExperience) : null, serviceAreas || null, userId]
+        );
+        return result.rows[0];
+    },
+
+    // Soft-delete a listing
+    async softDeleteListing(listingId) {
+        const result = await pool.query(
+            `UPDATE listings SET deleted_at = NOW() WHERE id = $1 RETURNING *`,
+            [listingId]
+        );
+        return result.rows[0];
+    },
+
+    // Update listing images
+    async updateListingImages(listingId, imageUrls) {
+        const result = await pool.query(
+            `UPDATE listings SET image_urls = $1 WHERE id = $2 RETURNING *`,
+            [imageUrls, listingId]
+        );
+        return result.rows[0];
+    },
+
+    // Withdraw (delete) an offer — only the realtor who submitted it
+    async deleteOffer(offerId) {
+        const result = await pool.query(
+            `DELETE FROM offers WHERE id = $1 RETURNING *`,
+            [offerId]
+        );
+        return result.rows[0];
+    },
+
+    // Admin: all users
+    async getAllUsersAdmin() {
+        const result = await pool.query(
+            `SELECT id, email, user_type, first_name, last_name, zip_code,
+                    email_verified, is_active, is_admin, created_at
+             FROM users ORDER BY created_at DESC`
+        );
+        return result.rows;
+    },
+
+    // Admin: all listings (including soft-deleted)
+    async getAllListingsAdmin() {
+        const result = await pool.query(
+            `SELECT l.id, l.address, l.city, l.state, l.zip, l.price, l.property_type,
+                    l.bedrooms, l.bathrooms, l.status, l.deleted_at, l.created_at,
+                    u.first_name, u.last_name, u.email as owner_email,
+                    (SELECT COUNT(*) FROM offers WHERE listing_id = l.id) as offer_count
+             FROM listings l
+             JOIN users u ON l.user_id = u.id
+             ORDER BY l.created_at DESC`
+        );
+        return result.rows;
+    },
+
+    // Admin: aggregate stats
+    async getAdminStats() {
+        const result = await pool.query(`
+            SELECT
+                (SELECT COUNT(*) FROM users) as total_users,
+                (SELECT COUNT(*) FROM users WHERE user_type = 'seller') as total_sellers,
+                (SELECT COUNT(*) FROM users WHERE user_type = 'realtor') as total_realtors,
+                (SELECT COUNT(*) FROM listings WHERE deleted_at IS NULL) as total_listings,
+                (SELECT COUNT(*) FROM listings WHERE status = 'active' AND deleted_at IS NULL) as active_listings,
+                (SELECT COUNT(*) FROM offers) as total_offers,
+                (SELECT COUNT(*) FROM waitlist) as total_waitlist
+        `);
+        return result.rows[0];
+    },
+
+    // Admin: deactivate user
+    async deactivateUser(userId) {
+        const result = await pool.query(
+            `UPDATE users SET is_active = FALSE WHERE id = $1 RETURNING id, email, is_active`,
+            [userId]
+        );
+        return result.rows[0];
+    },
+
+    // Admin: reactivate user
+    async reactivateUser(userId) {
+        const result = await pool.query(
+            `UPDATE users SET is_active = TRUE WHERE id = $1 RETURNING id, email, is_active`,
+            [userId]
+        );
+        return result.rows[0];
+    },
+
+    // Admin: hard-delete a listing (or use softDeleteListing for soft-delete)
+    async adminDeleteListing(listingId) {
+        const result = await pool.query(
+            `UPDATE listings SET deleted_at = NOW() WHERE id = $1 RETURNING *`,
+            [listingId]
+        );
+        return result.rows[0];
     }
 };
 

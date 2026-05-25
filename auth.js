@@ -30,22 +30,28 @@ const auth = {
     async verifyUser(email, password) {
         try {
             const result = await pool.query(
-                'SELECT id, email, password_hash, user_type, first_name, last_name, zip_code, email_verified FROM users WHERE email = $1',
+                `SELECT id, email, password_hash, user_type, first_name, last_name, zip_code,
+                        email_verified, is_admin, is_active
+                 FROM users WHERE email = $1`,
                 [email]
             );
-            
+
             if (result.rows.length === 0) {
-                return null; // User not found
+                return null;
             }
-            
+
             const user = result.rows[0];
-            const isValid = await bcrypt.compare(password, user.password_hash);
-            
-            if (!isValid) {
-                return null; // Invalid password
+
+            if (user.is_active === false) {
+                return null; // Deactivated account
             }
-            
-            // Return user without password
+
+            const isValid = await bcrypt.compare(password, user.password_hash);
+
+            if (!isValid) {
+                return null;
+            }
+
             return {
                 id: user.id,
                 email: user.email,
@@ -53,7 +59,8 @@ const auth = {
                 firstName: user.first_name,
                 lastName: user.last_name,
                 zipCode: user.zip_code,
-                emailVerified: user.email_verified
+                emailVerified: user.email_verified,
+                isAdmin: user.is_admin || false
             };
         } catch (error) {
             throw error;
@@ -63,7 +70,11 @@ const auth = {
     // Get user by ID
     async getUserById(userId) {
         const result = await pool.query(
-            'SELECT id, email, user_type, first_name, last_name, zip_code, email_verified, created_at FROM users WHERE id = $1',
+            `SELECT id, email, user_type, first_name, last_name, zip_code,
+                    email_verified, is_admin, is_active,
+                    phone, license_number, bio, years_experience, service_areas,
+                    created_at
+             FROM users WHERE id = $1`,
             [userId]
         );
         return result.rows[0];

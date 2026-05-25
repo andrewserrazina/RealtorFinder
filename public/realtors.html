@@ -1291,8 +1291,8 @@
                 <ul class="footer-links">
                     <li><a href="#">About Us</a></li>
                     <li><a href="#">Contact</a></li>
-                    <li><a href="#">Privacy Policy</a></li>
-                    <li><a href="#">Terms of Service</a></li>
+                    <li><a href="/privacy">Privacy Policy</a></li>
+                    <li><a href="/terms">Terms of Service</a></li>
                 </ul>
             </div>
         </div>
@@ -1300,6 +1300,12 @@
             <p>&copy; 2026 RealtorFinder.net. All rights reserved.</p>
         </div>
     </footer>
+
+    <!-- Cookie Consent Banner -->
+    <div id="cookieBanner" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#0A2540;color:#fff;padding:1rem 2rem;z-index:9999;display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
+        <p style="margin:0;font-size:0.9rem;opacity:0.9;">We use cookies to improve your experience and analyze traffic. By continuing to use this site, you agree to our <a href="/privacy" style="color:#FF6B35;text-decoration:none;font-weight:600;">Privacy Policy</a>.</p>
+        <button onclick="acceptCookies()" style="background:#FF6B35;color:white;border:none;padding:0.6rem 1.5rem;border-radius:50px;font-weight:600;cursor:pointer;white-space:nowrap;font-size:0.9rem;">Got it</button>
+    </div>
 
     <script>
         // Email form handling for realtors
@@ -1383,6 +1389,18 @@
                 submitButton.textContent = 'Register Interest';
             }
         });
+    </script>
+    <script>
+        // Cookie consent
+        (function() {
+            if (!localStorage.getItem('rf_cookies_accepted')) {
+                document.getElementById('cookieBanner').style.display = 'flex';
+            }
+        })();
+        function acceptCookies() {
+            localStorage.setItem('rf_cookies_accepted', '1');
+            document.getElementById('cookieBanner').style.display = 'none';
+        }
     </script>
 </body>
 </html>
