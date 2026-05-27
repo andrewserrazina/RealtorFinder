@@ -658,6 +658,7 @@
             <div class="tab" data-view="won">Won Listings</div>
             <div class="tab" data-view="profile">My Profile</div>
             <div class="tab" data-view="buyer-requests">Buyer Requests</div>
+                <div class="tab" data-view="company">My Company</div>
         </div>
     </div>
 
@@ -797,6 +798,84 @@
                 <button class="btn btn-outline" id="buyerPrevPage" onclick="changeBuyerPage(-1)">← Prev</button>
                 <span class="page-info" id="buyerPageInfo">Page 1 of 1</span>
                 <button class="btn btn-outline" id="buyerNextPage" onclick="changeBuyerPage(1)">Next →</button>
+            </div>
+        </section>
+
+        <!-- Company View -->
+        <section id="company-view" class="view-section">
+            <div class="section-header">
+                <h2>My Company</h2>
+                <p id="companyPlanBadge" style="margin-top:4px;"></p>
+            </div>
+
+            <!-- No company state -->
+            <div id="noCompanyState" style="display:none; text-align:center; padding:60px 20px;">
+                <p style="color:#6b7280; margin-bottom:16px;">You don't have a company set up yet.</p>
+            </div>
+
+            <!-- Company overview -->
+            <div id="companyOverview">
+                <div class="stats-grid" style="margin-bottom:32px;">
+                    <div class="stat-card">
+                        <div class="stat-number" id="companyMemberCount">—</div>
+                        <div class="stat-label">Team Members</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="companyLocationCount">—</div>
+                        <div class="stat-label">Locations</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="companyPlanDisplay">—</div>
+                        <div class="stat-label">Current Plan</div>
+                    </div>
+                </div>
+
+                <!-- Plan upgrade (shown for non-firm owners) -->
+                <div id="upgradeBanner" style="display:none; background:#fff8f0; border:1px solid #FF6B35; border-radius:12px; padding:20px 24px; margin-bottom:28px; display:flex; align-items:center; gap:16px;">
+                    <div style="flex:1;">
+                        <strong style="color:#FF6B35;">Upgrade to the Firm Plan</strong>
+                        <p style="margin:4px 0 0; color:#374151; font-size:14px;">Add unlimited agents per location at $499/location/month. Perfect for brokerages.</p>
+                    </div>
+                    <button class="btn-primary" onclick="upgradePlan()" style="white-space:nowrap;">Upgrade — $499/location</button>
+                </div>
+
+                <!-- Team Members -->
+                <div style="background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:24px; margin-bottom:28px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                        <h3 style="margin:0; font-size:18px;">Team Members</h3>
+                        <button class="btn-primary" id="addAgentBtn" onclick="showAddAgentForm()" style="font-size:13px; padding:8px 16px;">+ Add Agent</button>
+                    </div>
+                    <!-- Add agent form (hidden by default) -->
+                    <div id="addAgentForm" style="display:none; background:#f9fafb; border-radius:8px; padding:16px; margin-bottom:16px;">
+                        <p style="margin:0 0 12px; font-size:14px; color:#374151;">Enter the email of a registered realtor to add them to your company.</p>
+                        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                            <input type="email" id="agentEmail" placeholder="agent@example.com" style="flex:1; min-width:200px; padding:8px 12px; border:1px solid #d1d5db; border-radius:8px; font-size:14px;">
+                            <input type="text" id="agentZip" placeholder="Their ZIP code" maxlength="10" style="width:140px; padding:8px 12px; border:1px solid #d1d5db; border-radius:8px; font-size:14px;">
+                            <button class="btn-primary" onclick="addAgent()" style="font-size:13px; padding:8px 16px;">Add</button>
+                            <button onclick="hideAddAgentForm()" style="background:none; border:1px solid #d1d5db; border-radius:8px; padding:8px 14px; cursor:pointer; font-size:13px;">Cancel</button>
+                        </div>
+                        <p id="addAgentError" style="display:none; color:#ef4444; font-size:13px; margin:8px 0 0;"></p>
+                    </div>
+                    <div id="membersList" style="display:flex; flex-direction:column; gap:10px;"></div>
+                </div>
+
+                <!-- Locations (firm plan only) -->
+                <div id="locationsSection" style="display:none; background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:24px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                        <h3 style="margin:0; font-size:18px;">Office Locations</h3>
+                        <button class="btn-primary" onclick="showAddLocationForm()" style="font-size:13px; padding:8px 16px;">+ Add Location</button>
+                    </div>
+                    <div id="addLocationForm" style="display:none; background:#f9fafb; border-radius:8px; padding:16px; margin-bottom:16px;">
+                        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                            <input type="text" id="locationZip" placeholder="ZIP code" maxlength="10" style="width:140px; padding:8px 12px; border:1px solid #d1d5db; border-radius:8px; font-size:14px;">
+                            <input type="text" id="locationLabel" placeholder="Label (e.g. Downtown Office)" style="flex:1; min-width:200px; padding:8px 12px; border:1px solid #d1d5db; border-radius:8px; font-size:14px;">
+                            <button class="btn-primary" onclick="addLocation()" style="font-size:13px; padding:8px 16px;">Add</button>
+                            <button onclick="hideAddLocationForm()" style="background:none; border:1px solid #d1d5db; border-radius:8px; padding:8px 14px; cursor:pointer; font-size:13px;">Cancel</button>
+                        </div>
+                        <p id="addLocationError" style="display:none; color:#ef4444; font-size:13px; margin:8px 0 0;"></p>
+                    </div>
+                    <div id="locationsList" style="display:flex; flex-direction:column; gap:10px;"></div>
+                </div>
             </div>
         </section>
 
@@ -997,6 +1076,7 @@
                 }
 
                 if (view === 'buyer-requests') loadBuyerRequests();
+                if (view === 'company') loadCompany();
             });
         });
 
@@ -1628,6 +1708,148 @@
         });
 
         // ===== END BUYER REQUESTS =====
+
+        // ===== COMPANY / MY FIRM =====
+        let companyData = null;
+        let isCompanyOwner = false;
+
+        async function loadCompany() {
+            try {
+                const res = await fetch(`${API_BASE_URL}/company`, { credentials: 'include' });
+                if (!res.ok) { document.getElementById('noCompanyState').style.display = 'block'; document.getElementById('companyOverview').style.display = 'none'; return; }
+                const data = await res.json();
+                if (!data) { document.getElementById('noCompanyState').style.display = 'block'; document.getElementById('companyOverview').style.display = 'none'; return; }
+                companyData = data;
+                isCompanyOwner = currentUser && data.company && data.company.owner_user_id === currentUser.id;
+                renderCompany(data);
+            } catch (e) {
+                console.error('loadCompany error', e);
+            }
+        }
+
+        function renderCompany(data) {
+            const { company, members, locations } = data;
+            const planLabels = { basic: 'Basic ($99/mo)', professional: 'Professional ($249/mo)', firm: 'Firm ($499/location/mo)' };
+            document.getElementById('noCompanyState').style.display = 'none';
+            document.getElementById('companyOverview').style.display = 'block';
+            document.getElementById('companyMemberCount').textContent = members.length;
+            document.getElementById('companyLocationCount').textContent = locations.length || (company.plan !== 'firm' ? 1 : 0);
+            document.getElementById('companyPlanDisplay').textContent = { basic: 'Basic', professional: 'Pro', firm: 'Firm' }[company.plan] || company.plan;
+            document.getElementById('companyPlanBadge').innerHTML = `<strong>${company.name}</strong> &nbsp;·&nbsp; ${planLabels[company.plan] || company.plan}`;
+
+            const upgradeBanner = document.getElementById('upgradeBanner');
+            if (isCompanyOwner && company.plan !== 'firm') { upgradeBanner.style.display = 'flex'; } else { upgradeBanner.style.display = 'none'; }
+
+            const addAgentBtn = document.getElementById('addAgentBtn');
+            if (addAgentBtn) addAgentBtn.style.display = isCompanyOwner ? 'inline-flex' : 'none';
+
+            const locationsSection = document.getElementById('locationsSection');
+            if (company.plan === 'firm') { locationsSection.style.display = 'block'; renderLocations(locations); } else { locationsSection.style.display = 'none'; }
+
+            renderMembers(members, company);
+        }
+
+        function renderMembers(members, company) {
+            const list = document.getElementById('membersList');
+            if (!members.length) { list.innerHTML = '<p style="color:#6b7280;font-size:14px;">No team members yet.</p>'; return; }
+            list.innerHTML = members.map(m => `
+                <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:#f9fafb;border-radius:8px;">
+                    <div style="width:36px;height:36px;border-radius:50%;background:#0A2540;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;flex-shrink:0;">
+                        ${(m.first_name || 'A').charAt(0).toUpperCase()}
+                    </div>
+                    <div style="flex:1;">
+                        <div style="font-weight:600;font-size:14px;">${m.first_name} ${m.last_name}</div>
+                        <div style="font-size:12px;color:#6b7280;">${m.email} &nbsp;·&nbsp; ZIP ${m.zip_code || '—'} &nbsp;·&nbsp; <span style="text-transform:capitalize;">${m.company_role}</span></div>
+                    </div>
+                    ${isCompanyOwner && m.company_role !== 'owner' ? `<button onclick="removeAgent(${m.id})" style="background:none;border:1px solid #e5e7eb;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;color:#6b7280;">Remove</button>` : ''}
+                </div>
+            `).join('');
+        }
+
+        function renderLocations(locations) {
+            const list = document.getElementById('locationsList');
+            if (!locations.length) { list.innerHTML = '<p style="color:#6b7280;font-size:14px;">No additional locations yet. Each location is billed at $499/mo.</p>'; return; }
+            list.innerHTML = locations.map(loc => `
+                <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:#f9fafb;border-radius:8px;">
+                    <div style="flex:1;">
+                        <div style="font-weight:600;font-size:14px;">${loc.label || 'Office'} &nbsp;·&nbsp; ZIP ${loc.zip_code}</div>
+                        <div style="font-size:12px;color:#6b7280;">${loc.agent_count || 0} agent(s) at this location</div>
+                    </div>
+                    ${isCompanyOwner ? `<button onclick="removeLocation(${loc.id})" style="background:none;border:1px solid #e5e7eb;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;color:#6b7280;">Remove</button>` : ''}
+                </div>
+            `).join('');
+        }
+
+        function showAddAgentForm() { document.getElementById('addAgentForm').style.display = 'block'; document.getElementById('agentEmail').focus(); }
+        function hideAddAgentForm() { document.getElementById('addAgentForm').style.display = 'none'; document.getElementById('addAgentError').style.display = 'none'; }
+        function showAddLocationForm() { document.getElementById('addLocationForm').style.display = 'block'; document.getElementById('locationZip').focus(); }
+        function hideAddLocationForm() { document.getElementById('addLocationForm').style.display = 'none'; document.getElementById('addLocationError').style.display = 'none'; }
+
+        async function addAgent() {
+            const email = document.getElementById('agentEmail').value.trim();
+            const zipCode = document.getElementById('agentZip').value.trim();
+            const errEl = document.getElementById('addAgentError');
+            errEl.style.display = 'none';
+            if (!email || !zipCode) { errEl.textContent = 'Both email and ZIP code are required.'; errEl.style.display = 'block'; return; }
+            try {
+                const res = await fetch(`${API_BASE_URL}/company/agents`, {
+                    method: 'POST', credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, zipCode })
+                });
+                const data = await res.json();
+                if (!res.ok) { errEl.textContent = data.error || 'Failed to add agent.'; errEl.style.display = 'block'; return; }
+                hideAddAgentForm();
+                document.getElementById('agentEmail').value = '';
+                document.getElementById('agentZip').value = '';
+                loadCompany();
+            } catch (e) { errEl.textContent = 'Network error. Please try again.'; errEl.style.display = 'block'; }
+        }
+
+        async function removeAgent(userId) {
+            if (!confirm('Remove this agent from your company?')) return;
+            await fetch(`${API_BASE_URL}/company/agents/${userId}`, { method: 'DELETE', credentials: 'include' });
+            loadCompany();
+        }
+
+        async function addLocation() {
+            const zipCode = document.getElementById('locationZip').value.trim();
+            const label = document.getElementById('locationLabel').value.trim();
+            const errEl = document.getElementById('addLocationError');
+            errEl.style.display = 'none';
+            if (!zipCode) { errEl.textContent = 'ZIP code is required.'; errEl.style.display = 'block'; return; }
+            try {
+                const res = await fetch(`${API_BASE_URL}/company/locations`, {
+                    method: 'POST', credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ zipCode, label })
+                });
+                const data = await res.json();
+                if (!res.ok) { errEl.textContent = data.error || 'Failed to add location.'; errEl.style.display = 'block'; return; }
+                hideAddLocationForm();
+                document.getElementById('locationZip').value = '';
+                document.getElementById('locationLabel').value = '';
+                loadCompany();
+            } catch (e) { errEl.textContent = 'Network error. Please try again.'; errEl.style.display = 'block'; }
+        }
+
+        async function removeLocation(locationId) {
+            if (!confirm('Remove this location? Agents at this location will remain in your company.')) return;
+            await fetch(`${API_BASE_URL}/company/locations/${locationId}`, { method: 'DELETE', credentials: 'include' });
+            loadCompany();
+        }
+
+        async function upgradePlan() {
+            if (!confirm('Upgrade to the Firm plan? Each location is billed at $499/month. Contact sales to arrange billing.')) return;
+            const res = await fetch(`${API_BASE_URL}/company/plan`, {
+                method: 'PUT', credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ plan: 'firm' })
+            });
+            if (res.ok) loadCompany();
+        }
+
+        // ===== END COMPANY =====
 
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {

@@ -116,21 +116,31 @@ const waitlistLimiter = createRateLimiter(60 * 60 * 1000, 5,  'Too many signups 
 // Signup
 app.post('/api/auth/signup', authLimiter, async (req, res) => {
     try {
-        const { email, password, userType, firstName, lastName, zipCode } = req.body;
-        
+        const { email, password, userType, firstName, lastName, zipCode, companyName } = req.body;
+
         if (!email || !password || !userType || !firstName || !lastName || !zipCode) {
             return res.status(400).json({ error: 'All fields required' });
         }
-        
+
         if (!['seller', 'realtor', 'buyer'].includes(userType)) {
             return res.status(400).json({ error: 'Invalid user type' });
         }
-        
+
         if (password.length < 8) {
             return res.status(400).json({ error: 'Password must be at least 8 characters' });
         }
-        
+
         const user = await auth.createUser(email, password, userType, firstName, lastName, zipCode);
+
+        // Realtors automatically get a company (solo company if no name provided)
+        if (userType === 'realtor') {
+            const name = (companyName || '').trim() || `${firstName} ${lastName}`;
+            try {
+                await db.createCompany(name, user.id, 'basic');
+            } catch (companyErr) {
+                console.error('Company creation failed (non-fatal):', companyErr.message);
+            }
+        }
 
         // Send verification email (non-blocking)
         const verifyToken = crypto.randomBytes(32).toString('hex');
@@ -164,6 +174,120 @@ app.post('/api/auth/signup', authLimiter, async (req, res) => {
             return res.status(400).json({ error: 'Email already registered' });
         }
         res.status(500).json({ error: 'Failed to create account' });
+    }
+});
+
+// ===== COMPANY ROUTES =====
+
+// Get current realtor's company
+app.get('/api/company', auth.requireAuth, async (req, res) => {
+    try {
+        if (req.user.user_type !== 'realtor') return res.status(403).json({ error: 'Realtors only' });
+        const user = await db.getProfile(req.user.id);
+        if (!user.company_id) return res.json(null);
+        const company = await db.getCompany(user.company_id);
+        const members = await db.getCompanyMembers(user.company_id);
+        const locations = await db.getCompanyLocations(user.company_id);
+        res.json({ company, members, locations });
+    } catch (err) {
+        console.error('GET /api/company error:', err);
+        res.status(500).json({ error: 'Failed to load company' });
+    }
+});
+
+// Update company plan (owner only)
+app.put('/api/company/plan', auth.requireAuth, async (req, res) => {
+    try {
+        if (req.user.user_type !== 'realtor') return res.status(403).json({ error: 'Realtors only' });
+        const { plan } = req.body;
+        if (!['basic', 'professional', 'firm'].includes(plan)) {
+            return res.status(400).json({ error: 'Invalid plan' });
+        }
+        const user = await db.getProfile(req.user.id);
+        if (!user.company_id || user.company_role !== 'owner') {
+            return res.status(403).json({ error: 'Only the company owner can change the plan' });
+        }
+        await db.updateCompanyPlan(user.company_id, plan);
+        res.json({ success: true });
+    } catch (err) {
+        console.error('PUT /api/company/plan error:', err);
+        res.status(500).json({ error: 'Failed to update plan' });
+    }
+});
+
+// Add an agent to the company (owner only) — by email lookup
+app.post('/api/company/agents', auth.requireAuth, async (req, res) => {
+    try {
+        if (req.user.user_type !== 'realtor') return res.status(403).json({ error: 'Realtors only' });
+        const { email, zipCode } = req.body;
+        if (!email || !zipCode) return res.status(400).json({ error: 'email and zipCode required' });
+
+        const owner = await db.getProfile(req.user.id);
+        if (!owner.company_id || owner.company_role !== 'owner') {
+            return res.status(403).json({ error: 'Only the company owner can add agents' });
+        }
+
+        const agent = await db.getUserByEmail(email.toLowerCase().trim());
+        if (!agent) return res.status(404).json({ error: 'No account found with that email' });
+        if (agent.user_type !== 'realtor') return res.status(400).json({ error: 'User is not a realtor' });
+        if (agent.company_id) return res.status(400).json({ error: 'That agent already belongs to a company' });
+
+        await db.addAgentToCompany(agent.id, owner.company_id, zipCode);
+        res.json({ success: true });
+    } catch (err) {
+        console.error('POST /api/company/agents error:', err);
+        res.status(err.message.includes('Plan limit') ? 403 : 500).json({ error: err.message || 'Failed to add agent' });
+    }
+});
+
+// Remove an agent from the company (owner only)
+app.delete('/api/company/agents/:userId', auth.requireAuth, async (req, res) => {
+    try {
+        if (req.user.user_type !== 'realtor') return res.status(403).json({ error: 'Realtors only' });
+        const owner = await db.getProfile(req.user.id);
+        if (!owner.company_id || owner.company_role !== 'owner') {
+            return res.status(403).json({ error: 'Only the company owner can remove agents' });
+        }
+        await db.removeAgentFromCompany(parseInt(req.params.userId), owner.company_id);
+        res.json({ success: true });
+    } catch (err) {
+        console.error('DELETE /api/company/agents error:', err);
+        res.status(500).json({ error: 'Failed to remove agent' });
+    }
+});
+
+// Add a location to the company (owner only, firm plan only)
+app.post('/api/company/locations', auth.requireAuth, async (req, res) => {
+    try {
+        if (req.user.user_type !== 'realtor') return res.status(403).json({ error: 'Realtors only' });
+        const { zipCode, label } = req.body;
+        if (!zipCode) return res.status(400).json({ error: 'zipCode required' });
+
+        const owner = await db.getProfile(req.user.id);
+        if (!owner.company_id || owner.company_role !== 'owner') {
+            return res.status(403).json({ error: 'Only the company owner can add locations' });
+        }
+        const location = await db.addCompanyLocation(owner.company_id, zipCode, label);
+        res.json(location);
+    } catch (err) {
+        console.error('POST /api/company/locations error:', err);
+        res.status(err.message.includes('Firm plan') ? 403 : 500).json({ error: err.message || 'Failed to add location' });
+    }
+});
+
+// Remove a location (owner only)
+app.delete('/api/company/locations/:locationId', auth.requireAuth, async (req, res) => {
+    try {
+        if (req.user.user_type !== 'realtor') return res.status(403).json({ error: 'Realtors only' });
+        const owner = await db.getProfile(req.user.id);
+        if (!owner.company_id || owner.company_role !== 'owner') {
+            return res.status(403).json({ error: 'Only the company owner can remove locations' });
+        }
+        await db.removeCompanyLocation(parseInt(req.params.locationId), owner.company_id);
+        res.json({ success: true });
+    } catch (err) {
+        console.error('DELETE /api/company/locations error:', err);
+        res.status(500).json({ error: 'Failed to remove location' });
     }
 });
 
