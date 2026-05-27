@@ -13,6 +13,8 @@ const { upload, uploadToCloudinary } = require('./config/cloudinary');
 const { db, pool } = require('./db');
 const emailService = require('./email');
 const auth = require('./auth');
+const cities = require('./cities');
+const { generateCityPage } = require('./cityTemplate');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -1102,6 +1104,99 @@ app.get('/api/health', (req, res) => {
         timestamp: new Date(),
         environment: process.env.NODE_ENV || 'development'
     });
+});
+
+// ===== SEO CITY PAGES =====
+
+// Locations index
+app.get('/locations', (req, res) => {
+    const cards = cities.map(c => `
+        <a href="/locations/${c.slug}" class="city-card">
+            <div class="city-name">${c.name}</div>
+            <div class="city-meta">${c.county} County &nbsp;·&nbsp; Median ${c.median_price}</div>
+            <div class="city-trend">↑ ${c.price_trend} YoY &nbsp;·&nbsp; ${c.avg_dom} days avg.</div>
+        </a>`).join('');
+
+    res.send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Western Massachusetts Real Estate | RealtorFinder</title>
+    <meta name="description" content="RealtorFinder covers every major city and town in western Massachusetts. Find your city to sell your home or discover listings as a realtor.">
+    <link rel="canonical" href="https://www.realtorfinder.net/locations">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-BRGVVNKT65"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-BRGVVNKT65');</script>
+    <style>
+        :root{--primary:#0A2540;--accent:#FF6B35;--border:#e5e7eb;--soft-bg:#f8f9fa;}
+        *{margin:0;padding:0;box-sizing:border-box;}
+        body{font-family:'Work Sans',sans-serif;color:var(--primary);}
+        nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(255,255,255,0.97);backdrop-filter:blur(10px);border-bottom:1px solid var(--border);padding:0 5%;display:flex;align-items:center;justify-content:space-between;height:68px;}
+        .nav-logo{font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:900;color:var(--primary);text-decoration:none;}
+        .nav-logo span{color:var(--accent);}
+        .nav-cta{background:var(--accent);color:#fff;padding:10px 22px;border-radius:8px;font-weight:600;text-decoration:none;font-size:0.95rem;}
+        .hero{background:linear-gradient(135deg,var(--primary) 0%,#0d3a5c 100%);color:#fff;padding:130px 5% 70px;text-align:center;}
+        .hero h1{font-family:'Playfair Display',serif;font-size:clamp(2rem,4vw,3.2rem);font-weight:900;margin-bottom:14px;}
+        .hero h1 em{color:var(--accent);font-style:normal;}
+        .hero p{font-size:1.1rem;opacity:0.85;max-width:560px;margin:0 auto;}
+        .grid{max-width:1100px;margin:60px auto;padding:0 5%;display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:18px;}
+        .city-card{background:#fff;border:1px solid var(--border);border-radius:14px;padding:24px;text-decoration:none;color:var(--primary);transition:all 0.2s;display:block;}
+        .city-card:hover{border-color:var(--accent);box-shadow:0 8px 24px rgba(255,107,53,0.12);transform:translateY(-2px);}
+        .city-name{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:700;margin-bottom:6px;}
+        .city-meta{font-size:0.85rem;color:#6b7280;margin-bottom:4px;}
+        .city-trend{font-size:0.82rem;color:#16a34a;font-weight:600;}
+        footer{background:var(--primary);color:rgba(255,255,255,0.6);padding:32px 5%;text-align:center;font-size:0.84rem;margin-top:60px;}
+        footer a{color:rgba(255,255,255,0.6);margin:0 8px;text-decoration:none;}
+    </style>
+</head>
+<body>
+<nav>
+    <a href="/" class="nav-logo">Realtor<span>Finder</span></a>
+    <a href="/login" class="nav-cta">Get Started Free</a>
+</nav>
+<div class="hero">
+    <h1>Western Massachusetts<br><em>Real Estate Markets</em></h1>
+    <p>Connecting home sellers and local realtors across every city and town in western MA.</p>
+</div>
+<div class="grid">${cards}</div>
+<footer>
+    <p>© ${new Date().getFullYear()} RealtorFinder &nbsp;·&nbsp; <a href="/">Home</a><a href="/realtors">For Realtors</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a></p>
+</footer>
+</body>
+</html>`);
+});
+
+// Individual city pages
+app.get('/locations/:citySlug', (req, res) => {
+    const city = cities.find(c => c.slug === req.params.citySlug);
+    if (!city) return res.status(404).sendFile(path.join(__dirname, 'public', '404.html'));
+    res.send(generateCityPage(city));
+});
+
+// Robots.txt
+app.get('/robots.txt', (req, res) => {
+    res.type('text/plain');
+    res.send(`User-agent: *\nAllow: /\nDisallow: /dashboard/\nDisallow: /api/\nSitemap: https://www.realtorfinder.net/sitemap.xml\n`);
+});
+
+// XML Sitemap
+app.get('/sitemap.xml', (req, res) => {
+    const base = 'https://www.realtorfinder.net';
+    const staticUrls = ['/', '/login', '/buyers', '/realtors', '/locations'];
+    const cityUrls = cities.map(c => `/locations/${c.slug}`);
+    const allUrls = [...staticUrls, ...cityUrls];
+    const today = new Date().toISOString().split('T')[0];
+    const urlEntries = allUrls.map(u => `
+  <url>
+    <loc>${base}${u}</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>${u === '/' ? 'weekly' : u.startsWith('/locations/') ? 'monthly' : 'monthly'}</changefreq>
+    <priority>${u === '/' ? '1.0' : u.startsWith('/locations/') ? '0.8' : '0.7'}</priority>
+  </url>`).join('');
+    res.type('application/xml');
+    res.send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urlEntries}\n</urlset>`);
 });
 
 // ===== PAGE ROUTES (Must come AFTER API routes, BEFORE static files) =====
