@@ -69,15 +69,26 @@ const auth = {
 
     // Get user by ID
     async getUserById(userId) {
-        const result = await pool.query(
-            `SELECT id, email, user_type, first_name, last_name, zip_code,
-                    email_verified, is_admin, is_active,
-                    phone, license_number, bio, years_experience, service_areas,
-                    created_at
-             FROM users WHERE id = $1`,
-            [userId]
-        );
-        return result.rows[0];
+        try {
+            const result = await pool.query(
+                `SELECT id, email, user_type, first_name, last_name, zip_code,
+                        email_verified, is_admin, is_active,
+                        phone, license_number, bio, years_experience, service_areas,
+                        created_at
+                 FROM users WHERE id = $1`,
+                [userId]
+            );
+            return result.rows[0];
+        } catch {
+            // Fallback for environments where migration-launch.sql hasn't run yet
+            const result = await pool.query(
+                `SELECT id, email, user_type, first_name, last_name, zip_code,
+                        email_verified, created_at
+                 FROM users WHERE id = $1`,
+                [userId]
+            );
+            return result.rows[0];
+        }
     },
 
     // Middleware to require authentication
