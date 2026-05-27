@@ -695,9 +695,22 @@
         <div class="modal-content">
             <span class="modal-close" onclick="closeNewListingModal()">&times;</span>
             <div class="modal-header">
-                <h2>Create New Listing</h2>
-                <p style="color: #666;">List your property and start receiving offers from qualified realtors</p>
+                <h2 id="newListingModalTitle">Create New Listing</h2>
+                <p id="newListingModalSub" style="color: #666;">List your property and start receiving offers from qualified realtors</p>
             </div>
+
+            <!-- Step 2: Photo upload (shown after listing created) -->
+            <div id="newListingPhotoStep" style="display:none;">
+                <div id="newListingPreviews" style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-bottom:1rem;"></div>
+                <div style="display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap;margin-bottom:0.75rem;">
+                    <input type="file" id="newListingImageInput" accept="image/*" multiple style="flex:1;font-size:0.9rem;">
+                    <button type="button" class="btn btn-outline" onclick="uploadNewListingImages()" style="font-size:0.85rem;padding:0.5rem 1rem;">Upload</button>
+                </div>
+                <p id="newListingPhotoStatus" style="font-size:0.85rem;color:#666;margin-bottom:1.5rem;"></p>
+                <button type="button" class="btn btn-primary" onclick="finishNewListing()" style="width:100%;padding:1rem;">Done</button>
+                <button type="button" onclick="finishNewListing()" style="display:block;width:100%;text-align:center;margin-top:0.75rem;background:none;border:none;color:#999;font-size:0.9rem;cursor:pointer;">Skip photos for now</button>
+            </div>
+
             <form id="newListingForm">
                 <div class="form-group">
                     <label>Property Address *</label>
@@ -752,7 +765,7 @@
                         <input type="tel" name="ownerPhone" placeholder="(555) 123-4567" required>
                     </div>
                 </div>
-                <button type="submit" class="btn btn-primary" style="width: 100%; padding: 1rem; margin-top: 1rem;">Create Listing</button>
+                <button type="submit" class="btn btn-primary" style="width: 100%; padding: 1rem; margin-top: 1rem;">Next: Add Photos →</button>
             </form>
         </div>
     </div>
@@ -903,33 +916,85 @@
             document.getElementById('newListingModal').classList.add('active');
         }
 
+        let _newListingId = null;
+
         function closeNewListingModal() {
             document.getElementById('newListingModal').classList.remove('active');
             document.getElementById('newListingForm').reset();
+            document.getElementById('newListingForm').style.display = '';
+            document.getElementById('newListingPhotoStep').style.display = 'none';
+            document.getElementById('newListingModalTitle').textContent = 'Create New Listing';
+            document.getElementById('newListingModalSub').textContent = 'List your property and start receiving offers from qualified realtors';
+            document.getElementById('newListingPreviews').innerHTML = '';
+            document.getElementById('newListingPhotoStatus').textContent = '';
+            _newListingId = null;
+        }
+
+        function finishNewListing() {
+            closeNewListingModal();
+            loadDashboard();
+        }
+
+        async function uploadNewListingImages() {
+            if (!_newListingId) return;
+            const input = document.getElementById('newListingImageInput');
+            const status = document.getElementById('newListingPhotoStatus');
+            if (!input.files.length) { status.textContent = 'Please select at least one photo.'; return; }
+            status.textContent = 'Uploading…';
+            const formData = new FormData();
+            Array.from(input.files).forEach(f => formData.append('images', f));
+            try {
+                const res = await fetch(`${API_BASE_URL}/listings/${_newListingId}/images`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    body: formData
+                });
+                if (!res.ok) throw new Error();
+                const data = await res.json();
+                status.textContent = `✓ ${data.imageCount || input.files.length} photo(s) uploaded successfully.`;
+                // Show thumbnails
+                const previews = document.getElementById('newListingPreviews');
+                previews.innerHTML = '';
+                (data.imageUrls || []).forEach(url => {
+                    const img = document.createElement('img');
+                    img.src = url;
+                    img.style.cssText = 'width:80px;height:60px;object-fit:cover;border-radius:6px;';
+                    previews.appendChild(img);
+                });
+                input.value = '';
+            } catch {
+                status.textContent = 'Upload failed — please try again.';
+            }
         }
 
         // Create Listing
         document.getElementById('newListingForm').addEventListener('submit', async (e) => {
             e.preventDefault();
+            const btn = e.target.querySelector('button[type="submit"]');
+            btn.disabled = true;
+            btn.textContent = 'Creating…';
             const formData = new FormData(e.target);
             const data = Object.fromEntries(formData);
-            
             try {
                 const response = await fetch(`${API_BASE_URL}/listings`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',  // Important for sending session cookie
+                    credentials: 'include',
                     body: JSON.stringify(data)
                 });
-                
                 if (!response.ok) throw new Error('Failed to create listing');
-                
-                closeNewListingModal();
-                loadDashboard();
-                alert('✅ Listing created successfully!');
+                const result = await response.json();
+                _newListingId = result.id || result.listing?.id;
+                // Show photo upload step
+                document.getElementById('newListingForm').style.display = 'none';
+                document.getElementById('newListingPhotoStep').style.display = 'block';
+                document.getElementById('newListingModalTitle').textContent = 'Add Photos';
+                document.getElementById('newListingModalSub').textContent = 'Photos help your listing stand out. You can also add them later from your dashboard.';
             } catch (error) {
                 console.error('Error:', error);
                 alert('Failed to create listing. Please try again.');
+                btn.disabled = false;
+                btn.textContent = 'Next: Add Photos →';
             }
         });
 

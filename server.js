@@ -9,6 +9,7 @@ const https = require('https');
 const crypto = require('crypto');
 const bcrypt = require('bcrypt');
 const { upload, uploadToCloudinary } = require('./config/cloudinary');
+const stripe = process.env.STRIPE_SECRET_KEY ? require('stripe')(process.env.STRIPE_SECRET_KEY) : null;
 
 const { db, pool } = require('./db');
 const emailService = require('./email');
@@ -28,7 +29,14 @@ app.use(cors({
     origin: allowedOrigin,
     credentials: true
 }));
-app.use(express.json());
+// Stripe webhook needs raw body; everything else gets JSON parsed
+app.use((req, res, next) => {
+    if (req.originalUrl === '/api/webhook/stripe') {
+        next();
+    } else {
+        express.json()(req, res, next);
+    }
+});
 
 // Session configuration
 const sessionStore = new pgSession({
@@ -1205,6 +1213,92 @@ app.post('/api/city-lead', waitlistLimiter, async (req, res) => {
     }
 });
 
+// ===== STRIPE ROUTES =====
+
+const STRIPE_PRICE_IDS = {
+    basic:        process.env.STRIPE_PRICE_BASIC,
+    professional: process.env.STRIPE_PRICE_PROFESSIONAL,
+    firm:         process.env.STRIPE_PRICE_FIRM
+};
+
+// Create Stripe Checkout session
+app.post('/api/stripe/checkout', auth.requireAuth, async (req, res) => {
+    if (!stripe) return res.status(503).json({ error: 'stripe_not_configured' });
+    const { plan } = req.body;
+    if (!['basic', 'professional', 'firm'].includes(plan)) {
+        return res.status(400).json({ error: 'Invalid plan' });
+    }
+    const priceId = STRIPE_PRICE_IDS[plan];
+    if (!priceId) return res.status(503).json({ error: 'stripe_not_configured' });
+
+    try {
+        const user = await auth.getUserById(req.session.userId);
+        const base = process.env.FRONTEND_URL || 'https://www.realtorfinder.net';
+        const session = await stripe.checkout.sessions.create({
+            mode: 'subscription',
+            payment_method_types: ['card'],
+            customer_email: user.email,
+            line_items: [{ price: priceId, quantity: 1 }],
+            success_url: `${base}/subscription/success?session_id={CHECKOUT_SESSION_ID}`,
+            cancel_url: `${base}/pricing`,
+            metadata: { userId: String(req.session.userId), plan }
+        });
+        res.json({ url: session.url });
+    } catch (err) {
+        console.error('Stripe checkout error:', err);
+        res.status(500).json({ error: 'Failed to create checkout session' });
+    }
+});
+
+// Stripe webhook — must receive raw body
+app.post('/api/webhook/stripe', express.raw({ type: 'application/json' }), async (req, res) => {
+    if (!stripe) return res.status(503).send('Stripe not configured');
+    const sig = req.headers['stripe-signature'];
+    let event;
+    try {
+        event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
+    } catch (err) {
+        console.error('Stripe webhook signature error:', err.message);
+        return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
+
+    if (event.type === 'checkout.session.completed') {
+        const sess = event.data.object;
+        const userId = parseInt(sess.metadata?.userId);
+        const plan   = sess.metadata?.plan;
+        if (userId && plan) {
+            try {
+                await pool.query(
+                    `UPDATE companies SET plan=$1, stripe_customer_id=$2, stripe_subscription_id=$3, updated_at=NOW() WHERE owner_user_id=$4`,
+                    [plan, sess.customer, sess.subscription, userId]
+                );
+                await pool.query(
+                    `UPDATE users SET subscription_plan=$1 WHERE id=$2`,
+                    [plan, userId]
+                );
+                console.log(`✅ Stripe: upgraded user ${userId} to ${plan}`);
+            } catch (err) {
+                console.error('Stripe webhook DB error:', err);
+            }
+        }
+    }
+
+    if (event.type === 'customer.subscription.deleted') {
+        const sub = event.data.object;
+        try {
+            await pool.query(
+                `UPDATE companies SET plan='basic', stripe_subscription_id=NULL, updated_at=NOW() WHERE stripe_customer_id=$1`,
+                [sub.customer]
+            );
+            console.log(`⚠️ Stripe: subscription cancelled for customer ${sub.customer}`);
+        } catch (err) {
+            console.error('Stripe cancellation DB error:', err);
+        }
+    }
+
+    res.json({ received: true });
+});
+
 // Health check
 app.get('/api/health', (req, res) => {
     res.json({ 
@@ -1433,7 +1527,7 @@ app.get('/sitemap-index.xml', async (req, res) => {
 app.get('/sitemap-static.xml', (req, res) => {
     const base = 'https://www.realtorfinder.net';
     const today = new Date().toISOString().split('T')[0];
-    const urls = ['/', '/login', '/buyers', '/realtors', '/locations'];
+    const urls = ['/', '/realtors', '/pricing', '/buyers', '/locations', '/login'];
     const entries = urls.map(u => `  <url><loc>${base}${u}</loc><lastmod>${today}</lastmod><priority>${u === '/' ? '1.0' : '0.7'}</priority></url>`).join('\n');
     res.type('application/xml');
     res.send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${entries}\n</urlset>`);
@@ -1478,6 +1572,16 @@ app.get('/login', (req, res) => {
 // Waitlist holding page
 app.get('/waitlist', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'waitlist.html'));
+});
+
+// Pricing page
+app.get('/pricing', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'pricing.html'));
+});
+
+// Subscription success/cancel pages
+app.get('/subscription/success', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'subscription-success.html'));
 });
 
 // Seller landing page (homepage) — also serves realtors.html on realtors.realtorfinder.net
