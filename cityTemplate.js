@@ -1,19 +1,22 @@
-// cityTemplate.js — Generates SEO-optimized HTML for western MA city landing pages
+// cityTemplate.js — Generates SEO-optimized HTML for city landing pages
 
-function generateCityPage(city) {
-    const title = `Sell Your Home in ${city.name}, MA | RealtorFinder`;
-    const metaDesc = `List your ${city.name}, MA home on RealtorFinder and let local realtors compete for your listing. Free for sellers. Realtors: bid on ${city.name} listings before they hit Zillow.`;
-    const canonicalUrl = `https://www.realtorfinder.net/locations/${city.slug}`;
+function generateCityPage(city, liveData = {}) {
+    const { listingCount = 0, realtorCount = 0 } = liveData;
+    const stateCode = (city.state_code || 'MA').toUpperCase();
+    const stateName = city.state_name || 'Massachusetts';
+    const title = `Sell Your Home in ${city.name}, ${stateCode} | RealtorFinder`;
+    const metaDesc = `List your ${city.name}, ${stateCode} home on RealtorFinder and let local realtors compete for your listing. Free for sellers. Realtors: bid on ${city.name} listings before they hit Zillow.`;
+    const canonicalUrl = `https://www.realtorfinder.net/locations/${stateCode.toLowerCase()}/${city.slug}`;
     const schemaOrg = JSON.stringify({
         '@context': 'https://schema.org',
         '@type': 'RealEstateAgent',
-        'name': `RealtorFinder — ${city.name}, MA`,
+        'name': `RealtorFinder — ${city.name}, ${stateCode}`,
         'description': metaDesc,
         'url': canonicalUrl,
         'areaServed': {
             '@type': 'City',
             'name': city.name,
-            'addressRegion': 'MA',
+            'addressRegion': stateCode,
             'addressCountry': 'US'
         },
         'serviceType': 'Real Estate Listing Marketplace'
@@ -268,17 +271,14 @@ function generateCityPage(city) {
         <div class="stat-label">Median Home Price</div>
     </div>
     <div class="stat">
-        <div class="stat-num"><span>↑</span>${city.price_trend.replace('up ', '')}</div>
+        <div class="stat-num"><span>↑</span>${(city.price_trend || '').replace('up ', '')}</div>
         <div class="stat-label">Year-Over-Year</div>
     </div>
     <div class="stat">
-        <div class="stat-num">${city.avg_dom}<span>days</span></div>
+        <div class="stat-num">${city.avg_dom || '—'}<span>${city.avg_dom ? ' days' : ''}</span></div>
         <div class="stat-label">Avg. Days on Market</div>
     </div>
-    <div class="stat">
-        <div class="stat-num">$0</div>
-        <div class="stat-label">Cost to List for Sellers</div>
-    </div>
+    ${realtorCount > 0 ? `<div class="stat"><div class="stat-num">${realtorCount}</div><div class="stat-label">Active Realtors</div></div>` : `<div class="stat"><div class="stat-num">$0</div><div class="stat-label">Cost to List for Sellers</div></div>`}
 </div>
 
 <!-- WHO IS THIS FOR -->
@@ -373,9 +373,10 @@ function generateCityPage(city) {
 <!-- NEARBY CITIES -->
 <section class="section section-alt section-center">
     <div class="eyebrow">Also Serving</div>
-    <h2>Western Massachusetts Coverage</h2>
-    <p class="section-intro">RealtorFinder connects sellers and realtors across ${city.county} County and beyond, including ${city.nearby}.</p>
+    <h2>${stateName} Coverage</h2>
+    <p class="section-intro">RealtorFinder connects sellers and realtors across ${city.county ? city.county + ' County and ' : ''}${stateName}, including ${city.nearby || 'nearby communities'}.</p>
     <div class="nearby-links" id="nearbyLinks"></div>
+    <p style="margin-top:20px;"><a href="/locations/${stateCode.toLowerCase()}" style="color:var(--accent);font-weight:600;">View all ${stateName} cities →</a></p>
 </section>
 
 <!-- FINAL CTA -->
@@ -401,29 +402,20 @@ function generateCityPage(city) {
 </footer>
 
 <script>
-    // Populate nearby city links dynamically
-    const allCities = ${JSON.stringify([
-        { name: 'Springfield', slug: 'springfield' },
-        { name: 'Northampton', slug: 'northampton' },
-        { name: 'Amherst', slug: 'amherst' },
-        { name: 'Holyoke', slug: 'holyoke' },
-        { name: 'Chicopee', slug: 'chicopee' },
-        { name: 'Pittsfield', slug: 'pittsfield' },
-        { name: 'Westfield', slug: 'westfield' },
-        { name: 'Longmeadow', slug: 'longmeadow' },
-        { name: 'Easthampton', slug: 'easthampton' },
-        { name: 'South Hadley', slug: 'south-hadley' },
-        { name: 'Agawam', slug: 'agawam' },
-        { name: 'Great Barrington', slug: 'great-barrington' },
-    ])};
-    const container = document.getElementById('nearbyLinks');
-    allCities.filter(c => c.slug !== '${city.slug}').forEach(c => {
-        const a = document.createElement('a');
-        a.href = '/locations/' + c.slug;
-        a.className = 'nearby-link';
-        a.textContent = c.name + ', MA';
-        container.appendChild(a);
-    });
+    // Populate nearby city links from same state
+    fetch('/api/cities/${stateCode.toLowerCase()}')
+        .then(r => r.json())
+        .then(cities => {
+            const container = document.getElementById('nearbyLinks');
+            cities.filter(c => c.slug !== '${city.slug}').slice(0, 12).forEach(c => {
+                const a = document.createElement('a');
+                a.href = '/locations/${stateCode.toLowerCase()}/' + c.slug;
+                a.className = 'nearby-link';
+                a.textContent = c.name + ', ${stateCode}';
+                container.appendChild(a);
+            });
+        })
+        .catch(() => {});
 </script>
 
 </body>
