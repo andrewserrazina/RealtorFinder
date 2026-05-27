@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Subscription Confirmed - RealtorFinder</title>
+    <!-- Google Analytics 4 -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-BRGVVNKT65"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-BRGVVNKT65');
+    </script>
+    <!-- Microsoft Clarity -->
+    <script type="text/javascript">
+        (function(c,l,a,r,i,t,y){
+            c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+            t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+            y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+        })(window, document, "clarity", "script", "wxvaz0g7tq");
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@600;700;900&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root { --primary: #0A2540; --accent: #FF6B35; --soft-bg: #F8F6F3; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--soft-bg);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            text-align: center;
+        }
+        .logo { font-family: 'Crimson Pro', serif; font-size: 1.8rem; font-weight: 900; color: var(--primary); text-decoration: none; margin-bottom: 3rem; display: inline-block; }
+        .logo span { color: var(--accent); }
+        .card { background: white; border-radius: 24px; padding: 4rem 3rem; max-width: 500px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,0.08); }
+        .checkmark { width: 72px; height: 72px; background: linear-gradient(135deg, #10B981, #059669); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 2rem; font-size: 2rem; }
+        h1 { font-family: 'Crimson Pro', serif; font-size: 2.2rem; font-weight: 900; color: var(--primary); margin-bottom: 1rem; }
+        p { color: #555; line-height: 1.6; margin-bottom: 2rem; }
+        .btn { display: inline-block; padding: 0.9rem 2rem; background: var(--accent); color: white; border-radius: 10px; font-weight: 600; text-decoration: none; font-family: 'DM Sans', sans-serif; transition: background 0.2s; }
+        .btn:hover { background: #e55a2b; }
+    </style>
+</head>
+<body>
+    <a href="/" class="logo">Realtor<span>Finder</span></a>
+    <div class="card">
+        <div class="checkmark">✓</div>
+        <h1>You're subscribed!</h1>
+        <p>Your subscription is confirmed and your account has been upgraded. Head to your dashboard to start bidding on listings.</p>
+        <a href="/dashboard/realtor" class="btn">Go to Dashboard</a>
+    </div>
+    <script>
+        // Fire purchase conversion event
+        gtag('event', 'purchase', { currency: 'USD' });
+    </script>
+</body>
+</html>
