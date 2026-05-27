@@ -499,6 +499,19 @@
                 companyGroup.style.display = this.value === 'realtor' ? 'block' : 'none';
             });
         }
+
+        // Pre-fill from URL params: ?tab=signup&type=realtor
+        (function() {
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('tab') === 'signup') {
+                switchTab('signup');
+            }
+            const type = params.get('type');
+            if (type && userTypeSelect) {
+                userTypeSelect.value = type;
+                userTypeSelect.dispatchEvent(new Event('change'));
+            }
+        })();
     </script>
 </body>
 </html>
