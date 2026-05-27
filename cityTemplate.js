@@ -240,6 +240,85 @@ function generateCityPage(city, liveData = {}) {
         footer a:hover { color: #fff; }
         .footer-logo { font-family: 'Playfair Display', serif; font-size: 1.3rem; font-weight: 900; color: #fff; margin-bottom: 12px; }
         .footer-logo span { color: var(--accent); }
+
+        /* LEAD MODAL */
+        .modal-overlay {
+            display: none; position: fixed; inset: 0; z-index: 1000;
+            background: rgba(10,37,64,0.7); backdrop-filter: blur(4px);
+            align-items: center; justify-content: center; padding: 20px;
+        }
+        .modal-overlay.open { display: flex; }
+        .modal {
+            background: #fff; border-radius: 20px; padding: 44px 40px;
+            max-width: 480px; width: 100%; position: relative;
+            box-shadow: 0 24px 64px rgba(0,0,0,0.18);
+            animation: modalIn 0.22s ease;
+        }
+        @keyframes modalIn { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:none; } }
+        @media (max-width: 520px) { .modal { padding: 32px 24px; } }
+        .modal-close {
+            position: absolute; top: 16px; right: 20px;
+            background: none; border: none; font-size: 1.5rem;
+            color: var(--muted); cursor: pointer; line-height: 1;
+        }
+        .modal-close:hover { color: var(--text); }
+        .modal-eyebrow { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); margin-bottom: 8px; }
+        .modal h2 { font-family: 'Playfair Display', serif; font-size: 1.7rem; font-weight: 900; color: var(--primary); margin-bottom: 6px; line-height: 1.2; }
+        .modal-sub { font-size: 0.93rem; color: var(--muted); margin-bottom: 28px; }
+
+        /* Type toggle */
+        .type-toggle { display: flex; gap: 10px; margin-bottom: 24px; }
+        .type-btn {
+            flex: 1; padding: 11px 8px; border-radius: 10px; font-size: 0.9rem;
+            font-weight: 600; cursor: pointer; transition: all 0.15s;
+            border: 2px solid var(--border); background: #fff; color: var(--muted);
+        }
+        .type-btn.active { border-color: var(--accent); background: #fff8f5; color: var(--accent); }
+
+        /* Form fields */
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-size: 0.85rem; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+        .form-group input {
+            width: 100%; padding: 12px 14px; border: 1.5px solid var(--border);
+            border-radius: 10px; font-size: 0.97rem; font-family: inherit;
+            transition: border-color 0.15s; outline: none; background: #fff;
+        }
+        .form-group input:focus { border-color: var(--accent); }
+        .form-group input::placeholder { color: #b0b7c3; }
+        .form-submit {
+            width: 100%; padding: 15px; border-radius: 10px; border: none;
+            background: var(--accent); color: #fff; font-size: 1rem; font-weight: 700;
+            cursor: pointer; transition: all 0.2s; margin-top: 4px; font-family: inherit;
+        }
+        .form-submit:hover { background: var(--accent-dark); transform: translateY(-1px); box-shadow: 0 6px 20px rgba(255,107,53,0.3); }
+        .form-submit:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+        .form-note { font-size: 0.78rem; color: var(--muted); text-align: center; margin-top: 12px; }
+
+        /* Success state */
+        .modal-success { display: none; text-align: center; padding: 12px 0; }
+        .modal-success .check { font-size: 3rem; margin-bottom: 16px; }
+        .modal-success h3 { font-family: 'Playfair Display', serif; font-size: 1.5rem; color: var(--primary); margin-bottom: 10px; }
+        .modal-success p { color: var(--muted); font-size: 0.97rem; line-height: 1.6; }
+
+        /* Inline lead section */
+        .lead-section {
+            background: var(--primary);
+            padding: 72px 5%;
+        }
+        .lead-inner {
+            max-width: 1000px; margin: 0 auto;
+            display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center;
+        }
+        @media (max-width: 768px) { .lead-inner { grid-template-columns: 1fr; gap: 36px; } }
+        .lead-copy { color: #fff; }
+        .lead-copy .eyebrow { color: rgba(255,107,53,0.9); }
+        .lead-copy h2 { color: #fff; margin-bottom: 14px; }
+        .lead-copy p { color: rgba(255,255,255,0.78); font-size: 1.02rem; line-height: 1.7; }
+        .lead-form-card {
+            background: #fff; border-radius: 16px; padding: 36px;
+            box-shadow: 0 16px 48px rgba(0,0,0,0.2);
+        }
+        .lead-form-card .type-toggle { margin-bottom: 20px; }
     </style>
 </head>
 <body>
@@ -255,12 +334,12 @@ function generateCityPage(city, liveData = {}) {
 
 <!-- HERO -->
 <section class="hero">
-    <div class="hero-eyebrow">${city.county} County, Western MA</div>
+    <div class="hero-eyebrow">${city.county ? city.county + ' County, ' : ''}${stateName}</div>
     <h1>Sell Your Home in <em>${city.name}</em> the Smart Way</h1>
     <p class="hero-sub">List your ${city.name} property and let local realtors compete for the right to represent you — so you get the best agent, not just the first one you find.</p>
     <div class="hero-ctas">
-        <a href="/signup" class="btn-primary">List My Home — Free</a>
-        <a href="/realtors" class="btn-outline">I'm a Realtor →</a>
+        <button class="btn-primary" onclick="openLead('seller')">List My Home — Free</button>
+        <button class="btn-outline" onclick="openLead('realtor')">I'm a Realtor →</button>
     </div>
 </section>
 
@@ -296,7 +375,7 @@ function generateCityPage(city, liveData = {}) {
                 <li>Faster sales, better outcomes</li>
             </ul>
             <div class="panel-cta">
-                <a href="/signup" class="btn-accent">List My ${city.name} Home Free</a>
+                <button class="btn-accent" onclick="openLead('seller')">List My ${city.name} Home Free</button>
             </div>
         </div>
         <div class="panel accent-panel">
@@ -311,7 +390,7 @@ function generateCityPage(city, liveData = {}) {
                 <li>No leads fees, no referral cuts</li>
             </ul>
             <div class="panel-cta">
-                <a href="/realtors" class="btn-white">See Realtor Pricing</a>
+                <button class="btn-white" onclick="openLead('realtor')">Get Access in ${city.name}</button>
             </div>
         </div>
     </div>
@@ -320,7 +399,7 @@ function generateCityPage(city, liveData = {}) {
 <!-- MARKET SNAPSHOT -->
 <section class="section section-alt section-center">
     <div class="eyebrow">Market Snapshot</div>
-    <h2>${city.name}, MA Real Estate Market</h2>
+    <h2>${city.name}, ${stateCode} Real Estate Market</h2>
     <p class="section-intro">${city.name} is ${city.description}. Here's a quick look at current market conditions.</p>
     <div class="market-grid">
         <div class="market-card">
@@ -379,12 +458,45 @@ function generateCityPage(city, liveData = {}) {
     <p style="margin-top:20px;"><a href="/locations/${stateCode.toLowerCase()}" style="color:var(--accent);font-weight:600;">View all ${stateName} cities →</a></p>
 </section>
 
-<!-- FINAL CTA -->
-<section class="cta-band">
-    <h2>Ready to Sell in ${city.name}?</h2>
-    <p>Join the sellers and realtors already using RealtorFinder across western Massachusetts. Listing is always free.</p>
-    <a href="/signup" class="btn-white">List My Home — Free</a>
-    <a href="/realtors" class="btn-white-outline">I'm a Realtor</a>
+<!-- INLINE LEAD CAPTURE -->
+<section class="lead-section">
+    <div class="lead-inner">
+        <div class="lead-copy">
+            <div class="eyebrow">Get Started Today</div>
+            <h2>Connect with the Best Realtors in ${city.name}</h2>
+            <p>Whether you're selling your home or you're a realtor looking for listings, RealtorFinder connects the right people. Free for sellers, no referral fees for realtors.</p>
+        </div>
+        <div class="lead-form-card">
+            <div id="inlineFormWrap">
+                <div class="type-toggle">
+                    <button class="type-btn active" id="inline-seller-btn" onclick="setInlineType('seller')">🏠 I'm a Seller</button>
+                    <button class="type-btn" id="inline-realtor-btn" onclick="setInlineType('realtor')">🤝 I'm a Realtor</button>
+                </div>
+                <form id="inlineLeadForm" onsubmit="submitInlineLead(event)">
+                    <input type="hidden" id="inlineType" value="seller">
+                    <div class="form-group">
+                        <label for="inlineName">Your Name</label>
+                        <input type="text" id="inlineName" placeholder="Jane Smith" autocomplete="name">
+                    </div>
+                    <div class="form-group">
+                        <label for="inlineEmail">Email Address *</label>
+                        <input type="email" id="inlineEmail" placeholder="jane@email.com" required autocomplete="email">
+                    </div>
+                    <div class="form-group">
+                        <label for="inlinePhone">Phone <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
+                        <input type="tel" id="inlinePhone" placeholder="(555) 555-5555" autocomplete="tel">
+                    </div>
+                    <button type="submit" class="form-submit" id="inlineSubmitBtn">Get Started Free →</button>
+                    <p class="form-note">No spam. No credit card. Cancel anytime.</p>
+                </form>
+            </div>
+            <div id="inlineSuccess" class="modal-success">
+                <div class="check">✅</div>
+                <h3>You're on the list!</h3>
+                <p>We'll follow up within 24 hours with next steps. Check your email for a confirmation.</p>
+            </div>
+        </div>
+    </div>
 </section>
 
 <footer>
@@ -402,7 +514,7 @@ function generateCityPage(city, liveData = {}) {
 </footer>
 
 <script>
-    // Populate nearby city links from same state
+    // Nearby city links
     fetch('/api/cities/${stateCode.toLowerCase()}')
         .then(r => r.json())
         .then(cities => {
@@ -416,7 +528,136 @@ function generateCityPage(city, liveData = {}) {
             });
         })
         .catch(() => {});
+
+    // ── Modal ──────────────────────────────────────────────
+    const CITY_SLUG  = '${city.slug}';
+    const CITY_NAME  = '${city.name.replace(/'/g, "\\'")}';
+    const STATE_CODE = '${stateCode}';
+
+    function openLead(type) {
+        document.getElementById('modalType').value = type;
+        document.getElementById('modal-seller-btn').classList.toggle('active', type === 'seller');
+        document.getElementById('modal-realtor-btn').classList.toggle('active', type === 'realtor');
+        document.getElementById('modalSubmitBtn').textContent =
+            type === 'seller' ? 'Connect Me with Realtors →' : 'Get Listing Access →';
+        document.getElementById('modalFormWrap').style.display = '';
+        document.getElementById('modalSuccess').style.display = 'none';
+        document.getElementById('leadModal').classList.add('open');
+        document.getElementById('modalEmail').focus();
+    }
+
+    function closeLead() {
+        document.getElementById('leadModal').classList.remove('open');
+    }
+
+    function setModalType(type) {
+        document.getElementById('modalType').value = type;
+        document.getElementById('modal-seller-btn').classList.toggle('active', type === 'seller');
+        document.getElementById('modal-realtor-btn').classList.toggle('active', type === 'realtor');
+        document.getElementById('modalSubmitBtn').textContent =
+            type === 'seller' ? 'Connect Me with Realtors →' : 'Get Listing Access →';
+    }
+
+    async function submitModalLead(e) {
+        e.preventDefault();
+        const btn = document.getElementById('modalSubmitBtn');
+        btn.disabled = true;
+        btn.textContent = 'Submitting…';
+        await submitLead(
+            document.getElementById('modalType').value,
+            document.getElementById('modalName').value,
+            document.getElementById('modalEmail').value,
+            document.getElementById('modalPhone').value,
+            () => {
+                document.getElementById('modalFormWrap').style.display = 'none';
+                document.getElementById('modalSuccess').style.display = 'block';
+            },
+            () => { btn.disabled = false; btn.textContent = 'Try Again'; }
+        );
+    }
+
+    document.getElementById('leadModal').addEventListener('click', e => {
+        if (e.target === e.currentTarget) closeLead();
+    });
+
+    // ── Inline form ────────────────────────────────────────
+    function setInlineType(type) {
+        document.getElementById('inlineType').value = type;
+        document.getElementById('inline-seller-btn').classList.toggle('active', type === 'seller');
+        document.getElementById('inline-realtor-btn').classList.toggle('active', type === 'realtor');
+        document.getElementById('inlineSubmitBtn').textContent =
+            type === 'seller' ? 'Connect Me with Realtors →' : 'Get Listing Access →';
+    }
+
+    async function submitInlineLead(e) {
+        e.preventDefault();
+        const btn = document.getElementById('inlineSubmitBtn');
+        btn.disabled = true;
+        btn.textContent = 'Submitting…';
+        await submitLead(
+            document.getElementById('inlineType').value,
+            document.getElementById('inlineName').value,
+            document.getElementById('inlineEmail').value,
+            document.getElementById('inlinePhone').value,
+            () => {
+                document.getElementById('inlineFormWrap').style.display = 'none';
+                document.getElementById('inlineSuccess').style.display = 'block';
+            },
+            () => { btn.disabled = false; btn.textContent = 'Get Started Free →'; }
+        );
+    }
+
+    // ── Shared submit ──────────────────────────────────────
+    async function submitLead(type, name, email, phone, onSuccess, onError) {
+        try {
+            const res = await fetch('/api/city-lead', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ type, name, email, phone, city_slug: CITY_SLUG, city_name: CITY_NAME, state_code: STATE_CODE })
+            });
+            if (res.ok) { onSuccess(); } else { onError(); }
+        } catch { onError(); }
+    }
 </script>
+
+<!-- LEAD MODAL -->
+<div class="modal-overlay" id="leadModal">
+    <div class="modal">
+        <button class="modal-close" onclick="closeLead()" aria-label="Close">×</button>
+        <div id="modalFormWrap">
+            <div class="modal-eyebrow">Free — No Commitment</div>
+            <h2>Get Started in ${city.name}</h2>
+            <p class="modal-sub">Tell us who you are and we'll connect you with the right people.</p>
+            <div class="type-toggle">
+                <button class="type-btn active" id="modal-seller-btn" onclick="setModalType('seller')">🏠 I'm a Seller</button>
+                <button class="type-btn" id="modal-realtor-btn" onclick="setModalType('realtor')">🤝 I'm a Realtor</button>
+            </div>
+            <form onsubmit="submitModalLead(event)">
+                <input type="hidden" id="modalType" value="seller">
+                <div class="form-group">
+                    <label for="modalName">Your Name</label>
+                    <input type="text" id="modalName" placeholder="Jane Smith" autocomplete="name">
+                </div>
+                <div class="form-group">
+                    <label for="modalEmail">Email Address *</label>
+                    <input type="email" id="modalEmail" placeholder="jane@email.com" required autocomplete="email">
+                </div>
+                <div class="form-group">
+                    <label for="modalPhone">Phone <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
+                    <input type="tel" id="modalPhone" placeholder="(555) 555-5555" autocomplete="tel">
+                </div>
+                <button type="submit" class="form-submit" id="modalSubmitBtn">Connect Me with Realtors →</button>
+                <p class="form-note">No spam. No credit card. Cancel anytime.</p>
+            </form>
+        </div>
+        <div class="modal-success" id="modalSuccess">
+            <div class="check">✅</div>
+            <h3>You're on the list!</h3>
+            <p>We'll follow up within 24 hours. Check your email for a confirmation.</p>
+            <button onclick="closeLead()" class="btn-accent" style="margin-top:20px;border:none;cursor:pointer;">Done</button>
+        </div>
+    </div>
+</div>
 
 </body>
 </html>`;

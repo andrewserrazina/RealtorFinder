@@ -1097,6 +1097,45 @@ app.post('/api/waitlist', waitlistLimiter, async (req, res) => {
     }
 });
 
+// City page lead capture
+app.post('/api/city-lead', waitlistLimiter, async (req, res) => {
+    try {
+        const { type, name, email, phone, city_slug, city_name, state_code } = req.body;
+
+        if (!email || !email.includes('@')) {
+            return res.status(400).json({ error: 'Valid email required' });
+        }
+        const normalizedType = ['seller', 'realtor'].includes(type) ? type : 'seller';
+
+        await pool.query(
+            `INSERT INTO city_leads (type, name, email, phone, city_slug, city_name, state_code)
+             VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+            [
+                normalizedType,
+                (name || '').trim().slice(0, 255) || null,
+                email.trim().toLowerCase(),
+                (phone || '').trim().slice(0, 50) || null,
+                (city_slug || '').trim().slice(0, 100) || null,
+                (city_name || '').trim().slice(0, 255) || null,
+                (state_code || '').trim().toUpperCase().slice(0, 2) || null,
+            ]
+        );
+
+        console.log(`🏠 City lead: ${normalizedType} in ${city_name}, ${state_code} — ${email}`);
+
+        try {
+            await emailService.sendWaitlistConfirmation(email.trim().toLowerCase(), normalizedType);
+        } catch (emailErr) {
+            console.error('City lead email failed:', emailErr.message);
+        }
+
+        res.json({ success: true });
+    } catch (err) {
+        console.error('City lead error:', err);
+        res.status(500).json({ error: 'Failed to save lead' });
+    }
+});
+
 // Health check
 app.get('/api/health', (req, res) => {
     res.json({ 
