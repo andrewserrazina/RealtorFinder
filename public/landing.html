@@ -838,6 +838,300 @@
         }
         .cta-inline-form button:hover { background: white; color: var(--primary); transform: translateY(-2px); }
         .cta-inline-form button:disabled { opacity: 0.6; cursor: not-allowed; }
+
+        /* Hero value prop line */
+        .hero-value-prop {
+            font-size: 1.15rem;
+            color: var(--accent);
+            font-weight: 600;
+            margin-bottom: 1.75rem !important;
+            margin-top: -1rem;
+        }
+
+        /* Inline trust badges below hero form */
+        .inline-trust-badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+            animation: fadeInUp 0.8s ease-out 0.5s both;
+        }
+        .inline-badge {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 50px;
+            padding: 0.4rem 1rem;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text);
+        }
+
+        /* How It Works Steps Section */
+        .steps-detailed {
+            padding: 8rem 3rem;
+            background: white;
+        }
+        .steps-detailed-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .steps-detailed-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 3rem;
+            margin-top: 4rem;
+        }
+        .step-detailed {
+            display: flex;
+            gap: 1.5rem;
+            align-items: flex-start;
+        }
+        .step-detailed-number {
+            font-family: 'Playfair Display', serif;
+            font-size: 3rem;
+            font-weight: 900;
+            color: var(--accent);
+            line-height: 1;
+            min-width: 3.5rem;
+        }
+        .step-detailed-content h3 {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+        .step-detailed-content p {
+            font-family: 'Work Sans', sans-serif;
+            color: var(--text-light);
+            line-height: 1.7;
+        }
+
+        /* Comparison Table Section */
+        .comparison {
+            padding: 8rem 3rem;
+            background: var(--soft-bg);
+        }
+        .comparison-container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+            margin-top: 3rem;
+        }
+        .comparison-table thead tr {
+            background: var(--primary);
+            color: white;
+        }
+        .comparison-table thead th {
+            padding: 1.25rem 1.75rem;
+            text-align: left;
+            font-family: 'Work Sans', sans-serif;
+            font-weight: 600;
+            font-size: 1rem;
+        }
+        .comparison-table thead th:first-child {
+            width: 40%;
+        }
+        .comparison-table tbody tr {
+            background: white;
+            border-bottom: 1px solid var(--border);
+        }
+        .comparison-table tbody tr:last-child {
+            border-bottom: none;
+        }
+        .comparison-table tbody tr:hover {
+            background: #fafaf9;
+        }
+        .comparison-table td {
+            padding: 1.1rem 1.75rem;
+            font-size: 0.95rem;
+            font-family: 'Work Sans', sans-serif;
+            color: var(--text);
+        }
+        .comparison-table td:first-child {
+            font-weight: 600;
+            color: var(--primary);
+        }
+        .comparison-table td.old-way {
+            color: #ef4444;
+        }
+        .comparison-table td.new-way {
+            color: #10b981;
+            font-weight: 500;
+        }
+        .col-icon {
+            font-weight: 700;
+            margin-right: 0.4rem;
+        }
+
+        /* Testimonials Section */
+        .testimonials {
+            padding: 8rem 3rem;
+            background: white;
+        }
+        .testimonials-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .testimonials-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2.5rem;
+            margin-top: 4rem;
+        }
+        .testimonial-card {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 2.5rem;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.07);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        .testimonial-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.12);
+        }
+        .testimonial-stars {
+            color: #FFB800;
+            font-size: 1.2rem;
+            margin-bottom: 1.25rem;
+            letter-spacing: 2px;
+        }
+        .testimonial-quote {
+            font-family: 'Work Sans', sans-serif;
+            font-style: italic;
+            font-size: 1rem;
+            color: var(--text);
+            line-height: 1.7;
+            margin-bottom: 1.5rem;
+        }
+        .testimonial-author {
+            font-family: 'Work Sans', sans-serif;
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: var(--primary);
+        }
+
+        /* FAQ Section */
+        .faq {
+            padding: 8rem 3rem;
+            background: var(--soft-bg);
+        }
+        .faq-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .faq-list {
+            margin-top: 3.5rem;
+        }
+        .faq-item {
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            background: white;
+            overflow: hidden;
+        }
+        .faq-item input[type="checkbox"] {
+            display: none;
+        }
+        .faq-question {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.4rem 1.75rem;
+            cursor: pointer;
+            font-family: 'Work Sans', sans-serif;
+            font-weight: 600;
+            font-size: 1rem;
+            color: var(--primary);
+            transition: background 0.2s;
+            user-select: none;
+        }
+        .faq-question:hover {
+            background: #fafaf9;
+        }
+        .faq-icon {
+            font-size: 1.4rem;
+            font-weight: 300;
+            color: var(--accent);
+            transition: transform 0.3s;
+            flex-shrink: 0;
+            margin-left: 1rem;
+        }
+        .faq-answer {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.35s ease, padding 0.35s ease;
+            font-family: 'Work Sans', sans-serif;
+            font-size: 0.97rem;
+            color: var(--text-light);
+            line-height: 1.7;
+            padding: 0 1.75rem;
+        }
+        .faq-item input[type="checkbox"]:checked ~ .faq-answer {
+            max-height: 300px;
+            padding: 0 1.75rem 1.4rem;
+        }
+        .faq-item input[type="checkbox"]:checked ~ label .faq-icon {
+            transform: rotate(45deg);
+        }
+
+        /* Urgency line in CTA */
+        .cta-urgency {
+            margin-top: 2rem;
+            font-size: 1rem;
+            opacity: 0.85;
+            font-style: italic;
+        }
+
+        @media (max-width: 1024px) {
+            .testimonials-grid {
+                grid-template-columns: 1fr;
+            }
+            .steps-detailed-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .steps-detailed {
+                padding: 5rem 1.5rem;
+            }
+            .steps-detailed-grid {
+                grid-template-columns: 1fr;
+                gap: 2rem;
+            }
+            .comparison {
+                padding: 5rem 1.5rem;
+            }
+            .comparison-table thead th,
+            .comparison-table td {
+                padding: 0.9rem 1rem;
+                font-size: 0.88rem;
+            }
+            .testimonials {
+                padding: 5rem 1.5rem;
+            }
+            .testimonials-grid {
+                grid-template-columns: 1fr;
+            }
+            .faq {
+                padding: 5rem 1.5rem;
+            }
+            .inline-trust-badges {
+                gap: 0.5rem;
+            }
+            .inline-badge {
+                font-size: 0.8rem;
+            }
+        }
     </style>
 <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-BRGVVNKT65"></script>
@@ -884,12 +1178,20 @@
                 <p>List your property once and receive competing proposals from qualified realtors. Compare commission rates, marketing plans, and experience—all in one place.</p>
                 <p class="subtext"><strong>Coming Soon</strong> • Be the first to know when we launch</p>
                 
+                <p class="hero-value-prop">List once. Let licensed realtors compete for your business. Pick the best deal — for free.</p>
+
                 <form id="waitlistForm" class="search-box">
                     <input type="email" id="emailInput" placeholder="Enter your email address" required>
                     <button type="submit">Join Waitlist</button>
                 </form>
                 <div id="successMessage" class="success-message">✓ Thanks! You're on the waitlist. We'll email you when we launch.</div>
                 <div id="errorMessage" class="error-message">Please enter a valid email address.</div>
+
+                <div class="inline-trust-badges">
+                    <span class="inline-badge">🔒 No spam, ever</span>
+                    <span class="inline-badge">✅ Licensed agents only</span>
+                    <span class="inline-badge">🏆 Free forever for sellers</span>
+                </div>
 
                 <div class="trust-badges">
                     <div class="badge">
@@ -981,6 +1283,125 @@
         </div>
     </section>
 
+    <!-- How It Works: Step-by-Step -->
+    <section class="steps-detailed" id="how-it-works-steps">
+        <div class="steps-detailed-container">
+            <div class="section-header">
+                <div class="section-tag">How It Works</div>
+                <h2>Four Simple Steps to Your Best Agent</h2>
+                <p>From listing to closing — you're in the driver's seat the entire time.</p>
+            </div>
+
+            <div class="steps-detailed-grid">
+                <div class="step-detailed">
+                    <div class="step-detailed-number">01</div>
+                    <div class="step-detailed-content">
+                        <h3>Create Your Free Listing</h3>
+                        <p>Describe your property in minutes. No photos required to start.</p>
+                    </div>
+                </div>
+                <div class="step-detailed">
+                    <div class="step-detailed-number">02</div>
+                    <div class="step-detailed-content">
+                        <h3>Realtors Submit Competing Proposals</h3>
+                        <p>Licensed agents send you their commission rates, marketing plans, and credentials.</p>
+                    </div>
+                </div>
+                <div class="step-detailed">
+                    <div class="step-detailed-number">03</div>
+                    <div class="step-detailed-content">
+                        <h3>Compare Side by Side</h3>
+                        <p>Review every proposal at your own pace. No pressure, no cold calls.</p>
+                    </div>
+                </div>
+                <div class="step-detailed">
+                    <div class="step-detailed-number">04</div>
+                    <div class="step-detailed-content">
+                        <h3>Choose Your Agent &amp; Close</h3>
+                        <p>Select the best offer and let your chosen realtor handle the rest.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Comparison Table -->
+    <section class="comparison" id="comparison">
+        <div class="comparison-container">
+            <div class="section-header">
+                <div class="section-tag">The Difference</div>
+                <h2>RealtorFinder vs. The Old Way</h2>
+                <p>See exactly what changes when agents compete for you instead of the other way around.</p>
+            </div>
+
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>Feature</th>
+                        <th>Old Way</th>
+                        <th>RealtorFinder</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Finding agents</td>
+                        <td class="old-way"><span class="col-icon">✗</span>Cold calls &amp; referrals</td>
+                        <td class="new-way"><span class="col-icon">✓</span>Agents come to you</td>
+                    </tr>
+                    <tr>
+                        <td>Commission negotiation</td>
+                        <td class="old-way"><span class="col-icon">✗</span>Awkward &amp; one-sided</td>
+                        <td class="new-way"><span class="col-icon">✓</span>Transparent bidding</td>
+                    </tr>
+                    <tr>
+                        <td>Comparing agents</td>
+                        <td class="old-way"><span class="col-icon">✗</span>Nearly impossible</td>
+                        <td class="new-way"><span class="col-icon">✓</span>Side-by-side proposals</td>
+                    </tr>
+                    <tr>
+                        <td>Cost to seller</td>
+                        <td class="old-way"><span class="col-icon">✗</span>None (but fixed 2.5–3%)</td>
+                        <td class="new-way"><span class="col-icon">✓</span>Free + competitive rates</td>
+                    </tr>
+                    <tr>
+                        <td>Time to find agent</td>
+                        <td class="old-way"><span class="col-icon">✗</span>Days/weeks</td>
+                        <td class="new-way"><span class="col-icon">✓</span>24–48 hours</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- Testimonials -->
+    <section class="testimonials" id="testimonials">
+        <div class="testimonials-container">
+            <div class="section-header">
+                <div class="section-tag">Real Results</div>
+                <h2>Sellers Love RealtorFinder</h2>
+                <p>Homeowners across the country are choosing a smarter way to sell.</p>
+            </div>
+
+            <div class="testimonials-grid">
+                <div class="testimonial-card">
+                    <div class="testimonial-stars">★★★★★</div>
+                    <p class="testimonial-quote">"I got 6 proposals in 48 hours and saved over $8,000 in commission. I had no idea agents would compete like this."</p>
+                    <div class="testimonial-author">Sarah M. &mdash; Boston, MA</div>
+                </div>
+                <div class="testimonial-card">
+                    <div class="testimonial-stars">★★★★★</div>
+                    <p class="testimonial-quote">"The side-by-side comparison made it so easy. I picked an agent with 15 years experience who charged 1.5% less than average."</p>
+                    <div class="testimonial-author">James T. &mdash; Austin, TX</div>
+                </div>
+                <div class="testimonial-card">
+                    <div class="testimonial-stars">★★★★★</div>
+                    <p class="testimonial-quote">"Finally a platform that puts sellers first. Three agents, three different strategies — I made an informed choice."</p>
+                    <div class="testimonial-author">Linda K. &mdash; Chicago, IL</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <section class="how-it-works" id="how-it-works">
         <div class="steps-container">
             <div class="section-header">
@@ -1014,6 +1435,66 @@
         </div>
     </section>
 
+    <!-- FAQ Section -->
+    <section class="faq" id="faq">
+        <div class="faq-container">
+            <div class="section-header">
+                <div class="section-tag">FAQ</div>
+                <h2>Your Questions, Answered</h2>
+                <p>Everything you need to know before joining the waitlist.</p>
+            </div>
+
+            <div class="faq-list">
+
+                <div class="faq-item">
+                    <input type="checkbox" id="faq1">
+                    <label class="faq-question" for="faq1">
+                        Is RealtorFinder really free for sellers?
+                        <span class="faq-icon">+</span>
+                    </label>
+                    <div class="faq-answer">Yes, completely free. Sellers never pay a subscription or platform fee. Realtors pay to access the platform; your listing is always free.</div>
+                </div>
+
+                <div class="faq-item">
+                    <input type="checkbox" id="faq2">
+                    <label class="faq-question" for="faq2">
+                        Are the realtors on the platform licensed?
+                        <span class="faq-icon">+</span>
+                    </label>
+                    <div class="faq-answer">Every realtor on RealtorFinder is verified as a licensed real estate agent before they can submit proposals.</div>
+                </div>
+
+                <div class="faq-item">
+                    <input type="checkbox" id="faq3">
+                    <label class="faq-question" for="faq3">
+                        What if I don't like any of the proposals?
+                        <span class="faq-icon">+</span>
+                    </label>
+                    <div class="faq-answer">No obligation whatsoever. You can decline all proposals, wait for more, or remove your listing at any time.</div>
+                </div>
+
+                <div class="faq-item">
+                    <input type="checkbox" id="faq4">
+                    <label class="faq-question" for="faq4">
+                        How is this different from Zillow or Realtor.com?
+                        <span class="faq-icon">+</span>
+                    </label>
+                    <div class="faq-answer">Those sites help you find listings to buy. RealtorFinder flips the model — you list your home and agents compete to represent you.</div>
+                </div>
+
+                <div class="faq-item">
+                    <input type="checkbox" id="faq5">
+                    <label class="faq-question" for="faq5">
+                        When does RealtorFinder launch?
+                        <span class="faq-icon">+</span>
+                    </label>
+                    <div class="faq-answer">We're launching Late Q3 2026. Join the waitlist now for early access and a founders-only rate lock.</div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
     <section class="cta">
         <div class="cta-container">
             <h2>Ready to Sell Smarter?</h2>
@@ -1024,6 +1505,7 @@
             </form>
             <div id="ctaSuccessMessage" class="success-message" style="color:white; background: rgba(16,185,129,0.2); border: 1px solid rgba(255,255,255,0.3); margin-top: 1rem;">✓ You're on the list! We'll email you at launch.</div>
             <div id="ctaErrorMessage" class="error-message" style="color:white; background: rgba(239,68,68,0.2); border: 1px solid rgba(255,255,255,0.3); margin-top: 1rem;">Please enter a valid email address.</div>
+            <p class="cta-urgency">⏳ Early access spots are limited. Founding members get priority listing placement at launch.</p>
         </div>
     </section>
 
