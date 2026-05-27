@@ -4,6 +4,22 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>For Realtors - RealtorFinder.net</title>
+    <!-- Google Analytics 4 -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-BRGVVNKT65"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-BRGVVNKT65');
+    </script>
+    <!-- Microsoft Clarity -->
+    <script type="text/javascript">
+        (function(c,l,a,r,i,t,y){
+            c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+            t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+            y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+        })(window, document, "clarity", "script", "wxvaz0g7tq");
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Work+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -1053,7 +1069,7 @@
             <div class="nav-links">
                 <a href="#benefits">How It Works</a>
                 <a href="#pricing">Pricing</a>
-                <a href="#realtorWaitlistForm" class="nav-cta">Register Interest</a>
+                <a href="/login.html?tab=signup&type=realtor" class="nav-cta">Create Account</a>
             </div>
         </div>
     </nav>
@@ -1062,24 +1078,21 @@
         <div class="hero-container">
             <div class="hero-content">
                 <h1>Win More Listings by <span class="highlight">Bidding</span> on Them</h1>
-                <p>Stop cold calling sellers. Access exclusive listing opportunities where motivated home sellers are actively seeking representation.</p>
-                <p class="launch-tag"><strong>Launching Q2 2026</strong> • Register now for early platform access</p>
-                
-                <form id="realtorWaitlistForm" class="email-form">
-                    <input type="email" id="realtorEmailInput" placeholder="Enter your email address" required>
-                    <button type="submit">Register</button>
-                </form>
-                <div id="realtorSuccessMessage" class="success-message">✓ Registered! We'll contact you before launch with early access details.</div>
-                <div id="realtorErrorMessage" class="error-message">Please enter a valid email address.</div>
+                <p>Stop cold calling sellers. Access listing opportunities from motivated home sellers actively seeking representation — right now, across 659 markets nationwide.</p>
+
+                <div class="cta-buttons">
+                    <a href="/login.html?tab=signup&type=realtor" class="btn-primary">Create Your Free Account</a>
+                    <a href="#pricing" class="btn-secondary">See Pricing →</a>
+                </div>
 
                 <div class="hero-stats">
                     <div class="stat-box">
-                        <div class="stat-number">Q2</div>
-                        <div class="stat-label">2026 Launch</div>
+                        <div class="stat-number">659</div>
+                        <div class="stat-label">Markets Covered</div>
                     </div>
                     <div class="stat-box">
                         <div class="stat-number">$99</div>
-                        <div class="stat-label">Starting at</div>
+                        <div class="stat-label">Starting at /month</div>
                     </div>
                     <div class="stat-box">
                         <div class="stat-number">No</div>
@@ -1092,7 +1105,7 @@
                 <div class="dashboard-preview">
                     <div class="preview-header">
                         <div class="preview-title">Platform Preview</div>
-                        <div class="preview-badge">● Coming Soon</div>
+                        <div class="preview-badge">● Live Now</div>
                     </div>
                     <div class="metrics-grid">
                         <div class="metric-card">
@@ -1202,7 +1215,7 @@
                         <li>Performance dashboard</li>
                         <li>1 agent per location</li>
                     </ul>
-                    <button class="plan-button secondary">Register Interest</button>
+                    <a href="/login.html?tab=signup&type=realtor" class="plan-button secondary" style="text-align:center;display:block;text-decoration:none;">Get Started</a>
                 </div>
 
                 <div class="pricing-card featured">
@@ -1219,7 +1232,7 @@
                         <li>Early access to new listings</li>
                         <li>1 agent per location</li>
                     </ul>
-                    <button class="plan-button primary">Get Early Access</button>
+                    <a href="/login.html?tab=signup&type=realtor" class="plan-button primary" style="text-align:center;display:block;text-decoration:none;">Get Started</a>
                 </div>
 
                 <div class="pricing-card">
@@ -1236,7 +1249,7 @@
                         <li>Custom branding options</li>
                         <li>Dedicated account manager</li>
                     </ul>
-                    <button class="plan-button secondary">Contact Sales</button>
+                    <a href="/login.html?tab=signup&type=realtor" class="plan-button secondary" style="text-align:center;display:block;text-decoration:none;">Get Started</a>
                 </div>
             </div>
         </div>
@@ -1244,14 +1257,9 @@
 
     <section class="cta">
         <div class="cta-container">
-            <h2>Get Early Platform Access</h2>
-            <p>Register now and be among the first agents to access listing opportunities when we launch in Q2 2026.</p>
-            <form id="ctaRealtorForm" class="cta-inline-form">
-                <input type="email" id="ctaRealtorEmail" placeholder="Enter your email address" required>
-                <button type="submit">Register Interest</button>
-            </form>
-            <div id="ctaRealtorSuccess" class="success-message" style="margin-top:1rem;">✓ Registered! We'll reach out before launch with early access details.</div>
-            <div id="ctaRealtorError" class="error-message" style="margin-top:1rem;">Please enter a valid email address.</div>
+            <h2>Start Winning Listings Today</h2>
+            <p>Join thousands of agents already using RealtorFinder to connect with motivated sellers across 659 markets nationwide.</p>
+            <a href="/login.html?tab=signup&type=realtor" class="plan-button primary" style="display:inline-block;text-decoration:none;padding:1rem 2.5rem;font-size:1.1rem;border-radius:10px;">Create Free Account</a>
         </div>
     </section>
 
@@ -1293,86 +1301,5 @@
         </div>
     </footer>
 
-    <script>
-        // Email form handling for realtors
-        document.getElementById('realtorWaitlistForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const emailInput = document.getElementById('realtorEmailInput');
-            const submitButton = this.querySelector('button[type="submit"]');
-            const successMessage = document.getElementById('realtorSuccessMessage');
-            const errorMessage = document.getElementById('realtorErrorMessage');
-            
-            // Hide previous messages
-            successMessage.classList.remove('show');
-            errorMessage.classList.remove('show');
-            
-            // Validate email
-            const email = emailInput.value.trim();
-            if (!email || !email.includes('@')) {
-                errorMessage.classList.add('show');
-                return;
-            }
-            
-            // Disable button during submission
-            submitButton.disabled = true;
-            submitButton.textContent = 'Registering...';
-            
-            try {
-                // Call the waitlist API
-                const response = await fetch('/api/waitlist', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email: email, type: 'realtor' })
-                });
-                
-                if (!response.ok) throw new Error('Signup failed');
-                
-                // Show success message
-                successMessage.classList.add('show');
-                emailInput.value = '';
-                
-                // Optional: Track conversion with Google Analytics
-                // gtag('event', 'waitlist_signup', { user_type: 'realtor' });
-                
-            } catch (error) {
-                errorMessage.textContent = 'Something went wrong. Please try again.';
-                errorMessage.classList.add('show');
-            } finally {
-                submitButton.disabled = false;
-                submitButton.textContent = 'Register';
-            }
-        });
-
-        // CTA section form
-        document.getElementById('ctaRealtorForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            const emailInput = document.getElementById('ctaRealtorEmail');
-            const submitButton = this.querySelector('button[type="submit"]');
-            const successMessage = document.getElementById('ctaRealtorSuccess');
-            const errorMessage = document.getElementById('ctaRealtorError');
-            successMessage.classList.remove('show');
-            errorMessage.classList.remove('show');
-            const email = emailInput.value.trim();
-            if (!email || !email.includes('@')) { errorMessage.classList.add('show'); return; }
-            submitButton.disabled = true;
-            submitButton.textContent = 'Registering...';
-            try {
-                const response = await fetch('/api/waitlist', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email })
-                });
-                if (!response.ok) throw new Error('Signup failed');
-                successMessage.classList.add('show');
-                emailInput.value = '';
-            } catch (error) {
-                errorMessage.classList.add('show');
-            } finally {
-                submitButton.disabled = false;
-                submitButton.textContent = 'Register Interest';
-            }
-        });
-    </script>
 </body>
 </html>

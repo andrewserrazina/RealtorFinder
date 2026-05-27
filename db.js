@@ -521,7 +521,7 @@ const db = {
     async getAllUsersAdmin() {
         const result = await pool.query(
             `SELECT id, email, user_type, first_name, last_name, zip_code,
-                    email_verified, is_active, is_admin, created_at
+                    email_verified, is_active, is_admin, is_approved, created_at
              FROM users ORDER BY created_at DESC`
         );
         return result.rows;
