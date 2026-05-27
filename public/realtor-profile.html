@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Realtor Profile - RealtorFinder</title>
+    <!-- Google Analytics 4 -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-BRGVVNKT65"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-BRGVVNKT65');
+    </script>
+    <!-- Microsoft Clarity -->
+    <script type="text/javascript">
+        (function(c,l,a,r,i,t,y){
+            c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+            t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+            y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+        })(window, document, "clarity", "script", "wxvaz0g7tq");
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@600;700;900&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #0A2540;
+            --accent: #FF6B35;
+            --soft-bg: #F8F6F3;
+            --text: #1A1A1A;
+            --border: #E5E1DB;
+            --muted: #6B7280;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'DM Sans', sans-serif; background: var(--soft-bg); color: var(--text); }
+
+        nav {
+            background: var(--primary);
+            padding: 0 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 64px;
+        }
+        .nav-logo { font-family: 'Crimson Pro', serif; font-size: 1.6rem; font-weight: 900; color: white; text-decoration: none; }
+        .nav-logo span { color: var(--accent); }
+        .nav-back { color: rgba(255,255,255,0.7); font-size: 0.9rem; text-decoration: none; display: flex; align-items: center; gap: 0.4rem; }
+        .nav-back:hover { color: white; }
+
+        .profile-wrap {
+            max-width: 780px;
+            margin: 3rem auto;
+            padding: 0 1.5rem 4rem;
+        }
+
+        .profile-card {
+            background: white;
+            border-radius: 20px;
+            padding: 2.5rem;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+            border: 1px solid var(--border);
+            margin-bottom: 1.5rem;
+        }
+
+        .profile-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), #1a4a7a);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Crimson Pro', serif;
+            font-size: 2rem;
+            font-weight: 900;
+            color: white;
+            flex-shrink: 0;
+        }
+
+        .profile-name-block h1 {
+            font-family: 'Crimson Pro', serif;
+            font-size: 2rem;
+            font-weight: 900;
+            color: var(--primary);
+            line-height: 1.15;
+        }
+
+        .company-name {
+            font-size: 1rem;
+            color: var(--muted);
+            margin-top: 0.25rem;
+        }
+
+        .badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            padding: 0.3rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        .badge-featured { background: #FFF0EB; color: var(--accent); }
+        .badge-verified { background: #ECFDF5; color: #059669; }
+        .badge-area { background: var(--soft-bg); color: var(--primary); }
+
+        .stats-row {
+            display: flex;
+            gap: 2rem;
+            padding: 1.5rem 0;
+            border-top: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+        .stat { text-align: center; }
+        .stat-value { font-family: 'Crimson Pro', serif; font-size: 1.8rem; font-weight: 900; color: var(--primary); line-height: 1; }
+        .stat-label { font-size: 0.8rem; color: var(--muted); margin-top: 0.25rem; }
+
+        .section-title {
+            font-weight: 700;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--muted);
+            margin-bottom: 0.75rem;
+        }
+
+        .bio-text {
+            font-size: 1rem;
+            line-height: 1.75;
+            color: #444;
+        }
+
+        .details-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+        .detail-item { padding: 1rem; background: var(--soft-bg); border-radius: 10px; }
+        .detail-label { font-size: 0.8rem; color: var(--muted); margin-bottom: 0.25rem; }
+        .detail-value { font-weight: 600; color: var(--primary); font-size: 0.95rem; }
+
+        .not-found {
+            text-align: center;
+            padding: 5rem 2rem;
+            color: var(--muted);
+        }
+        .not-found h2 { font-family: 'Crimson Pro', serif; font-size: 2rem; color: var(--primary); margin-bottom: 1rem; }
+
+        .skeleton {
+            background: linear-gradient(90deg, #f0ede9 25%, #e8e4df 50%, #f0ede9 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.4s infinite;
+            border-radius: 6px;
+        }
+        @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+        @media (max-width: 600px) {
+            .profile-header { flex-direction: column; }
+            .details-grid { grid-template-columns: 1fr; }
+            .stats-row { gap: 1.25rem; }
+        }
+    </style>
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Realtor<span>Finder</span></a>
+    <a href="javascript:history.back()" class="nav-back">← Back</a>
+</nav>
+
+<div class="profile-wrap">
+    <div id="profileContent">
+        <!-- Loading skeleton -->
+        <div class="profile-card">
+            <div class="profile-header">
+                <div class="skeleton" style="width:80px;height:80px;border-radius:50%;"></div>
+                <div style="flex:1;">
+                    <div class="skeleton" style="height:28px;width:55%;margin-bottom:10px;"></div>
+                    <div class="skeleton" style="height:18px;width:35%;margin-bottom:12px;"></div>
+                    <div class="skeleton" style="height:24px;width:45%;"></div>
+                </div>
+            </div>
+            <div class="skeleton" style="height:16px;width:100%;margin-bottom:8px;"></div>
+            <div class="skeleton" style="height:16px;width:80%;"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const realtorId = window.location.pathname.split('/').pop();
+
+    async function loadProfile() {
+        try {
+            const res = await fetch(`/api/realtors/${realtorId}/public`);
+            if (!res.ok) { showNotFound(); return; }
+            const r = await res.json();
+            renderProfile(r);
+            // Update page title
+            document.title = `${r.first_name} ${r.last_name} — RealtorFinder`;
+        } catch {
+            showNotFound();
+        }
+    }
+
+    function renderProfile(r) {
+        const initials = ((r.first_name || '')[0] || '') + ((r.last_name || '')[0] || '');
+        const isFeatured = ['professional', 'firm'].includes(r.subscription_plan || r.company_plan);
+        const hasLicense = r.license_number && r.license_number.trim();
+        const hasYears = r.years_experience && parseInt(r.years_experience) > 0;
+        const hasBio = r.bio && r.bio.trim();
+        const serviceAreas = r.service_areas
+            ? (Array.isArray(r.service_areas) ? r.service_areas : r.service_areas.split(',').map(s => s.trim())).filter(Boolean)
+            : [];
+
+        const statsHtml = [
+            hasYears ? `<div class="stat"><div class="stat-value">${r.years_experience}</div><div class="stat-label">Years Experience</div></div>` : '',
+            hasLicense ? `<div class="stat"><div class="stat-value" style="font-size:1rem;padding-top:0.3rem;">${r.license_number}</div><div class="stat-label">License #</div></div>` : '',
+        ].filter(Boolean).join('');
+
+        const detailsHtml = [
+            r.company_name ? `<div class="detail-item"><div class="detail-label">Company / Brokerage</div><div class="detail-value">${esc(r.company_name)}</div></div>` : '',
+            r.zip_code     ? `<div class="detail-item"><div class="detail-label">Primary Market</div><div class="detail-value">${esc(r.zip_code)}</div></div>` : '',
+        ].filter(Boolean).join('');
+
+        document.getElementById('profileContent').innerHTML = `
+            <div class="profile-card">
+                <div class="profile-header">
+                    <div class="avatar">${esc(initials.toUpperCase())}</div>
+                    <div class="profile-name-block">
+                        <h1>${esc(r.first_name)} ${esc(r.last_name)}</h1>
+                        ${r.company_name ? `<div class="company-name">${esc(r.company_name)}</div>` : ''}
+                        <div class="badges">
+                            ${isFeatured ? '<span class="badge badge-featured">⭐ Featured Agent</span>' : ''}
+                            ${hasLicense ? '<span class="badge badge-verified">✓ Licensed</span>' : ''}
+                            ${serviceAreas.map(a => `<span class="badge badge-area">${esc(a)}</span>`).join('')}
+                        </div>
+                    </div>
+                </div>
+
+                ${statsHtml ? `<div class="stats-row">${statsHtml}</div>` : ''}
+
+                ${hasBio ? `
+                    <div class="section-title">About</div>
+                    <p class="bio-text">${esc(r.bio)}</p>
+                ` : ''}
+            </div>
+
+            ${detailsHtml ? `
+                <div class="profile-card">
+                    <div class="section-title">Details</div>
+                    <div class="details-grid">${detailsHtml}</div>
+                </div>
+            ` : ''}
+        `;
+    }
+
+    function showNotFound() {
+        document.getElementById('profileContent').innerHTML = `
+            <div class="not-found">
+                <h2>Profile Not Found</h2>
+                <p>This realtor profile doesn't exist or is no longer active.</p>
+            </div>
+        `;
+    }
+
+    function esc(str) {
+        return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    loadProfile();
+</script>
+</body>
+</html>

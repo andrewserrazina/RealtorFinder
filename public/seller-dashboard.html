@@ -1239,7 +1239,8 @@
                                 <button class="btn btn-primary" onclick="acceptOffer(${offer.id}, ${offer.listing_id})">Accept</button>
                                 <button class="btn btn-outline" onclick="declineOffer(${offer.id})">Decline</button>
                             ` : ''}
-                            <a href="mailto:${offer.realtor_email}" class="btn btn-secondary" style="font-size:0.85rem;text-align:center;">Contact</a>
+                            <a href="/realtor/${offer.user_id}" target="_blank" class="btn btn-secondary" style="font-size:0.85rem;text-align:center;">View Profile</a>
+                            <a href="mailto:${offer.realtor_email}" class="btn btn-outline" style="font-size:0.85rem;text-align:center;">Email</a>
                             <a href="tel:${offer.realtor_phone}" class="btn btn-outline" style="font-size:0.85rem;text-align:center;">Call</a>
                         </div>
                     </div>`;
