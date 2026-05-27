@@ -657,6 +657,7 @@
             <div class="tab" data-view="mybids">My Bids</div>
             <div class="tab" data-view="won">Won Listings</div>
             <div class="tab" data-view="profile">My Profile</div>
+            <div class="tab" data-view="buyer-requests">Buyer Requests</div>
         </div>
     </div>
 
@@ -757,6 +758,48 @@
             <div class="bids-list" id="wonListingsList"></div>
         </section>
 
+        <!-- Buyer Requests View -->
+        <section id="buyer-requests-view" class="view-section">
+            <h2 style="font-family: 'Crimson Pro', serif; font-size: 2rem; margin-bottom: 0.5rem;">Buyer Requests</h2>
+            <p style="color:#666;margin-bottom:2rem;">Home buyers in your area looking for a buyer's agent. Respond to connect with them directly.</p>
+
+            <div class="filter-bar" id="buyerFilterBar">
+                <div class="filter-group">
+                    <label>Area</label>
+                    <input type="text" id="buyerFilterArea" placeholder="Any area">
+                </div>
+                <div class="filter-group">
+                    <label>Type</label>
+                    <select id="buyerFilterType">
+                        <option value="">All Types</option>
+                        <option value="Single Family">Single Family</option>
+                        <option value="Condo">Condo</option>
+                        <option value="Townhouse">Townhouse</option>
+                        <option value="Multi-Family">Multi-Family</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Min Budget ($)</label>
+                    <input type="number" id="buyerFilterMinBudget" placeholder="0" step="50000" style="min-width:120px;">
+                </div>
+                <div class="filter-group">
+                    <label>Max Budget ($)</label>
+                    <input type="number" id="buyerFilterMaxBudget" placeholder="Any" step="50000" style="min-width:120px;">
+                </div>
+                <div class="filter-group" style="flex-direction:row;gap:0.5rem;">
+                    <button class="btn btn-primary" onclick="applyBuyerFilters()" style="padding:0.55rem 1.25rem;font-size:0.9rem;">Filter</button>
+                    <button class="btn btn-outline" onclick="clearBuyerFilters()" style="padding:0.55rem 1rem;font-size:0.9rem;">Clear</button>
+                </div>
+            </div>
+
+            <div class="bids-list" id="buyerRequestsList"></div>
+            <div class="pagination" id="buyerRequestsPagination" style="display:none;">
+                <button class="btn btn-outline" id="buyerPrevPage" onclick="changeBuyerPage(-1)">← Prev</button>
+                <span class="page-info" id="buyerPageInfo">Page 1 of 1</span>
+                <button class="btn btn-outline" id="buyerNextPage" onclick="changeBuyerPage(1)">Next →</button>
+            </div>
+        </section>
+
         <!-- Profile View -->
         <section id="profile-view" class="view-section">
             <h2 style="font-family: 'Crimson Pro', serif; font-size: 2rem; margin-bottom: 2rem;">My Profile</h2>
@@ -791,6 +834,25 @@
                 </form>
             </div>
         </section>
+    </div>
+
+    <!-- Connect Modal -->
+    <div id="connectModal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeConnectModal()">&times;</span>
+            <div class="modal-header">
+                <h2>Connect with <span id="connectBuyerName"></span></h2>
+                <p class="modal-subtitle">Introduce yourself as a buyer's agent</p>
+            </div>
+            <form id="connectForm">
+                <div class="form-group">
+                    <label>Your Introduction *</label>
+                    <textarea name="message" rows="5" placeholder="Hi, I'm [Name] with [Brokerage]. I specialize in buyer representation in [Area]..." required minlength="50" style="width:100%;padding:0.875rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:1rem;resize:vertical;"></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width:100%;padding:1rem;">Send Introduction</button>
+            </form>
+            <div id="connectMessage" style="display:none;margin-top:1rem;padding:0.875rem;border-radius:8px;font-size:0.9rem;font-weight:500;"></div>
+        </div>
     </div>
 
     <!-- Bid Modal -->
@@ -933,6 +995,8 @@
                         }
                     }, 50);
                 }
+
+                if (view === 'buyer-requests') loadBuyerRequests();
             });
         });
 
@@ -1370,6 +1434,200 @@
             }
             setTimeout(() => { msgEl.style.display = 'none'; }, 4000);
         });
+
+        // ===== BUYER REQUESTS =====
+        let buyerRequestsData = [];
+        let buyerRequestFilters = {};
+        let currentBuyerPage = 1;
+        let totalBuyerPages = 1;
+        let currentConnectRequestId = null;
+        const respondedRequests = new Set();
+
+        async function loadBuyerRequests() {
+            try {
+                const params = new URLSearchParams({ page: currentBuyerPage, limit: 20, ...buyerRequestFilters });
+                const res = await fetch(`${API_BASE_URL}/buyer-requests?${params}`, { credentials: 'include' });
+                if (!res.ok) throw new Error('Failed to load buyer requests');
+                const data = await res.json();
+
+                buyerRequestsData = data.requests || data;
+                totalBuyerPages = data.totalPages || 1;
+                renderBuyerRequests(buyerRequestsData);
+
+                const pagination = document.getElementById('buyerRequestsPagination');
+                if (totalBuyerPages > 1) {
+                    pagination.style.display = 'flex';
+                    document.getElementById('buyerPageInfo').textContent = `Page ${currentBuyerPage} of ${totalBuyerPages}`;
+                    document.getElementById('buyerPrevPage').disabled = currentBuyerPage <= 1;
+                    document.getElementById('buyerNextPage').disabled = currentBuyerPage >= totalBuyerPages;
+                } else {
+                    pagination.style.display = 'none';
+                }
+            } catch (error) {
+                console.error('Error loading buyer requests:', error);
+                document.getElementById('buyerRequestsList').innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🔍</div>
+                        <h3>Could not load buyer requests</h3>
+                        <p>Please try again later.</p>
+                    </div>
+                `;
+            }
+        }
+
+        function renderBuyerRequests(requests) {
+            const container = document.getElementById('buyerRequestsList');
+            if (!requests.length) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🏠</div>
+                        <h3>No buyer requests found</h3>
+                        <p>Check back soon or adjust your filters.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = requests.map(req => {
+                const firstName = req.first_name || req.firstName || 'Buyer';
+                const lastName = req.last_name || req.lastName || '';
+                const displayName = firstName + (lastName ? ' ' + lastName.charAt(0) + '.' : '');
+                const budgetMin = req.budget_min || req.budgetMin;
+                const budgetMax = req.budget_max || req.budgetMax;
+                const budgetStr = budgetMin && budgetMax
+                    ? `$${Number(budgetMin).toLocaleString()} – $${Number(budgetMax).toLocaleString()}`
+                    : budgetMin ? `From $${Number(budgetMin).toLocaleString()}` : budgetMax ? `Up to $${Number(budgetMax).toLocaleString()}` : 'Not specified';
+                const areas = req.target_areas || req.targetAreas || 'Not specified';
+                const propType = req.property_type || req.propertyType || 'Any';
+                const minBeds = req.min_bedrooms || req.minBedrooms || null;
+                const timeline = req.timeline || 'Not specified';
+                const notes = req.notes || req.additional_notes || '';
+                const truncatedNotes = notes.length > 120 ? notes.substring(0, 120) + '…' : notes;
+                const alreadyResponded = respondedRequests.has(req.id);
+
+                return `
+                    <div class="bid-card">
+                        <div class="bid-info">
+                            <h3>${displayName}</h3>
+                            <div class="bid-price">${budgetStr}</div>
+                            <div class="bid-details">
+                                <span>📍 ${areas}</span>
+                                <span>🏠 ${propType}</span>
+                                ${minBeds ? `<span>🛏️ ${minBeds}+ beds</span>` : ''}
+                                <span>⏱️ ${timeline}</span>
+                            </div>
+                            ${truncatedNotes ? `<div style="margin-top:0.75rem;color:#555;font-size:0.9rem;">${truncatedNotes}</div>` : ''}
+                        </div>
+                        <div>
+                            <button
+                                class="btn ${alreadyResponded ? 'btn-outline' : 'btn-primary'}"
+                                onclick="openConnectModal(${req.id}, '${firstName.replace(/'/g, "\\'")}')"
+                                ${alreadyResponded ? 'disabled' : ''}
+                                style="${alreadyResponded ? 'opacity:0.6;cursor:not-allowed;' : ''}"
+                            >${alreadyResponded ? 'Connected ✓' : 'Connect'}</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function applyBuyerFilters() {
+            const f = {};
+            const area = document.getElementById('buyerFilterArea').value.trim();
+            const type = document.getElementById('buyerFilterType').value;
+            const minBudget = document.getElementById('buyerFilterMinBudget').value;
+            const maxBudget = document.getElementById('buyerFilterMaxBudget').value;
+            if (area) f.area = area;
+            if (type) f.type = type;
+            if (minBudget) f.budgetMin = minBudget;
+            if (maxBudget) f.budgetMax = maxBudget;
+            buyerRequestFilters = f;
+            currentBuyerPage = 1;
+            loadBuyerRequests();
+        }
+
+        function clearBuyerFilters() {
+            document.getElementById('buyerFilterArea').value = '';
+            document.getElementById('buyerFilterType').value = '';
+            document.getElementById('buyerFilterMinBudget').value = '';
+            document.getElementById('buyerFilterMaxBudget').value = '';
+            buyerRequestFilters = {};
+            currentBuyerPage = 1;
+            loadBuyerRequests();
+        }
+
+        function changeBuyerPage(delta) {
+            const next = currentBuyerPage + delta;
+            if (next < 1 || next > totalBuyerPages) return;
+            currentBuyerPage = next;
+            loadBuyerRequests();
+        }
+
+        function openConnectModal(requestId, firstName) {
+            currentConnectRequestId = requestId;
+            document.getElementById('connectBuyerName').textContent = firstName;
+            document.getElementById('connectForm').reset();
+            const msgEl = document.getElementById('connectMessage');
+            msgEl.style.display = 'none';
+            msgEl.textContent = '';
+            document.getElementById('connectModal').classList.add('active');
+        }
+
+        function closeConnectModal() {
+            document.getElementById('connectModal').classList.remove('active');
+            currentConnectRequestId = null;
+        }
+
+        async function submitConnection(requestId) {
+            const form = document.getElementById('connectForm');
+            const message = form.elements.message.value.trim();
+            const msgEl = document.getElementById('connectMessage');
+            const submitBtn = form.querySelector('button[type="submit"]');
+
+            if (message.length < 50) {
+                msgEl.textContent = 'Please write at least 50 characters.';
+                msgEl.style.cssText = 'display:block;background:rgba(239,68,68,0.1);color:#991b1b;';
+                return;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Sending…';
+
+            try {
+                const res = await fetch(`${API_BASE_URL}/buyer-requests/${requestId}/respond`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ message })
+                });
+                if (!res.ok) throw new Error((await res.json()).error || 'Failed to send introduction');
+
+                respondedRequests.add(requestId);
+                closeConnectModal();
+
+                // Toast notification
+                const toast = document.createElement('div');
+                toast.style.cssText = 'position:fixed;top:20px;right:20px;background:#d1fae5;color:#065f46;padding:1rem 1.5rem;border-radius:10px;font-weight:600;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,0.15)';
+                toast.textContent = 'Introduction sent! The buyer will be notified.';
+                document.body.appendChild(toast);
+                setTimeout(() => toast.remove(), 4000);
+
+                // Update button in list
+                renderBuyerRequests(buyerRequestsData);
+            } catch (err) {
+                msgEl.textContent = err.message || 'Failed to send. Please try again.';
+                msgEl.style.cssText = 'display:block;background:rgba(239,68,68,0.1);color:#991b1b;';
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Send Introduction';
+            }
+        }
+
+        document.getElementById('connectForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            if (currentConnectRequestId !== null) submitConnection(currentConnectRequestId);
+        });
+
+        // ===== END BUYER REQUESTS =====
 
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {

@@ -312,6 +312,7 @@
                             <option value="">Select account type</option>
                             <option value="seller">Seller (I want to list my property)</option>
                             <option value="realtor">Realtor (I want to bid on listings)</option>
+                            <option value="buyer">Buyer (I'm looking for a home)</option>
                         </select>
                     </div>
                     <div class="form-group">
@@ -416,9 +417,8 @@
                 console.log('Login successful, redirecting to:', result.userType);
                 
                 // Redirect based on user type
-                const redirectUrl = result.userType === 'seller' 
-                    ? '/dashboard/seller' 
-                    : '/dashboard/realtor';
+                const dashMap = { seller: '/dashboard/seller', realtor: '/dashboard/realtor', buyer: '/dashboard/buyer' };
+                const redirectUrl = dashMap[result.userType] || '/dashboard/seller';
                 
                 console.log('Redirecting to:', redirectUrl);
                 window.location.href = redirectUrl;
@@ -474,9 +474,8 @@
                 
                 // Auto-login after signup
                 setTimeout(() => {
-                    const redirectUrl = result.userType === 'seller' 
-                        ? '/dashboard/seller' 
-                        : '/dashboard/realtor';
+                    const dashMap = { seller: '/dashboard/seller', realtor: '/dashboard/realtor', buyer: '/dashboard/buyer' };
+                    const redirectUrl = dashMap[result.userType] || '/dashboard/seller';
                     console.log('Redirecting to:', redirectUrl);
                     window.location.href = redirectUrl;
                 }, 1000);

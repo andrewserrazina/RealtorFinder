@@ -1,0 +1,1228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buyer Dashboard - RealtorFinder</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --ink: #1a1a1a;
+            --paper: #faf9f7;
+            --accent: #d4523e;
+            --soft-accent: #e8ded8;
+            --border: #e1ddd7;
+            --success: #2d6e4f;
+            --warning: #c77029;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--paper);
+            color: var(--ink);
+            line-height: 1.6;
+        }
+
+        /* Header */
+        header {
+            background: white;
+            border-bottom: 1px solid var(--border);
+            padding: 1.5rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.95);
+        }
+
+        .header-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: var(--ink);
+            letter-spacing: -0.5px;
+        }
+
+        .logo span {
+            color: var(--accent);
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent), var(--ink));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            font-size: 0.9rem;
+        }
+
+        /* Main Layout */
+        .dashboard-layout {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 3rem 2rem;
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            gap: 3rem;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            position: sticky;
+            top: 100px;
+            height: fit-content;
+        }
+
+        .nav-section {
+            margin-bottom: 2rem;
+        }
+
+        .nav-title {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #999;
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+
+        .nav-item {
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-weight: 500;
+            color: var(--ink);
+            margin-bottom: 0.5rem;
+        }
+
+        .nav-item:hover {
+            background: var(--soft-accent);
+        }
+
+        .nav-item.active {
+            background: var(--accent);
+            color: white;
+        }
+
+        .nav-icon {
+            font-size: 1.2rem;
+        }
+
+        .badge {
+            background: var(--accent);
+            color: white;
+            padding: 0.2rem 0.6rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-left: auto;
+        }
+
+        .nav-item.active .badge {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        /* Main Content */
+        .main-content {
+            min-height: 80vh;
+        }
+
+        .view-section {
+            display: none;
+        }
+
+        .view-section.active {
+            display: block;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .page-header {
+            margin-bottom: 2.5rem;
+        }
+
+        .page-title {
+            font-family: 'Crimson Pro', serif;
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            color: var(--ink);
+        }
+
+        .page-subtitle {
+            color: #666;
+            font-size: 1.1rem;
+        }
+
+        /* Stat Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-family: 'Crimson Pro', serif;
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--ink);
+        }
+
+        .stat-change {
+            font-size: 0.85rem;
+            margin-top: 0.5rem;
+            color: var(--success);
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.95rem;
+            display: inline-block;
+            text-decoration: none;
+            text-align: center;
+        }
+
+        .btn:disabled {
+            opacity: 0.65;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: #c04533;
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: var(--soft-accent);
+            color: var(--ink);
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: #d4cdc5;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--ink);
+        }
+
+        .btn-outline:hover:not(:disabled) {
+            background: var(--soft-accent);
+        }
+
+        .btn-danger {
+            background: transparent;
+            border: 1px solid #ef4444;
+            color: #ef4444;
+        }
+
+        .btn-danger:hover:not(:disabled) {
+            background: #fef2f2;
+        }
+
+        /* Forms */
+        .form-card {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 2.5rem;
+        }
+
+        .form-card h2 {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.8rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .form-card .form-desc {
+            color: #666;
+            margin-bottom: 2rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: var(--ink);
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 0.875rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 1rem;
+            background: white;
+            color: var(--ink);
+            transition: border-color 0.2s;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 120px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .form-error {
+            color: #dc2626;
+            font-size: 0.875rem;
+            margin-top: 0.75rem;
+            display: none;
+        }
+
+        .form-error.visible {
+            display: block;
+        }
+
+        /* Status badges */
+        .status-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+        }
+
+        .status-active   { background: #d1fae5; color: #065f46; }
+        .status-inactive { background: #e5e7eb; color: #374151; }
+
+        /* Request detail view */
+        .request-detail-card {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 2.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .request-detail-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .request-detail-header h2 {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.8rem;
+        }
+
+        .request-fields {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .request-field {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .request-field-label {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #999;
+            font-weight: 600;
+        }
+
+        .request-field-value {
+            font-size: 1.05rem;
+            font-weight: 500;
+            color: var(--ink);
+        }
+
+        .request-notes {
+            border-top: 1px solid var(--border);
+            padding-top: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .request-notes-label {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #999;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .request-notes-text {
+            color: #555;
+            line-height: 1.7;
+        }
+
+        .request-actions {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            border-top: 1px solid var(--border);
+            padding-top: 1.5rem;
+        }
+
+        /* Response cards */
+        .responses-list {
+            display: grid;
+            gap: 1.5rem;
+        }
+
+        .response-card {
+            background: white;
+            border: 1px solid var(--border);
+            border-left: 4px solid var(--success);
+            border-radius: 12px;
+            padding: 2rem;
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 2rem;
+            align-items: start;
+            transition: box-shadow 0.2s;
+        }
+
+        .response-card:hover {
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+        }
+
+        .response-name {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.4rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .response-brokerage {
+            color: #666;
+            font-size: 0.95rem;
+            margin-bottom: 1rem;
+        }
+
+        .response-meta {
+            display: flex;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+            font-size: 0.9rem;
+            color: #555;
+            margin-bottom: 1rem;
+        }
+
+        .response-meta span {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+
+        .response-message {
+            color: #555;
+            line-height: 1.7;
+            font-style: italic;
+            border-left: 3px solid var(--soft-accent);
+            padding-left: 1rem;
+            margin-top: 1rem;
+        }
+
+        .response-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            min-width: 120px;
+        }
+
+        /* Empty state */
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: #999;
+        }
+
+        .empty-state-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+
+        .empty-state h3 {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.5rem;
+            color: #666;
+            margin-bottom: 0.5rem;
+        }
+
+        /* CTA card */
+        .cta-card {
+            background: white;
+            border: 2px dashed var(--border);
+            border-radius: 12px;
+            padding: 3rem;
+            text-align: center;
+        }
+
+        .cta-card h3 {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.8rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .cta-card p {
+            color: #666;
+            margin-bottom: 1.5rem;
+            max-width: 480px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        /* Verification banner */
+        .verification-banner {
+            background: #fffbeb;
+            border: 1px solid #fcd34d;
+            border-radius: 10px;
+            padding: 1rem 1.5rem;
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .verification-banner p {
+            font-size: 0.95rem;
+            color: #92400e;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 1rem 1.5rem;
+            border-radius: 10px;
+            font-weight: 600;
+            z-index: 9999;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .toast-success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .toast-error {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to   { transform: translateX(0);   opacity: 1; }
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .dashboard-layout {
+                grid-template-columns: 1fr;
+                padding: 1.5rem 1rem;
+                gap: 1.5rem;
+            }
+
+            .sidebar {
+                position: static;
+            }
+
+            .response-card {
+                grid-template-columns: 1fr;
+            }
+
+            .response-actions {
+                flex-direction: row;
+                min-width: unset;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .header-container {
+                flex-wrap: wrap;
+                gap: 0.75rem;
+            }
+
+            .user-info {
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+
+            .nav-section .nav-title {
+                display: none;
+            }
+
+            nav {
+                display: flex;
+                gap: 0.25rem;
+                overflow-x: auto;
+                padding-bottom: 0.25rem;
+            }
+
+            .nav-section {
+                display: contents;
+            }
+
+            .nav-item {
+                white-space: nowrap;
+                font-size: 0.85rem;
+                padding: 0.6rem 0.75rem;
+            }
+
+            .page-title {
+                font-size: 1.8rem;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .request-detail-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .request-actions {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-container">
+            <div class="logo">Realtor<span>Finder</span></div>
+            <div class="user-info">
+                <span id="userName">Loading...</span>
+                <div class="user-avatar" id="userAvatar">B</div>
+                <button onclick="logout()" class="btn btn-secondary" style="margin-left: 1rem; padding: 0.5rem 1rem;">Log Out</button>
+            </div>
+        </div>
+    </header>
+
+    <div class="dashboard-layout">
+        <aside class="sidebar">
+            <nav>
+                <div class="nav-section">
+                    <div class="nav-title">Dashboard</div>
+                    <div class="nav-item active" data-view="overview">
+                        <span class="nav-icon">📊</span>
+                        <span>Overview</span>
+                    </div>
+                    <div class="nav-item" data-view="request">
+                        <span class="nav-icon">🔍</span>
+                        <span>My Request</span>
+                    </div>
+                    <div class="nav-item" data-view="responses">
+                        <span class="nav-icon">👥</span>
+                        <span>Agent Responses</span>
+                        <span class="badge" id="responseCount">0</span>
+                    </div>
+                </div>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <!-- Overview View -->
+            <section id="overview-view" class="view-section active">
+                <div class="page-header">
+                    <h1 class="page-title">Welcome Back</h1>
+                    <p class="page-subtitle">Here's where things stand with your home search</p>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-label">Request Status</div>
+                        <div class="stat-value" id="statRequestStatus">—</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Agent Responses</div>
+                        <div class="stat-value" id="statResponseCount">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Days Active</div>
+                        <div class="stat-value" id="statDaysActive">—</div>
+                    </div>
+                </div>
+
+                <h2 style="font-family: 'Crimson Pro', serif; font-size: 1.8rem; margin-bottom: 1.5rem;">Recent Responses</h2>
+                <div id="recentResponses"></div>
+            </section>
+
+            <!-- My Request View -->
+            <section id="request-view" class="view-section">
+                <div class="page-header">
+                    <h1 class="page-title">My Request</h1>
+                    <p class="page-subtitle">Manage your buyer agent request</p>
+                </div>
+                <div id="requestContainer"></div>
+            </section>
+
+            <!-- Agent Responses View -->
+            <section id="responses-view" class="view-section">
+                <div class="page-header">
+                    <h2 class="page-title">Realtors Interested in Helping You</h2>
+                    <p class="page-subtitle">Licensed agents who have reviewed your request and want to represent you</p>
+                </div>
+                <div id="responsesContainer"></div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        const API_BASE_URL = window.location.origin + '/api';
+        let currentUser = null;
+        let buyerRequest = null;
+        let cachedResponses = [];
+
+        // ─── Toast ───────────────────────────────────────────────────────────────
+        function showToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 4000);
+        }
+
+        // ─── Verification Banner ─────────────────────────────────────────────────
+        function renderVerificationBanner(user) {
+            const existing = document.getElementById('verificationBanner');
+            if (existing) existing.remove();
+            if (user.emailVerified) return;
+            const banner = document.createElement('div');
+            banner.id = 'verificationBanner';
+            banner.className = 'verification-banner';
+            banner.innerHTML = `
+                <p>📧 <strong>Verify your email</strong> — Check your inbox for a verification link to activate your buyer request.</p>
+                <button class="btn btn-secondary" onclick="resendVerification()" style="padding:0.5rem 1rem;white-space:nowrap;">Resend Email</button>
+            `;
+            document.querySelector('.main-content').prepend(banner);
+        }
+
+        async function resendVerification() {
+            try {
+                await fetch(`${API_BASE_URL}/auth/resend-verification`, { method: 'POST', credentials: 'include' });
+                showToast('Verification email sent! Check your inbox.');
+            } catch {
+                showToast('Failed to send email. Please try again.', 'error');
+            }
+        }
+
+        // ─── Auth ─────────────────────────────────────────────────────────────────
+        async function loadCurrentUser() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/auth/me`, { credentials: 'include' });
+                if (response.status === 401) { window.location.href = '/login'; return null; }
+                if (!response.ok) { console.error('Auth check failed:', response.status); return null; }
+                const user = await response.json();
+                currentUser = user;
+                const nameEl = document.getElementById('userName');
+                const avatarEl = document.getElementById('userAvatar');
+                if (nameEl) nameEl.textContent = `${user.firstName || ''} ${user.lastName || ''}`.trim();
+                if (avatarEl) avatarEl.textContent = (user.firstName || 'B').charAt(0).toUpperCase();
+                renderVerificationBanner(user);
+
+                if (new URLSearchParams(window.location.search).get('verified') === '1') {
+                    history.replaceState({}, '', window.location.pathname);
+                    showToast('✓ Email verified successfully!');
+                }
+                return user;
+            } catch (error) {
+                console.error('Error loading user:', error);
+                return null;
+            }
+        }
+
+        async function logout() {
+            try {
+                await fetch(`${API_BASE_URL}/auth/logout`, { method: 'POST', credentials: 'include' });
+            } catch (error) {
+                console.error('Logout error:', error);
+            }
+            window.location.href = '/login';
+        }
+
+        // ─── Navigation ──────────────────────────────────────────────────────────
+        document.querySelectorAll('.nav-item[data-view]').forEach(item => {
+            item.addEventListener('click', () => {
+                const view = item.dataset.view;
+                document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+                item.classList.add('active');
+                document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
+                document.getElementById(`${view}-view`).classList.add('active');
+            });
+        });
+
+        // ─── API Calls ────────────────────────────────────────────────────────────
+        async function loadBuyerRequest() {
+            try {
+                const res = await fetch(`${API_BASE_URL}/buyer-requests/mine`, { credentials: 'include' });
+                if (res.status === 404) return null;
+                if (!res.ok) { console.error('Failed to load buyer request:', res.status); return null; }
+                return await res.json();
+            } catch (error) {
+                console.error('Error loading buyer request:', error);
+                return null;
+            }
+        }
+
+        async function loadResponses() {
+            try {
+                const res = await fetch(`${API_BASE_URL}/buyer-requests/responses`, { credentials: 'include' });
+                if (!res.ok) { console.error('Failed to load responses:', res.status); return []; }
+                return await res.json();
+            } catch (error) {
+                console.error('Error loading responses:', error);
+                return [];
+            }
+        }
+
+        async function submitRequest(formData, requestId = null) {
+            const url = requestId
+                ? `${API_BASE_URL}/buyer-requests/${requestId}`
+                : `${API_BASE_URL}/buyer-requests`;
+            const method = requestId ? 'PUT' : 'POST';
+            const res = await fetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify(formData)
+            });
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                throw new Error(data.error || 'Failed to save request');
+            }
+            return await res.json();
+        }
+
+        async function deactivateRequest(id) {
+            const res = await fetch(`${API_BASE_URL}/buyer-requests/${id}`, {
+                method: 'DELETE',
+                credentials: 'include'
+            });
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                throw new Error(data.error || 'Failed to deactivate request');
+            }
+            return await res.json();
+        }
+
+        // ─── Render Helpers ───────────────────────────────────────────────────────
+        function formatBudget(min, max) {
+            const fmt = (n) => n != null ? '$' + Number(n).toLocaleString() : null;
+            const fMin = fmt(min);
+            const fMax = fmt(max);
+            if (fMin && fMax) return `${fMin} – ${fMax}`;
+            if (fMin) return `From ${fMin}`;
+            if (fMax) return `Up to ${fMax}`;
+            return '—';
+        }
+
+        function daysAgo(dateStr) {
+            if (!dateStr) return null;
+            const then = new Date(dateStr);
+            const now = new Date();
+            return Math.max(0, Math.floor((now - then) / (1000 * 60 * 60 * 24)));
+        }
+
+        function buildRequestForm(request = null) {
+            const isEdit = !!request;
+            return `
+                <div class="form-group">
+                    <label for="reqPhone">Phone Number</label>
+                    <input type="tel" id="reqPhone" name="phone" placeholder="(555) 123-4567"
+                        value="${request ? (request.phone || '') : ''}">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="reqBudgetMin">Budget Min ($)</label>
+                        <input type="number" id="reqBudgetMin" name="budgetMin" placeholder="300000" min="0"
+                            value="${request ? (request.budgetMin || '') : ''}">
+                    </div>
+                    <div class="form-group">
+                        <label for="reqBudgetMax">Budget Max ($)</label>
+                        <input type="number" id="reqBudgetMax" name="budgetMax" placeholder="600000" min="0"
+                            value="${request ? (request.budgetMax || '') : ''}">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="reqAreas">Target Areas</label>
+                    <input type="text" id="reqAreas" name="targetAreas" placeholder="Boston, Cambridge, Brookline..."
+                        value="${request ? (request.targetAreas || '') : ''}">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="reqPropertyType">Property Type</label>
+                        <select id="reqPropertyType" name="propertyType">
+                            <option value="Any"         ${(!request || request.propertyType === 'Any') ? 'selected' : ''}>Any</option>
+                            <option value="Single Family" ${request && request.propertyType === 'Single Family' ? 'selected' : ''}>Single Family</option>
+                            <option value="Condo"         ${request && request.propertyType === 'Condo' ? 'selected' : ''}>Condo</option>
+                            <option value="Townhouse"     ${request && request.propertyType === 'Townhouse' ? 'selected' : ''}>Townhouse</option>
+                            <option value="Multi-Family"  ${request && request.propertyType === 'Multi-Family' ? 'selected' : ''}>Multi-Family</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="reqBedrooms">Minimum Bedrooms</label>
+                        <select id="reqBedrooms" name="minBedrooms">
+                            <option value="Any" ${(!request || request.minBedrooms === 'Any') ? 'selected' : ''}>Any</option>
+                            <option value="1+"  ${request && request.minBedrooms === '1+' ? 'selected' : ''}>1+</option>
+                            <option value="2+"  ${request && request.minBedrooms === '2+' ? 'selected' : ''}>2+</option>
+                            <option value="3+"  ${request && request.minBedrooms === '3+' ? 'selected' : ''}>3+</option>
+                            <option value="4+"  ${request && request.minBedrooms === '4+' ? 'selected' : ''}>4+</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="reqTimeline">Timeline</label>
+                    <select id="reqTimeline" name="timeline">
+                        <option value="ASAP"          ${(!request || request.timeline === 'ASAP') ? 'selected' : ''}>ASAP</option>
+                        <option value="1-3 months"    ${request && request.timeline === '1-3 months' ? 'selected' : ''}>1–3 months</option>
+                        <option value="3-6 months"    ${request && request.timeline === '3-6 months' ? 'selected' : ''}>3–6 months</option>
+                        <option value="6-12 months"   ${request && request.timeline === '6-12 months' ? 'selected' : ''}>6–12 months</option>
+                        <option value="Just exploring" ${request && request.timeline === 'Just exploring' ? 'selected' : ''}>Just exploring</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="reqNotes">Additional Notes</label>
+                    <textarea id="reqNotes" name="notes" placeholder="Any additional details about your home search...">${request ? (request.notes || '') : ''}</textarea>
+                </div>
+                <p class="form-error" id="requestFormError"></p>
+                <button type="submit" class="btn btn-primary" id="requestSubmitBtn" style="width: 100%; padding: 1rem; margin-top: 0.5rem;">
+                    ${isEdit ? 'Update Request' : 'Submit My Request'}
+                </button>
+            `;
+        }
+
+        function renderRequest(request) {
+            const container = document.getElementById('requestContainer');
+            if (!request) {
+                container.innerHTML = `
+                    <div class="form-card">
+                        <h2>Create Your Buyer Request</h2>
+                        <p class="form-desc">Tell us what you're looking for and licensed realtors in your area will reach out to represent you.</p>
+                        <form id="requestForm">${buildRequestForm()}</form>
+                    </div>
+                `;
+                document.getElementById('requestForm').addEventListener('submit', handleRequestSubmit);
+                return;
+            }
+
+            const isActive = request.status === 'active';
+            const statusClass = isActive ? 'status-active' : 'status-inactive';
+            const statusLabel = isActive ? 'Active' : 'Inactive';
+
+            container.innerHTML = `
+                <div class="request-detail-card" id="requestDetailCard">
+                    <div class="request-detail-header">
+                        <h2>Your Buyer Request</h2>
+                        <span class="status-badge ${statusClass}">${statusLabel}</span>
+                    </div>
+                    <div class="request-fields">
+                        <div class="request-field">
+                            <div class="request-field-label">Budget</div>
+                            <div class="request-field-value">${formatBudget(request.budgetMin, request.budgetMax)}</div>
+                        </div>
+                        <div class="request-field">
+                            <div class="request-field-label">Target Areas</div>
+                            <div class="request-field-value">${request.targetAreas || '—'}</div>
+                        </div>
+                        <div class="request-field">
+                            <div class="request-field-label">Property Type</div>
+                            <div class="request-field-value">${request.propertyType || 'Any'}</div>
+                        </div>
+                        <div class="request-field">
+                            <div class="request-field-label">Min Bedrooms</div>
+                            <div class="request-field-value">${request.minBedrooms || 'Any'}</div>
+                        </div>
+                        <div class="request-field">
+                            <div class="request-field-label">Timeline</div>
+                            <div class="request-field-value">${request.timeline || '—'}</div>
+                        </div>
+                        <div class="request-field">
+                            <div class="request-field-label">Phone</div>
+                            <div class="request-field-value">${request.phone || '—'}</div>
+                        </div>
+                    </div>
+                    ${request.notes ? `
+                    <div class="request-notes">
+                        <div class="request-notes-label">Additional Notes</div>
+                        <div class="request-notes-text">${request.notes}</div>
+                    </div>` : ''}
+                    <div class="request-actions">
+                        <button class="btn btn-outline" onclick="showEditForm()">Edit Request</button>
+                        ${isActive ? `<button class="btn btn-danger" onclick="handleDeactivate()">Deactivate Request</button>` : ''}
+                    </div>
+                </div>
+
+                <div class="form-card" id="requestEditCard" style="display: none;">
+                    <h2>Edit Your Request</h2>
+                    <p class="form-desc">Update your search criteria — changes are visible to new agent responses immediately.</p>
+                    <form id="requestForm">${buildRequestForm(request)}</form>
+                    <button type="button" class="btn btn-outline" onclick="hideEditForm()" style="width: 100%; margin-top: 0.75rem;">Cancel</button>
+                </div>
+            `;
+            document.getElementById('requestForm').addEventListener('submit', handleRequestSubmit);
+        }
+
+        function showEditForm() {
+            document.getElementById('requestDetailCard').style.display = 'none';
+            document.getElementById('requestEditCard').style.display = 'block';
+        }
+
+        function hideEditForm() {
+            document.getElementById('requestDetailCard').style.display = 'block';
+            document.getElementById('requestEditCard').style.display = 'none';
+        }
+
+        function renderResponses(responses) {
+            const container = document.getElementById('responsesContainer');
+            if (!responses || responses.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🔎</div>
+                        <h3>No responses yet</h3>
+                        <p>Your request is live and agents are reviewing it — check back soon!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = `<div class="responses-list">${responses.map(r => buildResponseCard(r)).join('')}</div>`;
+        }
+
+        function buildResponseCard(r) {
+            const metaParts = [];
+            if (r.yearsExperience != null) metaParts.push(`<span>🏆 ${r.yearsExperience} yrs experience</span>`);
+            if (r.serviceAreas) metaParts.push(`<span>📍 ${r.serviceAreas}</span>`);
+
+            return `
+                <div class="response-card">
+                    <div class="response-info">
+                        <div class="response-name">${r.realtorName || r.realtor_name || 'Agent'}</div>
+                        <div class="response-brokerage">${r.brokerage || ''}</div>
+                        ${metaParts.length ? `<div class="response-meta">${metaParts.join('')}</div>` : ''}
+                        ${r.message ? `<div class="response-message">"${r.message}"</div>` : ''}
+                    </div>
+                    <div class="response-actions">
+                        ${r.email || r.realtorEmail ? `<a href="mailto:${r.email || r.realtorEmail}" class="btn btn-primary" style="font-size:0.875rem;padding:0.6rem 1rem;">Contact</a>` : ''}
+                        ${r.phone || r.realtorPhone ? `<a href="tel:${r.phone || r.realtorPhone}" class="btn btn-outline" style="font-size:0.875rem;padding:0.6rem 1rem;">Call</a>` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderOverview(request, responses) {
+            // Stat cards
+            if (!request) {
+                document.getElementById('statRequestStatus').textContent = 'None';
+                document.getElementById('statDaysActive').textContent = '—';
+            } else {
+                const isActive = request.status === 'active';
+                document.getElementById('statRequestStatus').textContent = isActive ? 'Active' : 'Inactive';
+                document.getElementById('statRequestStatus').style.color = isActive ? 'var(--success)' : '#999';
+                const days = daysAgo(request.createdAt || request.created_at);
+                document.getElementById('statDaysActive').textContent = days != null ? days : '—';
+            }
+            document.getElementById('statResponseCount').textContent = responses.length;
+            document.getElementById('responseCount').textContent = responses.length;
+
+            // Recent responses (last 2)
+            const recent = document.getElementById('recentResponses');
+            if (!request) {
+                recent.innerHTML = `
+                    <div class="cta-card">
+                        <h3>Create Your Buyer Request</h3>
+                        <p>Submit your home search criteria and let licensed realtors compete to represent you — for free.</p>
+                        <button class="btn btn-primary" onclick="switchToView('request')">Get Started</button>
+                    </div>
+                `;
+                return;
+            }
+
+            if (responses.length === 0) {
+                recent.innerHTML = '<p style="color: #999;">No agent responses yet — check back soon.</p>';
+                return;
+            }
+
+            const slice = responses.slice(0, 2);
+            recent.innerHTML = `<div class="responses-list">${slice.map(r => buildResponseCard(r)).join('')}</div>`;
+            if (responses.length > 2) {
+                recent.innerHTML += `
+                    <div style="margin-top: 1rem;">
+                        <button class="btn btn-outline" onclick="switchToView('responses')">View All ${responses.length} Responses →</button>
+                    </div>
+                `;
+            }
+        }
+
+        function switchToView(view) {
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.querySelector(`[data-view="${view}"]`).classList.add('active');
+            document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
+            document.getElementById(`${view}-view`).classList.add('active');
+        }
+
+        // ─── Form Handlers ─────────────────────────────────────────────────────────
+        async function handleRequestSubmit(e) {
+            e.preventDefault();
+            const form = e.target;
+            const submitBtn = form.querySelector('#requestSubmitBtn');
+            const errorEl = form.querySelector('#requestFormError');
+
+            const formData = {
+                phone:        form.elements.phone.value.trim(),
+                budgetMin:    form.elements.budgetMin.value ? Number(form.elements.budgetMin.value) : null,
+                budgetMax:    form.elements.budgetMax.value ? Number(form.elements.budgetMax.value) : null,
+                targetAreas:  form.elements.targetAreas.value.trim(),
+                propertyType: form.elements.propertyType.value,
+                minBedrooms:  form.elements.minBedrooms.value,
+                timeline:     form.elements.timeline.value,
+                notes:        form.elements.notes.value.trim()
+            };
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Saving...';
+            errorEl.classList.remove('visible');
+
+            try {
+                const saved = await submitRequest(formData, buyerRequest ? buyerRequest.id : null);
+                buyerRequest = saved;
+                showToast(buyerRequest ? '✓ Request updated successfully!' : '✓ Request submitted!');
+                await loadDashboard();
+            } catch (err) {
+                errorEl.textContent = err.message || 'Something went wrong. Please try again.';
+                errorEl.classList.add('visible');
+                submitBtn.disabled = false;
+                submitBtn.textContent = buyerRequest ? 'Update Request' : 'Submit My Request';
+            }
+        }
+
+        async function handleDeactivate() {
+            if (!buyerRequest) return;
+            if (!confirm('Deactivate your request? Realtors will no longer see it as active.')) return;
+            try {
+                await deactivateRequest(buyerRequest.id);
+                showToast('Request deactivated.');
+                await loadDashboard();
+            } catch (err) {
+                showToast(err.message || 'Failed to deactivate. Please try again.', 'error');
+            }
+        }
+
+        // ─── Main Load ─────────────────────────────────────────────────────────────
+        async function loadDashboard() {
+            const [request, responses] = await Promise.all([loadBuyerRequest(), loadResponses()]);
+            buyerRequest = request;
+            cachedResponses = responses;
+
+            renderOverview(request, responses);
+            renderRequest(request);
+            renderResponses(responses);
+        }
+
+        // ─── Init ──────────────────────────────────────────────────────────────────
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadCurrentUser();
+            await loadDashboard();
+        });
+    </script>
+</body>
+</html>
