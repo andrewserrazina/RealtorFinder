@@ -1218,7 +1218,7 @@ app.post('/api/city-lead', waitlistLimiter, async (req, res) => {
 
 // Expose public API keys to the frontend
 app.get('/api/config/maps-key', (req, res) => {
-    res.json({ key: process.env.GOOGLE_MAPS_API_KEY || null });
+    res.json({ mapboxKey: process.env.MAPBOX_API_KEY || null });
 });
 
 // ===== STRIPE ROUTES =====

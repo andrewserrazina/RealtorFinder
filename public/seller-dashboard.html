@@ -983,31 +983,74 @@
         document.getElementById('newListingPrice').addEventListener('input', function() { formatCurrencyInput(this); });
         document.getElementById('newListingZestimate').addEventListener('input', function() { formatCurrencyInput(this); });
 
-        // ── Google Places Autocomplete ────────────────────────────────────────────
-        async function initGooglePlaces() {
+        // ── Mapbox Address Autocomplete ───────────────────────────────────────────
+        async function initMapboxAutocomplete() {
             try {
                 const res = await fetch('/api/config/maps-key');
-                const { key } = await res.json();
-                if (!key) return; // No key configured — plain input fallback
-                const script = document.createElement('script');
-                script.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places`;
-                script.onload = () => {
-                    const input = document.getElementById('newListingAddress');
-                    const ac = new google.maps.places.Autocomplete(input, {
-                        types: ['address'],
-                        componentRestrictions: { country: 'us' }
+                const { mapboxKey } = await res.json();
+                if (!mapboxKey) return; // No key — plain text input fallback
+
+                const input = document.getElementById('newListingAddress');
+                let dropdown = null;
+                let debounceTimer = null;
+
+                function openDropdown() {
+                    if (dropdown) dropdown.remove();
+                    dropdown = document.createElement('ul');
+                    Object.assign(dropdown.style, {
+                        position: 'absolute', top: '100%', left: '0', right: '0',
+                        background: 'white', border: '1px solid #E5E1DB',
+                        borderRadius: '8px', marginTop: '4px', padding: '0',
+                        listStyle: 'none', zIndex: '1000',
+                        boxShadow: '0 4px 16px rgba(0,0,0,0.1)', maxHeight: '220px',
+                        overflowY: 'auto'
                     });
-                    ac.addListener('place_changed', () => {
-                        const place = ac.getPlace();
-                        if (place.formatted_address) {
-                            input.value = place.formatted_address;
-                        }
+                    const wrap = input.parentElement;
+                    wrap.style.position = 'relative';
+                    wrap.appendChild(dropdown);
+                }
+
+                function closeDropdown() {
+                    if (dropdown) { dropdown.remove(); dropdown = null; }
+                }
+
+                async function suggest(q) {
+                    const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(q)}.json`
+                        + `?access_token=${mapboxKey}&country=us&types=address&limit=5`;
+                    const r = await fetch(url);
+                    const data = await r.json();
+                    const features = data.features || [];
+                    if (!features.length) { closeDropdown(); return; }
+                    openDropdown();
+                    features.forEach(f => {
+                        const li = document.createElement('li');
+                        li.textContent = f.place_name;
+                        Object.assign(li.style, {
+                            padding: '0.7rem 1rem', cursor: 'pointer',
+                            fontSize: '0.9rem', borderBottom: '1px solid #f0ede9'
+                        });
+                        li.addEventListener('mouseenter', () => li.style.background = '#FFF7F4');
+                        li.addEventListener('mouseleave', () => li.style.background = '');
+                        li.addEventListener('mousedown', (e) => {
+                            e.preventDefault(); // prevent input blur before click
+                            input.value = f.place_name;
+                            closeDropdown();
+                        });
+                        dropdown.appendChild(li);
                     });
-                };
-                document.head.appendChild(script);
-            } catch (e) { /* fail silently — address still works as plain text */ }
+                }
+
+                input.addEventListener('input', () => {
+                    clearTimeout(debounceTimer);
+                    const q = input.value.trim();
+                    if (q.length < 3) { closeDropdown(); return; }
+                    debounceTimer = setTimeout(() => suggest(q), 300);
+                });
+
+                input.addEventListener('blur', () => setTimeout(closeDropdown, 150));
+            } catch (e) { /* fail silently — plain text input still works */ }
         }
-        initGooglePlaces();
+        initMapboxAutocomplete();
 
         // Create Listing
         document.getElementById('newListingForm').addEventListener('submit', async (e) => {
