@@ -430,6 +430,143 @@ const db = {
             [listingId]
         );
         return result.rows[0];
+    },
+
+    // ===== BUYER REQUEST METHODS =====
+
+    async createBuyerRequest(userId, data) {
+        const { firstName, lastName, email, phone, budgetMin, budgetMax, targetAreas, propertyType, bedroomsMin, timeline, additionalNotes, zipCode, latitude, longitude } = data;
+        const result = await pool.query(
+            `INSERT INTO buyer_requests
+             (user_id, first_name, last_name, email, phone, budget_min, budget_max,
+              target_areas, property_type, bedrooms_min, timeline, additional_notes,
+              zip_code, latitude, longitude)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
+             RETURNING *`,
+            [userId, firstName, lastName, email, phone,
+             budgetMin || null, budgetMax || null, targetAreas, propertyType || null,
+             bedroomsMin || null, timeline, additionalNotes, zipCode,
+             latitude || null, longitude || null]
+        );
+        return result.rows[0];
+    },
+
+    async getBuyerRequestByUser(userId) {
+        const result = await pool.query(
+            `SELECT * FROM buyer_requests WHERE user_id = $1 AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 1`,
+            [userId]
+        );
+        return result.rows[0];
+    },
+
+    async updateBuyerRequest(id, userId, data) {
+        const { phone, budgetMin, budgetMax, targetAreas, propertyType, bedroomsMin, timeline, additionalNotes } = data;
+        const result = await pool.query(
+            `UPDATE buyer_requests
+             SET phone=$1, budget_min=$2, budget_max=$3, target_areas=$4, property_type=$5,
+                 bedrooms_min=$6, timeline=$7, additional_notes=$8, updated_at=NOW()
+             WHERE id=$9 AND user_id=$10 AND deleted_at IS NULL
+             RETURNING *`,
+            [phone, budgetMin || null, budgetMax || null, targetAreas, propertyType || null,
+             bedroomsMin || null, timeline, additionalNotes, id, userId]
+        );
+        return result.rows[0];
+    },
+
+    async deleteBuyerRequest(id, userId) {
+        const result = await pool.query(
+            `UPDATE buyer_requests SET deleted_at = NOW(), status = 'inactive'
+             WHERE id=$1 AND user_id=$2 RETURNING *`,
+            [id, userId]
+        );
+        return result.rows[0];
+    },
+
+    async getActiveBuyerRequests(filters = {}, page = 1, limit = 20) {
+        const { area, type, budgetMin, budgetMax } = filters;
+        const offset = (page - 1) * limit;
+        const params = [];
+        const conditions = ["status = 'active'", "deleted_at IS NULL"];
+
+        if (area) {
+            params.push(`%${area.trim()}%`);
+            conditions.push(`target_areas ILIKE $${params.length}`);
+        }
+        if (type) {
+            params.push(type);
+            conditions.push(`(property_type = $${params.length} OR property_type IS NULL)`);
+        }
+        if (budgetMin) {
+            params.push(parseInt(budgetMin));
+            conditions.push(`(budget_max >= $${params.length} OR budget_max IS NULL)`);
+        }
+        if (budgetMax) {
+            params.push(parseInt(budgetMax));
+            conditions.push(`(budget_min <= $${params.length} OR budget_min IS NULL)`);
+        }
+
+        const where = `WHERE ${conditions.join(' AND ')}`;
+        const countResult = await pool.query(`SELECT COUNT(*) FROM buyer_requests ${where}`, params);
+        const total = parseInt(countResult.rows[0].count);
+
+        params.push(limit, offset);
+        const result = await pool.query(
+            `SELECT id, first_name, last_name, budget_min, budget_max, target_areas,
+                    property_type, bedrooms_min, timeline, additional_notes, zip_code,
+                    created_at, status
+             FROM buyer_requests ${where}
+             ORDER BY created_at DESC
+             LIMIT $${params.length - 1} OFFSET $${params.length}`,
+            params
+        );
+        return { requests: result.rows, total, page: parseInt(page), limit };
+    },
+
+    async respondToBuyerRequest(buyerRequestId, realtorUserId, message) {
+        const result = await pool.query(
+            `INSERT INTO buyer_request_responses (buyer_request_id, realtor_user_id, message)
+             VALUES ($1, $2, $3)
+             ON CONFLICT (buyer_request_id, realtor_user_id)
+             DO UPDATE SET message = $3, created_at = NOW()
+             RETURNING *`,
+            [buyerRequestId, realtorUserId, message || '']
+        );
+        return result.rows[0];
+    },
+
+    async getBuyerRequestById(id) {
+        const result = await pool.query(
+            `SELECT br.*, u.email as user_email, u.first_name as user_first, u.last_name as user_last
+             FROM buyer_requests br
+             JOIN users u ON br.user_id = u.id
+             WHERE br.id = $1`,
+            [id]
+        );
+        return result.rows[0];
+    },
+
+    async getResponsesForBuyer(userId) {
+        const result = await pool.query(
+            `SELECT brr.*, u.first_name as realtor_first, u.last_name as realtor_last,
+                    u.email as realtor_email, u.phone as realtor_phone,
+                    u.license_number, u.years_experience, u.service_areas, u.bio
+             FROM buyer_request_responses brr
+             JOIN buyer_requests br ON brr.buyer_request_id = br.id
+             JOIN users u ON brr.realtor_user_id = u.id
+             WHERE br.user_id = $1
+             ORDER BY brr.created_at DESC`,
+            [userId]
+        );
+        return result.rows;
+    },
+
+    async getRealtorBuyerResponses(realtorUserId) {
+        const result = await pool.query(
+            `SELECT brr.buyer_request_id FROM buyer_request_responses
+             WHERE realtor_user_id = $1`,
+            [realtorUserId]
+        );
+        return result.rows.map(r => r.buyer_request_id);
     }
 };
 

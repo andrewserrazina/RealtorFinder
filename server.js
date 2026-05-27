@@ -122,7 +122,7 @@ app.post('/api/auth/signup', authLimiter, async (req, res) => {
             return res.status(400).json({ error: 'All fields required' });
         }
         
-        if (!['seller', 'realtor'].includes(userType)) {
+        if (!['seller', 'realtor', 'buyer'].includes(userType)) {
             return res.status(400).json({ error: 'Invalid user type' });
         }
         
@@ -164,6 +164,114 @@ app.post('/api/auth/signup', authLimiter, async (req, res) => {
             return res.status(400).json({ error: 'Email already registered' });
         }
         res.status(500).json({ error: 'Failed to create account' });
+    }
+});
+
+// ===== BUYER REQUEST ROUTES =====
+
+// Get current buyer's own request (buyer) OR list active requests (realtor)
+app.get('/api/buyer-requests', auth.requireAuth, async (req, res) => {
+    try {
+        if (req.user.user_type === 'buyer') {
+            const request = await db.getBuyerRequestByUser(req.session.userId);
+            return res.json(request || null);
+        }
+        // Realtor: browse active requests with filters
+        const { area, type, budgetMin, budgetMax, page = 1, limit = 20 } = req.query;
+        const filters = {};
+        if (area) filters.area = area;
+        if (type) filters.type = type;
+        if (budgetMin) filters.budgetMin = budgetMin;
+        if (budgetMax) filters.budgetMax = budgetMax;
+        const result = await db.getActiveBuyerRequests(filters, parseInt(page), Math.min(parseInt(limit), 50));
+        // Also return which ones the realtor has already responded to
+        const responded = await db.getRealtorBuyerResponses(req.session.userId);
+        res.json({ ...result, responded });
+    } catch (error) {
+        console.error('Error fetching buyer requests:', error);
+        res.status(500).json({ error: 'Failed to fetch buyer requests' });
+    }
+});
+
+// Get responses for the logged-in buyer
+app.get('/api/buyer-requests/responses', auth.requireAuth, async (req, res) => {
+    try {
+        const responses = await db.getResponsesForBuyer(req.session.userId);
+        res.json(responses);
+    } catch (error) {
+        console.error('Error fetching buyer responses:', error);
+        res.status(500).json({ error: 'Failed to fetch responses' });
+    }
+});
+
+// Create a buyer request
+app.post('/api/buyer-requests', auth.requireAuth, async (req, res) => {
+    try {
+        if (req.user.user_type !== 'buyer') return res.status(403).json({ error: 'Buyers only' });
+        const user = req.user;
+        const data = {
+            ...req.body,
+            firstName: user.first_name,
+            lastName: user.last_name,
+            email: user.email,
+            zipCode: user.zip_code
+        };
+        const coords = await geocodeAddress(`${user.zip_code}, USA`);
+        if (coords) { data.latitude = coords.latitude; data.longitude = coords.longitude; }
+        const request = await db.createBuyerRequest(req.session.userId, data);
+        emailService.sendBuyerRequestConfirmation(request).catch(err =>
+            console.error('Buyer request email failed:', err.message)
+        );
+        res.status(201).json(request);
+    } catch (error) {
+        console.error('Error creating buyer request:', error);
+        res.status(500).json({ error: 'Failed to create buyer request' });
+    }
+});
+
+// Update a buyer request
+app.put('/api/buyer-requests/:id', auth.requireAuth, async (req, res) => {
+    try {
+        if (req.user.user_type !== 'buyer') return res.status(403).json({ error: 'Buyers only' });
+        const updated = await db.updateBuyerRequest(req.params.id, req.session.userId, req.body);
+        if (!updated) return res.status(404).json({ error: 'Request not found' });
+        res.json(updated);
+    } catch (error) {
+        console.error('Error updating buyer request:', error);
+        res.status(500).json({ error: 'Failed to update buyer request' });
+    }
+});
+
+// Deactivate a buyer request
+app.delete('/api/buyer-requests/:id', auth.requireAuth, async (req, res) => {
+    try {
+        if (req.user.user_type !== 'buyer') return res.status(403).json({ error: 'Buyers only' });
+        await db.deleteBuyerRequest(req.params.id, req.session.userId);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error deleting buyer request:', error);
+        res.status(500).json({ error: 'Failed to delete buyer request' });
+    }
+});
+
+// Realtor responds to a buyer request
+app.post('/api/buyer-requests/:id/respond', auth.requireAuth, async (req, res) => {
+    try {
+        if (req.user.user_type !== 'realtor') return res.status(403).json({ error: 'Realtors only' });
+        const { message } = req.body;
+        if (!message || message.trim().length < 10) {
+            return res.status(400).json({ error: 'Message must be at least 10 characters' });
+        }
+        const request = await db.getBuyerRequestById(req.params.id);
+        if (!request) return res.status(404).json({ error: 'Buyer request not found' });
+        await db.respondToBuyerRequest(req.params.id, req.session.userId, message);
+        // Email the buyer
+        emailService.sendRealtorBuyerLeadEmail(request.user_email, request.first_name, req.user, message)
+            .catch(err => console.error('Buyer lead email failed:', err.message));
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error responding to buyer request:', error);
+        res.status(500).json({ error: 'Failed to send response' });
     }
 });
 
@@ -259,7 +367,8 @@ app.get('/api/auth/verify-email', async (req, res) => {
         const user = await db.verifyEmailToken(token);
         if (!user) return res.redirect('/login?error=invalid_token');
         if (req.session?.userId === user.id) req.session.emailVerified = true;
-        const dash = user.user_type === 'seller' ? '/dashboard/seller' : '/dashboard/realtor';
+        const dashMap = { seller: '/dashboard/seller', realtor: '/dashboard/realtor', buyer: '/dashboard/buyer' };
+        const dash = dashMap[user.user_type] || '/dashboard/seller';
         res.redirect(`${dash}?verified=1`);
     } catch (error) {
         console.error('Email verification error:', error);
@@ -882,7 +991,8 @@ app.get('/reset-password', (req, res) => {
 app.get('/login', (req, res) => {
     // If already logged in, redirect to dashboard
     if (req.session && req.session.userId) {
-        const dashboardPath = req.session.userType === 'seller' ? '/dashboard/seller' : '/dashboard/realtor';
+        const dashMap2 = { seller: '/dashboard/seller', realtor: '/dashboard/realtor', buyer: '/dashboard/buyer' };
+        const dashboardPath = dashMap2[req.session.userType] || '/dashboard/seller';
         return res.redirect(dashboardPath);
     }
     res.sendFile(path.join(__dirname, 'public', 'login.html'));
@@ -923,9 +1033,28 @@ app.get('/dashboard/realtor', (req, res) => {
         return res.redirect('/login');
     }
     if (req.session.userType !== 'realtor') {
-        return res.redirect('/dashboard/seller');
+        const dest = req.session.userType === 'buyer' ? '/dashboard/buyer' : '/dashboard/seller';
+        return res.redirect(dest);
     }
     res.sendFile(path.join(__dirname, 'public', 'realtor-dashboard.html'));
+});
+
+// Buyer Dashboard (PROTECTED)
+app.get('/dashboard/buyer', (req, res) => {
+    if (!req.session || !req.session.userId) {
+        return res.redirect('/login');
+    }
+    if (req.session.userType !== 'buyer') {
+        const dest = req.session.userType === 'realtor' ? '/dashboard/realtor' : '/dashboard/seller';
+        return res.redirect(dest);
+    }
+    res.sendFile(path.join(__dirname, 'public', 'buyer-dashboard.html'));
+});
+
+// Buyer landing page
+app.get('/buyers', (req, res) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.sendFile(path.join(__dirname, 'public', 'buyers.html'));
 });
 
 // Legal pages
