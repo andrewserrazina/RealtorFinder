@@ -1047,6 +1047,43 @@ app.delete('/api/admin/listings/:id', requireAdmin, async (req, res) => {
     }
 });
 
+app.get('/api/admin/leads', requireAdmin, async (req, res) => {
+    try {
+        const { rows } = await pool.query(
+            `SELECT id, type, name, email, phone, city_name, state_code, created_at
+             FROM city_leads
+             ORDER BY created_at DESC
+             LIMIT 1000`
+        );
+        res.json(rows);
+    } catch (error) {
+        console.error('Admin leads error:', error);
+        res.status(500).json({ error: 'Failed to fetch leads' });
+    }
+});
+
+app.get('/api/admin/leads/export.csv', requireAdmin, async (req, res) => {
+    try {
+        const { rows } = await pool.query(
+            `SELECT id, type, name, email, phone, city_name, state_code, created_at
+             FROM city_leads ORDER BY created_at DESC`
+        );
+        const header = 'ID,Type,Name,Email,Phone,City,State,Date\n';
+        const csv = rows.map(r =>
+            [r.id, r.type, r.name || '', r.email, r.phone || '', r.city_name || '', r.state_code || '',
+             new Date(r.created_at).toISOString().slice(0, 10)]
+            .map(v => `"${String(v).replace(/"/g, '""')}"`)
+            .join(',')
+        ).join('\n');
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', 'attachment; filename="city-leads.csv"');
+        res.send(header + csv);
+    } catch (error) {
+        console.error('Leads CSV error:', error);
+        res.status(500).json({ error: 'Failed to export leads' });
+    }
+});
+
 // Waitlist signup endpoint
 app.post('/api/waitlist', waitlistLimiter, async (req, res) => {
     try {
