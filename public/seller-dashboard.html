@@ -714,13 +714,19 @@
             <form id="newListingForm">
                 <div class="form-group">
                     <label>Property Address *</label>
-                    <input type="text" name="address" placeholder="123 Main St, Boston, MA 02101" required>
+                    <input type="text" id="newListingAddress" name="address" placeholder="Start typing your address…" autocomplete="off" required>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label>Price *</label>
-                        <input type="text" name="price" placeholder="$500,000" required>
+                        <label>Listing Price *</label>
+                        <input type="text" id="newListingPrice" name="price" placeholder="$500,000" inputmode="numeric" required>
                     </div>
+                    <div class="form-group">
+                        <label>Zillow Zestimate <span style="font-weight:400;color:#6b7280;">(optional)</span></label>
+                        <input type="text" id="newListingZestimate" name="zestimate" placeholder="$480,000" inputmode="numeric">
+                    </div>
+                </div>
+                <div class="form-row">
                     <div class="form-group">
                         <label>Property Type *</label>
                         <select name="type" required>
@@ -967,6 +973,42 @@
             }
         }
 
+        // ── Price formatting ──────────────────────────────────────────────────────
+        function formatCurrencyInput(input) {
+            const raw = input.value.replace(/[^0-9]/g, '');
+            input.value = raw ? '$' + parseInt(raw, 10).toLocaleString('en-US') : '';
+        }
+        function stripCurrency(val) { return val.replace(/[^0-9]/g, ''); }
+
+        document.getElementById('newListingPrice').addEventListener('input', function() { formatCurrencyInput(this); });
+        document.getElementById('newListingZestimate').addEventListener('input', function() { formatCurrencyInput(this); });
+
+        // ── Google Places Autocomplete ────────────────────────────────────────────
+        async function initGooglePlaces() {
+            try {
+                const res = await fetch('/api/config/maps-key');
+                const { key } = await res.json();
+                if (!key) return; // No key configured — plain input fallback
+                const script = document.createElement('script');
+                script.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places`;
+                script.onload = () => {
+                    const input = document.getElementById('newListingAddress');
+                    const ac = new google.maps.places.Autocomplete(input, {
+                        types: ['address'],
+                        componentRestrictions: { country: 'us' }
+                    });
+                    ac.addListener('place_changed', () => {
+                        const place = ac.getPlace();
+                        if (place.formatted_address) {
+                            input.value = place.formatted_address;
+                        }
+                    });
+                };
+                document.head.appendChild(script);
+            } catch (e) { /* fail silently — address still works as plain text */ }
+        }
+        initGooglePlaces();
+
         // Create Listing
         document.getElementById('newListingForm').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -975,6 +1017,9 @@
             btn.textContent = 'Creating…';
             const formData = new FormData(e.target);
             const data = Object.fromEntries(formData);
+            // Strip currency formatting before sending
+            if (data.price) data.price = '$' + parseInt(stripCurrency(data.price), 10).toLocaleString('en-US');
+            if (data.zestimate) data.zestimate = data.zestimate.trim() ? '$' + parseInt(stripCurrency(data.zestimate), 10).toLocaleString('en-US') : undefined;
             try {
                 const response = await fetch(`${API_BASE_URL}/listings`, {
                     method: 'POST',

@@ -58,13 +58,13 @@ const db = {
 
     // Create new listing
     async createListing(listingData) {
-        const { address, city, state, zip, price, type, bedrooms, bathrooms, sqft, description, ownerName, ownerEmail, ownerPhone, userId, latitude, longitude } = listingData;
+        const { address, city, state, zip, price, zestimate, type, bedrooms, bathrooms, sqft, description, ownerName, ownerEmail, ownerPhone, userId, latitude, longitude } = listingData;
 
         const result = await pool.query(
-            `INSERT INTO listings (address, city, state, zip, price, property_type, bedrooms, bathrooms, sqft, description, owner_name, owner_email, owner_phone, user_id, latitude, longitude)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+            `INSERT INTO listings (address, city, state, zip, price, zestimate, property_type, bedrooms, bathrooms, sqft, description, owner_name, owner_email, owner_phone, user_id, latitude, longitude)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
              RETURNING *`,
-            [address, city, state, zip, price, type, bedrooms, bathrooms, sqft, description, ownerName, ownerEmail, ownerPhone, userId, latitude || null, longitude || null]
+            [address, city, state, zip, price, zestimate || null, type, bedrooms, bathrooms, sqft, description, ownerName, ownerEmail, ownerPhone, userId, latitude || null, longitude || null]
         );
         return result.rows[0];
     },
