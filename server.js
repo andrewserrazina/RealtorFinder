@@ -653,7 +653,7 @@ app.get('/api/listings/:id', async (req, res) => {
 // Create new listing (requires authentication)
 app.post('/api/listings', auth.requireAuth, async (req, res) => {
     try {
-        const { address, price, type, bedrooms, bathrooms, sqft, description, ownerName, ownerEmail, ownerPhone } = req.body;
+        const { address, price, type, bedrooms, bathrooms, sqft, description, ownerName, ownerEmail, ownerPhone, zestimate } = req.body;
         
         // Parse address into components (basic parsing - could be enhanced with address validation API)
         const addressParts = address.split(',').map(s => s.trim());
@@ -675,6 +675,7 @@ app.post('/api/listings', auth.requireAuth, async (req, res) => {
             state: state || '',
             zip: zip || '',
             price,
+            zestimate: zestimate || null,
             type,
             bedrooms: parseInt(bedrooms),
             bathrooms: parseFloat(bathrooms),
@@ -1211,6 +1212,13 @@ app.post('/api/city-lead', waitlistLimiter, async (req, res) => {
         console.error('City lead error:', err);
         res.status(500).json({ error: 'Failed to save lead' });
     }
+});
+
+// ===== CONFIG ROUTES =====
+
+// Expose public API keys to the frontend
+app.get('/api/config/maps-key', (req, res) => {
+    res.json({ mapboxKey: process.env.MAPBOX_API_KEY || null });
 });
 
 // ===== STRIPE ROUTES =====
