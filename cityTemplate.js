@@ -52,6 +52,14 @@ function generateCityPage(city, liveData = {}) {
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-BRGVVNKT65"></script>
     <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-BRGVVNKT65');</script>
+    <!-- Microsoft Clarity -->
+    <script type="text/javascript">
+        (function(c,l,a,r,i,t,y){
+            c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+            t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+            y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+        })(window, document, "clarity", "script", "wxvaz0g7tq");
+    </script>
 
     <style>
         :root {
@@ -615,7 +623,10 @@ function generateCityPage(city, liveData = {}) {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ type, name, email, phone, city_slug: CITY_SLUG, city_name: CITY_NAME, state_code: STATE_CODE })
             });
-            if (res.ok) { onSuccess(); } else { onError(); }
+            if (res.ok) {
+                gtag('event', 'generate_lead', { lead_type: type, city: CITY_NAME, state: STATE_CODE });
+                onSuccess();
+            } else { onError(); }
         } catch { onError(); }
     }
 </script>

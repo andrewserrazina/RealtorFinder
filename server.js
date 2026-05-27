@@ -159,6 +159,7 @@ app.post('/api/auth/signup', authLimiter, async (req, res) => {
         req.session.lastName = user.last_name;
         req.session.zipCode = user.zip_code;
         req.session.emailVerified = false;
+        req.session.isApproved = false; // new signups go to waitlist
 
         res.json({
             success: true,
@@ -168,7 +169,8 @@ app.post('/api/auth/signup', authLimiter, async (req, res) => {
             firstName: user.first_name,
             lastName: user.last_name,
             zipCode: user.zip_code,
-            emailVerified: false
+            emailVerified: false,
+            isApproved: false
         });
     } catch (error) {
         console.error('Signup error:', error);
@@ -427,21 +429,22 @@ app.post('/api/auth/login', authLimiter, async (req, res) => {
         req.session.firstName = user.firstName;
         req.session.lastName = user.lastName;
         req.session.zipCode = user.zipCode;
-        
+        req.session.isApproved = user.isApproved || false;
+
         console.log('💾 Attempting to save session...');
-        
+
         // Force save the session
         req.session.save((err) => {
             if (err) {
                 console.error('❌ Session save error:', err);
                 return res.status(500).json({ error: 'Session save failed' });
             }
-            
+
             console.log('✅ Session saved successfully!');
             console.log('   Session ID:', req.sessionID);
             console.log('   User ID:', req.session.userId);
             console.log('   User Type:', req.session.userType);
-            
+
             res.json({
                 success: true,
                 userId: user.id,
@@ -449,7 +452,8 @@ app.post('/api/auth/login', authLimiter, async (req, res) => {
                 userType: user.userType,
                 firstName: user.firstName,
                 lastName: user.lastName,
-                zipCode: user.zipCode
+                zipCode: user.zipCode,
+                isApproved: user.isApproved || false
             });
         });
     } catch (error) {
@@ -1036,6 +1040,34 @@ app.put('/api/admin/users/:id/reactivate', requireAdmin, async (req, res) => {
     }
 });
 
+app.put('/api/admin/users/:id/approve', requireAdmin, async (req, res) => {
+    try {
+        const { rows } = await pool.query(
+            `UPDATE users SET is_approved = true WHERE id = $1 RETURNING id, email, is_approved`,
+            [parseInt(req.params.id)]
+        );
+        if (!rows.length) return res.status(404).json({ error: 'User not found' });
+        res.json({ success: true, user: rows[0] });
+    } catch (error) {
+        console.error('Admin approve error:', error);
+        res.status(500).json({ error: 'Failed to approve user' });
+    }
+});
+
+app.put('/api/admin/users/:id/unapprove', requireAdmin, async (req, res) => {
+    try {
+        const { rows } = await pool.query(
+            `UPDATE users SET is_approved = false WHERE id = $1 RETURNING id, email, is_approved`,
+            [parseInt(req.params.id)]
+        );
+        if (!rows.length) return res.status(404).json({ error: 'User not found' });
+        res.json({ success: true, user: rows[0] });
+    } catch (error) {
+        console.error('Admin unapprove error:', error);
+        res.status(500).json({ error: 'Failed to unapprove user' });
+    }
+});
+
 app.delete('/api/admin/listings/:id', requireAdmin, async (req, res) => {
     try {
         const listing = await db.adminDeleteListing(parseInt(req.params.id));
@@ -1434,13 +1466,18 @@ app.get('/reset-password', (req, res) => {
 
 // Login page
 app.get('/login', (req, res) => {
-    // If already logged in, redirect to dashboard
     if (req.session && req.session.userId) {
+        if (!req.session.isApproved) return res.redirect('/waitlist');
         const dashMap2 = { seller: '/dashboard/seller', realtor: '/dashboard/realtor', buyer: '/dashboard/buyer' };
         const dashboardPath = dashMap2[req.session.userType] || '/dashboard/seller';
         return res.redirect(dashboardPath);
     }
     res.sendFile(path.join(__dirname, 'public', 'login.html'));
+});
+
+// Waitlist holding page
+app.get('/waitlist', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'waitlist.html'));
 });
 
 // Seller landing page (homepage) — also serves realtors.html on realtors.realtorfinder.net
@@ -1463,20 +1500,16 @@ app.get('/realtors', (req, res) => {
 
 // Seller Dashboard (PROTECTED)
 app.get('/dashboard/seller', (req, res) => {
-    if (!req.session || !req.session.userId) {
-        return res.redirect('/login');
-    }
-    if (req.session.userType !== 'seller') {
-        return res.redirect('/dashboard/realtor');
-    }
+    if (!req.session || !req.session.userId) return res.redirect('/login');
+    if (!req.session.isApproved) return res.redirect('/waitlist');
+    if (req.session.userType !== 'seller') return res.redirect('/dashboard/realtor');
     res.sendFile(path.join(__dirname, 'public', 'seller-dashboard.html'));
 });
 
 // Realtor Dashboard (PROTECTED)
 app.get('/dashboard/realtor', (req, res) => {
-    if (!req.session || !req.session.userId) {
-        return res.redirect('/login');
-    }
+    if (!req.session || !req.session.userId) return res.redirect('/login');
+    if (!req.session.isApproved) return res.redirect('/waitlist');
     if (req.session.userType !== 'realtor') {
         const dest = req.session.userType === 'buyer' ? '/dashboard/buyer' : '/dashboard/seller';
         return res.redirect(dest);
@@ -1486,9 +1519,8 @@ app.get('/dashboard/realtor', (req, res) => {
 
 // Buyer Dashboard (PROTECTED)
 app.get('/dashboard/buyer', (req, res) => {
-    if (!req.session || !req.session.userId) {
-        return res.redirect('/login');
-    }
+    if (!req.session || !req.session.userId) return res.redirect('/login');
+    if (!req.session.isApproved) return res.redirect('/waitlist');
     if (req.session.userType !== 'buyer') {
         const dest = req.session.userType === 'realtor' ? '/dashboard/realtor' : '/dashboard/seller';
         return res.redirect(dest);

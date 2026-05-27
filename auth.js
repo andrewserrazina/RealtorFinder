@@ -31,7 +31,7 @@ const auth = {
         try {
             const result = await pool.query(
                 `SELECT id, email, password_hash, user_type, first_name, last_name, zip_code,
-                        email_verified, is_admin, is_active
+                        email_verified, is_admin, is_active, is_approved
                  FROM users WHERE email = $1`,
                 [email]
             );
@@ -60,7 +60,8 @@ const auth = {
                 lastName: user.last_name,
                 zipCode: user.zip_code,
                 emailVerified: user.email_verified,
-                isAdmin: user.is_admin || false
+                isAdmin: user.is_admin || false,
+                isApproved: user.is_approved || user.is_admin || false
             };
         } catch (error) {
             throw error;

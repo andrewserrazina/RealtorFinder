@@ -4,6 +4,22 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - RealtorFinder</title>
+    <!-- Google Analytics 4 -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-BRGVVNKT65"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-BRGVVNKT65');
+    </script>
+    <!-- Microsoft Clarity -->
+    <script type="text/javascript">
+        (function(c,l,a,r,i,t,y){
+            c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+            t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+            y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+        })(window, document, "clarity", "script", "wxvaz0g7tq");
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@600;700;900&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
@@ -417,14 +433,17 @@
                 }
                 
                 console.log('Login successful, redirecting to:', result.userType);
-                
-                // Redirect based on user type
-                const redirectUrl = result.userType === 'seller' 
-                    ? '/dashboard/seller' 
-                    : '/dashboard/realtor';
-                
-                console.log('Redirecting to:', redirectUrl);
-                window.location.href = redirectUrl;
+
+                gtag('event', 'login', { method: 'email', user_type: result.userType });
+
+                if (!result.isApproved) {
+                    window.location.href = '/waitlist';
+                } else {
+                    const redirectUrl = result.userType === 'seller'
+                        ? '/dashboard/seller'
+                        : '/dashboard/realtor';
+                    window.location.href = redirectUrl;
+                }
                 
             } catch (error) {
                 console.error('Login error:', error);
@@ -471,17 +490,21 @@
                     throw new Error(result.error || 'Signup failed');
                 }
                 
-                showSuccess('Account created! Logging you in...');
-                
+                showSuccess('Account created! Redirecting you now...');
+
                 console.log('Signup successful, redirecting to:', result.userType);
-                
-                // Auto-login after signup
+
+                gtag('event', 'sign_up', { method: 'email', user_type: result.userType });
+
                 setTimeout(() => {
-                    const redirectUrl = result.userType === 'seller' 
-                        ? '/dashboard/seller' 
-                        : '/dashboard/realtor';
-                    console.log('Redirecting to:', redirectUrl);
-                    window.location.href = redirectUrl;
+                    if (!result.isApproved) {
+                        window.location.href = '/waitlist';
+                    } else {
+                        const redirectUrl = result.userType === 'seller'
+                            ? '/dashboard/seller'
+                            : '/dashboard/realtor';
+                        window.location.href = redirectUrl;
+                    }
                 }, 1000);
             } catch (error) {
                 console.error('Signup error:', error);

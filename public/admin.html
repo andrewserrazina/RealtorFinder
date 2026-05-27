@@ -645,6 +645,7 @@
                             <th>Email</th>
                             <th>Type</th>
                             <th>Verified</th>
+                            <th>Approved</th>
                             <th>Status</th>
                             <th>Joined</th>
                             <th>Actions</th>
@@ -853,7 +854,7 @@
         document.getElementById('users-count').textContent = usersData.length + ' users';
 
         if (!usersData.length) {
-            tbody.innerHTML = '<tr><td colspan="8" class="empty-state">No users found.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="9" class="empty-state">No users found.</td></tr>';
             return;
         }
 
@@ -862,11 +863,17 @@
             const verified = (u.email_verified || u.emailVerified)
                 ? '<span class="verified-yes" title="Verified">✓</span>'
                 : '<span class="verified-no" title="Not verified">✗</span>';
+            const approved = u.is_approved
+                ? '<span class="verified-yes" title="Approved">✓</span>'
+                : '<span class="verified-no" title="Waitlisted">Waitlist</span>';
             const active = u.is_active !== false;
             const statusBadge = active
                 ? '<span class="badge badge-active">Active</span>'
                 : '<span class="badge badge-deactivated">Deactivated</span>';
-            const actionBtn = active
+            const approveBtn = u.is_approved
+                ? `<button class="btn-action btn-deactivate" onclick="unapproveUser(${u.id}, this)" style="margin-right:4px">Waitlist</button>`
+                : `<button class="btn-action btn-reactivate" onclick="approveUser(${u.id}, this)" style="margin-right:4px">Approve</button>`;
+            const activateBtn = active
                 ? `<button class="btn-action btn-deactivate" onclick="deactivateUser(${u.id}, this)">Deactivate</button>`
                 : `<button class="btn-action btn-reactivate" onclick="reactivateUser(${u.id}, this)">Reactivate</button>`;
 
@@ -876,11 +883,43 @@
                 <td>${escHtml(u.email)}</td>
                 <td>${typeBadge(u.user_type)}</td>
                 <td style="text-align:center">${verified}</td>
+                <td style="text-align:center">${approved}</td>
                 <td>${statusBadge}</td>
                 <td class="td-muted">${fmtDate(u.created_at)}</td>
-                <td>${actionBtn}</td>
+                <td>${approveBtn}${activateBtn}</td>
             </tr>`;
         }).join('');
+    }
+
+    async function approveUser(id, btn) {
+        btn.disabled = true;
+        try {
+            const res = await fetch(`/api/admin/users/${id}/approve`, { method: 'PUT', credentials: 'include' });
+            if (!res.ok) throw new Error();
+            const idx = usersData.findIndex(u => u.id === id);
+            if (idx !== -1) usersData[idx].is_approved = true;
+            renderUsers();
+            showToast('User approved — they can now access the dashboard.', 'success');
+        } catch {
+            showToast('Failed to approve user.', 'error');
+            btn.disabled = false;
+        }
+    }
+
+    async function unapproveUser(id, btn) {
+        if (!confirm('Move this user back to waitlist?')) return;
+        btn.disabled = true;
+        try {
+            const res = await fetch(`/api/admin/users/${id}/unapprove`, { method: 'PUT', credentials: 'include' });
+            if (!res.ok) throw new Error();
+            const idx = usersData.findIndex(u => u.id === id);
+            if (idx !== -1) usersData[idx].is_approved = false;
+            renderUsers();
+            showToast('User moved back to waitlist.', 'success');
+        } catch {
+            showToast('Failed to update user.', 'error');
+            btn.disabled = false;
+        }
     }
 
     async function deactivateUser(id, btn) {
