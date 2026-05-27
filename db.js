@@ -718,6 +718,97 @@ const db = {
             [realtorUserId]
         );
         return result.rows.map(r => r.buyer_request_id);
+    },
+
+    // ===== CITY PAGE METHODS =====
+
+    async getCityPage(stateCode, slug) {
+        const result = await pool.query(
+            `SELECT * FROM city_pages WHERE state_code = $1 AND slug = $2 AND is_published = TRUE`,
+            [stateCode.toUpperCase(), slug]
+        );
+        return result.rows[0];
+    },
+
+    async getCitiesByState(stateCode) {
+        const result = await pool.query(
+            `SELECT slug, name, county, median_price, price_trend, avg_dom
+             FROM city_pages WHERE state_code = $1 AND is_published = TRUE
+             ORDER BY name ASC`,
+            [stateCode.toUpperCase()]
+        );
+        return result.rows;
+    },
+
+    async getPublishedStates() {
+        const result = await pool.query(
+            `SELECT state_code, state_name, COUNT(*) AS city_count
+             FROM city_pages WHERE is_published = TRUE
+             GROUP BY state_code, state_name
+             ORDER BY state_name ASC`
+        );
+        return result.rows;
+    },
+
+    async getAllPublishedCities() {
+        const result = await pool.query(
+            `SELECT state_code, slug, updated_at FROM city_pages
+             WHERE is_published = TRUE ORDER BY state_code, name`
+        );
+        return result.rows;
+    },
+
+    async getCityLiveCounts(zip) {
+        const [listings, realtors] = await Promise.all([
+            pool.query(
+                `SELECT COUNT(*) FROM listings WHERE zip = $1 AND deleted_at IS NULL`,
+                [zip]
+            ),
+            pool.query(
+                `SELECT COUNT(*) FROM users WHERE zip_code = $1 AND user_type = 'realtor' AND (is_active IS NULL OR is_active = TRUE)`,
+                [zip]
+            )
+        ]);
+        return {
+            listingCount: parseInt(listings.rows[0].count),
+            realtorCount: parseInt(realtors.rows[0].count)
+        };
+    },
+
+    async upsertCityPage(data) {
+        const {
+            slug, name, stateCode, stateName, county, zip, population,
+            medianPrice, priceTrend, avgDom, description, neighborhoods,
+            nearby, sellerHook, realtorHook, isPublished = true
+        } = data;
+        const result = await pool.query(
+            `INSERT INTO city_pages
+                (slug, name, state_code, state_name, county, zip, population, median_price, price_trend, avg_dom,
+                 description, neighborhoods, nearby, seller_hook, realtor_hook, is_published, updated_at)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,NOW())
+             ON CONFLICT (state_code, slug) DO UPDATE SET
+                name=EXCLUDED.name, county=EXCLUDED.county, zip=EXCLUDED.zip,
+                population=EXCLUDED.population, median_price=EXCLUDED.median_price,
+                price_trend=EXCLUDED.price_trend, avg_dom=EXCLUDED.avg_dom,
+                description=EXCLUDED.description, neighborhoods=EXCLUDED.neighborhoods,
+                nearby=EXCLUDED.nearby, seller_hook=EXCLUDED.seller_hook,
+                realtor_hook=EXCLUDED.realtor_hook, is_published=EXCLUDED.is_published,
+                updated_at=NOW()
+             RETURNING *`,
+            [slug, name, stateCode, stateName, county, zip, population,
+             medianPrice, priceTrend, avgDom ? parseInt(avgDom) : null,
+             description, neighborhoods, nearby, sellerHook, realtorHook, isPublished]
+        );
+        return result.rows[0];
+    },
+
+    async toggleCityPagePublished(id) {
+        const result = await pool.query(
+            `UPDATE city_pages SET is_published = NOT is_published, updated_at = NOW()
+             WHERE id = $1 RETURNING id, name, state_code, is_published`,
+            [id]
+        );
+        return result.rows[0];
     }
 };
 

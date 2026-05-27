@@ -13,6 +13,8 @@ const { upload, uploadToCloudinary } = require('./config/cloudinary');
 const { db, pool } = require('./db');
 const emailService = require('./email');
 const auth = require('./auth');
+const cities = require('./cities');
+const { generateCityPage } = require('./cityTemplate');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -1103,6 +1105,249 @@ app.get('/api/health', (req, res) => {
         environment: process.env.NODE_ENV || 'development'
     });
 });
+
+// ===== SEO CITY PAGES =====
+
+// API: cities by state (used by city page JS for nearby links)
+app.get('/api/cities/:stateCode', async (req, res) => {
+    try {
+        const cities = await db.getCitiesByState(req.params.stateCode);
+        res.json(cities);
+    } catch (err) {
+        res.json([]);
+    }
+});
+
+// Redirect old /locations/:slug → /locations/ma/:slug for backwards compat
+app.get('/locations/:citySlug', (req, res, next) => {
+    const slug = req.params.citySlug;
+    // If it looks like a state code (2 chars), let the state handler deal with it
+    if (slug.length === 2) return next();
+    // Check if it's an old western MA slug — redirect to /locations/ma/:slug
+    const westernMaSlugs = ['springfield','northampton','amherst','holyoke','chicopee','pittsfield','westfield','longmeadow','easthampton','south-hadley','agawam','great-barrington'];
+    if (westernMaSlugs.includes(slug)) {
+        return res.redirect(301, `/locations/ma/${slug}`);
+    }
+    next();
+});
+
+// National locations index — browse by state
+app.get('/locations', async (req, res) => {
+    let states = [];
+    try { states = await db.getPublishedStates(); } catch (e) { /* DB not migrated yet — show empty */ }
+
+    const newEngland = ['MA','CT','RI','VT','NH','ME'];
+    const neStates = states.filter(s => newEngland.includes(s.state_code));
+    const otherStates = states.filter(s => !newEngland.includes(s.state_code));
+
+    const stateCard = (s) => `
+        <a href="/locations/${s.state_code.toLowerCase()}" class="state-card">
+            <div class="state-code">${s.state_code}</div>
+            <div class="state-name">${s.state_name}</div>
+            <div class="state-count">${s.city_count} ${parseInt(s.city_count) === 1 ? 'city' : 'cities'}</div>
+        </a>`;
+
+    res.send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real Estate Markets by City | RealtorFinder</title>
+    <meta name="description" content="Find your city on RealtorFinder. Sellers list free, realtors compete for listings. Covering New England and growing nationwide.">
+    <link rel="canonical" href="https://www.realtorfinder.net/locations">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-BRGVVNKT65"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-BRGVVNKT65');</script>
+    <style>
+        :root{--primary:#0A2540;--accent:#FF6B35;--border:#e5e7eb;--soft-bg:#f8f9fa;}
+        *{margin:0;padding:0;box-sizing:border-box;}
+        body{font-family:'Work Sans',sans-serif;color:var(--primary);}
+        nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(255,255,255,0.97);backdrop-filter:blur(10px);border-bottom:1px solid var(--border);padding:0 5%;display:flex;align-items:center;justify-content:space-between;height:68px;}
+        .nav-logo{font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:900;color:var(--primary);text-decoration:none;}
+        .nav-logo span{color:var(--accent);}
+        .nav-cta{background:var(--accent);color:#fff;padding:10px 22px;border-radius:8px;font-weight:600;text-decoration:none;font-size:0.95rem;}
+        .hero{background:linear-gradient(135deg,var(--primary) 0%,#0d3a5c 100%);color:#fff;padding:130px 5% 70px;text-align:center;}
+        .hero h1{font-family:'Playfair Display',serif;font-size:clamp(2rem,4vw,3.2rem);font-weight:900;margin-bottom:14px;}
+        .hero h1 em{color:var(--accent);font-style:normal;}
+        .hero p{font-size:1.1rem;opacity:0.85;max-width:560px;margin:0 auto;}
+        .content{max-width:1100px;margin:0 auto;padding:60px 5%;}
+        h2{font-family:'Playfair Display',serif;font-size:1.6rem;font-weight:900;margin-bottom:24px;color:var(--primary);}
+        .section-label{font-size:0.78rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--accent);margin-bottom:8px;}
+        .states-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px;margin-bottom:52px;}
+        .state-card{background:#fff;border:1px solid var(--border);border-radius:12px;padding:20px;text-decoration:none;color:var(--primary);transition:all 0.2s;text-align:center;display:block;}
+        .state-card:hover{border-color:var(--accent);box-shadow:0 6px 20px rgba(255,107,53,0.12);transform:translateY(-2px);}
+        .state-code{font-family:'Playfair Display',serif;font-size:1.8rem;font-weight:900;color:var(--primary);}
+        .state-name{font-size:0.85rem;color:#6b7280;margin:4px 0;}
+        .state-count{font-size:0.78rem;color:var(--accent);font-weight:600;}
+        footer{background:var(--primary);color:rgba(255,255,255,0.6);padding:32px 5%;text-align:center;font-size:0.84rem;}
+        footer a{color:rgba(255,255,255,0.6);margin:0 8px;text-decoration:none;}
+    </style>
+</head>
+<body>
+<nav>
+    <a href="/" class="nav-logo">Realtor<span>Finder</span></a>
+    <a href="/login" class="nav-cta">Get Started Free</a>
+</nav>
+<div class="hero">
+    <h1>Find Your Market on<br><em>RealtorFinder</em></h1>
+    <p>Sellers list free. Realtors compete. Covering New England now — and growing nationwide.</p>
+</div>
+<div class="content">
+    ${neStates.length ? `<div class="section-label">New England</div><h2>Our Home Market</h2><div class="states-grid">${neStates.map(stateCard).join('')}</div>` : ''}
+    ${otherStates.length ? `<div class="section-label">Expanding Coverage</div><h2>More States</h2><div class="states-grid">${otherStates.map(stateCard).join('')}</div>` : ''}
+    ${!states.length ? '<p style="color:#6b7280;text-align:center;padding:40px 0;">City pages loading — check back soon.</p>' : ''}
+</div>
+<footer>
+    <p>© ${new Date().getFullYear()} RealtorFinder &nbsp;·&nbsp; <a href="/">Home</a><a href="/realtors">For Realtors</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a></p>
+</footer>
+</body>
+</html>`);
+});
+
+// State index page — /locations/ma
+app.get('/locations/:stateCode', async (req, res, next) => {
+    const stateCode = req.params.stateCode.toUpperCase();
+    if (stateCode.length !== 2) return next();
+    let cities = [];
+    let stateName = stateCode;
+    try {
+        cities = await db.getCitiesByState(stateCode);
+        if (cities.length === 0) return res.status(404).sendFile(path.join(__dirname, 'public', '404.html'));
+        stateName = cities[0].state_name || stateCode; // fallback
+    } catch (e) {
+        return res.status(404).sendFile(path.join(__dirname, 'public', '404.html'));
+    }
+    // Get stateName from DB
+    try {
+        const stateRes = await db.getPublishedStates();
+        const s = stateRes.find(s => s.state_code === stateCode);
+        if (s) stateName = s.state_name;
+    } catch (e) {}
+
+    const cards = cities.map(c => `
+        <a href="/locations/${stateCode.toLowerCase()}/${c.slug}" class="city-card">
+            <div class="city-name">${c.name}</div>
+            <div class="city-meta">${c.county ? c.county + ' County · ' : ''}Median ${c.median_price || '—'}</div>
+            <div class="city-trend">↑ ${(c.price_trend || '').replace('up ', '')} YoY &nbsp;·&nbsp; ${c.avg_dom || '—'} days avg.</div>
+        </a>`).join('');
+
+    res.send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${stateName} Real Estate Markets | RealtorFinder</title>
+    <meta name="description" content="RealtorFinder covers every major city and town in ${stateName}. Sellers list free, realtors compete for listings.">
+    <link rel="canonical" href="https://www.realtorfinder.net/locations/${stateCode.toLowerCase()}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-BRGVVNKT65"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-BRGVVNKT65');</script>
+    <style>
+        :root{--primary:#0A2540;--accent:#FF6B35;--border:#e5e7eb;--soft-bg:#f8f9fa;}
+        *{margin:0;padding:0;box-sizing:border-box;}
+        body{font-family:'Work Sans',sans-serif;color:var(--primary);}
+        nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(255,255,255,0.97);backdrop-filter:blur(10px);border-bottom:1px solid var(--border);padding:0 5%;display:flex;align-items:center;justify-content:space-between;height:68px;}
+        .nav-logo{font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:900;color:var(--primary);text-decoration:none;}
+        .nav-logo span{color:var(--accent);}
+        .nav-cta{background:var(--accent);color:#fff;padding:10px 22px;border-radius:8px;font-weight:600;text-decoration:none;font-size:0.95rem;}
+        .hero{background:linear-gradient(135deg,var(--primary) 0%,#0d3a5c 100%);color:#fff;padding:130px 5% 70px;text-align:center;}
+        .hero h1{font-family:'Playfair Display',serif;font-size:clamp(2rem,4vw,3.2rem);font-weight:900;margin-bottom:14px;}
+        .hero h1 em{color:var(--accent);font-style:normal;}
+        .hero p{font-size:1.1rem;opacity:0.85;max-width:560px;margin:0 auto;}
+        .breadcrumb{font-size:0.85rem;text-align:center;margin-top:16px;opacity:0.7;}
+        .breadcrumb a{color:rgba(255,255,255,0.8);text-decoration:underline;}
+        .grid{max-width:1100px;margin:60px auto;padding:0 5%;display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:18px;}
+        .city-card{background:#fff;border:1px solid var(--border);border-radius:14px;padding:24px;text-decoration:none;color:var(--primary);transition:all 0.2s;display:block;}
+        .city-card:hover{border-color:var(--accent);box-shadow:0 8px 24px rgba(255,107,53,0.12);transform:translateY(-2px);}
+        .city-name{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:700;margin-bottom:6px;}
+        .city-meta{font-size:0.85rem;color:#6b7280;margin-bottom:4px;}
+        .city-trend{font-size:0.82rem;color:#16a34a;font-weight:600;}
+        footer{background:var(--primary);color:rgba(255,255,255,0.6);padding:32px 5%;text-align:center;font-size:0.84rem;margin-top:60px;}
+        footer a{color:rgba(255,255,255,0.6);margin:0 8px;text-decoration:none;}
+    </style>
+</head>
+<body>
+<nav>
+    <a href="/" class="nav-logo">Realtor<span>Finder</span></a>
+    <a href="/login" class="nav-cta">Get Started Free</a>
+</nav>
+<div class="hero">
+    <h1><em>${stateName}</em><br>Real Estate Markets</h1>
+    <p>Connecting home sellers and local realtors across every city and town in ${stateName}.</p>
+    <div class="breadcrumb"><a href="/locations">← All States</a></div>
+</div>
+<div class="grid">${cards}</div>
+<footer>
+    <p>© ${new Date().getFullYear()} RealtorFinder &nbsp;·&nbsp; <a href="/">Home</a><a href="/locations">All Markets</a><a href="/realtors">For Realtors</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a></p>
+</footer>
+</body>
+</html>`);
+});
+
+// Individual city page — /locations/ma/northampton
+app.get('/locations/:stateCode/:citySlug', async (req, res) => {
+    try {
+        const city = await db.getCityPage(req.params.stateCode, req.params.citySlug);
+        if (!city) return res.status(404).sendFile(path.join(__dirname, 'public', '404.html'));
+        let liveData = { listingCount: 0, realtorCount: 0 };
+        if (city.zip) {
+            try { liveData = await db.getCityLiveCounts(city.zip); } catch (e) {}
+        }
+        res.set('Cache-Control', 'public, max-age=3600');
+        res.send(generateCityPage(city, liveData));
+    } catch (err) {
+        console.error('City page error:', err);
+        res.status(500).send('Server error');
+    }
+});
+
+// Robots.txt
+app.get('/robots.txt', (req, res) => {
+    res.type('text/plain');
+    res.send('User-agent: *\nAllow: /\nDisallow: /dashboard/\nDisallow: /api/\nSitemap: https://www.realtorfinder.net/sitemap-index.xml\n');
+});
+
+// Sitemap index — points to per-state sitemaps
+app.get('/sitemap-index.xml', async (req, res) => {
+    const base = 'https://www.realtorfinder.net';
+    const today = new Date().toISOString().split('T')[0];
+    let states = [];
+    try { states = await db.getPublishedStates(); } catch (e) {}
+    const staticEntry = `  <sitemap><loc>${base}/sitemap-static.xml</loc><lastmod>${today}</lastmod></sitemap>`;
+    const stateEntries = states.map(s =>
+        `  <sitemap><loc>${base}/sitemap-${s.state_code.toLowerCase()}.xml</loc><lastmod>${today}</lastmod></sitemap>`
+    ).join('\n');
+    res.type('application/xml');
+    res.send(`<?xml version="1.0" encoding="UTF-8"?>\n<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${staticEntry}\n${stateEntries}\n</sitemapindex>`);
+});
+
+// Static pages sitemap
+app.get('/sitemap-static.xml', (req, res) => {
+    const base = 'https://www.realtorfinder.net';
+    const today = new Date().toISOString().split('T')[0];
+    const urls = ['/', '/login', '/buyers', '/realtors', '/locations'];
+    const entries = urls.map(u => `  <url><loc>${base}${u}</loc><lastmod>${today}</lastmod><priority>${u === '/' ? '1.0' : '0.7'}</priority></url>`).join('\n');
+    res.type('application/xml');
+    res.send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${entries}\n</urlset>`);
+});
+
+// Per-state city sitemap — /sitemap-ma.xml
+app.get('/sitemap-:stateCode\\.xml', async (req, res) => {
+    const stateCode = req.params.stateCode.toUpperCase();
+    const base = 'https://www.realtorfinder.net';
+    const today = new Date().toISOString().split('T')[0];
+    let cities = [];
+    try { cities = await db.getCitiesByState(stateCode); } catch (e) {}
+    const stateEntry = `  <url><loc>${base}/locations/${stateCode.toLowerCase()}</loc><lastmod>${today}</lastmod><priority>0.8</priority></url>`;
+    const cityEntries = cities.map(c =>
+        `  <url><loc>${base}/locations/${stateCode.toLowerCase()}/${c.slug}</loc><lastmod>${today}</lastmod><priority>0.8</priority></url>`
+    ).join('\n');
+    res.type('application/xml');
+    res.send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${stateEntry}\n${cityEntries}\n</urlset>`);
+});
+
+// Legacy sitemap.xml redirect
+app.get('/sitemap.xml', (req, res) => res.redirect(301, '/sitemap-index.xml'));
 
 // ===== PAGE ROUTES (Must come AFTER API routes, BEFORE static files) =====
 
