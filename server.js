@@ -1052,11 +1052,14 @@ app.put('/api/admin/users/:id/reactivate', requireAdmin, async (req, res) => {
 app.put('/api/admin/users/:id/approve', requireAdmin, async (req, res) => {
     try {
         const { rows } = await pool.query(
-            `UPDATE users SET is_approved = true WHERE id = $1 RETURNING id, email, is_approved`,
+            `UPDATE users SET is_approved = true WHERE id = $1 RETURNING id, email, first_name, user_type, is_approved`,
             [parseInt(req.params.id)]
         );
         if (!rows.length) return res.status(404).json({ error: 'User not found' });
-        res.json({ success: true, user: rows[0] });
+        const u = rows[0];
+        emailService.sendAccountApprovedEmail(u.email, u.first_name, u.user_type)
+            .catch(err => console.error('Approval email failed:', err.message));
+        res.json({ success: true, user: u });
     } catch (error) {
         console.error('Admin approve error:', error);
         res.status(500).json({ error: 'Failed to approve user' });
@@ -1519,7 +1522,7 @@ app.get('/robots.txt', (req, res) => {
 
 // Sitemap index — points to per-state sitemaps
 app.get('/sitemap-index.xml', async (req, res) => {
-    const base = 'https://www.realtorfinder.net';
+    const base = (process.env.FRONTEND_URL || 'https://realtorfinder.net').replace(/\/$/, '');
     const today = new Date().toISOString().split('T')[0];
     let states = [];
     try { states = await db.getPublishedStates(); } catch (e) {}
@@ -1533,7 +1536,7 @@ app.get('/sitemap-index.xml', async (req, res) => {
 
 // Static pages sitemap
 app.get('/sitemap-static.xml', (req, res) => {
-    const base = 'https://www.realtorfinder.net';
+    const base = (process.env.FRONTEND_URL || 'https://realtorfinder.net').replace(/\/$/, '');
     const today = new Date().toISOString().split('T')[0];
     const urls = ['/', '/realtors', '/pricing', '/buyers', '/locations', '/login'];
     const entries = urls.map(u => `  <url><loc>${base}${u}</loc><lastmod>${today}</lastmod><priority>${u === '/' ? '1.0' : '0.7'}</priority></url>`).join('\n');
@@ -1544,7 +1547,7 @@ app.get('/sitemap-static.xml', (req, res) => {
 // Per-state city sitemap — /sitemap-ma.xml
 app.get('/sitemap-:stateCode\\.xml', async (req, res) => {
     const stateCode = req.params.stateCode.toUpperCase();
-    const base = 'https://www.realtorfinder.net';
+    const base = (process.env.FRONTEND_URL || 'https://realtorfinder.net').replace(/\/$/, '');
     const today = new Date().toISOString().split('T')[0];
     let cities = [];
     try { cities = await db.getCitiesByState(stateCode); } catch (e) {}
@@ -1559,11 +1562,46 @@ app.get('/sitemap-:stateCode\\.xml', async (req, res) => {
 // Legacy sitemap.xml redirect
 app.get('/sitemap.xml', (req, res) => res.redirect(301, '/sitemap-index.xml'));
 
+// ===== PUBLIC REALTOR PROFILE API =====
+
+app.get('/api/realtors/:id/public', async (req, res) => {
+    try {
+        const { rows } = await pool.query(
+            `SELECT u.id, u.first_name, u.last_name, u.bio, u.years_experience,
+                    u.license_number, u.service_areas, u.subscription_plan, u.zip_code,
+                    c.name AS company_name, c.plan AS company_plan
+             FROM users u
+             LEFT JOIN companies c ON u.company_id = c.id
+             WHERE u.id = $1 AND u.user_type = 'realtor' AND u.is_active IS NOT FALSE`,
+            [parseInt(req.params.id)]
+        );
+        if (!rows.length) return res.status(404).json({ error: 'Realtor not found' });
+        res.json(rows[0]);
+    } catch (err) {
+        console.error('Public profile error:', err);
+        res.status(500).json({ error: 'Failed to load profile' });
+    }
+});
+
 // ===== PAGE ROUTES (Must come AFTER API routes, BEFORE static files) =====
+
+// www → non-www redirect
+app.use((req, res, next) => {
+    if (req.hostname && req.hostname.startsWith('www.')) {
+        const nonWww = req.hostname.slice(4);
+        return res.redirect(301, `https://${nonWww}${req.originalUrl}`);
+    }
+    next();
+});
 
 // Password reset page
 app.get('/reset-password', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'reset-password.html'));
+});
+
+// Public realtor profile page
+app.get('/realtor/:id', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'realtor-profile.html'));
 });
 
 // Login page

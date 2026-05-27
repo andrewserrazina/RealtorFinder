@@ -381,6 +381,24 @@ const emailService = {
         try {
             await send({ to: email, subject: 'Verify Your RealtorFinder Email', html: emailWrap(null, body) });
         } catch (error) { logSendgridError('Email verification', error); throw error; }
+    },
+
+    async sendAccountApprovedEmail(email, firstName, userType) {
+        const dashUrl = userType === 'realtor' ? `${BASE_URL}/dashboard/realtor` : `${BASE_URL}/dashboard/seller`;
+        const roleLabel = userType === 'realtor' ? 'For Realtors' : 'For Sellers';
+        const body = `
+            ${h1("Your Account is Approved! 🎉")}
+            ${p(`Hi ${firstName}, great news — your RealtorFinder account has been approved and you now have full access to the platform.`)}
+            ${userType === 'realtor'
+                ? p("Start browsing active listings in your area and submit your first proposal. Sellers are waiting to hear from qualified agents like you.")
+                : p("You can now create your listing and start receiving proposals from qualified realtors in your area — completely free.")}
+            ${btn(dashUrl, 'Go to My Dashboard')}
+            ${divider()}
+            <p style="color:#999;font-size:13px;margin:0;">The RealtorFinder Team</p>
+        `;
+        try {
+            await send({ to: email, subject: "You're approved — welcome to RealtorFinder!", html: emailWrap(roleLabel, body) });
+        } catch (error) { logSendgridError('Account approved email', error); }
     }
 };
 
