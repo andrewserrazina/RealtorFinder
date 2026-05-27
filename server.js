@@ -1562,6 +1562,19 @@ app.get('/sitemap-:stateCode\\.xml', async (req, res) => {
 // Legacy sitemap.xml redirect
 app.get('/sitemap.xml', (req, res) => res.redirect(301, '/sitemap-index.xml'));
 
+// Founding realtor spot counter (public)
+app.get('/api/realtors/founding-count', async (req, res) => {
+    try {
+        const { rows } = await pool.query(
+            `SELECT COUNT(*) AS count FROM users WHERE user_type = 'realtor' AND is_active IS NOT FALSE`
+        );
+        const claimed = Math.min(parseInt(rows[0].count) || 0, 100);
+        res.json({ claimed, total: 100, remaining: Math.max(100 - claimed, 0) });
+    } catch {
+        res.json({ claimed: 0, total: 100, remaining: 100 });
+    }
+});
+
 // ===== PUBLIC REALTOR PROFILE API =====
 
 app.get('/api/realtors/:id/public', async (req, res) => {
