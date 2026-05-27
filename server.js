@@ -1047,6 +1047,43 @@ app.delete('/api/admin/listings/:id', requireAdmin, async (req, res) => {
     }
 });
 
+app.get('/api/admin/leads', requireAdmin, async (req, res) => {
+    try {
+        const { rows } = await pool.query(
+            `SELECT id, type, name, email, phone, city_name, state_code, created_at
+             FROM city_leads
+             ORDER BY created_at DESC
+             LIMIT 1000`
+        );
+        res.json(rows);
+    } catch (error) {
+        console.error('Admin leads error:', error);
+        res.status(500).json({ error: 'Failed to fetch leads' });
+    }
+});
+
+app.get('/api/admin/leads/export.csv', requireAdmin, async (req, res) => {
+    try {
+        const { rows } = await pool.query(
+            `SELECT id, type, name, email, phone, city_name, state_code, created_at
+             FROM city_leads ORDER BY created_at DESC`
+        );
+        const header = 'ID,Type,Name,Email,Phone,City,State,Date\n';
+        const csv = rows.map(r =>
+            [r.id, r.type, r.name || '', r.email, r.phone || '', r.city_name || '', r.state_code || '',
+             new Date(r.created_at).toISOString().slice(0, 10)]
+            .map(v => `"${String(v).replace(/"/g, '""')}"`)
+            .join(',')
+        ).join('\n');
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', 'attachment; filename="city-leads.csv"');
+        res.send(header + csv);
+    } catch (error) {
+        console.error('Leads CSV error:', error);
+        res.status(500).json({ error: 'Failed to export leads' });
+    }
+});
+
 // Waitlist signup endpoint
 app.post('/api/waitlist', waitlistLimiter, async (req, res) => {
     try {
@@ -1094,6 +1131,45 @@ app.post('/api/waitlist', waitlistLimiter, async (req, res) => {
     } catch (error) {
         console.error('Waitlist error:', error);
         res.status(500).json({ error: 'Failed to add to waitlist' });
+    }
+});
+
+// City page lead capture
+app.post('/api/city-lead', waitlistLimiter, async (req, res) => {
+    try {
+        const { type, name, email, phone, city_slug, city_name, state_code } = req.body;
+
+        if (!email || !email.includes('@')) {
+            return res.status(400).json({ error: 'Valid email required' });
+        }
+        const normalizedType = ['seller', 'realtor'].includes(type) ? type : 'seller';
+
+        await pool.query(
+            `INSERT INTO city_leads (type, name, email, phone, city_slug, city_name, state_code)
+             VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+            [
+                normalizedType,
+                (name || '').trim().slice(0, 255) || null,
+                email.trim().toLowerCase(),
+                (phone || '').trim().slice(0, 50) || null,
+                (city_slug || '').trim().slice(0, 100) || null,
+                (city_name || '').trim().slice(0, 255) || null,
+                (state_code || '').trim().toUpperCase().slice(0, 2) || null,
+            ]
+        );
+
+        console.log(`🏠 City lead: ${normalizedType} in ${city_name}, ${state_code} — ${email}`);
+
+        try {
+            await emailService.sendWaitlistConfirmation(email.trim().toLowerCase(), normalizedType);
+        } catch (emailErr) {
+            console.error('City lead email failed:', emailErr.message);
+        }
+
+        res.json({ success: true });
+    } catch (err) {
+        console.error('City lead error:', err);
+        res.status(500).json({ error: 'Failed to save lead' });
     }
 });
 

@@ -626,6 +626,7 @@
     <div class="tabs">
         <button class="tab-btn active" onclick="switchTab('users', this)">Users</button>
         <button class="tab-btn" onclick="switchTab('listings', this)">Listings</button>
+        <button class="tab-btn" onclick="switchTab('leads', this)">City Leads</button>
     </div>
 
     <!-- Users tab -->
@@ -651,6 +652,36 @@
                     </thead>
                     <tbody id="users-tbody">
                         <tr><td colspan="8" class="empty-state">Loading users…</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leads tab -->
+    <div class="tab-panel" id="tab-leads">
+        <div class="table-wrapper">
+            <div class="table-header">
+                <span class="table-title">City Page Leads</span>
+                <span class="table-count" id="leads-count">Loading…</span>
+                <a href="/api/admin/leads/export.csv" class="btn-action" style="margin-left:auto;text-decoration:none">⬇ Export CSV</a>
+            </div>
+            <div class="table-scroll">
+                <table id="leads-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Type</th>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Phone</th>
+                            <th>City</th>
+                            <th>State</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody id="leads-tbody">
+                        <tr><td colspan="8" class="empty-state">Loading leads…</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -751,6 +782,7 @@
             loadStats();
             loadUsers();
             loadListings();
+            loadLeads();
         } catch (err) {
             window.location.href = '/login.html';
         }
@@ -970,6 +1002,45 @@
             showToast('Failed to delete listing.', 'error');
             btn.disabled = false;
         }
+    }
+
+    // ── Leads ─────────────────────────────────────────────────────────────────
+
+    let leadsData = [];
+
+    async function loadLeads() {
+        try {
+            const res = await fetch('/api/admin/leads', { credentials: 'include' });
+            leadsData = await res.json();
+            renderLeads();
+        } catch (err) {
+            document.getElementById('leads-tbody').innerHTML =
+                '<tr><td colspan="8" class="empty-state">Failed to load leads.</td></tr>';
+        }
+    }
+
+    function renderLeads() {
+        const tbody = document.getElementById('leads-tbody');
+        document.getElementById('leads-count').textContent = leadsData.length + ' leads';
+
+        if (!leadsData.length) {
+            tbody.innerHTML = '<tr><td colspan="8" class="empty-state">No leads yet. They\'ll appear here once someone submits the city page form.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = leadsData.map(l => {
+            const typeCls = l.type === 'seller' ? 'badge-seller' : 'badge-realtor';
+            return `<tr>
+                <td class="id-cell">#${l.id}</td>
+                <td><span class="badge ${typeCls}">${escHtml(l.type)}</span></td>
+                <td>${escHtml(l.name || '—')}</td>
+                <td><a href="mailto:${escHtml(l.email)}" style="color:var(--accent)">${escHtml(l.email)}</a></td>
+                <td class="td-muted">${escHtml(l.phone || '—')}</td>
+                <td>${escHtml(l.city_name || '—')}</td>
+                <td class="td-muted">${escHtml(l.state_code || '—')}</td>
+                <td class="td-muted">${fmtDate(l.created_at)}</td>
+            </tr>`;
+        }).join('');
     }
 
     // ── Boot ──────────────────────────────────────────────────────────────────
