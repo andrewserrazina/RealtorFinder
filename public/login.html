@@ -297,9 +297,8 @@
                     </div>
                     <button type="submit" class="btn btn-primary">Log In</button>
                 </form>
-                <div class="divider" style="display:flex;justify-content:space-between;align-items:center;">
-                    <span>Don't have an account? <a href="#" class="link" onclick="switchTab('signup'); return false;">Sign up</a></span>
-                    <a href="/reset-password" class="link" style="font-size:0.875rem;">Forgot password?</a>
+                <div class="divider">
+                    Don't have an account? <a href="#" class="link" onclick="switchTab('signup'); return false;">Sign up</a>
                 </div>
             </div>
 
@@ -312,8 +311,11 @@
                             <option value="">Select account type</option>
                             <option value="seller">Seller (I want to list my property)</option>
                             <option value="realtor">Realtor (I want to bid on listings)</option>
-                            <option value="buyer">Buyer (I'm looking for a home)</option>
                         </select>
+                    </div>
+                    <div class="form-group" id="companyNameGroup" style="display:none;">
+                        <label>Company / Brokerage Name <span style="font-weight:400;color:#6b7280;">(optional)</span></label>
+                        <input type="text" name="companyName" placeholder="e.g. Sunrise Realty Group" maxlength="255">
                     </div>
                     <div class="form-group">
                         <label>First Name</label>
@@ -417,8 +419,9 @@
                 console.log('Login successful, redirecting to:', result.userType);
                 
                 // Redirect based on user type
-                const dashMap = { seller: '/dashboard/seller', realtor: '/dashboard/realtor', buyer: '/dashboard/buyer' };
-                const redirectUrl = dashMap[result.userType] || '/dashboard/seller';
+                const redirectUrl = result.userType === 'seller' 
+                    ? '/dashboard/seller' 
+                    : '/dashboard/realtor';
                 
                 console.log('Redirecting to:', redirectUrl);
                 window.location.href = redirectUrl;
@@ -474,8 +477,9 @@
                 
                 // Auto-login after signup
                 setTimeout(() => {
-                    const dashMap = { seller: '/dashboard/seller', realtor: '/dashboard/realtor', buyer: '/dashboard/buyer' };
-                    const redirectUrl = dashMap[result.userType] || '/dashboard/seller';
+                    const redirectUrl = result.userType === 'seller' 
+                        ? '/dashboard/seller' 
+                        : '/dashboard/realtor';
                     console.log('Redirecting to:', redirectUrl);
                     window.location.href = redirectUrl;
                 }, 1000);
@@ -486,6 +490,15 @@
                 submitBtn.textContent = 'Create Account';
             }
         });
+
+        // Show company name field when userType is realtor
+        const userTypeSelect = document.querySelector('select[name="userType"]');
+        const companyGroup = document.getElementById('companyNameGroup');
+        if (userTypeSelect && companyGroup) {
+            userTypeSelect.addEventListener('change', function() {
+                companyGroup.style.display = this.value === 'realtor' ? 'block' : 'none';
+            });
+        }
     </script>
 </body>
 </html>

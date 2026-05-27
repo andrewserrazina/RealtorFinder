@@ -311,9 +311,13 @@ const db = {
     async getProfile(userId) {
         try {
             const result = await pool.query(
-                `SELECT id, email, user_type, first_name, last_name, zip_code,
-                        phone, license_number, bio, years_experience, service_areas
-                 FROM users WHERE id = $1`,
+                `SELECT u.id, u.email, u.user_type, u.first_name, u.last_name, u.zip_code,
+                        u.phone, u.license_number, u.bio, u.years_experience, u.service_areas,
+                        u.company_id, u.company_name, u.subscription_plan, u.company_role,
+                        c.name AS company_display_name, c.plan AS company_plan
+                 FROM users u
+                 LEFT JOIN companies c ON c.id = u.company_id
+                 WHERE u.id = $1`,
                 [userId]
             );
             return result.rows[0];
@@ -332,11 +336,158 @@ const db = {
         const result = await pool.query(
             `UPDATE users SET phone=$1, license_number=$2, bio=$3, years_experience=$4, service_areas=$5
              WHERE id=$6 RETURNING id, email, user_type, first_name, last_name, zip_code,
-                    phone, license_number, bio, years_experience, service_areas`,
+                    phone, license_number, bio, years_experience, service_areas,
+                    company_id, company_name, subscription_plan, company_role`,
             [phone || null, licenseNumber || null, bio || null,
              yearsExperience ? parseInt(yearsExperience) : null, serviceAreas || null, userId]
         );
         return result.rows[0];
+    },
+
+    // ===== COMPANY METHODS =====
+
+    async createCompany(name, ownerUserId, plan = 'basic') {
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
+            const co = await client.query(
+                `INSERT INTO companies (name, owner_user_id, plan)
+                 VALUES ($1, $2, $3) RETURNING *`,
+                [name, ownerUserId, plan]
+            );
+            const company = co.rows[0];
+            await client.query(
+                `UPDATE users SET company_id=$1, company_name=$2, subscription_plan=$3, company_role='owner'
+                 WHERE id=$4`,
+                [company.id, name, plan, ownerUserId]
+            );
+            await client.query('COMMIT');
+            return company;
+        } catch (err) {
+            await client.query('ROLLBACK');
+            throw err;
+        } finally {
+            client.release();
+        }
+    },
+
+    async getCompany(companyId) {
+        const result = await pool.query(
+            `SELECT c.*, u.first_name AS owner_first_name, u.last_name AS owner_last_name, u.email AS owner_email
+             FROM companies c
+             LEFT JOIN users u ON u.id = c.owner_user_id
+             WHERE c.id = $1`,
+            [companyId]
+        );
+        return result.rows[0];
+    },
+
+    async getCompanyByOwner(userId) {
+        const result = await pool.query(
+            `SELECT * FROM companies WHERE owner_user_id = $1 AND is_active = TRUE`,
+            [userId]
+        );
+        return result.rows[0];
+    },
+
+    async getCompanyMembers(companyId) {
+        const result = await pool.query(
+            `SELECT id, first_name, last_name, email, zip_code, phone,
+                    license_number, company_role, subscription_plan, created_at
+             FROM users
+             WHERE company_id = $1 AND (is_active IS NULL OR is_active = TRUE)
+             ORDER BY company_role DESC, created_at ASC`,
+            [companyId]
+        );
+        return result.rows;
+    },
+
+    // Returns false if the plan doesn't allow adding more agents at this zip
+    async canAddAgent(companyId, zipCode) {
+        const co = await pool.query(`SELECT plan FROM companies WHERE id = $1`, [companyId]);
+        const company = co.rows[0];
+        if (!company) return false;
+        if (company.plan === 'firm') return true;
+        // basic / professional: max 1 agent per location
+        const count = await pool.query(
+            `SELECT COUNT(*) FROM users WHERE company_id = $1 AND zip_code = $2 AND (is_active IS NULL OR is_active = TRUE)`,
+            [companyId, zipCode]
+        );
+        return parseInt(count.rows[0].count) === 0;
+    },
+
+    async addAgentToCompany(userId, companyId, zipCode) {
+        const allowed = await this.canAddAgent(companyId, zipCode);
+        if (!allowed) throw new Error('Plan limit reached: upgrade to the Firm plan to add more agents at this location');
+        const co = await pool.query(`SELECT plan, name FROM companies WHERE id = $1`, [companyId]);
+        const company = co.rows[0];
+        await pool.query(
+            `UPDATE users SET company_id=$1, company_name=$2, subscription_plan=$3, company_role='agent'
+             WHERE id=$4`,
+            [companyId, company.name, company.plan, userId]
+        );
+    },
+
+    async removeAgentFromCompany(userId, companyId) {
+        await pool.query(
+            `UPDATE users SET company_id=NULL, company_role='owner', subscription_plan='basic'
+             WHERE id=$1 AND company_id=$2 AND company_role != 'owner'`,
+            [userId, companyId]
+        );
+    },
+
+    async updateCompanyPlan(companyId, plan) {
+        await pool.query(
+            `UPDATE companies SET plan=$1, updated_at=NOW() WHERE id=$2`,
+            [plan, companyId]
+        );
+        await pool.query(
+            `UPDATE users SET subscription_plan=$1 WHERE company_id=$2`,
+            [plan, companyId]
+        );
+    },
+
+    // Company locations (firm plan — $499/location)
+    async getCompanyLocations(companyId) {
+        const result = await pool.query(
+            `SELECT cl.*,
+                    (SELECT COUNT(*) FROM users u WHERE u.company_id = $1 AND u.zip_code = cl.zip_code AND (u.is_active IS NULL OR u.is_active = TRUE)) AS agent_count
+             FROM company_locations cl
+             WHERE cl.company_id = $1 AND cl.is_active = TRUE
+             ORDER BY cl.created_at ASC`,
+            [companyId]
+        );
+        return result.rows;
+    },
+
+    async addCompanyLocation(companyId, zipCode, label) {
+        const co = await pool.query(`SELECT plan FROM companies WHERE id = $1`, [companyId]);
+        if (!co.rows[0] || co.rows[0].plan !== 'firm') {
+            throw new Error('Multiple locations require the Firm plan ($499/location)');
+        }
+        let lat = null, lng = null;
+        try {
+            const geo = await fetch(`https://nominatim.openstreetmap.org/search?postalcode=${zipCode}&country=US&format=json&limit=1`, {
+                headers: { 'User-Agent': 'RealtorFinder/1.0' }
+            });
+            const geoData = await geo.json();
+            if (geoData.length > 0) { lat = parseFloat(geoData[0].lat); lng = parseFloat(geoData[0].lon); }
+        } catch { /* geocoding optional */ }
+        const result = await pool.query(
+            `INSERT INTO company_locations (company_id, zip_code, label, latitude, longitude)
+             VALUES ($1, $2, $3, $4, $5)
+             ON CONFLICT (company_id, zip_code) DO UPDATE SET label=EXCLUDED.label, is_active=TRUE
+             RETURNING *`,
+            [companyId, zipCode, label || null, lat, lng]
+        );
+        return result.rows[0];
+    },
+
+    async removeCompanyLocation(locationId, companyId) {
+        await pool.query(
+            `UPDATE company_locations SET is_active=FALSE WHERE id=$1 AND company_id=$2`,
+            [locationId, companyId]
+        );
     },
 
     // Soft-delete a listing
