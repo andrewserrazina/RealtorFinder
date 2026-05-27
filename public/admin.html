@@ -770,7 +770,7 @@
             }
 
             // Logged in but not admin
-            if (!user.is_admin) {
+            if (!user.is_admin && !user.isAdmin) {
                 window.location.href = '/';
                 return;
             }
