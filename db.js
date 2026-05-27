@@ -309,13 +309,21 @@ const db = {
 
     // Get realtor profile fields
     async getProfile(userId) {
-        const result = await pool.query(
-            `SELECT id, email, user_type, first_name, last_name, zip_code,
-                    phone, license_number, bio, years_experience, service_areas
-             FROM users WHERE id = $1`,
-            [userId]
-        );
-        return result.rows[0];
+        try {
+            const result = await pool.query(
+                `SELECT id, email, user_type, first_name, last_name, zip_code,
+                        phone, license_number, bio, years_experience, service_areas
+                 FROM users WHERE id = $1`,
+                [userId]
+            );
+            return result.rows[0];
+        } catch {
+            const result = await pool.query(
+                `SELECT id, email, user_type, first_name, last_name, zip_code FROM users WHERE id = $1`,
+                [userId]
+            );
+            return result.rows[0];
+        }
     },
 
     // Update realtor profile fields
