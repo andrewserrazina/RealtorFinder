@@ -874,11 +874,14 @@
         async function loadCurrentUser() {
             try {
                 const response = await fetch(`${API_BASE_URL}/auth/me`, { credentials: 'include' });
-                if (!response.ok) { window.location.href = '/login'; return null; }
+                if (response.status === 401) { window.location.href = '/login'; return null; }
+                if (!response.ok) { console.error('Auth check failed:', response.status); return null; }
                 const user = await response.json();
                 currentUser = user;
-                document.getElementById('userName').textContent = `${user.firstName} ${user.lastName}`;
-                document.getElementById('userAvatar').textContent = user.firstName.charAt(0).toUpperCase();
+                const nameEl = document.getElementById('userName');
+                const avatarEl = document.getElementById('userAvatar');
+                if (nameEl) nameEl.textContent = `${user.firstName || ''} ${user.lastName || ''}`.trim();
+                if (avatarEl) avatarEl.textContent = (user.firstName || 'U').charAt(0).toUpperCase();
                 renderVerificationBanner(user);
 
                 // Verified toast
@@ -893,7 +896,6 @@
                 return user;
             } catch (error) {
                 console.error('Error loading user:', error);
-                window.location.href = '/login';
                 return null;
             }
         }

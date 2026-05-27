@@ -117,9 +117,27 @@ const auth = {
         if (req.session && req.session.userId) {
             try {
                 const user = await auth.getUserById(req.session.userId);
-                req.user = user;
+                // Fall back to session data if DB lookup fails or returns nothing
+                req.user = user || {
+                    id: req.session.userId,
+                    user_type: req.session.userType,
+                    first_name: req.session.firstName,
+                    last_name: req.session.lastName,
+                    zip_code: req.session.zipCode,
+                    email_verified: req.session.emailVerified || false,
+                    is_admin: false
+                };
             } catch (error) {
                 console.error('Error attaching user:', error);
+                req.user = {
+                    id: req.session.userId,
+                    user_type: req.session.userType,
+                    first_name: req.session.firstName,
+                    last_name: req.session.lastName,
+                    zip_code: req.session.zipCode,
+                    email_verified: req.session.emailVerified || false,
+                    is_admin: false
+                };
             }
         }
         next();
