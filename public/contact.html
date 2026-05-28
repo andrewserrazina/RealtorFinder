@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contact Us - RealtorFinder</title>
+    <meta name="description" content="Get in touch with the RealtorFinder team. We're here to help with any questions about buying, selling, or working with realtors on our platform.">
+    <!-- Google Analytics 4 -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-BRGVVNKT65"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-BRGVVNKT65');
+    </script>
+    <!-- Microsoft Clarity -->
+    <script type="text/javascript">
+        (function(c,l,a,r,i,t,y){
+            c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+            t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+            y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+        })(window, document, "clarity", "script", "wxvaz0g7tq");
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@600;700;900&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #0A2540;
+            --accent: #FF6B35;
+            --soft-bg: #F8F6F3;
+            --text: #1A1A1A;
+            --border: #E5E1DB;
+            --muted: #6B7280;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'DM Sans', sans-serif; background: var(--soft-bg); color: var(--text); }
+
+        /* Nav */
+        nav {
+            background: var(--primary);
+            padding: 0 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 64px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .nav-logo {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.6rem;
+            font-weight: 900;
+            color: white;
+            text-decoration: none;
+        }
+        .nav-logo span { color: var(--accent); }
+        .nav-links { display: flex; gap: 2rem; align-items: center; }
+        .nav-links a { color: rgba(255,255,255,0.8); text-decoration: none; font-size: 0.95rem; font-weight: 500; }
+        .nav-links a:hover { color: white; }
+        .nav-cta {
+            background: var(--accent);
+            color: white !important;
+            padding: 0.5rem 1.25rem;
+            border-radius: 8px;
+            font-weight: 600 !important;
+        }
+        .nav-cta:hover { background: #e55a2b; }
+
+        /* Hamburger */
+        .nav-hamburger {
+            display: none;
+            flex-direction: column;
+            gap: 5px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 4px;
+        }
+        .nav-hamburger span {
+            display: block;
+            width: 24px;
+            height: 2px;
+            background: white;
+            border-radius: 2px;
+            transition: all 0.2s;
+        }
+        .mobile-menu {
+            display: none;
+            background: var(--primary);
+            width: 100%;
+            position: absolute;
+            top: 64px;
+            left: 0;
+            z-index: 99;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+        .mobile-menu.open { display: block; }
+        .mobile-menu a {
+            display: block;
+            color: rgba(255,255,255,0.85);
+            text-decoration: none;
+            font-size: 1rem;
+            font-weight: 500;
+            padding: 1rem 2rem;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+        .mobile-menu a:hover { color: white; background: rgba(255,255,255,0.05); }
+        .mobile-menu .nav-cta {
+            margin: 1rem 2rem;
+            display: block;
+            text-align: center;
+            border-radius: 8px;
+            background: var(--accent);
+            color: white !important;
+            font-weight: 600 !important;
+            border-bottom: none;
+        }
+        .mobile-menu .nav-cta:hover { background: #e55a2b; }
+
+        /* Hero */
+        .hero {
+            text-align: center;
+            padding: 5rem 2rem 3rem;
+            max-width: 700px;
+            margin: 0 auto;
+        }
+        .hero-eyebrow {
+            display: inline-block;
+            background: #FFF0EB;
+            color: var(--accent);
+            font-weight: 600;
+            font-size: 0.85rem;
+            padding: 0.35rem 1rem;
+            border-radius: 20px;
+            margin-bottom: 1.5rem;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+        .hero h1 {
+            font-family: 'Crimson Pro', serif;
+            font-size: 3.2rem;
+            font-weight: 900;
+            color: var(--primary);
+            line-height: 1.1;
+            margin-bottom: 1.25rem;
+        }
+        .hero p {
+            font-size: 1.15rem;
+            color: var(--muted);
+            line-height: 1.7;
+        }
+
+        /* Contact Section */
+        .contact-section {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 2rem 2rem 5rem;
+        }
+        .contact-grid {
+            display: grid;
+            grid-template-columns: 1fr 380px;
+            gap: 3rem;
+            align-items: start;
+        }
+
+        /* Form */
+        .contact-form-card {
+            background: white;
+            border-radius: 20px;
+            padding: 2.5rem;
+            border: 1px solid var(--border);
+        }
+        .contact-form-card h2 {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.8rem;
+            font-weight: 900;
+            color: var(--primary);
+            margin-bottom: 1.75rem;
+        }
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.85rem 1rem;
+            border: 1.5px solid var(--border);
+            border-radius: 10px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.95rem;
+            color: var(--text);
+            background: white;
+            transition: border-color 0.2s;
+        }
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+        .form-group textarea {
+            resize: vertical;
+            min-height: 140px;
+            line-height: 1.6;
+        }
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+        .send-btn {
+            display: block;
+            width: 100%;
+            padding: 1rem;
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-family: 'DM Sans', sans-serif;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .send-btn:hover { background: #e55a2b; transform: translateY(-1px); }
+        .send-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+        /* Inline feedback */
+        .form-feedback {
+            display: none;
+            padding: 1rem 1.25rem;
+            border-radius: 10px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            margin-top: 1rem;
+        }
+        .form-feedback.success {
+            display: block;
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+        }
+        .form-feedback.error {
+            display: block;
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fca5a5;
+        }
+
+        /* Info cards */
+        .contact-info {
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+        .info-card {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 1.75rem;
+        }
+        .info-card-icon {
+            font-size: 1.5rem;
+            margin-bottom: 0.75rem;
+        }
+        .info-card h3 {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.1rem;
+            font-weight: 900;
+            color: var(--primary);
+            margin-bottom: 0.4rem;
+        }
+        .info-card p {
+            font-size: 0.9rem;
+            color: var(--muted);
+            line-height: 1.6;
+        }
+        .info-card a {
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .info-card a:hover { text-decoration: underline; }
+
+        /* Footer */
+        footer {
+            background: #060F1A;
+            color: rgba(255,255,255,0.5);
+            text-align: center;
+            padding: 2rem;
+            font-size: 0.85rem;
+        }
+        footer a { color: rgba(255,255,255,0.5); text-decoration: none; margin: 0 0.5rem; }
+        footer a:hover { color: white; }
+
+        @media (max-width: 900px) {
+            .contact-grid { grid-template-columns: 1fr; }
+            .hero h1 { font-size: 2.4rem; }
+            .nav-links { display: none; }
+            .nav-hamburger { display: flex; }
+        }
+        @media (max-width: 600px) {
+            .form-row { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Realtor<span>Finder</span></a>
+    <div class="nav-links">
+        <a href="/realtors">For Realtors</a>
+        <a href="/about">About</a>
+        <a href="/login" class="nav-cta">Get Started</a>
+    </div>
+    <button class="nav-hamburger" id="hamburgerBtn" aria-label="Open menu">
+        <span></span><span></span><span></span>
+    </button>
+</nav>
+<div class="mobile-menu" id="mobileMenu">
+    <a href="/realtors">For Realtors</a>
+    <a href="/about">About</a>
+    <a href="/contact">Contact</a>
+    <a href="/login" class="nav-cta">Get Started</a>
+</div>
+
+<div class="hero">
+    <div class="hero-eyebrow">Contact</div>
+    <h1>Get in Touch</h1>
+    <p>Have a question, idea, or issue? We'd love to hear from you. We typically respond within 24 hours.</p>
+</div>
+
+<div class="contact-section">
+    <div class="contact-grid">
+
+        <!-- Left: Contact Form -->
+        <div class="contact-form-card">
+            <h2>Send us a message</h2>
+            <form id="contactForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="contactName">Name</label>
+                        <input type="text" id="contactName" name="name" placeholder="Your name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="contactEmail">Email</label>
+                        <input type="email" id="contactEmail" name="email" placeholder="you@email.com" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="contactSubject">Subject</label>
+                    <select id="contactSubject" name="subject" required>
+                        <option value="">Select a subject…</option>
+                        <option value="General Question">General Question</option>
+                        <option value="Press Inquiry">Press Inquiry</option>
+                        <option value="Partnership">Partnership</option>
+                        <option value="Bug Report">Bug Report</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="contactMessage">Message</label>
+                    <textarea id="contactMessage" name="message" placeholder="Tell us how we can help…" required></textarea>
+                </div>
+                <button type="submit" class="send-btn" id="sendBtn">Send Message</button>
+                <div class="form-feedback" id="formFeedback"></div>
+            </form>
+        </div>
+
+        <!-- Right: Contact Info -->
+        <div class="contact-info">
+            <div class="info-card">
+                <div class="info-card-icon">✉️</div>
+                <h3>Email us directly</h3>
+                <p>For all inquiries, reach us at<br>
+                <a href="mailto:hello@realtorfinder.net">hello@realtorfinder.net</a></p>
+            </div>
+            <div class="info-card">
+                <div class="info-card-icon">⏱️</div>
+                <h3>Response time</h3>
+                <p>We aim to reply to every message within <strong>24 hours</strong>, Monday through Friday.</p>
+            </div>
+            <div class="info-card">
+                <div class="info-card-icon">🚨</div>
+                <h3>For urgent issues</h3>
+                <p>If you're experiencing a critical problem with your account or listing, email us directly at <a href="mailto:hello@realtorfinder.net">hello@realtorfinder.net</a> and include "URGENT" in your subject line.</p>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<footer>
+    <p>
+        &copy; 2025 RealtorFinder &nbsp;·&nbsp;
+        <a href="/privacy">Privacy</a>
+        <a href="/terms">Terms</a>
+        <a href="/about">About</a>
+    </p>
+</footer>
+
+<script>
+    // Hamburger menu
+    document.getElementById('hamburgerBtn').addEventListener('click', () => {
+        document.getElementById('mobileMenu').classList.toggle('open');
+    });
+
+    // Contact form submission
+    document.getElementById('contactForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('sendBtn');
+        const feedback = document.getElementById('formFeedback');
+
+        btn.disabled = true;
+        btn.textContent = 'Sending…';
+        feedback.className = 'form-feedback';
+        feedback.style.display = 'none';
+
+        const data = {
+            name: document.getElementById('contactName').value.trim(),
+            email: document.getElementById('contactEmail').value.trim(),
+            subject: document.getElementById('contactSubject').value,
+            message: document.getElementById('contactMessage').value.trim()
+        };
+
+        try {
+            const res = await fetch('/api/contact', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            const result = await res.json();
+
+            if (res.ok && result.ok) {
+                feedback.className = 'form-feedback success';
+                feedback.textContent = '✓ Message sent! We\'ll get back to you within 24 hours.';
+                e.target.reset();
+                gtag('event', 'contact_form_submit', { subject: data.subject });
+            } else {
+                throw new Error(result.error || 'Send failed');
+            }
+        } catch (err) {
+            feedback.className = 'form-feedback error';
+            feedback.textContent = 'Something went wrong. Please try again or email us directly at hello@realtorfinder.net.';
+            btn.disabled = false;
+            btn.textContent = 'Send Message';
+            return;
+        }
+
+        btn.disabled = false;
+        btn.textContent = 'Send Message';
+    });
+</script>
+</body>
+</html>

@@ -1218,6 +1218,26 @@ app.post('/api/waitlist', waitlistLimiter, async (req, res) => {
     }
 });
 
+// Contact form submission
+app.post('/api/contact', createRateLimiter(60 * 60 * 1000, 10, 'Too many contact requests. Please try again later.'), async (req, res) => {
+    try {
+        const { name, email, subject, message } = req.body;
+        if (!name || !email || !subject || !message) {
+            return res.status(400).json({ error: 'All fields are required' });
+        }
+        if (!email.includes('@')) {
+            return res.status(400).json({ error: 'Valid email required' });
+        }
+        console.log(`📩 Contact form: [${subject}] from ${name} <${email}>`);
+        emailService.sendContactEmail({ name, email, subject, message })
+            .catch(err => console.error('Contact email failed:', err.message));
+        res.json({ ok: true });
+    } catch (err) {
+        console.error('Contact form error:', err);
+        res.status(500).json({ error: 'Failed to send message' });
+    }
+});
+
 // City page lead capture
 app.post('/api/city-lead', waitlistLimiter, async (req, res) => {
     try {
@@ -1824,6 +1844,9 @@ app.get('/terms', (req, res) => {
 });
 app.get('/about', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'about.html'));
+});
+app.get('/contact', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'contact.html'));
 });
 
 // Admin panel
