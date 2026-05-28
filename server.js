@@ -1756,6 +1756,95 @@ app.get('/api/realtors/:id/public', async (req, res) => {
     }
 });
 
+// ===== SAVED LISTINGS =====
+
+app.post('/api/saved-listings/:id', auth.requireAuth, async (req, res) => {
+    try {
+        await pool.query(
+            `INSERT INTO saved_listings (user_id, listing_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+            [req.session.userId, parseInt(req.params.id)]
+        );
+        res.json({ saved: true });
+    } catch (err) { res.status(500).json({ error: 'Failed to save listing' }); }
+});
+
+app.delete('/api/saved-listings/:id', auth.requireAuth, async (req, res) => {
+    try {
+        await pool.query(
+            `DELETE FROM saved_listings WHERE user_id = $1 AND listing_id = $2`,
+            [req.session.userId, parseInt(req.params.id)]
+        );
+        res.json({ saved: false });
+    } catch (err) { res.status(500).json({ error: 'Failed to unsave listing' }); }
+});
+
+app.get('/api/saved-listings', auth.requireAuth, async (req, res) => {
+    try {
+        const { rows } = await pool.query(
+            `SELECT l.id, l.address, l.city, l.state, l.zip, l.price, l.property_type,
+                    l.bedrooms, l.bathrooms, l.sqft, l.image_urls, l.status,
+                    COALESCE(l.view_count, 0) AS view_count,
+                    (SELECT COUNT(*) FROM offers WHERE listing_id = l.id) AS offer_count,
+                    sl.created_at AS saved_at
+             FROM saved_listings sl
+             JOIN listings l ON l.id = sl.listing_id
+             WHERE sl.user_id = $1 AND l.deleted_at IS NULL
+             ORDER BY sl.created_at DESC`,
+            [req.session.userId]
+        );
+        res.json(rows);
+    } catch (err) { res.status(500).json({ error: 'Failed to fetch saved listings' }); }
+});
+
+// Return which listing IDs the current user has saved (used to render bookmark state)
+app.get('/api/saved-listings/ids', auth.requireAuth, async (req, res) => {
+    try {
+        const { rows } = await pool.query(
+            `SELECT listing_id FROM saved_listings WHERE user_id = $1`,
+            [req.session.userId]
+        );
+        res.json(rows.map(r => r.listing_id));
+    } catch (err) { res.status(500).json({ error: 'Failed to fetch saved ids' }); }
+});
+
+// ===== REALTOR REVIEWS =====
+
+app.post('/api/realtors/:id/reviews', auth.requireAuth, async (req, res) => {
+    try {
+        const { rating, body, listingId } = req.body;
+        if (!rating || rating < 1 || rating > 5) return res.status(400).json({ error: 'Rating must be 1–5' });
+        const { rows } = await pool.query(
+            `INSERT INTO realtor_reviews (realtor_id, seller_id, listing_id, rating, body)
+             VALUES ($1, $2, $3, $4, $5)
+             ON CONFLICT (seller_id, listing_id) DO UPDATE SET rating=$4, body=$5, created_at=NOW()
+             RETURNING *`,
+            [parseInt(req.params.id), req.session.userId, listingId || null, rating, body || null]
+        );
+        res.status(201).json(rows[0]);
+    } catch (err) {
+        console.error('Review error:', err);
+        res.status(500).json({ error: 'Failed to submit review' });
+    }
+});
+
+app.get('/api/realtors/:id/reviews', async (req, res) => {
+    try {
+        const { rows } = await pool.query(
+            `SELECT r.id, r.rating, r.body, r.created_at,
+                    u.first_name, u.last_name,
+                    l.address AS listing_address
+             FROM realtor_reviews r
+             JOIN users u ON u.id = r.seller_id
+             LEFT JOIN listings l ON l.id = r.listing_id
+             WHERE r.realtor_id = $1
+             ORDER BY r.created_at DESC`,
+            [parseInt(req.params.id)]
+        );
+        const avg = rows.length ? (rows.reduce((s, r) => s + r.rating, 0) / rows.length).toFixed(1) : null;
+        res.json({ reviews: rows, avg, count: rows.length });
+    } catch (err) { res.status(500).json({ error: 'Failed to fetch reviews' }); }
+});
+
 // ===== PAGE ROUTES (Must come AFTER API routes, BEFORE static files) =====
 
 // Password reset page
