@@ -1760,6 +1760,148 @@
     </footer>
 
     <script>
+        /* ── Realtor Search Logic ── */
+        let currentPage = 1;
+        const LIMIT = 12;
+
+        function getInitials(first, last) {
+            return ((first || '').charAt(0) + (last || '').charAt(0)).toUpperCase() || '?';
+        }
+
+        function skeletonCard() {
+            return `<div class="skeleton-card">
+                <div style="display:flex;gap:1rem;align-items:flex-start;margin-bottom:1rem">
+                    <div class="skeleton skeleton-avatar"></div>
+                    <div style="flex:1">
+                        <div class="skeleton skeleton-line medium" style="margin-bottom:8px"></div>
+                        <div class="skeleton skeleton-line short"></div>
+                    </div>
+                </div>
+                <div class="skeleton skeleton-line full"></div>
+                <div class="skeleton skeleton-line full"></div>
+                <div class="skeleton skeleton-line medium" style="margin-top:4px"></div>
+                <div class="skeleton skeleton-line full" style="margin-top:12px;height:36px;border-radius:10px"></div>
+            </div>`;
+        }
+
+        function renderSkeletons(n) {
+            const grid = document.getElementById('realtorGrid');
+            grid.innerHTML = Array.from({length: n}, skeletonCard).join('');
+            document.getElementById('realtorPagination').style.display = 'none';
+        }
+
+        function renderEmpty() {
+            document.getElementById('realtorGrid').innerHTML = `
+                <div class="realtor-empty">
+                    <div class="realtor-empty-icon">🔍</div>
+                    <h3>No realtors found</h3>
+                    <p>Try a different name or ZIP code.</p>
+                </div>`;
+            document.getElementById('realtorPagination').style.display = 'none';
+        }
+
+        function renderRealtors(data) {
+            const { realtors, total, page, pages } = data;
+            const grid = document.getElementById('realtorGrid');
+
+            if (!realtors || realtors.length === 0) { renderEmpty(); return; }
+
+            const isFeatured = p => p === 'professional' || p === 'firm';
+
+            grid.innerHTML = realtors.map(r => {
+                const initials = getInitials(r.first_name, r.last_name);
+                const name = [r.first_name, r.last_name].filter(Boolean).join(' ') || 'Realtor';
+                const company = r.company_name || '';
+                const featured = isFeatured(r.subscription_plan);
+                const hasBio = r.bio && r.bio.trim().length > 0;
+
+                const badges = [
+                    featured ? `<span class="badge badge-featured">&#9733; Featured</span>` : '',
+                    r.license_number ? `<span class="badge badge-license">Licensed</span>` : ''
+                ].filter(Boolean).join('');
+
+                const meta = [
+                    r.zip_code ? `<span>📍 ${r.zip_code}</span>` : '',
+                    r.years_experience ? `<span>🏆 ${r.years_experience} yrs exp</span>` : ''
+                ].filter(Boolean).join('');
+
+                return `<div class="realtor-card">
+                    <div class="realtor-card-top">
+                        <div class="realtor-avatar">${initials}</div>
+                        <div class="realtor-card-info">
+                            <div class="realtor-name">${name}</div>
+                            ${company ? `<div class="realtor-company">${company}</div>` : ''}
+                            ${badges ? `<div class="realtor-badges">${badges}</div>` : ''}
+                        </div>
+                    </div>
+                    ${meta ? `<div class="realtor-meta">${meta}</div>` : ''}
+                    ${hasBio ? `<p class="realtor-bio">${r.bio}</p>` : ''}
+                    <div class="realtor-card-footer">
+                        <a href="/realtor/${r.id}" class="realtor-view-btn">View Profile &rarr;</a>
+                    </div>
+                </div>`;
+            }).join('');
+
+            // Pagination
+            const pag = document.getElementById('realtorPagination');
+            if (pages > 1) {
+                pag.style.display = 'flex';
+                document.getElementById('prevBtn').disabled = page <= 1;
+                document.getElementById('nextBtn').disabled = page >= pages;
+                const start = (page - 1) * LIMIT + 1;
+                const end   = Math.min(page * LIMIT, total);
+                document.getElementById('pageInfo').textContent = `${start}–${end} of ${total}`;
+            } else {
+                pag.style.display = 'none';
+            }
+        }
+
+        async function fetchRealtors(page) {
+            const name = document.getElementById('searchName').value.trim();
+            const zip  = document.getElementById('searchZip').value.trim();
+            const params = new URLSearchParams({ page, limit: LIMIT });
+            if (name) params.set('name', name);
+            if (zip)  params.set('zip', zip);
+
+            renderSkeletons(LIMIT);
+            try {
+                const res  = await fetch(`/api/realtors/search?${params}`);
+                const data = await res.json();
+                renderRealtors(data);
+            } catch {
+                document.getElementById('realtorGrid').innerHTML = `
+                    <div class="realtor-empty">
+                        <div class="realtor-empty-icon">⚠️</div>
+                        <h3>Something went wrong</h3>
+                        <p>Please try again in a moment.</p>
+                    </div>`;
+                document.getElementById('realtorPagination').style.display = 'none';
+            }
+        }
+
+        function runSearch() {
+            currentPage = 1;
+            fetchRealtors(1);
+        }
+
+        function changePage(delta) {
+            currentPage += delta;
+            fetchRealtors(currentPage);
+            document.getElementById('browse-realtors').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        // Allow Enter key to trigger search
+        ['searchName','searchZip'].forEach(id => {
+            document.getElementById(id).addEventListener('keydown', e => {
+                if (e.key === 'Enter') runSearch();
+            });
+        });
+
+        // Load on page start
+        fetchRealtors(1);
+    </script>
+
+    <script>
         (async function loadFoundingCounter() {
             try {
                 const res = await fetch('/api/realtors/founding-count');
