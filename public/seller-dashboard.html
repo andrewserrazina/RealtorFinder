@@ -1452,7 +1452,7 @@
                             <span>📏 ${listing.sqft.toLocaleString()} sqft</span>
                         </div>
                         <p style="margin-top:1rem;color:#666;">${listing.description}</p>
-                        <p style="margin-top:0.5rem;font-size:0.9rem;color:#999;">${listing.date} &nbsp;·&nbsp; 👁 ${listing.view_count || 0} views</p>
+                        <p style="margin-top:0.5rem;font-size:0.9rem;color:#999;">${listing.date} &nbsp;·&nbsp; 👁 ${listing.view_count || 0} views &nbsp;·&nbsp; 📬 ${listing.offerCount || 0} proposals &nbsp;·&nbsp; 📅 ${Math.floor((Date.now() - new Date(listing.created_at).getTime()) / 86400000)} days on market</p>
                     </div>
                     <div class="listing-actions">
                         <button class="btn btn-primary" onclick="viewOffers(${listing.id})">${listing.offerCount || 0} Offers</button>

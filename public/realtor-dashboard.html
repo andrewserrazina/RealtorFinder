@@ -1006,7 +1006,7 @@
                         <strong style="color:#FF6B35;">Upgrade to the Firm Plan</strong>
                         <p style="margin:4px 0 0; color:#374151; font-size:14px;">Add unlimited agents per location at $499/location/month. Perfect for brokerages.</p>
                     </div>
-                    <button class="btn-primary" onclick="upgradePlan()" style="white-space:nowrap;">Upgrade — $499/location</button>
+                    <button class="btn-primary" onclick="upgradePlan('firm')" style="white-space:nowrap;">Upgrade — $499/location</button>
                 </div>
 
                 <!-- Team Members -->
@@ -2147,14 +2147,24 @@
             loadCompany();
         }
 
-        async function upgradePlan() {
-            if (!confirm('Upgrade to the Firm plan? Each location is billed at $499/month. Contact sales to arrange billing.')) return;
-            const res = await fetch(`${API_BASE_URL}/company/plan`, {
-                method: 'PUT', credentials: 'include',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ plan: 'firm' })
-            });
-            if (res.ok) loadCompany();
+        async function upgradePlan(plan) {
+            plan = plan || 'firm';
+            try {
+                const res = await fetch(`${API_BASE_URL}/stripe/checkout`, {
+                    method: 'POST', credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ plan })
+                });
+                const data = await res.json();
+                if (data.error === 'stripe_not_configured') {
+                    showToast('Stripe is not configured yet. Contact support to upgrade.', 'error');
+                    return;
+                }
+                if (!res.ok) { showToast(data.error || 'Failed to start checkout', 'error'); return; }
+                window.location.href = data.url;
+            } catch (e) {
+                showToast('Failed to start checkout. Please try again.', 'error');
+            }
         }
 
         // ===== END COMPANY =====

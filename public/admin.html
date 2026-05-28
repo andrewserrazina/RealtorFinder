@@ -616,6 +616,16 @@
             <span class="stat-label">Offers</span>
         </div>
         <div class="stat-card">
+            <span class="stat-icon">🏠</span>
+            <span class="stat-value" id="stat-buyers">—</span>
+            <span class="stat-label">Buyers</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-icon">💬</span>
+            <span class="stat-value" id="stat-messages">—</span>
+            <span class="stat-label">Messages</span>
+        </div>
+        <div class="stat-card">
             <span class="stat-icon">⏳</span>
             <span class="stat-value" id="stat-waitlist">—</span>
             <span class="stat-label">Waitlist</span>
@@ -624,9 +634,67 @@
 
     <!-- Tabs -->
     <div class="tabs">
+        <button class="tab-btn" onclick="switchTab('stats', this)">Stats</button>
         <button class="tab-btn active" onclick="switchTab('users', this)">Users</button>
         <button class="tab-btn" onclick="switchTab('listings', this)">Listings</button>
         <button class="tab-btn" onclick="switchTab('leads', this)">City Leads</button>
+        <button class="tab-btn" onclick="switchTab('reviews', this)">Reviews</button>
+    </div>
+
+    <!-- Stats tab -->
+    <div class="tab-panel" id="tab-stats">
+        <div class="table-wrapper" style="padding:28px;">
+            <div class="table-header" style="margin-bottom:24px;">
+                <span class="table-title">Platform Statistics</span>
+            </div>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <span class="stat-icon">&#128101;</span>
+                    <span class="stat-value" id="ts-total-users">&#8212;</span>
+                    <span class="stat-label">Total Users</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-icon">&#127968;</span>
+                    <span class="stat-value" id="ts-sellers">&#8212;</span>
+                    <span class="stat-label">Sellers</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-icon">&#129309;</span>
+                    <span class="stat-value" id="ts-realtors">&#8212;</span>
+                    <span class="stat-label">Realtors</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-icon">&#128269;</span>
+                    <span class="stat-value" id="ts-buyers">&#8212;</span>
+                    <span class="stat-label">Buyers</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-icon">&#128203;</span>
+                    <span class="stat-value" id="ts-total-listings">&#8212;</span>
+                    <span class="stat-label">Total Listings</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-icon">&#9989;</span>
+                    <span class="stat-value" id="ts-active-listings">&#8212;</span>
+                    <span class="stat-label">Active Listings</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-icon">&#128172;</span>
+                    <span class="stat-value" id="ts-offers">&#8212;</span>
+                    <span class="stat-label">Total Offers</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-icon">&#9993;</span>
+                    <span class="stat-value" id="ts-messages">&#8212;</span>
+                    <span class="stat-label">Messages</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-icon">&#9203;</span>
+                    <span class="stat-value" id="ts-waitlist">&#8212;</span>
+                    <span class="stat-label">Waitlist</span>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Users tab -->
@@ -718,6 +786,34 @@
             </div>
         </div>
     </div>
+
+    <!-- Reviews tab -->
+    <div class="tab-panel" id="tab-reviews">
+        <div class="table-wrapper">
+            <div class="table-header">
+                <span class="table-title">Realtor Reviews</span>
+                <span class="table-count" id="reviews-count">Loading…</span>
+            </div>
+            <div class="table-scroll">
+                <table id="reviews-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Realtor</th>
+                            <th>Reviewer</th>
+                            <th>Rating</th>
+                            <th>Review</th>
+                            <th>Listing</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody id="reviews-tbody">
+                        <tr><td colspan="7" class="empty-state">Loading reviews…</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 </main>
 
 <!-- Toast -->
@@ -803,13 +899,26 @@
         try {
             const res = await fetch('/api/admin/stats', { credentials: 'include' });
             const d = await res.json();
+            // Top stats grid
             document.getElementById('stat-total-users').textContent = d.total_users ?? '—';
             document.getElementById('stat-sellers').textContent = d.total_sellers ?? '—';
             document.getElementById('stat-realtors').textContent = d.total_realtors ?? '—';
             document.getElementById('stat-total-listings').textContent = d.total_listings ?? '—';
             document.getElementById('stat-active-listings').textContent = d.active_listings ?? '—';
             document.getElementById('stat-offers').textContent = d.total_offers ?? '—';
-            document.getElementById('stat-waitlist').textContent = d.waitlist_count ?? '—';
+            document.getElementById('stat-buyers').textContent = d.total_buyers ?? '—';
+            document.getElementById('stat-messages').textContent = d.total_messages ?? '—';
+            document.getElementById('stat-waitlist').textContent = d.total_waitlist ?? '—';
+            // Stats tab panel
+            document.getElementById('ts-total-users').textContent = d.total_users ?? '—';
+            document.getElementById('ts-sellers').textContent = d.total_sellers ?? '—';
+            document.getElementById('ts-realtors').textContent = d.total_realtors ?? '—';
+            document.getElementById('ts-buyers').textContent = d.total_buyers ?? '—';
+            document.getElementById('ts-total-listings').textContent = d.total_listings ?? '—';
+            document.getElementById('ts-active-listings').textContent = d.active_listings ?? '—';
+            document.getElementById('ts-offers').textContent = d.total_offers ?? '—';
+            document.getElementById('ts-messages').textContent = d.total_messages ?? '—';
+            document.getElementById('ts-waitlist').textContent = d.total_waitlist ?? '—';
         } catch (err) {
             console.error('Stats error', err);
         }
@@ -822,6 +931,33 @@
         document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
         btn.classList.add('active');
         document.getElementById('tab-' + name).classList.add('active');
+        if (name === 'reviews') loadAdminReviews();
+    }
+
+    // ── Reviews ───────────────────────────────────────────────────────────────
+
+    async function loadAdminReviews() {
+        try {
+            const res = await fetch('/api/admin/reviews', { credentials: 'include' });
+            if (!res.ok) throw new Error();
+            const reviews = await res.json();
+            document.getElementById('reviews-count').textContent = reviews.length + ' reviews';
+            const stars = n => '★'.repeat(n) + '☆'.repeat(5 - n);
+            document.getElementById('reviews-tbody').innerHTML = reviews.length ? reviews.map(r => `
+                <tr>
+                    <td>${r.id}</td>
+                    <td>${escHtml(r.realtor_name || r.realtor_id)}</td>
+                    <td>${escHtml(r.reviewer_name || r.seller_id)}</td>
+                    <td style="color:#f59e0b;">${stars(r.rating)} (${r.rating})</td>
+                    <td style="max-width:240px;white-space:normal;">${escHtml(r.body || '—')}</td>
+                    <td>${escHtml(r.listing_address || '—')}</td>
+                    <td>${new Date(r.created_at).toLocaleDateString()}</td>
+                </tr>`).join('') :
+                '<tr><td colspan="7" class="empty-state">No reviews yet.</td></tr>';
+        } catch {
+            document.getElementById('reviews-tbody').innerHTML =
+                '<tr><td colspan="7" class="empty-state">Failed to load reviews.</td></tr>';
+        }
     }
 
     // ── Users ─────────────────────────────────────────────────────────────────

@@ -1705,18 +1705,32 @@
                 banner.style.display = 'none';
             }
         }
-        function openCompareModal() {
+        async function openCompareModal() {
             if (compareList.length < 2) { showToast('Select at least 2 realtors to compare', 'error'); return; }
             const modal = document.getElementById('compareModal');
+            modal.classList.add('active');
+            document.getElementById('compareBody').innerHTML = '<div style="text-align:center;padding:2rem;color:#888;">Loading…</div>';
+
+            const ratings = await Promise.all(compareList.map(async r => {
+                if (!r.user_id) return null;
+                try {
+                    const res = await fetch(`${API_BASE_URL}/realtors/${r.user_id}/reviews`, { credentials: 'include' });
+                    if (!res.ok) return null;
+                    const d = await res.json();
+                    return d.avg ? `${d.avg} ★ (${d.count})` : '—';
+                } catch { return '—'; }
+            }));
+
             const colCount = compareList.length + 1;
             const rows = [
-                { label: 'Name', key: r => `${r.realtorName || r.realtor_name || 'Agent'}` },
-                { label: 'Brokerage', key: r => r.brokerage || '—' },
-                { label: 'Experience', key: r => r.yearsExperience != null ? `${r.yearsExperience} years` : '—' },
-                { label: 'Service Areas', key: r => r.serviceAreas || '—' },
-                { label: 'Message', key: r => r.message ? `"${r.message.slice(0,120)}${r.message.length > 120 ? '…' : ''}"` : '—' },
-                { label: 'Contact', key: r => r.email || r.realtorEmail ? `<a href="mailto:${r.email || r.realtorEmail}" style="color:var(--accent);">${r.email || r.realtorEmail}</a>` : '—' },
-                { label: 'Profile', key: r => r.user_id ? `<a href="/realtor/${r.user_id}" target="_blank" class="btn btn-outline" style="font-size:0.8rem;padding:0.35rem 0.75rem;">View →</a>` : '—' }
+                { label: 'Name', key: (r, i) => `${r.realtorName || r.realtor_name || 'Agent'}` },
+                { label: 'Rating', key: (r, i) => ratings[i] || '—' },
+                { label: 'Brokerage', key: (r, i) => r.brokerage || '—' },
+                { label: 'Experience', key: (r, i) => r.yearsExperience != null ? `${r.yearsExperience} years` : '—' },
+                { label: 'Service Areas', key: (r, i) => r.serviceAreas || '—' },
+                { label: 'Message', key: (r, i) => r.message ? `"${r.message.slice(0,120)}${r.message.length > 120 ? '…' : ''}"` : '—' },
+                { label: 'Contact', key: (r, i) => r.email || r.realtorEmail ? `<a href="mailto:${r.email || r.realtorEmail}" style="color:var(--accent);">${r.email || r.realtorEmail}</a>` : '—' },
+                { label: 'Profile', key: (r, i) => r.user_id ? `<a href="/realtor/${r.user_id}" target="_blank" class="btn btn-outline" style="font-size:0.8rem;padding:0.35rem 0.75rem;">View →</a>` : '—' }
             ];
             document.getElementById('compareBody').innerHTML = `
                 <div class="compare-table" style="grid-template-columns: repeat(${colCount}, 1fr);">
@@ -1727,12 +1741,11 @@
                     ${rows.map(row => `
                         <div class="compare-row" style="grid-template-columns: repeat(${colCount}, 1fr);">
                             <div class="compare-cell label">${row.label}</div>
-                            ${compareList.map(r => `<div class="compare-cell">${row.key(r)}</div>`).join('')}
+                            ${compareList.map((r, i) => `<div class="compare-cell">${row.key(r, i)}</div>`).join('')}
                         </div>
                     `).join('')}
                 </div>
             `;
-            modal.classList.add('active');
         }
         function closeCompareModal() {
             document.getElementById('compareModal').classList.remove('active');
