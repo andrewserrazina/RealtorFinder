@@ -1598,15 +1598,6 @@ app.get('/api/realtors/:id/public', async (req, res) => {
 
 // ===== PAGE ROUTES (Must come AFTER API routes, BEFORE static files) =====
 
-// www → non-www redirect
-app.use((req, res, next) => {
-    if (req.hostname && req.hostname.startsWith('www.')) {
-        const nonWww = req.hostname.slice(4);
-        return res.redirect(301, `https://${nonWww}${req.originalUrl}`);
-    }
-    next();
-});
-
 // Password reset page
 app.get('/reset-password', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'reset-password.html'));
