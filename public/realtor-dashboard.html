@@ -587,6 +587,48 @@
         }
         .verification-banner p { font-size: 0.9rem; color: #92400e; }
 
+        .profile-nudge {
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            border-radius: 10px;
+            padding: 1rem 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .profile-nudge-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-bottom: 0.75rem;
+        }
+        .profile-nudge p { font-size: 0.9rem; color: #1e40af; margin: 0; }
+        .profile-nudge-bar {
+            height: 6px;
+            background: #bfdbfe;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-bottom: 0.5rem;
+        }
+        .profile-nudge-fill {
+            height: 100%;
+            background: #3b82f6;
+            border-radius: 3px;
+            transition: width 0.4s;
+        }
+        .profile-nudge-missing {
+            font-size: 0.8rem;
+            color: #3730a3;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+        }
+        .profile-nudge-chip {
+            background: #dbeafe;
+            border-radius: 20px;
+            padding: 0.2rem 0.65rem;
+        }
+
         @media (max-width: 1024px) {
             .listings-grid {
                 grid-template-columns: 1fr;
@@ -1489,6 +1531,35 @@
         }
 
         // ===== PROFILE =====
+        function renderProfileNudge(p) {
+            const existing = document.getElementById('profileNudge');
+            if (existing) existing.remove();
+
+            const fields = [
+                { key: 'license_number', label: 'License #' },
+                { key: 'years_experience', label: 'Years of experience' },
+                { key: 'bio', label: 'Bio' },
+                { key: 'service_areas', label: 'Service areas' },
+                { key: 'phone', label: 'Phone' },
+            ];
+            const missing = fields.filter(f => !p[f.key] || String(p[f.key]).trim() === '');
+            if (missing.length === 0) return;
+
+            const pct = Math.round(((fields.length - missing.length) / fields.length) * 100);
+            const nudge = document.createElement('div');
+            nudge.id = 'profileNudge';
+            nudge.className = 'profile-nudge';
+            nudge.innerHTML = `
+                <div class="profile-nudge-header">
+                    <p><strong>Complete your profile</strong> — Sellers are more likely to accept proposals from realtors with full profiles. Your profile is ${pct}% complete.</p>
+                    <button class="btn btn-secondary" style="padding:0.4rem 1rem;font-size:0.85rem;white-space:nowrap;" onclick="document.querySelector('[data-view=profile]').click()">Update Profile →</button>
+                </div>
+                <div class="profile-nudge-bar"><div class="profile-nudge-fill" style="width:${pct}%"></div></div>
+                <div class="profile-nudge-missing">Missing: ${missing.map(f => `<span class="profile-nudge-chip">${f.label}</span>`).join('')}</div>
+            `;
+            document.querySelector('.dashboard-container').prepend(nudge);
+        }
+
         async function loadProfile() {
             try {
                 const res = await fetch(`${API_BASE_URL}/profile`, { credentials: 'include' });
@@ -1500,6 +1571,7 @@
                 form.elements.yearsExperience.value = p.years_experience || '';
                 form.elements.serviceAreas.value = p.service_areas || '';
                 form.elements.bio.value = p.bio || '';
+                renderProfileNudge(p);
             } catch {}
         }
 
@@ -1524,6 +1596,14 @@
                 if (!res.ok) throw new Error((await res.json()).error);
                 msgEl.textContent = 'Profile saved!';
                 msgEl.style.cssText = 'display:block;background:rgba(16,185,129,0.1);color:#065f46;';
+                // Re-evaluate nudge with current form values
+                renderProfileNudge({
+                    phone: form.elements.phone.value.trim(),
+                    license_number: form.elements.licenseNumber.value.trim(),
+                    years_experience: form.elements.yearsExperience.value,
+                    service_areas: form.elements.serviceAreas.value.trim(),
+                    bio: form.elements.bio.value.trim()
+                });
             } catch (err) {
                 msgEl.textContent = err.message || 'Failed to save profile.';
                 msgEl.style.cssText = 'display:block;background:rgba(239,68,68,0.1);color:#991b1b;';
