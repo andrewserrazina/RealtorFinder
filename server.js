@@ -117,7 +117,8 @@ async function notifyNearbyRealtors(listing) {
         const { rows } = await pool.query(
             `SELECT id, first_name, email, zip_code FROM users
              WHERE user_type = 'realtor' AND is_approved = true AND is_active IS NOT FALSE
-               AND email IS NOT NULL AND zip_code IS NOT NULL`
+               AND email IS NOT NULL AND zip_code IS NOT NULL
+               AND (email_alerts IS NULL OR email_alerts = true)`
         );
         const RADIUS_MILES = 25;
         const MAX_EMAILS = 200;
@@ -780,7 +781,26 @@ app.post('/api/listings/:id/offers', auth.requireAuth, async (req, res) => {
         if (!realtorName || !brokerage || !realtorEmail || !realtorPhone || !offerDetails) {
             return res.status(400).json({ error: 'All fields are required' });
         }
-        
+
+        // Monthly proposal limit for basic plan
+        const planRow = await pool.query(
+            `SELECT COALESCE(c.plan, u.subscription_plan, 'basic') AS plan
+             FROM users u LEFT JOIN companies c ON u.company_id = c.id
+             WHERE u.id = $1`,
+            [req.session.userId]
+        );
+        const realtorPlan = planRow.rows[0]?.plan || 'basic';
+        if (realtorPlan === 'basic') {
+            const countRow = await pool.query(
+                `SELECT COUNT(*) AS cnt FROM offers
+                 WHERE user_id = $1 AND created_at >= date_trunc('month', NOW())`,
+                [req.session.userId]
+            );
+            if (parseInt(countRow.rows[0].cnt) >= 5) {
+                return res.status(429).json({ error: "You've reached your 5 proposals/month limit on the Basic plan. Upgrade to Professional or Firm for unlimited proposals." });
+            }
+        }
+
         const offerData = {
             realtorName,
             brokerage,
@@ -1042,6 +1062,61 @@ app.post('/api/profile/photo', auth.requireAuth, upload.single('photo'), async (
     }
 });
 
+app.put('/api/profile/password', auth.requireAuth, async (req, res) => {
+    try {
+        const { currentPassword, newPassword } = req.body;
+        if (!currentPassword || !newPassword) return res.status(400).json({ error: 'Both current and new password are required' });
+        if (newPassword.length < 8) return res.status(400).json({ error: 'New password must be at least 8 characters' });
+        const { rows } = await pool.query('SELECT password_hash FROM users WHERE id = $1', [req.session.userId]);
+        if (!rows.length) return res.status(404).json({ error: 'User not found' });
+        const valid = await bcrypt.compare(currentPassword, rows[0].password_hash);
+        if (!valid) return res.status(401).json({ error: 'Current password is incorrect' });
+        const hash = await bcrypt.hash(newPassword, 12);
+        await pool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [hash, req.session.userId]);
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Password change error:', err);
+        res.status(500).json({ error: 'Failed to change password' });
+    }
+});
+
+app.put('/api/profile/email-alerts', auth.requireAuth, async (req, res) => {
+    try {
+        const { enabled } = req.body;
+        await pool.query(
+            'UPDATE users SET email_alerts = $1 WHERE id = $2',
+            [enabled !== false, req.session.userId]
+        );
+        res.json({ success: true, email_alerts: enabled !== false });
+    } catch (err) {
+        console.error('Email alerts pref error:', err);
+        res.status(500).json({ error: 'Failed to update preference' });
+    }
+});
+
+app.get('/api/analytics/realtor', auth.requireAuth, async (req, res) => {
+    try {
+        const uid = req.session.userId;
+        const [totalRow, wonRow, monthRow, planRow] = await Promise.all([
+            pool.query('SELECT COUNT(*) AS cnt FROM offers WHERE user_id = $1', [uid]),
+            pool.query("SELECT COUNT(*) AS cnt FROM offers WHERE user_id = $1 AND status = 'accepted'", [uid]),
+            pool.query("SELECT COUNT(*) AS cnt FROM offers WHERE user_id = $1 AND created_at >= date_trunc('month', NOW())", [uid]),
+            pool.query(`SELECT COALESCE(c.plan, u.subscription_plan, 'basic') AS plan FROM users u LEFT JOIN companies c ON u.company_id = c.id WHERE u.id = $1`, [uid])
+        ]);
+        const total = parseInt(totalRow.rows[0].cnt);
+        const won = parseInt(wonRow.rows[0].cnt);
+        const thisMonth = parseInt(monthRow.rows[0].cnt);
+        const plan = planRow.rows[0]?.plan || 'basic';
+        const winRate = total > 0 ? Math.round((won / total) * 100) : 0;
+        const monthlyLimit = plan === 'basic' ? 5 : null;
+        const remaining = monthlyLimit !== null ? Math.max(0, monthlyLimit - thisMonth) : null;
+        res.json({ total, won, winRate, thisMonth, plan, monthlyLimit, remaining });
+    } catch (err) {
+        console.error('Realtor analytics error:', err);
+        res.status(500).json({ error: 'Failed to fetch analytics' });
+    }
+});
+
 // ===== ADMIN ROUTES =====
 
 function requireAdmin(req, res, next) {
@@ -1130,6 +1205,50 @@ app.put('/api/admin/users/:id/unapprove', requireAdmin, async (req, res) => {
     } catch (error) {
         console.error('Admin unapprove error:', error);
         res.status(500).json({ error: 'Failed to unapprove user' });
+    }
+});
+
+app.post('/api/admin/users/approve-all', requireAdmin, async (req, res) => {
+    try {
+        const { rows } = await pool.query(
+            `UPDATE users SET is_approved = true
+             WHERE is_approved = false AND is_active IS NOT FALSE
+             RETURNING id, email, first_name, user_type`
+        );
+        rows.forEach(u => {
+            emailService.sendAccountApprovedEmail(u.email, u.first_name, u.user_type)
+                .catch(err => console.error('Approval email failed:', err.message));
+        });
+        res.json({ success: true, count: rows.length });
+    } catch (error) {
+        console.error('Admin approve-all error:', error);
+        res.status(500).json({ error: 'Failed to approve users' });
+    }
+});
+
+app.post('/api/admin/send-weekly-digests', requireAdmin, async (req, res) => {
+    try {
+        const { rows: sellers } = await pool.query(
+            `SELECT u.id, u.email, u.first_name,
+                    COUNT(DISTINCT l.id) AS listing_count,
+                    COUNT(DISTINCT o.id) AS new_offers,
+                    COALESCE(SUM(l.view_count), 0) AS total_views
+             FROM users u
+             JOIN listings l ON l.user_id = u.id AND l.status = 'active'
+             LEFT JOIN offers o ON o.listing_id = l.id AND o.created_at >= NOW() - INTERVAL '7 days'
+             WHERE u.user_type = 'seller' AND u.is_approved = true AND u.is_active IS NOT FALSE
+             GROUP BY u.id, u.email, u.first_name
+             HAVING COUNT(DISTINCT l.id) > 0`
+        );
+        let sent = 0;
+        for (const seller of sellers) {
+            await emailService.sendSellerWeeklyDigest(seller).catch(e => console.error(`Digest failed for ${seller.email}:`, e.message));
+            sent++;
+        }
+        res.json({ success: true, sent });
+    } catch (err) {
+        console.error('Weekly digest error:', err);
+        res.status(500).json({ error: 'Failed to send digests' });
     }
 });
 
@@ -1858,8 +1977,41 @@ app.get('/realtor/:id', (req, res) => {
 });
 
 // Public listing detail page
-app.get('/listing/:id', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'listing-detail.html'));
+app.get('/listing/:id', async (req, res) => {
+    try {
+        const id = parseInt(req.params.id);
+        if (!id) return res.sendFile(path.join(__dirname, 'public', 'listing-detail.html'));
+        const { rows } = await pool.query(
+            `SELECT address, city, state, price, bedrooms, bathrooms, image_urls FROM listings WHERE id = $1 AND status != 'inactive'`,
+            [id]
+        );
+        if (!rows.length) return res.sendFile(path.join(__dirname, 'public', 'listing-detail.html'));
+        const l = rows[0];
+        const base = (process.env.FRONTEND_URL || 'https://realtorfinder.net').replace(/\/$/, '');
+        const title = `${l.address}${l.city ? ', ' + l.city : ''} — RealtorFinder`;
+        const desc = [
+            l.price ? '$' + Number(l.price).toLocaleString() : null,
+            l.bedrooms ? l.bedrooms + ' bed' : null,
+            l.bathrooms ? l.bathrooms + ' bath' : null
+        ].filter(Boolean).join(' · ') + ' — View this home on RealtorFinder';
+        const img = (Array.isArray(l.image_urls) && l.image_urls[0]) ? l.image_urls[0] : `${base}/og-default.png`;
+        const fs = require('fs');
+        let html = fs.readFileSync(path.join(__dirname, 'public', 'listing-detail.html'), 'utf8');
+        html = html
+            .replace(/<title>[^<]*<\/title>/, `<title>${title}</title>`)
+            .replace(/(<meta name="description" content=")[^"]*(")/i, `$1${desc}$2`)
+            .replace(/(<meta property="og:title" content=")[^"]*(")/i, `$1${title}$2`)
+            .replace(/(<meta property="og:description" content=")[^"]*(")/i, `$1${desc}$2`)
+            .replace(/(<meta property="og:image" content=")[^"]*(")/i, `$1${img}$2`)
+            .replace(/(<meta property="og:url" content=")[^"]*(")/i, `$1${base}/listing/${id}$2`)
+            .replace(/(<meta name="twitter:title" content=")[^"]*(")/i, `$1${title}$2`)
+            .replace(/(<meta name="twitter:description" content=")[^"]*(")/i, `$1${desc}$2`)
+            .replace(/(<meta name="twitter:image" content=")[^"]*(")/i, `$1${img}$2`);
+        res.send(html);
+    } catch (err) {
+        console.error('Listing OG SSR error:', err);
+        res.sendFile(path.join(__dirname, 'public', 'listing-detail.html'));
+    }
 });
 
 // Login page
