@@ -1029,6 +1029,19 @@ app.put('/api/profile', auth.requireAuth, async (req, res) => {
     }
 });
 
+// Upload profile photo
+app.post('/api/profile/photo', auth.requireAuth, upload.single('photo'), async (req, res) => {
+    try {
+        if (!req.file) return res.status(400).json({ error: 'No photo provided' });
+        const result = await uploadToCloudinary(req.file.buffer);
+        await pool.query(`UPDATE users SET profile_photo = $1 WHERE id = $2`, [result.secure_url, req.session.userId]);
+        res.json({ url: result.secure_url });
+    } catch (error) {
+        console.error('Profile photo upload error:', error);
+        res.status(500).json({ error: 'Failed to upload photo' });
+    }
+});
+
 // ===== ADMIN ROUTES =====
 
 function requireAdmin(req, res, next) {
@@ -1598,7 +1611,7 @@ app.get('/sitemap-index.xml', async (req, res) => {
 app.get('/sitemap-static.xml', (req, res) => {
     const base = (process.env.FRONTEND_URL || 'https://realtorfinder.net').replace(/\/$/, '');
     const today = new Date().toISOString().split('T')[0];
-    const urls = ['/', '/realtors', '/pricing', '/about', '/buyers', '/locations', '/login'];
+    const urls = ['/', '/realtors', '/pricing', '/about', '/buyers', '/locations', '/login', '/contact'];
     const entries = urls.map(u => `  <url><loc>${base}${u}</loc><lastmod>${today}</lastmod><priority>${u === '/' ? '1.0' : '0.7'}</priority></url>`).join('\n');
     res.type('application/xml');
     res.send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${entries}\n</urlset>`);
@@ -1632,6 +1645,11 @@ app.get('/api/listings/:id/public', async (req, res) => {
             [parseInt(req.params.id)]
         );
         if (!rows.length) return res.status(404).json({ error: 'Listing not found' });
+        // Fire-and-forget view count increment
+        pool.query(
+            `UPDATE listings SET view_count = COALESCE(view_count, 0) + 1 WHERE id = $1`,
+            [parseInt(req.params.id)]
+        ).catch(() => {});
         res.json(rows[0]);
     } catch (err) {
         console.error('Public listing error:', err);
@@ -1724,7 +1742,7 @@ app.get('/api/realtors/:id/public', async (req, res) => {
         const { rows } = await pool.query(
             `SELECT u.id, u.first_name, u.last_name, u.bio, u.years_experience,
                     u.license_number, u.service_areas, u.subscription_plan, u.zip_code,
-                    c.name AS company_name, c.plan AS company_plan
+                    u.profile_photo, c.name AS company_name, c.plan AS company_plan
              FROM users u
              LEFT JOIN companies c ON u.company_id = c.id
              WHERE u.id = $1 AND u.user_type = 'realtor' AND u.is_active IS NOT FALSE`,

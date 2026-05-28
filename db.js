@@ -24,7 +24,7 @@ const db = {
     async getAllListings() {
         const result = await pool.query(
             `SELECT id, address, city, state, zip, price, property_type, bedrooms, bathrooms, sqft,
-                    description, image_urls, created_at, user_id,
+                    description, image_urls, created_at, user_id, COALESCE(view_count, 0) AS view_count,
                     (SELECT COUNT(*) FROM offers WHERE listing_id = listings.id) as offer_count
              FROM listings
              WHERE deleted_at IS NULL
@@ -37,7 +37,7 @@ const db = {
     async getUserListings(userId) {
         const result = await pool.query(
             `SELECT id, address, city, state, zip, price, property_type, bedrooms, bathrooms, sqft,
-                    description, image_urls, created_at, user_id, status,
+                    description, image_urls, created_at, user_id, status, COALESCE(view_count, 0) AS view_count,
                     (SELECT COUNT(*) FROM offers WHERE listing_id = listings.id) as offer_count
              FROM listings
              WHERE user_id = $1 AND deleted_at IS NULL
@@ -197,6 +197,7 @@ const db = {
             `SELECT l.id, l.address, l.city, l.state, l.zip, l.price, l.property_type,
                     l.bedrooms, l.bathrooms, l.sqft, l.description, l.image_urls,
                     l.created_at, l.user_id, l.latitude, l.longitude, l.status,
+                    COALESCE(l.view_count, 0) as view_count,
                     (SELECT COUNT(*) FROM offers WHERE listing_id = l.id) as offer_count
              FROM listings l
              ${where}
@@ -313,7 +314,7 @@ const db = {
             const result = await pool.query(
                 `SELECT u.id, u.email, u.user_type, u.first_name, u.last_name, u.zip_code,
                         u.phone, u.license_number, u.bio, u.years_experience, u.service_areas,
-                        u.company_id, u.company_name, u.subscription_plan, u.company_role,
+                        u.profile_photo, u.company_id, u.company_name, u.subscription_plan, u.company_role,
                         c.name AS company_display_name, c.plan AS company_plan
                  FROM users u
                  LEFT JOIN companies c ON c.id = u.company_id

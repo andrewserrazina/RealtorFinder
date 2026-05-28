@@ -1161,7 +1161,7 @@
                             <span>📏 ${listing.sqft.toLocaleString()} sqft</span>
                         </div>
                         <p style="margin-top:1rem;color:#666;">${listing.description}</p>
-                        <p style="margin-top:0.5rem;font-size:0.9rem;color:#999;">${listing.date}</p>
+                        <p style="margin-top:0.5rem;font-size:0.9rem;color:#999;">${listing.date} &nbsp;·&nbsp; 👁 ${listing.view_count || 0} views</p>
                     </div>
                     <div class="listing-actions">
                         <button class="btn btn-primary" onclick="viewOffers(${listing.id})">${listing.offerCount || 0} Offers</button>
