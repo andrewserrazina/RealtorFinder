@@ -1632,6 +1632,71 @@ app.get('/api/realtors/founding-count', async (req, res) => {
     }
 });
 
+// ===== PUBLIC REALTOR SEARCH API =====
+
+app.get('/api/realtors/search', async (req, res) => {
+    try {
+        const page  = Math.max(1, parseInt(req.query.page)  || 1);
+        const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 12));
+        const offset = (page - 1) * limit;
+        const { zip, name } = req.query;
+
+        const conditions = [
+            `u.user_type = 'realtor'`,
+            `u.is_approved = true`,
+            `u.is_active IS NOT FALSE`
+        ];
+        const params = [];
+
+        if (zip) {
+            params.push(zip);
+            conditions.push(`(u.zip_code = $${params.length} OR u.service_areas ILIKE '%' || $${params.length} || '%')`);
+        }
+        if (name) {
+            params.push(name);
+            conditions.push(`CONCAT(u.first_name, ' ', u.last_name) ILIKE '%' || $${params.length} || '%'`);
+        }
+
+        const where = conditions.join(' AND ');
+
+        const countResult = await pool.query(
+            `SELECT COUNT(*) AS total FROM users u WHERE ${where}`,
+            params
+        );
+        const total = parseInt(countResult.rows[0].total) || 0;
+
+        params.push(limit);
+        params.push(offset);
+        const { rows } = await pool.query(
+            `SELECT u.id, u.first_name, u.last_name, u.bio, u.years_experience,
+                    u.license_number, u.service_areas, u.subscription_plan, u.zip_code,
+                    c.name AS company_name, c.plan AS company_plan
+             FROM users u
+             LEFT JOIN companies c ON u.company_id = c.id
+             WHERE ${where}
+             ORDER BY
+               CASE u.subscription_plan
+                 WHEN 'firm'         THEN 1
+                 WHEN 'professional' THEN 2
+                 ELSE 3
+               END ASC,
+               u.created_at DESC
+             LIMIT $${params.length - 1} OFFSET $${params.length}`,
+            params
+        );
+
+        res.json({
+            realtors: rows,
+            total,
+            page,
+            pages: Math.ceil(total / limit)
+        });
+    } catch (err) {
+        console.error('Realtor search error:', err);
+        res.status(500).json({ error: 'Failed to search realtors' });
+    }
+});
+
 // ===== PUBLIC REALTOR PROFILE API =====
 
 app.get('/api/realtors/:id/public', async (req, res) => {
