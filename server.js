@@ -1728,52 +1728,198 @@ app.get('/locations/:stateCode', async (req, res, next) => {
             <div class="city-trend">↑ ${(c.price_trend || '').replace('up ', '')} YoY &nbsp;·&nbsp; ${c.avg_dom || '—'} days avg.</div>
         </a>`).join('');
 
+    const stateData = {
+        MA: { tagline: 'The most competitive real estate market in New England', desc: 'Massachusetts combines historic charm with one of the nation\'s hottest real estate markets. From Boston\'s world-class neighborhoods to the quiet towns of the Pioneer Valley and the beaches of Cape Cod, sellers in Massachusetts benefit from strong year-round buyer demand and low days on market.', highlights: ['Spring market peaks April–June with multiple offers common', 'Boston metro drives statewide price appreciation', 'Cape Cod and islands command strong seasonal premiums', 'Pioneer Valley offers affordability relative to eastern MA'], color: '#0A2540' },
+        CT: { tagline: 'New York City\'s backyard — with New England soul', desc: 'Connecticut\'s real estate market is powered by two forces: NYC commuters seeking space in Fairfield County, and a resurgent Hartford metro drawing remote workers and first-time buyers. Gold Coast towns like Greenwich, Darien, and Westport rank among the most valuable real estate in the country.', highlights: ['Fairfield County commands the highest prices in New England outside Boston', 'No NYC state income tax burden for CT residents who commute', 'New Haven\'s Yale-driven market stays resilient through cycles', 'Shoreline towns along Long Island Sound carry waterfront premiums'], color: '#1a3a5c' },
+        RI: { tagline: 'The Ocean State — tight inventory, rising prices', desc: 'Rhode Island packs remarkable diversity into the smallest state in the country. Providence\'s thriving arts and food scene draws Boston overflow buyers, Newport\'s historic mansions attract luxury purchasers, and South County\'s coastal towns see some of the strongest appreciation in New England.', highlights: ['One of the lowest housing inventories in New England', 'Providence ranked top 10 nationally for buyer demand', 'Newport and Washington County coastal properties sell at premium', 'No major new construction — existing homes dominate inventory'], color: '#0f3460' },
+        VT: { tagline: 'Four seasons of demand — and a booming buyer pool', desc: 'Vermont\'s real estate market has been transformed by remote work. Buyers from Boston, New York, and beyond are snapping up homes in Burlington, Stowe, and dozens of small towns across the Green Mountains. Low inventory and rising prices have made Vermont one of the fastest-appreciating states in the Northeast.', highlights: ['Remote work has permanently expanded the Vermont buyer pool', 'Ski resort towns (Stowe, Killington, Mad River) command vacation premiums', 'Burlington metro is the hottest market in northern New England', 'Fall foliage season drives peak second-home buyer interest'], color: '#1b4332' },
+        NH: { tagline: 'No income tax. No sales tax. No wonder buyers keep coming.', desc: 'New Hampshire\'s tax advantage is its superpower. Buyers fleeing Massachusetts and Connecticut income taxes flood into southern NH communities like Derry, Londonderry, Bedford, and Windham. The seacoast offers ocean access without Maine\'s remoteness, and the Lakes Region draws second-home buyers year-round.', highlights: ['No state income or sales tax — powerful draw from MA and CT', 'Southern NH commuter towns see Boston-level buyer demand', 'Portsmouth and seacoast rank among NH\'s most desirable markets', 'Lakes Region and White Mountains drive strong vacation home demand'], color: '#0c2d6b' },
+        ME: { tagline: 'The way life should be — and the market to prove it', desc: 'Maine has experienced one of the most dramatic real estate booms in the country since 2020. Portland is now one of the fastest-appreciating markets in the nation. Remote workers, retirees, and coastal lifestyle seekers have pushed prices to record highs while inventory remains historically tight.', highlights: ['Portland metro is among the top 5 fastest-appreciating markets in the US', 'York County seacoast (Kennebunk, York, Kittery) sees premium coastal demand', 'Mid-coast (Rockland, Camden, Brunswick) attracts lifestyle and retirement buyers', 'Statewide inventory at historic lows — a strong seller\'s market'], color: '#1c3d5a' },
+    };
+    const sd = stateData[stateCode] || { tagline: `Real estate markets across ${stateName}`, desc: `Find sellers and realtors across ${stateName} on RealtorFinder.`, highlights: [], color: '#0A2540' };
+
+    const stateLd = JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'RealEstateAgent',
+        'name': `RealtorFinder — ${stateName}`,
+        'description': sd.desc,
+        'url': `https://www.realtorfinder.net/locations/${stateCode.toLowerCase()}`,
+        'areaServed': { '@type': 'State', 'name': stateName, 'addressCountry': 'US' }
+    });
+
+    const highlightItems = sd.highlights.map(h => `<li>${h}</li>`).join('');
+
     res.send(`<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>${stateName} Real Estate Markets | RealtorFinder</title>
-    <meta name="description" content="RealtorFinder covers every major city and town in ${stateName}. Sellers list free, realtors compete for listings.">
+    <meta name="description" content="${sd.tagline}. RealtorFinder covers every major city and town in ${stateName}. Sellers list free, realtors compete for listings.">
     <link rel="canonical" href="https://www.realtorfinder.net/locations/${stateCode.toLowerCase()}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-BRGVVNKT65"></script>
     <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-BRGVVNKT65');</script>
+    <script type="application/ld+json">${stateLd}</script>
     <style>
         :root{--primary:#0A2540;--accent:#FF6B35;--border:#e5e7eb;--soft-bg:#f8f9fa;}
         *{margin:0;padding:0;box-sizing:border-box;}
         body{font-family:'Work Sans',sans-serif;color:var(--primary);}
+
+        /* Nav */
         nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(255,255,255,0.97);backdrop-filter:blur(10px);border-bottom:1px solid var(--border);padding:0 5%;display:flex;align-items:center;justify-content:space-between;height:68px;}
         .nav-logo{font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:900;color:var(--primary);text-decoration:none;}
         .nav-logo span{color:var(--accent);}
-        .nav-cta{background:var(--accent);color:#fff;padding:10px 22px;border-radius:8px;font-weight:600;text-decoration:none;font-size:0.95rem;}
-        .hero{background:linear-gradient(135deg,var(--primary) 0%,#0d3a5c 100%);color:#fff;padding:130px 5% 70px;text-align:center;}
-        .hero h1{font-family:'Playfair Display',serif;font-size:clamp(2rem,4vw,3.2rem);font-weight:900;margin-bottom:14px;}
+        .nav-links{display:flex;align-items:center;gap:1.5rem;}
+        .nav-links a{color:var(--primary);text-decoration:none;font-size:0.9rem;font-weight:500;opacity:0.75;transition:opacity 0.2s;}
+        .nav-links a:hover{opacity:1;}
+        .nav-cta{background:var(--accent);color:#fff;padding:10px 22px;border-radius:8px;font-weight:600;text-decoration:none;font-size:0.95rem;opacity:1!important;}
+
+        /* Hero */
+        .hero{background:linear-gradient(135deg,${sd.color} 0%,#0d3a5c 100%);color:#fff;padding:140px 5% 80px;text-align:center;}
+        .hero h1{font-family:'Playfair Display',serif;font-size:clamp(2.2rem,5vw,3.6rem);font-weight:900;margin-bottom:12px;line-height:1.15;}
         .hero h1 em{color:var(--accent);font-style:normal;}
-        .hero p{font-size:1.1rem;opacity:0.85;max-width:560px;margin:0 auto;}
-        .breadcrumb{font-size:0.85rem;text-align:center;margin-top:16px;opacity:0.7;}
+        .hero-tagline{font-size:1.15rem;opacity:0.85;max-width:620px;margin:0 auto 24px;line-height:1.6;}
+        .breadcrumb{font-size:0.85rem;text-align:center;margin-bottom:28px;opacity:0.7;}
         .breadcrumb a{color:rgba(255,255,255,0.8);text-decoration:underline;}
-        .grid{max-width:1100px;margin:60px auto;padding:0 5%;display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:18px;}
+        .hero-btns{display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;margin-top:8px;}
+        .btn-primary{background:var(--accent);color:#fff;padding:14px 30px;border-radius:8px;font-weight:700;text-decoration:none;font-size:1rem;transition:transform 0.15s,box-shadow 0.15s;}
+        .btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(255,107,53,0.4);}
+        .btn-outline{background:transparent;color:#fff;padding:14px 30px;border-radius:8px;font-weight:700;text-decoration:none;font-size:1rem;border:2px solid rgba(255,255,255,0.5);transition:border-color 0.15s;}
+        .btn-outline:hover{border-color:#fff;}
+
+        /* Stats strip */
+        .stats-strip{background:#fff;border-bottom:1px solid var(--border);padding:24px 5%;display:flex;justify-content:center;gap:3rem;flex-wrap:wrap;}
+        .strip-stat{text-align:center;}
+        .strip-val{font-family:'Playfair Display',serif;font-size:2rem;font-weight:900;color:var(--primary);}
+        .strip-label{font-size:0.8rem;color:#6b7280;margin-top:2px;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;}
+
+        /* Overview section */
+        .section{max-width:1100px;margin:0 auto;padding:64px 5%;}
+        .section-label{font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--accent);margin-bottom:10px;}
+        .section h2{font-family:'Playfair Display',serif;font-size:clamp(1.6rem,3vw,2.4rem);font-weight:900;margin-bottom:20px;line-height:1.25;}
+        .overview-grid{display:grid;grid-template-columns:1.2fr 1fr;gap:4rem;align-items:start;}
+        .overview-desc{font-size:1.05rem;line-height:1.8;color:#374151;}
+        .highlights-list{list-style:none;padding:0;margin-top:0;}
+        .highlights-list li{padding:12px 0 12px 28px;border-bottom:1px solid var(--border);font-size:0.95rem;color:#374151;position:relative;line-height:1.5;}
+        .highlights-list li:last-child{border-bottom:none;}
+        .highlights-list li::before{content:'→';position:absolute;left:0;color:var(--accent);font-weight:700;}
+
+        /* City grid */
+        .city-grid-section{background:var(--soft-bg);padding:64px 0;}
+        .city-grid-inner{max-width:1100px;margin:0 auto;padding:0 5%;}
+        .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:18px;margin-top:32px;}
         .city-card{background:#fff;border:1px solid var(--border);border-radius:14px;padding:24px;text-decoration:none;color:var(--primary);transition:all 0.2s;display:block;}
         .city-card:hover{border-color:var(--accent);box-shadow:0 8px 24px rgba(255,107,53,0.12);transform:translateY(-2px);}
         .city-name{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:700;margin-bottom:6px;}
         .city-meta{font-size:0.85rem;color:#6b7280;margin-bottom:4px;}
         .city-trend{font-size:0.82rem;color:#16a34a;font-weight:600;}
-        footer{background:var(--primary);color:rgba(255,255,255,0.6);padding:32px 5%;text-align:center;font-size:0.84rem;margin-top:60px;}
+
+        /* Market insight */
+        .insight-section{background:#fff;border-top:1px solid var(--border);}
+        .insight-inner{max-width:1100px;margin:0 auto;padding:64px 5%;}
+        .insight-box{background:linear-gradient(135deg,var(--soft-bg) 0%,#fff 100%);border:1px solid var(--border);border-radius:16px;padding:40px;border-left:4px solid var(--accent);}
+        .insight-box p{font-size:1rem;line-height:1.8;color:#374151;margin-bottom:16px;}
+        .insight-box p:last-child{margin-bottom:0;}
+
+        /* CTA band */
+        .cta-band{background:linear-gradient(135deg,#FF6B35 0%,#e85a25 100%);color:#fff;text-align:center;padding:72px 5%;}
+        .cta-band h2{font-family:'Playfair Display',serif;font-size:clamp(1.8rem,4vw,2.8rem);font-weight:900;margin-bottom:12px;}
+        .cta-band p{font-size:1.1rem;opacity:0.9;margin-bottom:32px;max-width:500px;margin-left:auto;margin-right:auto;}
+        .cta-band .hero-btns .btn-primary{background:#fff;color:var(--accent);}
+        .cta-band .hero-btns .btn-outline{border-color:rgba(255,255,255,0.6);color:#fff;}
+
+        /* Footer */
+        footer{background:var(--primary);color:rgba(255,255,255,0.6);padding:32px 5%;text-align:center;font-size:0.84rem;}
         footer a{color:rgba(255,255,255,0.6);margin:0 8px;text-decoration:none;}
+
+        @media(max-width:768px){
+            .overview-grid{grid-template-columns:1fr;gap:2rem;}
+            .stats-strip{gap:1.5rem;}
+            .nav-links{display:none;}
+            .hero{padding:110px 5% 60px;}
+        }
     </style>
 </head>
 <body>
 <nav>
     <a href="/" class="nav-logo">Realtor<span>Finder</span></a>
-    <a href="/login" class="nav-cta">Get Started Free</a>
+    <div class="nav-links">
+        <a href="/locations">All States</a>
+        <a href="/realtors">For Realtors</a>
+        <a href="/login?tab=signup&type=seller" class="nav-cta">Get Started Free</a>
+    </div>
 </nav>
+
 <div class="hero">
-    <h1><em>${stateName}</em><br>Real Estate Markets</h1>
-    <p>Connecting home sellers and local realtors across every city and town in ${stateName}.</p>
     <div class="breadcrumb"><a href="/locations">← All States</a></div>
+    <h1><em>${stateName}</em><br>Real Estate Markets</h1>
+    <p class="hero-tagline">${sd.tagline}</p>
+    <div class="hero-btns">
+        <a href="/login?tab=signup&type=seller" class="btn-primary">List My Home Free</a>
+        <a href="/realtors" class="btn-outline">I'm a Realtor →</a>
+    </div>
 </div>
-<div class="grid">${cards}</div>
+
+<div class="stats-strip">
+    <div class="strip-stat">
+        <div class="strip-val">${cities.length}</div>
+        <div class="strip-label">Markets Covered</div>
+    </div>
+    <div class="strip-stat">
+        <div class="strip-val">$0</div>
+        <div class="strip-label">Free for Sellers</div>
+    </div>
+    <div class="strip-stat">
+        <div class="strip-val">100%</div>
+        <div class="strip-label">Licensed Realtors</div>
+    </div>
+</div>
+
+<div class="section">
+    <div class="overview-grid">
+        <div>
+            <div class="section-label">Market Overview</div>
+            <h2>Selling in ${stateName}</h2>
+            <p class="overview-desc">${sd.desc}</p>
+        </div>
+        <div>
+            <div class="section-label" style="margin-bottom:16px;">Key Market Highlights</div>
+            <ul class="highlights-list">
+                ${highlightItems}
+            </ul>
+        </div>
+    </div>
+</div>
+
+<div class="city-grid-section">
+    <div class="city-grid-inner">
+        <div class="section-label">Browse by City</div>
+        <h2 style="font-family:'Playfair Display',serif;font-size:clamp(1.6rem,3vw,2.4rem);font-weight:900;line-height:1.25;">Browse ${stateName} Markets</h2>
+        <div class="grid">${cards}</div>
+    </div>
+</div>
+
+<div class="insight-section">
+    <div class="insight-inner">
+        <div class="section-label">For Sellers</div>
+        <h2 style="font-family:'Playfair Display',serif;font-size:clamp(1.6rem,3vw,2.4rem);font-weight:900;line-height:1.25;margin-bottom:28px;">Why sell in ${stateName} now?</h2>
+        <div class="insight-box">
+            <p>${stateName} sellers who list on RealtorFinder put themselves in the driver's seat. Instead of cold-calling agents or taking the first offer, you post your home once — for free — and licensed local realtors compete for your business. You compare commission rates, track records, and proposals side by side, then choose the agent who earns it.</p>
+            <p>In a competitive market like ${stateName}, the difference between a 2% and 3% commission on a $500,000 home is $5,000 in your pocket. RealtorFinder gives you the leverage to negotiate from a position of strength. It's always free for sellers, with no obligation to accept any proposal.</p>
+        </div>
+    </div>
+</div>
+
+<div class="cta-band">
+    <h2>Ready to list in ${stateName}?</h2>
+    <p>Join thousands of sellers who have used RealtorFinder to find their perfect agent — for free.</p>
+    <div class="hero-btns">
+        <a href="/login?tab=signup&type=seller" class="btn-primary">List My Home Free</a>
+        <a href="/realtors" class="btn-outline">I'm a Realtor →</a>
+    </div>
+</div>
+
 <footer>
     <p>© ${new Date().getFullYear()} RealtorFinder &nbsp;·&nbsp; <a href="/">Home</a><a href="/locations">All Markets</a><a href="/realtors">For Realtors</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a></p>
 </footer>
@@ -2056,6 +2202,26 @@ app.get('/api/realtors/:id/reviews', async (req, res) => {
     } catch (err) { res.status(500).json({ error: 'Failed to fetch reviews' }); }
 });
 
+app.get('/api/realtors/:id/response-time', async (req, res) => {
+    try {
+        const { rows } = await pool.query(
+            `SELECT AVG(response_hours) as avg_hours, COUNT(*) as sample_count
+             FROM realtor_response_times WHERE realtor_id = $1`,
+            [parseInt(req.params.id)]
+        );
+        const avg = parseFloat(rows[0]?.avg_hours);
+        const count = parseInt(rows[0]?.sample_count);
+        if (!count || isNaN(avg)) return res.json({ label: null });
+        let label;
+        if (avg < 1) label = 'Typically responds within an hour';
+        else if (avg < 4) label = 'Typically responds within a few hours';
+        else if (avg < 24) label = 'Typically responds same day';
+        else if (avg < 48) label = 'Typically responds within a day';
+        else label = 'Typically responds within a few days';
+        res.json({ label, avg_hours: Math.round(avg * 10) / 10, sample_count: count });
+    } catch(err) { res.status(500).json({ error: 'Failed' }); }
+});
+
 // ===== REALTOR REVIEWS TABLE INIT =====
 pool.query(`
     CREATE TABLE IF NOT EXISTS realtor_reviews (
@@ -2084,6 +2250,18 @@ pool.query(`
         created_at TIMESTAMPTZ DEFAULT NOW()
     )
 `).catch(err => console.error('messages table init error:', err.message));
+
+pool.query(`
+    CREATE TABLE IF NOT EXISTS realtor_response_times (
+        id SERIAL PRIMARY KEY,
+        realtor_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        response_hours NUMERIC(6,2) NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+`).catch(err => console.error('realtor_response_times table init error:', err.message));
+
+pool.query(`ALTER TABLE listings ADD COLUMN IF NOT EXISTS expiry_warning_sent BOOLEAN DEFAULT FALSE`).catch(() => {});
+pool.query(`ALTER TABLE listings ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ`).catch(() => {});
 
 // List conversations for current user
 app.get('/api/messages/conversations', auth.requireAuth, async (req, res) => {
@@ -2170,6 +2348,9 @@ app.post('/api/messages', auth.requireAuth, async (req, res) => {
             VALUES ($1, $2, $3, $4) RETURNING *
         `, [uid, toUserId, listingId || null, body.trim()]);
 
+        const newMsgId = rows[0].id;
+        const fromUserId = uid;
+
         // Create notification for recipient
         await pool.query(`
             INSERT INTO notifications (user_id, type, title, body, link)
@@ -2195,6 +2376,31 @@ app.post('/api/messages', auth.requireAuth, async (req, res) => {
                 }
                 await emailService.sendMessageNotification(recipientEmail, senderName, listingAddress);
             } catch (_) {}
+        })();
+
+        // Track response time if realtor is replying for the first time in this thread
+        (async () => {
+            try {
+                const sender = await pool.query(`SELECT user_type FROM users WHERE id = $1`, [fromUserId]);
+                if (sender.rows[0]?.user_type !== 'realtor') return;
+                // Check if this is the first reply from this realtor in this thread
+                const prevReplies = await pool.query(
+                    `SELECT id FROM messages WHERE from_user_id = $1 AND to_user_id = $2 AND ($3::int IS NULL OR listing_id = $3) AND id != $4`,
+                    [fromUserId, toUserId, listingId || null, newMsgId]
+                );
+                if (prevReplies.rows.length > 0) return; // not first reply
+                // Find the original message sent TO this realtor
+                const original = await pool.query(
+                    `SELECT created_at FROM messages WHERE to_user_id = $1 AND from_user_id = $2 AND ($3::int IS NULL OR listing_id = $3) ORDER BY created_at ASC LIMIT 1`,
+                    [fromUserId, toUserId, listingId || null]
+                );
+                if (!original.rows.length) return;
+                const hours = (Date.now() - new Date(original.rows[0].created_at).getTime()) / 3600000;
+                await pool.query(
+                    `INSERT INTO realtor_response_times (realtor_id, response_hours) VALUES ($1, $2)`,
+                    [fromUserId, Math.round(hours * 100) / 100]
+                );
+            } catch(e) {}
         })();
 
         res.status(201).json(rows[0]);
@@ -2598,6 +2804,55 @@ app.use((err, req, res, next) => {
         message: process.env.NODE_ENV === 'development' ? err.message : undefined
     });
 });
+
+// Listing expiry job — runs every 24 hours
+async function runListingExpiryJob() {
+    try {
+        const now = new Date();
+        // Warn listings at day 87 (3 days before 90-day expiry)
+        const warnCutoff = new Date(now - 87 * 24 * 3600 * 1000);
+        const toWarn = await pool.query(
+            `SELECT l.id, l.address, l.city, l.state, l.created_at,
+                    u.email, u.first_name, u.last_name
+             FROM listings l JOIN users u ON u.id = l.user_id
+             WHERE l.status IN ('active','pending')
+               AND l.deleted_at IS NULL
+               AND l.expiry_warning_sent = FALSE
+               AND l.created_at <= $1
+               AND NOT EXISTS (SELECT 1 FROM offers WHERE listing_id = l.id AND status = 'accepted')`,
+            [warnCutoff]
+        );
+        for (const l of toWarn.rows) {
+            await emailService.sendListingExpiryWarning(l.email, l.first_name, l).catch(() => {});
+            await pool.query(`UPDATE listings SET expiry_warning_sent = TRUE WHERE id = $1`, [l.id]);
+        }
+
+        // Archive listings at day 90
+        const archiveCutoff = new Date(now - 90 * 24 * 3600 * 1000);
+        const toArchive = await pool.query(
+            `SELECT l.id, l.address, l.city, l.state, l.created_at,
+                    u.email, u.first_name, u.last_name
+             FROM listings l JOIN users u ON u.id = l.user_id
+             WHERE l.status IN ('active','pending')
+               AND l.deleted_at IS NULL
+               AND l.created_at <= $1
+               AND NOT EXISTS (SELECT 1 FROM offers WHERE listing_id = l.id AND status = 'accepted')`,
+            [archiveCutoff]
+        );
+        for (const l of toArchive.rows) {
+            await pool.query(`UPDATE listings SET status = 'expired' WHERE id = $1`, [l.id]);
+            await emailService.sendListingExpired(l.email, l.first_name, l).catch(() => {});
+        }
+
+        if (toWarn.rows.length || toArchive.rows.length) {
+            console.log(`📋 Expiry job: warned ${toWarn.rows.length}, archived ${toArchive.rows.length}`);
+        }
+    } catch(err) {
+        console.error('Listing expiry job error:', err.message);
+    }
+}
+runListingExpiryJob();
+setInterval(runListingExpiryJob, 24 * 60 * 60 * 1000).unref();
 
 // Start server
 app.listen(PORT, () => {

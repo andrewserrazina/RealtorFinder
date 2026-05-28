@@ -218,10 +218,14 @@
 
     async function loadProfile() {
         try {
-            const res = await fetch(`/api/realtors/${realtorId}/public`);
-            if (!res.ok) { showNotFound(); return; }
-            const r = await res.json();
-            renderProfile(r);
+            const [profileRes, rtRes] = await Promise.all([
+                fetch(`/api/realtors/${realtorId}/public`),
+                fetch(`/api/realtors/${realtorId}/response-time`)
+            ]);
+            if (!profileRes.ok) { showNotFound(); return; }
+            const r = await profileRes.json();
+            const rt = rtRes.ok ? await rtRes.json() : { label: null };
+            renderProfile(r, rt);
             // Update page title
             document.title = `${r.first_name} ${r.last_name} — RealtorFinder`;
         } catch {
@@ -229,7 +233,7 @@
         }
     }
 
-    function renderProfile(r) {
+    function renderProfile(r, rt) {
         const initials = ((r.first_name || '')[0] || '') + ((r.last_name || '')[0] || '');
         const isFeatured = ['professional', 'firm'].includes(r.subscription_plan || r.company_plan);
         const hasLicense = r.license_number && r.license_number.trim();
@@ -270,6 +274,7 @@
                     <div class="section-title">About</div>
                     <p class="bio-text">${esc(r.bio)}</p>
                 ` : ''}
+                ${rt && rt.label ? `<div style="display:inline-block;background:#f0fdf4;border:1px solid #bbf7d0;color:#15803d;border-radius:20px;padding:4px 12px;font-size:0.85rem;font-weight:600;margin-top:0.5rem;">⚡ ${esc(rt.label)}</div>` : ''}
             </div>
 
             ${detailsHtml ? `
