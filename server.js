@@ -1562,6 +1562,23 @@ app.get('/sitemap-:stateCode\\.xml', async (req, res) => {
 // Legacy sitemap.xml redirect
 app.get('/sitemap.xml', (req, res) => res.redirect(301, '/sitemap-index.xml'));
 
+// Public listing detail (no auth required)
+app.get('/api/listings/:id/public', async (req, res) => {
+    try {
+        const { rows } = await pool.query(
+            `SELECT id, address, city, state, zip, price, zestimate, property_type,
+                    bedrooms, bathrooms, sqft, description, image_urls, status, created_at
+             FROM listings WHERE id = $1 AND status != 'inactive'`,
+            [parseInt(req.params.id)]
+        );
+        if (!rows.length) return res.status(404).json({ error: 'Listing not found' });
+        res.json(rows[0]);
+    } catch (err) {
+        console.error('Public listing error:', err);
+        res.status(500).json({ error: 'Failed to load listing' });
+    }
+});
+
 // Founding realtor spot counter (public)
 app.get('/api/realtors/founding-count', async (req, res) => {
     try {
@@ -1606,6 +1623,11 @@ app.get('/reset-password', (req, res) => {
 // Public realtor profile page
 app.get('/realtor/:id', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'realtor-profile.html'));
+});
+
+// Public listing detail page
+app.get('/listing/:id', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'listing-detail.html'));
 });
 
 // Login page

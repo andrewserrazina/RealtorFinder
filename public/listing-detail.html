@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Listing — RealtorFinder</title>
+    <!-- Google Analytics 4 -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-BRGVVNKT65"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-BRGVVNKT65');
+    </script>
+    <!-- Microsoft Clarity -->
+    <script type="text/javascript">
+        (function(c,l,a,r,i,t,y){
+            c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+            t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+            y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+        })(window, document, "clarity", "script", "wxvaz0g7tq");
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@600;700;900&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #0A2540;
+            --accent: #FF6B35;
+            --soft-bg: #F8F6F3;
+            --text: #1A1A1A;
+            --border: #E5E1DB;
+            --muted: #6B7280;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'DM Sans', sans-serif; background: var(--soft-bg); color: var(--text); }
+
+        nav {
+            background: var(--primary);
+            padding: 0 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 64px;
+        }
+        .nav-logo { font-family: 'Crimson Pro', serif; font-size: 1.6rem; font-weight: 900; color: white; text-decoration: none; }
+        .nav-logo span { color: var(--accent); }
+        .nav-back { color: rgba(255,255,255,0.7); font-size: 0.9rem; text-decoration: none; display: flex; align-items: center; gap: 0.4rem; }
+        .nav-back:hover { color: white; }
+
+        .wrap {
+            max-width: 900px;
+            margin: 3rem auto;
+            padding: 0 1.5rem 4rem;
+        }
+
+        /* Photo gallery */
+        .gallery {
+            border-radius: 16px;
+            overflow: hidden;
+            margin-bottom: 2rem;
+            background: #e8e4df;
+            aspect-ratio: 16/9;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        .gallery img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+        .gallery-placeholder {
+            color: var(--muted);
+            font-size: 3rem;
+        }
+        .gallery-nav {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(0,0,0,0.45);
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            font-size: 1.2rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .gallery-nav:hover { background: rgba(0,0,0,0.65); }
+        .gallery-nav.prev { left: 1rem; }
+        .gallery-nav.next { right: 1rem; }
+        .gallery-counter {
+            position: absolute;
+            bottom: 0.75rem;
+            right: 1rem;
+            background: rgba(0,0,0,0.5);
+            color: white;
+            font-size: 0.8rem;
+            padding: 0.2rem 0.6rem;
+            border-radius: 20px;
+        }
+
+        .content-grid {
+            display: grid;
+            grid-template-columns: 1fr 320px;
+            gap: 2rem;
+            align-items: start;
+        }
+
+        /* Main card */
+        .main-card {
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 24px rgba(0,0,0,0.05);
+        }
+
+        .listing-address {
+            font-family: 'Crimson Pro', serif;
+            font-size: 2rem;
+            font-weight: 900;
+            color: var(--primary);
+            line-height: 1.15;
+            margin-bottom: 0.5rem;
+        }
+
+        .listing-location {
+            color: var(--muted);
+            font-size: 1rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .price-row {
+            display: flex;
+            align-items: baseline;
+            gap: 1.25rem;
+            flex-wrap: wrap;
+            padding: 1.25rem 0;
+            border-top: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 1.5rem;
+        }
+        .listing-price {
+            font-family: 'Crimson Pro', serif;
+            font-size: 2.2rem;
+            font-weight: 900;
+            color: var(--primary);
+        }
+        .zestimate-label {
+            font-size: 0.85rem;
+            color: var(--muted);
+        }
+        .zestimate-value {
+            font-weight: 600;
+            color: #4b5563;
+            font-size: 0.95rem;
+        }
+
+        .specs-row {
+            display: flex;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 1.5rem;
+        }
+        .spec { text-align: center; }
+        .spec-value { font-family: 'Crimson Pro', serif; font-size: 1.6rem; font-weight: 900; color: var(--primary); }
+        .spec-label { font-size: 0.78rem; color: var(--muted); }
+
+        .section-label {
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            color: var(--muted);
+            margin-bottom: 0.6rem;
+        }
+        .description-text {
+            color: #444;
+            line-height: 1.75;
+            font-size: 0.97rem;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+        .status-active { background: #dcfce7; color: #166534; }
+        .status-under_contract { background: #fef3c7; color: #92400e; }
+        .status-sold { background: #f3f4f6; color: #6b7280; }
+
+        /* Sidebar CTA */
+        .cta-card {
+            background: white;
+            border-radius: 16px;
+            padding: 1.75rem;
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 24px rgba(0,0,0,0.05);
+            position: sticky;
+            top: 80px;
+        }
+        .cta-card h3 {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.4rem;
+            font-weight: 900;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+        .cta-card p {
+            font-size: 0.9rem;
+            color: var(--muted);
+            margin-bottom: 1.25rem;
+            line-height: 1.55;
+        }
+        .btn-cta {
+            display: block;
+            width: 100%;
+            padding: 0.9rem 1.5rem;
+            background: var(--accent);
+            color: white;
+            text-align: center;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 1rem;
+            text-decoration: none;
+            border: none;
+            cursor: pointer;
+            margin-bottom: 0.75rem;
+            transition: opacity 0.15s;
+        }
+        .btn-cta:hover { opacity: 0.88; }
+        .btn-cta-outline {
+            display: block;
+            width: 100%;
+            padding: 0.9rem 1.5rem;
+            background: white;
+            color: var(--primary);
+            text-align: center;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            text-decoration: none;
+            border: 1.5px solid var(--border);
+            cursor: pointer;
+            transition: border-color 0.15s;
+        }
+        .btn-cta-outline:hover { border-color: var(--primary); }
+
+        .skeleton {
+            background: linear-gradient(90deg, #f0ede9 25%, #e8e4df 50%, #f0ede9 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.4s infinite;
+            border-radius: 6px;
+        }
+        @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+        .not-found { text-align: center; padding: 5rem 2rem; color: var(--muted); }
+        .not-found h2 { font-family: 'Crimson Pro', serif; font-size: 2rem; color: var(--primary); margin-bottom: 1rem; }
+
+        @media (max-width: 700px) {
+            .content-grid { grid-template-columns: 1fr; }
+            .cta-card { position: static; }
+            .listing-address { font-size: 1.6rem; }
+        }
+    </style>
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Realtor<span>Finder</span></a>
+    <a href="javascript:history.back()" class="nav-back">← Back</a>
+</nav>
+
+<div class="wrap">
+    <!-- Gallery skeleton -->
+    <div id="galleryWrap" class="gallery skeleton"></div>
+
+    <div class="content-grid">
+        <div id="mainCard" class="main-card">
+            <div class="skeleton" style="height:36px;width:70%;margin-bottom:10px;"></div>
+            <div class="skeleton" style="height:20px;width:40%;margin-bottom:20px;"></div>
+            <div class="skeleton" style="height:60px;width:100%;margin-bottom:20px;"></div>
+            <div class="skeleton" style="height:16px;width:100%;margin-bottom:8px;"></div>
+            <div class="skeleton" style="height:16px;width:80%;"></div>
+        </div>
+        <div id="ctaCard" class="cta-card">
+            <div class="skeleton" style="height:24px;width:80%;margin-bottom:10px;"></div>
+            <div class="skeleton" style="height:16px;width:100%;margin-bottom:6px;"></div>
+            <div class="skeleton" style="height:16px;width:70%;margin-bottom:20px;"></div>
+            <div class="skeleton" style="height:48px;width:100%;border-radius:10px;"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const listingId = window.location.pathname.split('/').pop();
+    let photos = [];
+    let photoIdx = 0;
+
+    async function loadListing() {
+        try {
+            const res = await fetch(`/api/listings/${listingId}/public`);
+            if (!res.ok) { showNotFound(); return; }
+            const l = await res.json();
+            document.title = `${l.address} — RealtorFinder`;
+            renderGallery(l);
+            renderMain(l);
+            renderCta(l);
+        } catch {
+            showNotFound();
+        }
+    }
+
+    function renderGallery(l) {
+        photos = Array.isArray(l.image_urls) ? l.image_urls : [];
+        const wrap = document.getElementById('galleryWrap');
+        wrap.classList.remove('skeleton');
+        if (photos.length === 0) {
+            wrap.innerHTML = '<span class="gallery-placeholder">🏠</span>';
+            return;
+        }
+        wrap.innerHTML = `
+            <img id="galleryImg" src="${esc(photos[0])}" alt="Listing photo">
+            ${photos.length > 1 ? `
+                <button class="gallery-nav prev" onclick="changePhoto(-1)">‹</button>
+                <button class="gallery-nav next" onclick="changePhoto(1)">›</button>
+                <div class="gallery-counter" id="galleryCounter">1 / ${photos.length}</div>
+            ` : ''}
+        `;
+    }
+
+    function changePhoto(dir) {
+        photoIdx = (photoIdx + dir + photos.length) % photos.length;
+        document.getElementById('galleryImg').src = photos[photoIdx];
+        document.getElementById('galleryCounter').textContent = `${photoIdx + 1} / ${photos.length}`;
+    }
+
+    function renderMain(l) {
+        const price = l.price ? '$' + Number(l.price).toLocaleString() : null;
+        const zest  = l.zestimate ? '$' + Number(String(l.zestimate).replace(/[^0-9]/g, '')).toLocaleString() : null;
+        const statusMap = { active: 'Active', under_contract: 'Under Contract', sold: 'Sold' };
+        const statusClass = { active: 'status-active', under_contract: 'status-under_contract', sold: 'status-sold' };
+        const status = l.status || 'active';
+
+        const specs = [
+            l.bedrooms   ? { v: l.bedrooms,   u: 'Beds' }    : null,
+            l.bathrooms  ? { v: l.bathrooms,  u: 'Baths' }   : null,
+            l.sqft       ? { v: Number(l.sqft).toLocaleString(), u: 'Sq Ft' } : null,
+            l.property_type ? { v: l.property_type, u: 'Type' } : null,
+        ].filter(Boolean);
+
+        document.getElementById('mainCard').innerHTML = `
+            <span class="status-badge ${statusClass[status] || 'status-active'}">${statusMap[status] || status}</span>
+            <h1 class="listing-address">${esc(l.address)}</h1>
+            <p class="listing-location">${esc([l.city, l.state, l.zip].filter(Boolean).join(', '))}</p>
+
+            <div class="price-row">
+                ${price ? `<div class="listing-price">${price}</div>` : ''}
+                ${zest ? `<div><div class="zestimate-label">Zestimate</div><div class="zestimate-value">${zest}</div></div>` : ''}
+            </div>
+
+            ${specs.length ? `
+                <div class="specs-row">
+                    ${specs.map(s => `<div class="spec"><div class="spec-value">${esc(String(s.v))}</div><div class="spec-label">${s.u}</div></div>`).join('')}
+                </div>
+            ` : ''}
+
+            ${l.description ? `
+                <div class="section-label">About this home</div>
+                <p class="description-text">${esc(l.description)}</p>
+            ` : ''}
+        `;
+    }
+
+    function renderCta(l) {
+        const isAvailable = !l.status || l.status === 'active';
+        document.getElementById('ctaCard').innerHTML = isAvailable ? `
+            <h3>Are you a realtor?</h3>
+            <p>Submit a proposal to represent this seller. Show them why you're the right agent for this home.</p>
+            <a href="/login?tab=signup&type=realtor" class="btn-cta">Submit a Proposal</a>
+            <a href="/realtors" class="btn-cta-outline">Learn More</a>
+        ` : `
+            <h3>This listing is ${l.status === 'sold' ? 'sold' : 'under contract'}.</h3>
+            <p>Looking to sell your home? List it on RealtorFinder and start receiving proposals from qualified realtors.</p>
+            <a href="/login?tab=signup&type=seller" class="btn-cta">List Your Home</a>
+        `;
+    }
+
+    function showNotFound() {
+        document.getElementById('galleryWrap').style.display = 'none';
+        document.querySelector('.content-grid').innerHTML = `
+            <div class="not-found" style="grid-column:1/-1;">
+                <h2>Listing Not Found</h2>
+                <p>This listing doesn't exist or has been removed.</p>
+            </div>
+        `;
+    }
+
+    function esc(str) {
+        return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    loadListing();
+</script>
+</body>
+</html>

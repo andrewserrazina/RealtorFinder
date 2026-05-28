@@ -833,6 +833,18 @@
         </div>
     </div>
 
+    <!-- Offer Detail Modal -->
+    <div id="offerDetailModal" class="modal">
+        <div class="modal-content" style="max-width:560px;">
+            <span class="modal-close" onclick="closeOfferDetailModal()">&times;</span>
+            <div class="modal-header">
+                <h2 id="offerDetailName"></h2>
+                <p id="offerDetailBrokerage" style="color:#666;"></p>
+            </div>
+            <div id="offerDetailBody"></div>
+        </div>
+    </div>
+
     <script>
         const API_BASE_URL = window.location.origin + '/api';
         let currentUser = null;
@@ -1153,6 +1165,7 @@
                     </div>
                     <div class="listing-actions">
                         <button class="btn btn-primary" onclick="viewOffers(${listing.id})">${listing.offerCount || 0} Offers</button>
+                        <a href="/listing/${listing.id}" target="_blank" class="btn btn-secondary" style="font-size:0.85rem;text-align:center;">View Listing</a>
                         <button class="btn btn-outline" onclick="openEditModal(${listing.id})">Edit</button>
                         ${status !== 'sold' ? `<button class="btn btn-outline" onclick="markListingSold(${listing.id})" style="font-size:0.85rem;">Mark Sold</button>` : ''}
                         <button class="btn btn-outline" onclick="deleteListing(${listing.id})" style="font-size:0.85rem;border-color:#ef4444;color:#ef4444;">Delete</button>
@@ -1196,12 +1209,15 @@
             await loadOffers(listingId);
         }
 
+        let cachedOffers = [];
+
         async function loadOffers(listingId = null) {
             const container = document.getElementById('offersContainer');
             try {
                 const res = await fetch(`${API_BASE_URL}/seller/offers`, { credentials: 'include' });
                 if (!res.ok) throw new Error('Failed to fetch offers');
                 let offers = await res.json();
+                cachedOffers = offers;
 
                 if (listingId) offers = offers.filter(o => o.listing_id === listingId);
 
@@ -1235,13 +1251,11 @@
                             <p style="margin-top:1rem;color:#666;">${offer.offer_details}</p>
                         </div>
                         <div class="offer-actions" style="flex-direction:column;">
+                            <button class="btn btn-primary" onclick="openOfferDetailModal(cachedOffers.find(o=>o.id===${offer.id}))" style="font-size:0.85rem;">View Proposal</button>
                             ${offerStatus === 'pending' ? `
-                                <button class="btn btn-primary" onclick="acceptOffer(${offer.id}, ${offer.listing_id})">Accept</button>
-                                <button class="btn btn-outline" onclick="declineOffer(${offer.id})">Decline</button>
+                                <button class="btn btn-outline" onclick="acceptOffer(${offer.id}, ${offer.listing_id})" style="font-size:0.85rem;">Accept</button>
+                                <button class="btn btn-outline" onclick="declineOffer(${offer.id})" style="font-size:0.85rem;">Decline</button>
                             ` : ''}
-                            <a href="/realtor/${offer.user_id}" target="_blank" class="btn btn-secondary" style="font-size:0.85rem;text-align:center;">View Profile</a>
-                            <a href="mailto:${offer.realtor_email}" class="btn btn-outline" style="font-size:0.85rem;text-align:center;">Email</a>
-                            <a href="tel:${offer.realtor_phone}" class="btn btn-outline" style="font-size:0.85rem;text-align:center;">Call</a>
                         </div>
                     </div>`;
                 }).join('');
@@ -1266,6 +1280,47 @@
                 loadOffers();
                 alert('✅ Offer accepted! The realtor has been notified.');
             } catch { alert('Failed to accept offer. Please try again.'); }
+        }
+
+        // Offer detail modal
+        function openOfferDetailModal(offer) {
+            document.getElementById('offerDetailName').textContent = offer.realtor_name;
+            document.getElementById('offerDetailBrokerage').textContent = offer.brokerage;
+            const fullAddress = `${offer.address}, ${offer.city}, ${offer.state} ${offer.zip}`;
+            const offerStatus = offer.status || 'pending';
+            const statusLabel = { pending: '⏳ Pending', accepted: '✓ Accepted', declined: '✗ Declined' }[offerStatus] || offerStatus;
+            document.getElementById('offerDetailBody').innerHTML = `
+                <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1.5rem;">
+                    <span class="status-badge status-${offerStatus}">${statusLabel}</span>
+                    ${offer.commission ? `<span class="status-badge" style="background:#eff6ff;color:#1e40af;">${offer.commission}% Commission</span>` : ''}
+                </div>
+                <p style="font-size:0.8rem;color:#999;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.25rem;">Property</p>
+                <p style="font-weight:600;margin-bottom:1.25rem;">${esc(fullAddress)}</p>
+                <p style="font-size:0.8rem;color:#999;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.5rem;">Proposal Message</p>
+                <div style="background:#f8f6f3;border-radius:10px;padding:1rem 1.25rem;margin-bottom:1.5rem;line-height:1.7;color:#444;white-space:pre-wrap;">${esc(offer.offer_details)}</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1.5rem;">
+                    <div style="background:#f8f6f3;border-radius:8px;padding:0.75rem 1rem;">
+                        <div style="font-size:0.75rem;color:#999;margin-bottom:0.2rem;">Email</div>
+                        <a href="mailto:${esc(offer.realtor_email)}" style="font-weight:600;color:#d4523e;font-size:0.9rem;text-decoration:none;">${esc(offer.realtor_email)}</a>
+                    </div>
+                    <div style="background:#f8f6f3;border-radius:8px;padding:0.75rem 1rem;">
+                        <div style="font-size:0.75rem;color:#999;margin-bottom:0.2rem;">Phone</div>
+                        <a href="tel:${esc(offer.realtor_phone)}" style="font-weight:600;color:#d4523e;font-size:0.9rem;text-decoration:none;">${esc(offer.realtor_phone)}</a>
+                    </div>
+                </div>
+                <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
+                    ${offerStatus === 'pending' ? `
+                        <button class="btn btn-primary" style="flex:1;" onclick="closeOfferDetailModal();acceptOffer(${offer.id},${offer.listing_id})">Accept Offer</button>
+                        <button class="btn btn-outline" onclick="closeOfferDetailModal();declineOffer(${offer.id})">Decline</button>
+                    ` : ''}
+                    ${offer.user_id ? `<a href="/realtor/${offer.user_id}" target="_blank" class="btn btn-secondary" style="flex:1;text-align:center;">View Profile</a>` : ''}
+                </div>
+            `;
+            document.getElementById('offerDetailModal').classList.add('active');
+        }
+
+        function closeOfferDetailModal() {
+            document.getElementById('offerDetailModal').classList.remove('active');
         }
 
         // Decline an offer
@@ -1413,6 +1468,10 @@
             loadCurrentUser();
             loadDashboard();
         });
+
+        function esc(str) {
+            return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
     </script>
 </body>
 </html>
