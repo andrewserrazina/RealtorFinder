@@ -462,6 +462,20 @@ const emailService = {
         } catch (error) { logSendgridError('Seller weekly digest', error); }
     },
 
+    async sendMessageNotification(recipientEmail, senderName, listingAddress) {
+        const body = `
+            ${h1("You Have a New Message 💬")}
+            ${p(`You have a new message from <strong>${senderName}</strong>${listingAddress ? ` about <strong>${listingAddress}</strong>` : ''}.`)}
+            ${p("Log in to your dashboard to read and reply.")}
+            ${btn(`${BASE_URL}/dashboard/seller`, 'View My Messages')}
+            ${divider()}
+            <p style="color:#999;font-size:13px;margin:0;">The RealtorFinder Team</p>
+        `;
+        try {
+            await send({ to: recipientEmail, subject: `New message from ${senderName} — RealtorFinder`, html: emailWrap('New Message', body) });
+        } catch (error) { logSendgridError('Message notification', error); }
+    },
+
     async sendAccountApprovedEmail(email, firstName, userType) {
         const dashUrl = userType === 'realtor' ? `${BASE_URL}/dashboard/realtor` : `${BASE_URL}/dashboard/seller`;
         const roleLabel = userType === 'realtor' ? 'For Realtors' : 'For Sellers';

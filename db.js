@@ -567,10 +567,13 @@ const db = {
                 (SELECT COUNT(*) FROM users) as total_users,
                 (SELECT COUNT(*) FROM users WHERE user_type = 'seller') as total_sellers,
                 (SELECT COUNT(*) FROM users WHERE user_type = 'realtor') as total_realtors,
+                (SELECT COUNT(*) FROM users WHERE user_type = 'buyer') as total_buyers,
                 (SELECT COUNT(*) FROM listings WHERE deleted_at IS NULL) as total_listings,
                 (SELECT COUNT(*) FROM listings WHERE status = 'active' AND deleted_at IS NULL) as active_listings,
                 (SELECT COUNT(*) FROM offers) as total_offers,
-                (SELECT COUNT(*) FROM waitlist) as total_waitlist
+                (SELECT COUNT(*) FROM messages) as total_messages,
+                (SELECT COUNT(*) FROM waitlist) as total_waitlist,
+                (SELECT COUNT(*) FROM waitlist) as waitlist_count
         `);
         return result.rows[0];
     },

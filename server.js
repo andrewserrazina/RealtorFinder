@@ -1275,6 +1275,27 @@ app.post('/api/admin/send-weekly-digests', requireAdmin, async (req, res) => {
     }
 });
 
+app.get('/api/admin/reviews', requireAdmin, async (req, res) => {
+    try {
+        const { rows } = await pool.query(`
+            SELECT r.id, r.rating, r.body, r.created_at,
+                   r.realtor_id, r.seller_id,
+                   ru.first_name || ' ' || ru.last_name AS realtor_name,
+                   su.first_name || ' ' || su.last_name AS reviewer_name,
+                   l.address AS listing_address
+            FROM realtor_reviews r
+            JOIN users ru ON ru.id = r.realtor_id
+            JOIN users su ON su.id = r.seller_id
+            LEFT JOIN listings l ON l.id = r.listing_id
+            ORDER BY r.created_at DESC
+        `);
+        res.json(rows);
+    } catch (err) {
+        console.error('Admin reviews error:', err);
+        res.status(500).json({ error: 'Failed to fetch reviews' });
+    }
+});
+
 app.delete('/api/admin/listings/:id', requireAdmin, async (req, res) => {
     try {
         const listing = await db.adminDeleteListing(parseInt(req.params.id));
@@ -1987,6 +2008,20 @@ app.get('/api/realtors/:id/reviews', async (req, res) => {
     } catch (err) { res.status(500).json({ error: 'Failed to fetch reviews' }); }
 });
 
+// ===== REALTOR REVIEWS TABLE INIT =====
+pool.query(`
+    CREATE TABLE IF NOT EXISTS realtor_reviews (
+        id SERIAL PRIMARY KEY,
+        realtor_id INTEGER REFERENCES users(id),
+        seller_id INTEGER REFERENCES users(id),
+        listing_id INTEGER REFERENCES listings(id),
+        rating INTEGER NOT NULL CHECK(rating BETWEEN 1 AND 5),
+        body TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE(seller_id, listing_id)
+    )
+`).catch(err => console.error('realtor_reviews table init error:', err.message));
+
 // ===== MESSAGING =====
 
 // Ensure messages table exists
@@ -2094,6 +2129,26 @@ app.post('/api/messages', auth.requireAuth, async (req, res) => {
             ON CONFLICT DO NOTHING
         `, [toUserId, `You have a new message`]).catch(() => {});
 
+        // Fire-and-forget email notification
+        (async () => {
+            try {
+                const [recipientRes, senderRes] = await Promise.all([
+                    pool.query(`SELECT email FROM users WHERE id = $1`, [toUserId]),
+                    pool.query(`SELECT first_name, last_name FROM users WHERE id = $1`, [uid])
+                ]);
+                if (!recipientRes.rows.length) return;
+                const recipientEmail = recipientRes.rows[0].email;
+                const s = senderRes.rows[0] || {};
+                const senderName = [s.first_name, s.last_name].filter(Boolean).join(' ') || 'Someone';
+                let listingAddress = null;
+                if (listingId) {
+                    const lRes = await pool.query(`SELECT address FROM listings WHERE id = $1`, [listingId]);
+                    if (lRes.rows.length) listingAddress = lRes.rows[0].address;
+                }
+                await emailService.sendMessageNotification(recipientEmail, senderName, listingAddress);
+            } catch (_) {}
+        })();
+
         res.status(201).json(rows[0]);
     } catch (err) {
         console.error('send message error:', err);
@@ -2181,7 +2236,7 @@ app.get('/listing/:id', async (req, res) => {
         const id = parseInt(req.params.id);
         if (!id) return res.sendFile(path.join(__dirname, 'public', 'listing-detail.html'));
         const { rows } = await pool.query(
-            `SELECT address, city, state, price, bedrooms, bathrooms, image_urls FROM listings WHERE id = $1 AND status != 'inactive'`,
+            `SELECT address, city, state, zip, price, bedrooms, bathrooms, sqft, property_type, description, image_urls, latitude, longitude FROM listings WHERE id = $1 AND status != 'inactive'`,
             [id]
         );
         if (!rows.length) return res.sendFile(path.join(__dirname, 'public', 'listing-detail.html'));
@@ -2191,9 +2246,33 @@ app.get('/listing/:id', async (req, res) => {
         const desc = [
             l.price ? '$' + Number(l.price).toLocaleString() : null,
             l.bedrooms ? l.bedrooms + ' bed' : null,
-            l.bathrooms ? l.bathrooms + ' bath' : null
+            l.bathrooms ? l.bathrooms + ' bath' : null,
+            l.sqft ? Number(l.sqft).toLocaleString() + ' sqft' : null
         ].filter(Boolean).join(' · ') + ' — View this home on RealtorFinder';
         const img = (Array.isArray(l.image_urls) && l.image_urls[0]) ? l.image_urls[0] : `${base}/og-default.png`;
+        const canonicalUrl = `${base}/listing/${id}`;
+
+        const jsonLd = {
+            '@context': 'https://schema.org',
+            '@type': 'RealEstateListing',
+            name: l.address,
+            description: l.description || desc,
+            url: canonicalUrl,
+            image: Array.isArray(l.image_urls) ? l.image_urls : (l.image_urls ? [l.image_urls] : []),
+            address: {
+                '@type': 'PostalAddress',
+                streetAddress: l.address,
+                addressLocality: l.city,
+                addressRegion: l.state,
+                postalCode: l.zip,
+                addressCountry: 'US'
+            },
+            ...(l.bedrooms ? { numberOfRooms: l.bedrooms } : {}),
+            ...(l.sqft ? { floorSize: { '@type': 'QuantitativeValue', value: l.sqft, unitCode: 'FTK' } } : {}),
+            ...(l.price ? { offers: { '@type': 'Offer', price: String(l.price).replace(/[^0-9]/g, ''), priceCurrency: 'USD' } } : {}),
+            ...(l.latitude && l.longitude ? { geo: { '@type': 'GeoCoordinates', latitude: l.latitude, longitude: l.longitude } } : {})
+        };
+
         const fs = require('fs');
         let html = fs.readFileSync(path.join(__dirname, 'public', 'listing-detail.html'), 'utf8');
         html = html
@@ -2202,10 +2281,11 @@ app.get('/listing/:id', async (req, res) => {
             .replace(/(<meta property="og:title" content=")[^"]*(")/i, `$1${title}$2`)
             .replace(/(<meta property="og:description" content=")[^"]*(")/i, `$1${desc}$2`)
             .replace(/(<meta property="og:image" content=")[^"]*(")/i, `$1${img}$2`)
-            .replace(/(<meta property="og:url" content=")[^"]*(")/i, `$1${base}/listing/${id}$2`)
+            .replace(/(<meta property="og:url" content=")[^"]*(")/i, `$1${canonicalUrl}$2`)
             .replace(/(<meta name="twitter:title" content=")[^"]*(")/i, `$1${title}$2`)
             .replace(/(<meta name="twitter:description" content=")[^"]*(")/i, `$1${desc}$2`)
-            .replace(/(<meta name="twitter:image" content=")[^"]*(")/i, `$1${img}$2`);
+            .replace(/(<meta name="twitter:image" content=")[^"]*(")/i, `$1${img}$2`)
+            .replace('</head>', `<link rel="canonical" href="${canonicalUrl}"><script type="application/ld+json">${JSON.stringify(jsonLd)}</script></head>`);
         res.send(html);
     } catch (err) {
         console.error('Listing OG SSR error:', err);
@@ -2299,6 +2379,9 @@ app.get('/privacy', (req, res) => {
 });
 app.get('/terms', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'terms.html'));
+});
+app.get('/features', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'features.html'));
 });
 app.get('/about', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'about.html'));
