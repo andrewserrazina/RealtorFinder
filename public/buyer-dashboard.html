@@ -625,6 +625,57 @@
             to   { transform: translateX(0);   opacity: 1; }
         }
 
+        /* Notification Bell */
+        .notif-wrapper { position: relative; }
+        .notif-bell { background: none; border: 1px solid var(--border); border-radius: 8px; padding: 0.45rem 0.65rem; cursor: pointer; font-size: 1.1rem; position: relative; transition: background 0.2s; line-height: 1; }
+        .notif-bell:hover { background: var(--soft-accent); }
+        .notif-badge { position: absolute; top: -6px; right: -6px; background: var(--accent); color: white; border-radius: 50%; font-size: 0.65rem; font-weight: 700; width: 18px; height: 18px; display: none; align-items: center; justify-content: center; }
+        .notif-dropdown { position: absolute; top: calc(100% + 8px); right: 0; background: white; border: 1px solid var(--border); border-radius: 12px; width: 320px; max-height: 400px; overflow-y: auto; box-shadow: 0 8px 30px rgba(0,0,0,0.12); z-index: 500; }
+
+        /* Saved listings */
+        .saved-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; }
+        .saved-card { background: white; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; transition: box-shadow 0.2s; }
+        .saved-card:hover { box-shadow: 0 8px 30px rgba(0,0,0,0.08); }
+        .saved-card-img { height: 160px; background: var(--soft-accent); background-size: cover; background-position: center; }
+        .saved-card-body { padding: 1.25rem; }
+        .saved-card-price { font-family: 'Crimson Pro', serif; font-size: 1.5rem; font-weight: 700; margin-bottom: 0.25rem; }
+        .saved-card-addr { font-size: 0.9rem; color: #666; margin-bottom: 0.75rem; }
+        .saved-card-meta { display: flex; gap: 1rem; font-size: 0.85rem; color: #888; }
+
+        /* Browse listings */
+        .browse-filters { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 2rem; padding: 1.25rem; background: white; border: 1px solid var(--border); border-radius: 12px; align-items: flex-end; }
+        .browse-filters .fg { display: flex; flex-direction: column; gap: 0.35rem; flex: 1; min-width: 130px; }
+        .browse-filters label { font-size: 0.8rem; font-weight: 600; color: #666; text-transform: uppercase; letter-spacing: 0.5px; }
+        .browse-filters input, .browse-filters select { padding: 0.6rem 0.75rem; border: 1px solid var(--border); border-radius: 8px; font-family: inherit; font-size: 0.9rem; outline: none; }
+        .browse-filters input:focus, .browse-filters select:focus { border-color: var(--accent); }
+        .browse-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; }
+        .browse-card { background: white; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; transition: box-shadow 0.2s; cursor: pointer; }
+        .browse-card:hover { box-shadow: 0 8px 30px rgba(0,0,0,0.08); }
+        .browse-card-img { height: 160px; background: var(--soft-accent); background-size: cover; background-position: center; }
+        .browse-card-body { padding: 1.25rem; }
+        .browse-card-price { font-family: 'Crimson Pro', serif; font-size: 1.5rem; font-weight: 700; margin-bottom: 0.25rem; }
+        .browse-card-addr { font-size: 0.9rem; color: #666; margin-bottom: 0.75rem; }
+        .browse-card-meta { display: flex; gap: 1rem; font-size: 0.85rem; color: #888; }
+
+        /* Realtor comparison */
+        .compare-bar { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 2px solid var(--accent); padding: 0.875rem 2rem; display: flex; align-items: center; gap: 1.5rem; z-index: 200; box-shadow: 0 -4px 20px rgba(0,0,0,0.1); transition: transform 0.3s; }
+        .compare-bar.hidden { transform: translateY(100%); }
+        .compare-bar-label { font-weight: 600; font-size: 0.9rem; color: var(--ink); white-space: nowrap; }
+        .compare-slots { display: flex; gap: 0.75rem; flex: 1; }
+        .compare-slot { background: var(--soft-accent); border: 2px dashed var(--border); border-radius: 8px; padding: 0.5rem 1rem; font-size: 0.85rem; min-width: 130px; display: flex; align-items: center; gap: 0.5rem; }
+        .compare-slot.filled { border-style: solid; border-color: var(--accent); background: #fdf4f2; }
+        .compare-slot .remove-btn { background: none; border: none; cursor: pointer; color: #aaa; font-size: 1rem; padding: 0; line-height: 1; margin-left: auto; }
+        .compare-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 600; display: none; align-items: flex-start; justify-content: center; padding: 3rem 1rem; overflow-y: auto; }
+        .compare-modal.active { display: flex; }
+        .compare-modal-inner { background: white; border-radius: 16px; padding: 2.5rem; width: 100%; max-width: 900px; position: relative; }
+        .compare-table { display: grid; gap: 0; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-top: 1.5rem; }
+        .compare-row { display: grid; border-bottom: 1px solid var(--border); }
+        .compare-row:last-child { border-bottom: none; }
+        .compare-cell { padding: 0.875rem 1.25rem; border-right: 1px solid var(--border); font-size: 0.9rem; }
+        .compare-cell:last-child { border-right: none; }
+        .compare-cell.label { background: var(--soft-accent); font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; color: #666; }
+        .compare-cell.header { background: var(--ink); color: white; font-weight: 700; font-size: 1rem; font-family: 'Crimson Pro', serif; }
+
         /* Responsive */
         @media (max-width: 1024px) {
             .dashboard-layout {
@@ -644,6 +695,11 @@
             .response-actions {
                 flex-direction: row;
                 min-width: unset;
+                flex-wrap: wrap;
+            }
+
+            .saved-grid, .browse-grid {
+                grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
             }
         }
 
@@ -699,6 +755,38 @@
             .request-actions {
                 flex-direction: column;
             }
+
+            .saved-grid, .browse-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .browse-filters {
+                flex-direction: column;
+            }
+
+            .browse-filters .fg {
+                min-width: unset;
+            }
+
+            .compare-bar {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.75rem;
+                padding: 0.875rem 1rem;
+            }
+
+            .compare-slots {
+                flex-wrap: wrap;
+            }
+
+            .notif-dropdown {
+                width: 280px;
+                right: -60px;
+            }
+
+            .response-actions {
+                gap: 0.5rem;
+            }
         }
     </style>
 </head>
@@ -708,6 +796,18 @@
             <div class="logo">Realtor<span>Finder</span></div>
             <div class="user-info">
                 <span id="userName">Loading...</span>
+                <div class="notif-wrapper">
+                    <button class="notif-bell" id="notifBell" onclick="toggleNotifDropdown()" title="Notifications">🔔
+                        <span class="notif-badge" id="notifBadge">0</span>
+                    </button>
+                    <div class="notif-dropdown" id="notifDropdown" style="display:none;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;padding:1rem 1.25rem 0.75rem;border-bottom:1px solid var(--border);font-weight:600;font-size:0.95rem;">
+                            <span>Notifications</span>
+                            <button onclick="markAllNotifRead()" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:0.8rem;font-family:inherit;">Mark all read</button>
+                        </div>
+                        <div id="notifList"><div style="padding:2rem;text-align:center;color:#aaa;font-size:0.9rem;">No notifications yet</div></div>
+                    </div>
+                </div>
                 <div class="user-avatar" id="userAvatar">B</div>
                 <button onclick="logout()" class="btn btn-secondary" style="margin-left: 1rem; padding: 0.5rem 1rem;">Log Out</button>
             </div>
@@ -731,6 +831,15 @@
                         <span class="nav-icon">👥</span>
                         <span>Agent Responses</span>
                         <span class="badge" id="responseCount">0</span>
+                    </div>
+                    <div class="nav-item" data-view="browse">
+                        <span class="nav-icon">🏠</span>
+                        <span>Browse Listings</span>
+                    </div>
+                    <div class="nav-item" data-view="saved">
+                        <span class="nav-icon">🔖</span>
+                        <span>Saved</span>
+                        <span class="badge" id="savedCount" style="display:none;">0</span>
                     </div>
                 </div>
             </nav>
@@ -778,7 +887,67 @@
                     <h2 class="page-title">Realtors Interested in Helping You</h2>
                     <p class="page-subtitle">Licensed agents who have reviewed your request and want to represent you</p>
                 </div>
+                <div id="compareBanner" style="display:none;background:#fdf4f2;border:1px solid var(--accent);border-radius:10px;padding:0.875rem 1.25rem;margin-bottom:1.5rem;align-items:center;gap:1rem;flex-wrap:wrap;">
+                    <span style="font-size:0.9rem;font-weight:600;">⚖️ <span id="compareCount">0</span> selected for comparison</span>
+                    <button class="btn btn-primary" onclick="openCompareModal()" style="padding:0.5rem 1.25rem;font-size:0.875rem;">Compare Now</button>
+                    <button class="btn btn-outline" onclick="clearCompare()" style="padding:0.5rem 1rem;font-size:0.875rem;">Clear</button>
+                </div>
                 <div id="responsesContainer"></div>
+            </section>
+
+            <!-- Browse Listings View -->
+            <section id="browse-view" class="view-section">
+                <div class="page-header">
+                    <h1 class="page-title">Browse Listings</h1>
+                    <p class="page-subtitle">Explore homes currently listed on RealtorFinder</p>
+                </div>
+                <div class="browse-filters">
+                    <div class="fg">
+                        <label>City</label>
+                        <input type="text" id="bFilterCity" placeholder="Any city">
+                    </div>
+                    <div class="fg">
+                        <label>Type</label>
+                        <select id="bFilterType">
+                            <option value="">All Types</option>
+                            <option value="Single Family">Single Family</option>
+                            <option value="Condo">Condo</option>
+                            <option value="Townhouse">Townhouse</option>
+                            <option value="Multi-Family">Multi-Family</option>
+                        </select>
+                    </div>
+                    <div class="fg">
+                        <label>Min Price</label>
+                        <input type="number" id="bFilterMinPrice" placeholder="No min" step="50000">
+                    </div>
+                    <div class="fg">
+                        <label>Max Price</label>
+                        <input type="number" id="bFilterMaxPrice" placeholder="No max" step="50000">
+                    </div>
+                    <div class="fg">
+                        <label>Min Beds</label>
+                        <select id="bFilterBeds">
+                            <option value="">Any</option>
+                            <option value="2">2+</option>
+                            <option value="3">3+</option>
+                            <option value="4">4+</option>
+                        </select>
+                    </div>
+                    <div style="display:flex;gap:0.5rem;align-items:flex-end;">
+                        <button class="btn btn-primary" onclick="applyBrowseFilters()" style="padding:0.6rem 1.25rem;font-size:0.9rem;">Filter</button>
+                        <button class="btn btn-outline" onclick="clearBrowseFilters()" style="padding:0.6rem 1rem;font-size:0.9rem;">Clear</button>
+                    </div>
+                </div>
+                <div class="browse-grid" id="browseGrid"><div class="empty-state"><div class="empty-state-icon">🏠</div><h3>Loading listings…</h3></div></div>
+            </section>
+
+            <!-- Saved Listings View -->
+            <section id="saved-view" class="view-section">
+                <div class="page-header">
+                    <h1 class="page-title">Saved Listings</h1>
+                    <p class="page-subtitle">Homes you've bookmarked for later</p>
+                </div>
+                <div class="saved-grid" id="savedGrid"><div class="empty-state"><div class="empty-state-icon">🔖</div><h3>No saved listings yet</h3><p>Browse listings and bookmark ones you like.</p></div></div>
             </section>
         </main>
     </div>
@@ -856,16 +1025,7 @@
             window.location.href = '/login';
         }
 
-        // ─── Navigation ──────────────────────────────────────────────────────────
-        document.querySelectorAll('.nav-item[data-view]').forEach(item => {
-            item.addEventListener('click', () => {
-                const view = item.dataset.view;
-                document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-                item.classList.add('active');
-                document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
-                document.getElementById(`${view}-view`).classList.add('active');
-            });
-        });
+        // Navigation handled in DOMContentLoaded block below
 
         // ─── API Calls ────────────────────────────────────────────────────────────
         async function loadBuyerRequest() {
@@ -1104,10 +1264,11 @@
             container.innerHTML = `<div class="responses-list">${responses.map(r => buildResponseCard(r)).join('')}</div>`;
         }
 
-        function buildResponseCard(r) {
+        function buildResponseCard(r, showCompare = false) {
             const metaParts = [];
             if (r.yearsExperience != null) metaParts.push(`<span>🏆 ${r.yearsExperience} yrs experience</span>`);
             if (r.serviceAreas) metaParts.push(`<span>📍 ${r.serviceAreas}</span>`);
+            const rData = encodeURIComponent(JSON.stringify(r));
 
             return `
                 <div class="response-card">
@@ -1120,6 +1281,8 @@
                     <div class="response-actions">
                         ${r.email || r.realtorEmail ? `<a href="mailto:${r.email || r.realtorEmail}" class="btn btn-primary" style="font-size:0.875rem;padding:0.6rem 1rem;">Contact</a>` : ''}
                         ${r.phone || r.realtorPhone ? `<a href="tel:${r.phone || r.realtorPhone}" class="btn btn-outline" style="font-size:0.875rem;padding:0.6rem 1rem;">Call</a>` : ''}
+                        ${r.user_id ? `<a href="/realtor/${r.user_id}" target="_blank" class="btn btn-outline" style="font-size:0.875rem;padding:0.6rem 1rem;">Profile</a>` : ''}
+                        <button class="btn btn-secondary" style="font-size:0.8rem;padding:0.5rem 0.75rem;" onclick='addToCompare(${JSON.stringify(r)})'>⚖️ Compare</button>
                     </div>
                 </div>
             `;
@@ -1174,6 +1337,8 @@
             document.querySelector(`[data-view="${view}"]`).classList.add('active');
             document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
             document.getElementById(`${view}-view`).classList.add('active');
+            if (view === 'browse') loadBrowseListings();
+            if (view === 'saved') loadSavedListings();
         }
 
         // ─── Form Handlers ─────────────────────────────────────────────────────────
@@ -1238,7 +1403,256 @@
         document.addEventListener('DOMContentLoaded', async () => {
             await loadCurrentUser();
             await loadDashboard();
+            loadNotifications();
+            setInterval(loadNotifications, 60000);
         });
+
+        // ─── Nav switching ────────────────────────────────────────────────────────
+        document.querySelectorAll('.nav-item[data-view]').forEach(item => {
+            item.addEventListener('click', () => {
+                const view = item.dataset.view;
+                document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+                item.classList.add('active');
+                document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
+                document.getElementById(`${view}-view`).classList.add('active');
+                if (view === 'browse') loadBrowseListings();
+                if (view === 'saved') loadSavedListings();
+            });
+        });
+
+        // ─── Notifications ────────────────────────────────────────────────────────
+        let notifOpen = false;
+        async function loadNotifications() {
+            try {
+                const res = await fetch(`${API_BASE_URL}/notifications`, { credentials: 'include' });
+                if (!res.ok) return;
+                const { notifications, unread } = await res.json();
+                const badge = document.getElementById('notifBadge');
+                if (unread > 0) { badge.textContent = unread > 9 ? '9+' : unread; badge.style.display = 'flex'; }
+                else { badge.style.display = 'none'; }
+                const list = document.getElementById('notifList');
+                if (!notifications.length) { list.innerHTML = '<div style="padding:2rem;text-align:center;color:#aaa;font-size:0.9rem;">No notifications yet</div>'; return; }
+                list.innerHTML = notifications.map(n => `
+                    <div onclick="clickNotif(${n.id})" style="padding:0.85rem 1.25rem;border-bottom:1px solid var(--border);cursor:pointer;background:${n.read_at ? 'white' : '#fdf8f6'};">
+                        <div style="font-weight:600;font-size:0.88rem;">${esc2(n.title)}</div>
+                        ${n.body ? `<div style="font-size:0.82rem;color:#666;line-height:1.4;">${esc2(n.body)}</div>` : ''}
+                        <div style="font-size:0.75rem;color:#aaa;margin-top:0.2rem;">${timeAgo2(n.created_at)}</div>
+                    </div>
+                `).join('');
+            } catch(e) {}
+        }
+        function toggleNotifDropdown() {
+            const dd = document.getElementById('notifDropdown');
+            notifOpen = !notifOpen;
+            dd.style.display = notifOpen ? 'block' : 'none';
+        }
+        document.addEventListener('click', e => {
+            const wrapper = document.querySelector('.notif-wrapper');
+            if (wrapper && !wrapper.contains(e.target) && notifOpen) {
+                notifOpen = false;
+                document.getElementById('notifDropdown').style.display = 'none';
+            }
+        });
+        async function markAllNotifRead() {
+            await fetch(`${API_BASE_URL}/notifications/read-all`, { method: 'PUT', credentials: 'include' });
+            loadNotifications();
+        }
+        async function clickNotif(id) {
+            await fetch(`${API_BASE_URL}/notifications/${id}/read`, { method: 'PUT', credentials: 'include' });
+            loadNotifications();
+        }
+        function timeAgo2(dateStr) {
+            const diff = Date.now() - new Date(dateStr);
+            const m = Math.floor(diff / 60000);
+            if (m < 1) return 'just now';
+            if (m < 60) return `${m}m ago`;
+            const h = Math.floor(m / 60);
+            if (h < 24) return `${h}h ago`;
+            return `${Math.floor(h / 24)}d ago`;
+        }
+        function esc2(str) {
+            return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+
+        // ─── Browse Listings ──────────────────────────────────────────────────────
+        let allBrowseListings = [];
+        async function loadBrowseListings() {
+            if (allBrowseListings.length) { renderBrowse(allBrowseListings); return; }
+            try {
+                const res = await fetch(`${API_BASE_URL}/listings`, { credentials: 'include' });
+                if (!res.ok) throw new Error();
+                allBrowseListings = await res.json();
+                renderBrowse(allBrowseListings);
+            } catch(e) {
+                document.getElementById('browseGrid').innerHTML = '<div class="empty-state"><h3>Failed to load listings</h3></div>';
+            }
+        }
+        function applyBrowseFilters() {
+            const city = document.getElementById('bFilterCity').value.trim().toLowerCase();
+            const type = document.getElementById('bFilterType').value;
+            const minP = parseFloat(document.getElementById('bFilterMinPrice').value) || 0;
+            const maxP = parseFloat(document.getElementById('bFilterMaxPrice').value) || Infinity;
+            const beds = parseInt(document.getElementById('bFilterBeds').value) || 0;
+            const filtered = allBrowseListings.filter(l =>
+                (!city || (l.city || '').toLowerCase().includes(city)) &&
+                (!type || l.property_type === type) &&
+                (l.price >= minP) &&
+                (l.price <= maxP) &&
+                (!beds || (l.bedrooms || 0) >= beds)
+            );
+            renderBrowse(filtered);
+        }
+        function clearBrowseFilters() {
+            ['bFilterCity','bFilterType','bFilterMinPrice','bFilterMaxPrice','bFilterBeds'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = '';
+            });
+            renderBrowse(allBrowseListings);
+        }
+        function renderBrowse(listings) {
+            const grid = document.getElementById('browseGrid');
+            if (!listings.length) {
+                grid.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🏠</div><h3>No listings match your filters</h3></div>';
+                return;
+            }
+            grid.innerHTML = listings.map(l => {
+                const img = l.image_urls && l.image_urls.length ? l.image_urls[0] : '';
+                return `<div class="browse-card" onclick="window.open('/listing/${l.id}','_blank')">
+                    <div class="browse-card-img" style="${img ? `background-image:url('${img}')` : 'background:#e8ded8;'}"></div>
+                    <div class="browse-card-body">
+                        <div class="browse-card-price">$${Number(l.price).toLocaleString()}</div>
+                        <div class="browse-card-addr">${esc2(l.address)}, ${esc2(l.city)}, ${esc2(l.state)}</div>
+                        <div class="browse-card-meta">
+                            ${l.bedrooms ? `<span>🛏 ${l.bedrooms}bd</span>` : ''}
+                            ${l.bathrooms ? `<span>🚿 ${l.bathrooms}ba</span>` : ''}
+                            ${l.sqft ? `<span>📐 ${Number(l.sqft).toLocaleString()} sqft</span>` : ''}
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        // ─── Saved Listings ───────────────────────────────────────────────────────
+        async function loadSavedListings() {
+            const grid = document.getElementById('savedGrid');
+            grid.innerHTML = '<div class="empty-state"><div class="empty-state-icon">⏳</div><h3>Loading…</h3></div>';
+            try {
+                const res = await fetch(`${API_BASE_URL}/saved-listings`, { credentials: 'include' });
+                if (!res.ok) throw new Error();
+                const listings = await res.json();
+                const badge = document.getElementById('savedCount');
+                if (listings.length) { badge.textContent = listings.length; badge.style.display = 'flex'; }
+                else badge.style.display = 'none';
+                if (!listings.length) {
+                    grid.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🔖</div><h3>No saved listings yet</h3><p>Browse listings and bookmark ones you like.</p><button class="btn btn-primary" style="margin-top:1rem;" onclick="switchToView(\'browse\')">Browse Listings</button></div>';
+                    return;
+                }
+                grid.innerHTML = listings.map(l => {
+                    const img = l.image_urls && l.image_urls.length ? l.image_urls[0] : '';
+                    return `<div class="saved-card">
+                        <div class="saved-card-img" style="${img ? `background-image:url('${img}')` : 'background:#e8ded8;'}"></div>
+                        <div class="saved-card-body">
+                            <div class="saved-card-price">$${Number(l.price).toLocaleString()}</div>
+                            <div class="saved-card-addr">${esc2(l.address)}, ${esc2(l.city)}, ${esc2(l.state)}</div>
+                            <div class="saved-card-meta">
+                                ${l.bedrooms ? `<span>🛏 ${l.bedrooms}bd</span>` : ''}
+                                ${l.bathrooms ? `<span>🚿 ${l.bathrooms}ba</span>` : ''}
+                                ${l.sqft ? `<span>📐 ${Number(l.sqft).toLocaleString()} sqft</span>` : ''}
+                            </div>
+                            <div style="margin-top:0.75rem;display:flex;gap:0.5rem;">
+                                <a href="/listing/${l.id}" target="_blank" class="btn btn-primary" style="flex:1;text-align:center;font-size:0.85rem;padding:0.5rem;">View</a>
+                                <button class="btn btn-outline" onclick="unsaveListing(${l.id},this)" style="font-size:0.85rem;padding:0.5rem 0.75rem;">🗑</button>
+                            </div>
+                        </div>
+                    </div>`;
+                }).join('');
+            } catch(e) {
+                grid.innerHTML = '<div class="empty-state"><h3>Failed to load saved listings</h3></div>';
+            }
+        }
+        async function unsaveListing(id, btn) {
+            btn.disabled = true;
+            try {
+                await fetch(`${API_BASE_URL}/saved-listings/${id}`, { method: 'DELETE', credentials: 'include' });
+                loadSavedListings();
+            } catch(e) { btn.disabled = false; }
+        }
+
+        // ─── Realtor Comparison ───────────────────────────────────────────────────
+        let compareList = [];
+        function addToCompare(r) {
+            if (compareList.find(c => c.user_id === r.user_id)) return;
+            if (compareList.length >= 3) { showToast('Max 3 realtors can be compared at once', 'error'); return; }
+            compareList.push(r);
+            updateCompareBanner();
+        }
+        function removeFromCompare(userId) {
+            compareList = compareList.filter(c => c.user_id !== userId);
+            updateCompareBanner();
+        }
+        function clearCompare() {
+            compareList = [];
+            updateCompareBanner();
+        }
+        function updateCompareBanner() {
+            const banner = document.getElementById('compareBanner');
+            if (!banner) return;
+            const count = document.getElementById('compareCount');
+            if (compareList.length > 0) {
+                banner.style.display = 'flex';
+                if (count) count.textContent = compareList.length;
+            } else {
+                banner.style.display = 'none';
+            }
+        }
+        function openCompareModal() {
+            if (compareList.length < 2) { showToast('Select at least 2 realtors to compare', 'error'); return; }
+            const modal = document.getElementById('compareModal');
+            const colCount = compareList.length + 1;
+            const rows = [
+                { label: 'Name', key: r => `${r.realtorName || r.realtor_name || 'Agent'}` },
+                { label: 'Brokerage', key: r => r.brokerage || '—' },
+                { label: 'Experience', key: r => r.yearsExperience != null ? `${r.yearsExperience} years` : '—' },
+                { label: 'Service Areas', key: r => r.serviceAreas || '—' },
+                { label: 'Message', key: r => r.message ? `"${r.message.slice(0,120)}${r.message.length > 120 ? '…' : ''}"` : '—' },
+                { label: 'Contact', key: r => r.email || r.realtorEmail ? `<a href="mailto:${r.email || r.realtorEmail}" style="color:var(--accent);">${r.email || r.realtorEmail}</a>` : '—' },
+                { label: 'Profile', key: r => r.user_id ? `<a href="/realtor/${r.user_id}" target="_blank" class="btn btn-outline" style="font-size:0.8rem;padding:0.35rem 0.75rem;">View →</a>` : '—' }
+            ];
+            document.getElementById('compareBody').innerHTML = `
+                <div class="compare-table" style="grid-template-columns: repeat(${colCount}, 1fr);">
+                    <div class="compare-row" style="grid-template-columns: repeat(${colCount}, 1fr);">
+                        <div class="compare-cell label"></div>
+                        ${compareList.map(r => `<div class="compare-cell header">${esc2(r.realtorName || r.realtor_name || 'Agent')}</div>`).join('')}
+                    </div>
+                    ${rows.map(row => `
+                        <div class="compare-row" style="grid-template-columns: repeat(${colCount}, 1fr);">
+                            <div class="compare-cell label">${row.label}</div>
+                            ${compareList.map(r => `<div class="compare-cell">${row.key(r)}</div>`).join('')}
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            modal.classList.add('active');
+        }
+        function closeCompareModal() {
+            document.getElementById('compareModal').classList.remove('active');
+        }
     </script>
+
+    <!-- Compare Modal -->
+    <div id="compareModal" class="compare-modal" onclick="if(event.target===this)closeCompareModal()">
+        <div class="compare-modal-inner">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
+                <h2 style="font-family:'Crimson Pro',serif;font-size:2rem;">Compare Realtors</h2>
+                <button onclick="closeCompareModal()" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:#aaa;">&times;</button>
+            </div>
+            <p style="color:#666;margin-bottom:0.5rem;">Side-by-side comparison of selected agents</p>
+            <div id="compareBody"></div>
+            <div style="margin-top:1.5rem;display:flex;gap:1rem;">
+                <button class="btn btn-outline" onclick="clearCompare();closeCompareModal()">Clear & Close</button>
+                <button class="btn btn-secondary" onclick="closeCompareModal()">Close</button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

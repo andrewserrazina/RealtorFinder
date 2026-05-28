@@ -816,7 +816,14 @@ app.post('/api/listings/:id/offers', auth.requireAuth, async (req, res) => {
         // Send email notifications
         await emailService.sendOfferNotification(listing, newOffer);
         await emailService.sendOfferConfirmation(listing, newOffer);
-        
+
+        // In-app notification for the seller
+        pool.query(
+            `INSERT INTO notifications (user_id, type, title, body, link)
+             VALUES ($1, 'offer', 'New Realtor Proposal', $2, '/dashboard/seller')`,
+            [listing.user_id, `${realtorName} from ${brokerage} submitted a proposal on ${listing.address}`]
+        ).catch(() => {});
+
         res.status(201).json({
             message: 'Offer submitted successfully',
             offer: newOffer
@@ -853,11 +860,19 @@ app.put('/api/offers/:id/status', auth.requireAuth, async (req, res) => {
             emailService.sendOfferAcceptedEmail(offerRow, offerRow).catch(err =>
                 console.error('Offer accepted email failed:', err.message)
             );
+            if (offerRow.user_id) {
+                pool.query(`INSERT INTO notifications (user_id, type, title, body, link) VALUES ($1,'offer_accepted','Proposal Accepted!',$2,'/dashboard/realtor')`,
+                    [offerRow.user_id, `Your proposal on ${offerRow.address} was accepted!`]).catch(() => {});
+            }
             // Notify each losing realtor
             declinedOffers.forEach(declined => {
                 emailService.sendOfferDeclinedEmail(declined, offerRow).catch(err =>
                     console.error('Offer declined email failed:', err.message)
                 );
+                if (declined.user_id) {
+                    pool.query(`INSERT INTO notifications (user_id, type, title, body, link) VALUES ($1,'offer_declined','Proposal Declined',$2,'/dashboard/realtor')`,
+                        [declined.user_id, `Your proposal on ${offerRow.address} was not selected.`]).catch(() => {});
+                }
             });
             return res.json({ success: true, status: 'accepted' });
         }
@@ -867,6 +882,10 @@ app.put('/api/offers/:id/status', auth.requireAuth, async (req, res) => {
         emailService.sendOfferDeclinedEmail(offerRow, offerRow).catch(err =>
             console.error('Offer declined email failed:', err.message)
         );
+        if (offerRow.user_id) {
+            pool.query(`INSERT INTO notifications (user_id, type, title, body, link) VALUES ($1,'offer_declined','Proposal Declined',$2,'/dashboard/realtor')`,
+                [offerRow.user_id, `Your proposal on ${offerRow.address} was not selected.`]).catch(() => {});
+        }
         res.json({ success: true, status: 'declined' });
     } catch (error) {
         console.error('Error updating offer status:', error);
@@ -1962,6 +1981,182 @@ app.get('/api/realtors/:id/reviews', async (req, res) => {
         const avg = rows.length ? (rows.reduce((s, r) => s + r.rating, 0) / rows.length).toFixed(1) : null;
         res.json({ reviews: rows, avg, count: rows.length });
     } catch (err) { res.status(500).json({ error: 'Failed to fetch reviews' }); }
+});
+
+// ===== MESSAGING =====
+
+// Ensure messages table exists
+pool.query(`
+    CREATE TABLE IF NOT EXISTS messages (
+        id SERIAL PRIMARY KEY,
+        from_user_id INTEGER NOT NULL REFERENCES users(id),
+        to_user_id INTEGER NOT NULL REFERENCES users(id),
+        listing_id INTEGER REFERENCES listings(id),
+        body TEXT NOT NULL,
+        read_at TIMESTAMPTZ,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+`).catch(err => console.error('messages table init error:', err.message));
+
+// List conversations for current user
+app.get('/api/messages/conversations', auth.requireAuth, async (req, res) => {
+    try {
+        const uid = req.session.userId;
+        const { rows } = await pool.query(`
+            SELECT DISTINCT ON (conv_key)
+                conv_key,
+                other_user_id,
+                u.first_name, u.last_name, u.user_type,
+                listing_id,
+                l.address AS listing_address,
+                last_body,
+                last_at,
+                unread_count
+            FROM (
+                SELECT
+                    LEAST(from_user_id, to_user_id)::text || '-' || GREATEST(from_user_id, to_user_id)::text || '-' || COALESCE(listing_id::text,'0') AS conv_key,
+                    CASE WHEN from_user_id = $1 THEN to_user_id ELSE from_user_id END AS other_user_id,
+                    listing_id,
+                    body AS last_body,
+                    created_at AS last_at,
+                    (SELECT COUNT(*) FROM messages m2
+                     WHERE m2.to_user_id = $1
+                       AND m2.from_user_id = CASE WHEN messages.from_user_id = $1 THEN messages.to_user_id ELSE messages.from_user_id END
+                       AND COALESCE(m2.listing_id,0) = COALESCE(messages.listing_id,0)
+                       AND m2.read_at IS NULL) AS unread_count
+                FROM messages
+                WHERE from_user_id = $1 OR to_user_id = $1
+                ORDER BY created_at DESC
+            ) sub
+            JOIN users u ON u.id = sub.other_user_id
+            LEFT JOIN listings l ON l.id = sub.listing_id
+            ORDER BY conv_key, last_at DESC
+        `, [uid]);
+        res.json(rows);
+    } catch (err) {
+        console.error('conversations error:', err);
+        res.status(500).json({ error: 'Failed to load conversations' });
+    }
+});
+
+// Get messages in a conversation thread
+app.get('/api/messages/thread', auth.requireAuth, async (req, res) => {
+    try {
+        const uid = req.session.userId;
+        const withUser = parseInt(req.query.with);
+        const listingId = req.query.listing ? parseInt(req.query.listing) : null;
+        if (!withUser) return res.status(400).json({ error: 'with parameter required' });
+
+        const { rows } = await pool.query(`
+            SELECT m.id, m.from_user_id, m.to_user_id, m.body, m.read_at, m.created_at,
+                   u.first_name, u.last_name
+            FROM messages m
+            JOIN users u ON u.id = m.from_user_id
+            WHERE ((m.from_user_id = $1 AND m.to_user_id = $2) OR (m.from_user_id = $2 AND m.to_user_id = $1))
+              AND ($3::int IS NULL OR m.listing_id = $3)
+            ORDER BY m.created_at ASC
+        `, [uid, withUser, listingId]);
+
+        // Mark received messages as read
+        await pool.query(`
+            UPDATE messages SET read_at = NOW()
+            WHERE to_user_id = $1 AND from_user_id = $2
+              AND ($3::int IS NULL OR listing_id = $3) AND read_at IS NULL
+        `, [uid, withUser, listingId]);
+
+        res.json(rows);
+    } catch (err) {
+        console.error('thread error:', err);
+        res.status(500).json({ error: 'Failed to load messages' });
+    }
+});
+
+// Send a message
+app.post('/api/messages', auth.requireAuth, async (req, res) => {
+    try {
+        const uid = req.session.userId;
+        const { toUserId, listingId, body } = req.body;
+        if (!toUserId || !body || !body.trim()) return res.status(400).json({ error: 'toUserId and body required' });
+
+        const { rows } = await pool.query(`
+            INSERT INTO messages (from_user_id, to_user_id, listing_id, body)
+            VALUES ($1, $2, $3, $4) RETURNING *
+        `, [uid, toUserId, listingId || null, body.trim()]);
+
+        // Create notification for recipient
+        await pool.query(`
+            INSERT INTO notifications (user_id, type, title, body, link)
+            VALUES ($1, 'message', 'New Message', $2, '/dashboard/' || (SELECT user_type FROM users WHERE id=$1))
+            ON CONFLICT DO NOTHING
+        `, [toUserId, `You have a new message`]).catch(() => {});
+
+        res.status(201).json(rows[0]);
+    } catch (err) {
+        console.error('send message error:', err);
+        res.status(500).json({ error: 'Failed to send message' });
+    }
+});
+
+// Unread message count
+app.get('/api/messages/unread-count', auth.requireAuth, async (req, res) => {
+    try {
+        const { rows } = await pool.query(
+            `SELECT COUNT(*) AS count FROM messages WHERE to_user_id = $1 AND read_at IS NULL`,
+            [req.session.userId]
+        );
+        res.json({ count: parseInt(rows[0].count) });
+    } catch (err) { res.status(500).json({ error: 'Failed to get count' }); }
+});
+
+// ===== NOTIFICATIONS =====
+
+// Ensure notifications table exists
+pool.query(`
+    CREATE TABLE IF NOT EXISTS notifications (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id),
+        type VARCHAR(50) NOT NULL,
+        title VARCHAR(255) NOT NULL,
+        body TEXT,
+        link VARCHAR(500),
+        read_at TIMESTAMPTZ,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+`).catch(err => console.error('notifications table init error:', err.message));
+
+// Get notifications for current user
+app.get('/api/notifications', auth.requireAuth, async (req, res) => {
+    try {
+        const { rows } = await pool.query(`
+            SELECT id, type, title, body, link, read_at, created_at
+            FROM notifications WHERE user_id = $1
+            ORDER BY created_at DESC LIMIT 30
+        `, [req.session.userId]);
+        const unread = rows.filter(r => !r.read_at).length;
+        res.json({ notifications: rows, unread });
+    } catch (err) { res.status(500).json({ error: 'Failed to load notifications' }); }
+});
+
+// Mark one notification as read
+app.put('/api/notifications/:id/read', auth.requireAuth, async (req, res) => {
+    try {
+        await pool.query(
+            `UPDATE notifications SET read_at = NOW() WHERE id = $1 AND user_id = $2`,
+            [parseInt(req.params.id), req.session.userId]
+        );
+        res.json({ ok: true });
+    } catch (err) { res.status(500).json({ error: 'Failed to mark read' }); }
+});
+
+// Mark all notifications as read
+app.put('/api/notifications/read-all', auth.requireAuth, async (req, res) => {
+    try {
+        await pool.query(
+            `UPDATE notifications SET read_at = NOW() WHERE user_id = $1 AND read_at IS NULL`,
+            [req.session.userId]
+        );
+        res.json({ ok: true });
+    } catch (err) { res.status(500).json({ error: 'Failed to mark all read' }); }
 });
 
 // ===== PAGE ROUTES (Must come AFTER API routes, BEFORE static files) =====

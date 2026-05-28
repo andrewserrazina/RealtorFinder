@@ -662,6 +662,17 @@
             .header-container {
                 flex-wrap: wrap;
                 gap: 0.75rem;
+                padding: 0 1rem;
+            }
+
+            .header-actions {
+                width: 100%;
+                justify-content: flex-end;
+            }
+
+            .user-info {
+                gap: 0.5rem;
+                flex-wrap: wrap;
             }
 
             .tabs {
@@ -695,6 +706,7 @@
 
             .modal-content {
                 padding: 1.5rem;
+                width: 95%;
             }
 
             #map-container {
@@ -706,6 +718,50 @@
                 align-items: flex-start;
                 gap: 0.5rem;
             }
+
+            .filter-bar {
+                flex-direction: column;
+            }
+
+            .filter-group {
+                width: 100%;
+            }
+        }
+
+        /* Messaging */
+        .msg-layout {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            gap: 0;
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            min-height: 520px;
+        }
+        .msg-conv-list { border-right: 1px solid var(--border); overflow-y: auto; }
+        .msg-conv-item { padding: 1rem 1.25rem; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.15s; }
+        .msg-conv-item:hover { background: var(--soft-bg); }
+        .msg-conv-item.active { background: #fff5f2; border-left: 3px solid var(--accent); }
+        .msg-conv-name { font-weight: 600; font-size: 0.9rem; margin-bottom: 0.2rem; }
+        .msg-conv-preview { font-size: 0.8rem; color: #888; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .msg-conv-time { font-size: 0.75rem; color: #aaa; }
+        .msg-conv-unread { display: inline-block; background: var(--accent); color: white; border-radius: 50%; width: 16px; height: 16px; font-size: 0.65rem; font-weight: 700; text-align: center; line-height: 16px; margin-left: 0.4rem; }
+        .msg-thread { display: flex; flex-direction: column; height: 520px; }
+        .msg-thread-header { padding: 1rem 1.5rem; border-bottom: 1px solid var(--border); font-weight: 600; font-size: 0.95rem; background: #fafafa; }
+        .msg-thread-body { flex: 1; overflow-y: auto; padding: 1.25rem; display: flex; flex-direction: column; gap: 0.75rem; }
+        .msg-bubble { max-width: 72%; padding: 0.65rem 1rem; border-radius: 14px; font-size: 0.9rem; line-height: 1.5; }
+        .msg-bubble.sent { background: var(--accent); color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
+        .msg-bubble.received { background: #f0efed; color: var(--text); align-self: flex-start; border-bottom-left-radius: 4px; }
+        .msg-thread-compose { padding: 1rem 1.25rem; border-top: 1px solid var(--border); display: flex; gap: 0.75rem; }
+        .msg-thread-compose textarea { flex: 1; border: 1px solid var(--border); border-radius: 8px; padding: 0.6rem 0.875rem; font-family: inherit; font-size: 0.9rem; resize: none; outline: none; }
+        .msg-thread-compose textarea:focus { border-color: var(--accent); }
+        .msg-no-thread { flex: 1; display: flex; align-items: center; justify-content: center; color: #aaa; flex-direction: column; gap: 0.5rem; font-size: 0.95rem; }
+        .msg-conv-empty { padding: 2rem; text-align: center; color: #aaa; font-size: 0.9rem; }
+        @media (max-width: 768px) {
+            .msg-layout { grid-template-columns: 1fr; }
+            .msg-conv-list { border-right: none; border-bottom: 1px solid var(--border); max-height: 200px; }
+            .msg-thread { height: 400px; }
         }
     </style>
 </head>
@@ -716,6 +772,18 @@
             <div class="header-actions">
                 <div class="user-info">
                     <span id="userName">Loading...</span>
+                    <div class="notif-wrapper" style="position:relative;">
+                        <button class="notif-bell" id="notifBell" onclick="toggleNotifDropdown()" title="Notifications" style="background:none;border:1px solid var(--border);border-radius:8px;padding:0.45rem 0.65rem;cursor:pointer;font-size:1.1rem;position:relative;line-height:1;">🔔
+                            <span id="notifBadge" style="display:none;position:absolute;top:-6px;right:-6px;background:var(--accent);color:white;border-radius:50%;font-size:0.65rem;font-weight:700;width:18px;height:18px;align-items:center;justify-content:center;display:none;">0</span>
+                        </button>
+                        <div id="notifDropdown" style="display:none;position:absolute;top:calc(100% + 8px);right:0;background:white;border:1px solid var(--border);border-radius:12px;width:340px;max-height:420px;overflow-y:auto;box-shadow:0 8px 30px rgba(0,0,0,0.12);z-index:500;">
+                            <div style="display:flex;justify-content:space-between;align-items:center;padding:1rem 1.25rem 0.75rem;border-bottom:1px solid var(--border);font-weight:600;font-size:0.95rem;">
+                                <span>Notifications</span>
+                                <button onclick="markAllNotifRead()" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:0.8rem;font-family:inherit;">Mark all read</button>
+                            </div>
+                            <div id="notifList"><div style="padding:2rem;text-align:center;color:#aaa;font-size:0.9rem;">No notifications yet</div></div>
+                        </div>
+                    </div>
                     <div class="user-avatar" id="userAvatar">R</div>
                     <button onclick="logout()" class="btn btn-secondary" style="margin-left: 1rem; padding: 0.5rem 1rem;">Log Out</button>
                 </div>
@@ -733,7 +801,8 @@
             <div class="tab" data-view="analytics">Analytics</div>
             <div class="tab" data-view="profile">My Profile</div>
             <div class="tab" data-view="buyer-requests">Buyer Requests</div>
-                <div class="tab" data-view="company">My Company</div>
+            <div class="tab" data-view="company">My Company</div>
+            <div class="tab" data-view="messages" id="msgTab">Messages <span id="msgTabBadge" style="display:none;background:var(--accent);color:white;border-radius:50%;width:16px;height:16px;font-size:0.65rem;font-weight:700;text-align:center;line-height:16px;display:none;margin-left:4px;vertical-align:middle;"></span></div>
         </div>
     </div>
 
@@ -1058,6 +1127,23 @@
                 </div>
             </div>
         </section>
+
+        <!-- Messages View -->
+        <section id="messages-view" class="view-section">
+            <h2 style="font-family:'Crimson Pro',serif;font-size:2rem;margin-bottom:1.5rem;">Messages</h2>
+            <p style="color:#666;margin-bottom:2rem;">Conversations with sellers about their listings</p>
+            <div class="msg-layout" id="msgLayout">
+                <div class="msg-conv-list" id="msgConvList">
+                    <div class="msg-conv-empty">Loading conversations…</div>
+                </div>
+                <div class="msg-thread" id="msgThread">
+                    <div class="msg-no-thread">
+                        <span style="font-size:2rem;">💬</span>
+                        <span>Select a conversation to view messages</span>
+                    </div>
+                </div>
+            </div>
+        </section>
     </div>
 
     <!-- Connect Modal -->
@@ -1225,6 +1311,7 @@
                 if (view === 'saved') loadSavedListings();
                 if (view === 'analytics') loadAnalytics();
                 if (view === 'profile') { loadEmailAlerts(); }
+                if (view === 'messages') loadConversations();
             });
         });
 
@@ -2226,7 +2313,160 @@
             loadDashboard();
             loadProfile();
             loadSavedIds();
+            loadNotifications();
+            loadUnreadMsgCount();
+            setInterval(loadNotifications, 60000);
+            setInterval(loadUnreadMsgCount, 60000);
         });
+
+        // ─── Notifications ───────────────────────────────────────────────────────
+        let notifOpen = false;
+        async function loadNotifications() {
+            try {
+                const res = await fetch(`${API_BASE_URL}/notifications`, { credentials: 'include' });
+                if (!res.ok) return;
+                const { notifications, unread } = await res.json();
+                const badge = document.getElementById('notifBadge');
+                if (unread > 0) { badge.textContent = unread > 9 ? '9+' : unread; badge.style.display = 'flex'; }
+                else { badge.style.display = 'none'; }
+                const list = document.getElementById('notifList');
+                if (!notifications.length) { list.innerHTML = '<div style="padding:2rem;text-align:center;color:#aaa;font-size:0.9rem;">No notifications yet</div>'; return; }
+                list.innerHTML = notifications.map(n => `
+                    <div onclick="clickNotif(${n.id},'${n.link || ''}')" style="padding:0.85rem 1.25rem;border-bottom:1px solid var(--border);cursor:pointer;background:${n.read_at ? 'white' : '#fdf8f6'};">
+                        <div style="font-weight:600;font-size:0.88rem;margin-bottom:0.2rem;">${esc(n.title)}</div>
+                        ${n.body ? `<div style="font-size:0.82rem;color:#666;line-height:1.4;">${esc(n.body)}</div>` : ''}
+                        <div style="font-size:0.75rem;color:#aaa;margin-top:0.25rem;">${timeAgo(n.created_at)}</div>
+                    </div>
+                `).join('');
+            } catch(e) {}
+        }
+        function toggleNotifDropdown() {
+            const dd = document.getElementById('notifDropdown');
+            notifOpen = !notifOpen;
+            dd.style.display = notifOpen ? 'block' : 'none';
+            if (notifOpen) loadNotifications();
+        }
+        document.addEventListener('click', e => {
+            const wrapper = document.querySelector('.notif-wrapper');
+            if (wrapper && !wrapper.contains(e.target) && notifOpen) {
+                notifOpen = false;
+                document.getElementById('notifDropdown').style.display = 'none';
+            }
+        });
+        async function markAllNotifRead() {
+            await fetch(`${API_BASE_URL}/notifications/read-all`, { method: 'PUT', credentials: 'include' });
+            loadNotifications();
+        }
+        async function clickNotif(id, link) {
+            await fetch(`${API_BASE_URL}/notifications/${id}/read`, { method: 'PUT', credentials: 'include' });
+            if (link) window.location.href = link;
+            else loadNotifications();
+        }
+        function timeAgo(dateStr) {
+            const diff = Date.now() - new Date(dateStr);
+            const m = Math.floor(diff / 60000);
+            if (m < 1) return 'just now';
+            if (m < 60) return `${m}m ago`;
+            const h = Math.floor(m / 60);
+            if (h < 24) return `${h}h ago`;
+            return `${Math.floor(h / 24)}d ago`;
+        }
+
+        // ─── Messaging ───────────────────────────────────────────────────────────
+        let activeConvUserId = null;
+        let activeConvListingId = null;
+        let activeConvName = '';
+
+        async function loadUnreadMsgCount() {
+            try {
+                const res = await fetch(`${API_BASE_URL}/messages/unread-count`, { credentials: 'include' });
+                if (!res.ok) return;
+                const { count } = await res.json();
+                const badge = document.getElementById('msgTabBadge');
+                if (count > 0) { badge.textContent = count > 9 ? '9+' : count; badge.style.display = 'inline-block'; }
+                else { badge.style.display = 'none'; }
+            } catch(e) {}
+        }
+
+        async function loadConversations() {
+            const convList = document.getElementById('msgConvList');
+            convList.innerHTML = '<div class="msg-conv-empty">Loading…</div>';
+            try {
+                const res = await fetch(`${API_BASE_URL}/messages/conversations`, { credentials: 'include' });
+                if (!res.ok) throw new Error();
+                const convs = await res.json();
+                if (!convs.length) { convList.innerHTML = '<div class="msg-conv-empty">No conversations yet.<br><small>Messages will appear here when sellers reach out.</small></div>'; return; }
+                convList.innerHTML = convs.map(c => `
+                    <div class="msg-conv-item" onclick="openConv(${c.other_user_id},${c.listing_id || 'null'},'${esc(c.first_name)} ${esc(c.last_name)}')">
+                        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+                            <div class="msg-conv-name">${esc(c.first_name)} ${esc(c.last_name)}${c.unread_count > 0 ? `<span class="msg-conv-unread">${c.unread_count}</span>` : ''}</div>
+                            <div class="msg-conv-time">${timeAgo(c.last_at)}</div>
+                        </div>
+                        ${c.listing_address ? `<div class="msg-conv-preview">Re: ${esc(c.listing_address)}</div>` : ''}
+                        <div class="msg-conv-preview">${esc(c.last_body)}</div>
+                    </div>
+                `).join('');
+            } catch(e) {
+                convList.innerHTML = '<div class="msg-conv-empty">Failed to load conversations.</div>';
+            }
+        }
+
+        async function openConv(userId, listingId, name) {
+            activeConvUserId = userId;
+            activeConvListingId = listingId;
+            activeConvName = name;
+            document.querySelectorAll('.msg-conv-item').forEach(el => el.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+            const thread = document.getElementById('msgThread');
+            thread.innerHTML = `
+                <div class="msg-thread-header">${esc(name)}</div>
+                <div class="msg-thread-body" id="msgThreadBody"></div>
+                <div class="msg-thread-compose">
+                    <textarea id="msgCompose" rows="2" placeholder="Type a message…"></textarea>
+                    <button class="btn btn-primary" onclick="sendMsg()" style="padding:0.6rem 1.25rem;align-self:flex-end;">Send</button>
+                </div>
+            `;
+            document.getElementById('msgCompose').addEventListener('keydown', e => {
+                if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(); }
+            });
+            await loadThread();
+            loadUnreadMsgCount();
+        }
+
+        async function loadThread() {
+            const body = document.getElementById('msgThreadBody');
+            if (!body) return;
+            try {
+                let url = `${API_BASE_URL}/messages/thread?with=${activeConvUserId}`;
+                if (activeConvListingId) url += `&listing=${activeConvListingId}`;
+                const res = await fetch(url, { credentials: 'include' });
+                const msgs = await res.json();
+                body.innerHTML = msgs.length ? msgs.map(m => {
+                    const sent = m.from_user_id === (currentUser && currentUser.id);
+                    return `<div style="display:flex;flex-direction:column;align-items:${sent ? 'flex-end' : 'flex-start'};">
+                        <div class="msg-bubble ${sent ? 'sent' : 'received'}">${esc(m.body)}</div>
+                        <div style="font-size:0.7rem;color:#aaa;margin-top:2px;${sent ? 'text-align:right' : ''}">${timeAgo(m.created_at)}</div>
+                    </div>`;
+                }).join('') : '<div style="text-align:center;color:#aaa;padding:2rem;font-size:0.9rem;">No messages yet. Start the conversation!</div>';
+                body.scrollTop = body.scrollHeight;
+            } catch(e) {}
+        }
+
+        async function sendMsg() {
+            const ta = document.getElementById('msgCompose');
+            if (!ta || !ta.value.trim()) return;
+            const body = ta.value.trim();
+            ta.value = '';
+            try {
+                await fetch(`${API_BASE_URL}/messages`, {
+                    method: 'POST', credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ toUserId: activeConvUserId, listingId: activeConvListingId, body })
+                });
+                await loadThread();
+                await loadConversations();
+            } catch(e) {}
+        }
     </script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </body>
