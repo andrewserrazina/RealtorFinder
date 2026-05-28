@@ -266,6 +266,29 @@
         }
         .btn-cta-outline:hover { border-color: var(--primary); }
 
+        .share-row {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+        }
+        .btn-share {
+            flex: 1;
+            padding: 0.6rem 1rem;
+            background: var(--soft-bg);
+            color: var(--primary);
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.88rem;
+            cursor: pointer;
+            font-family: inherit;
+            transition: border-color 0.15s;
+        }
+        .btn-share:hover { border-color: var(--primary); }
+
         .skeleton {
             background: linear-gradient(90deg, #f0ede9 25%, #e8e4df 50%, #f0ede9 75%);
             background-size: 200% 100%;
@@ -399,10 +422,17 @@
             <p>Submit a proposal to represent this seller. Show them why you're the right agent for this home.</p>
             <a href="/login?tab=signup&type=realtor" class="btn-cta">Submit a Proposal</a>
             <a href="/realtors" class="btn-cta-outline">Learn More</a>
+            <div class="share-row">
+                <button class="btn-share" onclick="shareListing()">📋 Copy Link</button>
+                ${navigator.share ? `<button class="btn-share" onclick="nativeShare('${esc(l.address || '')}')">↗ Share</button>` : ''}
+            </div>
         ` : `
             <h3>This listing is ${l.status === 'sold' ? 'sold' : 'under contract'}.</h3>
             <p>Looking to sell your home? List it on RealtorFinder and start receiving proposals from qualified realtors.</p>
             <a href="/login?tab=signup&type=seller" class="btn-cta">List Your Home</a>
+            <div class="share-row">
+                <button class="btn-share" onclick="shareListing()">📋 Copy Link</button>
+            </div>
         `;
     }
 
@@ -418,6 +448,36 @@
 
     function esc(str) {
         return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function shareListing() {
+        const url = window.location.href;
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(url).then(() => {
+                const btn = event.target;
+                const orig = btn.textContent;
+                btn.textContent = '✓ Copied!';
+                setTimeout(() => btn.textContent = orig, 2000);
+            }).catch(() => fallbackCopy(url));
+        } else {
+            fallbackCopy(url);
+        }
+    }
+
+    function fallbackCopy(url) {
+        const el = document.createElement('textarea');
+        el.value = url;
+        document.body.appendChild(el);
+        el.select();
+        document.execCommand('copy');
+        document.body.removeChild(el);
+        alert('Link copied!');
+    }
+
+    function nativeShare(address) {
+        if (navigator.share) {
+            navigator.share({ title: address + ' — RealtorFinder', url: window.location.href }).catch(() => {});
+        }
     }
 
     loadListing();

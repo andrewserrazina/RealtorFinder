@@ -632,6 +632,10 @@
                         <span>Offers Received</span>
                         <span class="badge" id="offerCount">0</span>
                     </div>
+                    <div class="nav-item" data-view="settings">
+                        <span class="nav-icon">⚙️</span>
+                        <span>Settings</span>
+                    </div>
                 </div>
                 <div class="nav-section">
                     <div class="nav-title">Actions</div>
@@ -686,6 +690,28 @@
                     <p class="page-subtitle">Review and manage realtor proposals</p>
                 </div>
                 <div id="offersContainer"></div>
+            </section>
+
+            <!-- Settings View -->
+            <section id="settings-view" class="view-section">
+                <div class="page-header">
+                    <h1 class="page-title">Settings</h1>
+                    <p class="page-subtitle">Manage your account preferences</p>
+                </div>
+
+                <div style="max-width:500px;">
+                    <div style="background:white;border-radius:12px;border:1px solid #e1e8ed;padding:1.75rem;margin-bottom:1.5rem;">
+                        <h3 style="font-family:'Crimson Pro',serif;font-size:1.4rem;font-weight:700;margin-bottom:1.25rem;color:#0a2540;">Change Password</h3>
+                        <div style="display:flex;flex-direction:column;gap:0.75rem;">
+                            <input type="password" id="currentPassword" placeholder="Current password" style="padding:0.75rem 1rem;border:1px solid #e1e8ed;border-radius:8px;font-family:inherit;font-size:0.95rem;outline:none;">
+                            <input type="password" id="newPassword" placeholder="New password (min 8 characters)" style="padding:0.75rem 1rem;border:1px solid #e1e8ed;border-radius:8px;font-family:inherit;font-size:0.95rem;outline:none;">
+                            <input type="password" id="confirmPassword" placeholder="Confirm new password" style="padding:0.75rem 1rem;border:1px solid #e1e8ed;border-radius:8px;font-family:inherit;font-size:0.95rem;outline:none;">
+                            <div id="passwordError" style="display:none;color:#dc2626;font-size:0.85rem;padding:0.5rem 0;"></div>
+                            <div id="passwordSuccess" style="display:none;color:#059669;font-size:0.85rem;padding:0.5rem 0;">✓ Password changed successfully!</div>
+                            <button onclick="changePassword()" style="background:#ff6b35;color:white;border:none;padding:0.75rem 1.5rem;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.95rem;align-self:flex-start;font-family:inherit;">Update Password</button>
+                        </div>
+                    </div>
+                </div>
             </section>
         </main>
     </div>
@@ -1543,6 +1569,31 @@
 
         function esc(str) {
             return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+
+        async function changePassword() {
+            const current = document.getElementById('currentPassword').value;
+            const next = document.getElementById('newPassword').value;
+            const confirm = document.getElementById('confirmPassword').value;
+            const errEl = document.getElementById('passwordError');
+            const okEl = document.getElementById('passwordSuccess');
+            errEl.style.display = 'none'; okEl.style.display = 'none';
+            if (!current || !next || !confirm) { errEl.textContent = 'All fields are required.'; errEl.style.display = 'block'; return; }
+            if (next !== confirm) { errEl.textContent = 'New passwords do not match.'; errEl.style.display = 'block'; return; }
+            if (next.length < 8) { errEl.textContent = 'Password must be at least 8 characters.'; errEl.style.display = 'block'; return; }
+            try {
+                const res = await fetch('/api/profile/password', {
+                    method: 'PUT', credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ currentPassword: current, newPassword: next })
+                });
+                const d = await res.json();
+                if (!res.ok) { errEl.textContent = d.error || 'Failed to change password.'; errEl.style.display = 'block'; return; }
+                okEl.style.display = 'block';
+                document.getElementById('currentPassword').value = '';
+                document.getElementById('newPassword').value = '';
+                document.getElementById('confirmPassword').value = '';
+            } catch { errEl.textContent = 'Network error. Please try again.'; errEl.style.display = 'block'; }
         }
     </script>
 </body>

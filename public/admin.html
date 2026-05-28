@@ -635,6 +635,7 @@
             <div class="table-header">
                 <span class="table-title">All Users</span>
                 <span class="table-count" id="users-count">Loading…</span>
+                <button class="btn-action btn-reactivate" onclick="approveAll()" id="approveAllBtn" style="margin-left:auto;">Approve All Waitlisted</button>
             </div>
             <div class="table-scroll">
                 <table id="users-table">
@@ -1080,6 +1081,27 @@
                 <td class="td-muted">${fmtDate(l.created_at)}</td>
             </tr>`;
         }).join('');
+    }
+
+    async function approveAll() {
+        const waitlisted = usersData.filter(u => !u.is_approved && u.is_active !== false);
+        if (!waitlisted.length) { showToast('No waitlisted users to approve.', 'success'); return; }
+        if (!confirm(`Approve all ${waitlisted.length} waitlisted user(s)? They will each receive an approval email.`)) return;
+        const btn = document.getElementById('approveAllBtn');
+        btn.disabled = true;
+        btn.textContent = 'Approving…';
+        try {
+            const res = await fetch('/api/admin/users/approve-all', { method: 'POST', credentials: 'include' });
+            if (!res.ok) throw new Error();
+            const data = await res.json();
+            showToast(`✓ Approved ${data.count} user(s) and sent approval emails.`, 'success');
+            await loadUsers();
+        } catch {
+            showToast('Failed to approve all users.', 'error');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Approve All Waitlisted';
+        }
     }
 
     // ── Boot ──────────────────────────────────────────────────────────────────

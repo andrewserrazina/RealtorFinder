@@ -436,6 +436,32 @@ const emailService = {
         } catch (error) { logSendgridError('Contact email', error); throw error; }
     },
 
+    async sendSellerWeeklyDigest(seller) {
+        const listingCount = parseInt(seller.listing_count) || 0;
+        const newOffers = parseInt(seller.new_offers) || 0;
+        const totalViews = parseInt(seller.total_views) || 0;
+        const body = `
+            ${h1(`Your Weekly RealtorFinder Update 📊`)}
+            ${p(`Hi ${seller.first_name}, here's what happened with your listing${listingCount !== 1 ? 's' : ''} this week.`)}
+            ${infoBox([
+                ['Active Listings', String(listingCount)],
+                ['New Proposals (7 days)', String(newOffers)],
+                ['Total Listing Views', String(totalViews)]
+            ])}
+            ${newOffers > 0
+                ? p(`You received <strong>${newOffers} new proposal${newOffers !== 1 ? 's' : ''}</strong> this week. Log in to review them and take action.`)
+                : p(`No new proposals this week — your listing is still active and visible to realtors in your area.`)
+            }
+            ${btn(`${BASE_URL}/dashboard/seller`, 'View My Dashboard')}
+            ${divider()}
+            <p style="color:#999;font-size:13px;margin:0;">The RealtorFinder Team<br>
+            <a href="${BASE_URL}/dashboard/seller" style="color:#FF6B35;text-decoration:none;">Manage email preferences</a></p>
+        `;
+        try {
+            await send({ to: seller.email, subject: `Your Weekly RealtorFinder Summary — ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}`, html: emailWrap('Weekly Update', body) });
+        } catch (error) { logSendgridError('Seller weekly digest', error); }
+    },
+
     async sendAccountApprovedEmail(email, firstName, userType) {
         const dashUrl = userType === 'realtor' ? `${BASE_URL}/dashboard/realtor` : `${BASE_URL}/dashboard/seller`;
         const roleLabel = userType === 'realtor' ? 'For Realtors' : 'For Sellers';
