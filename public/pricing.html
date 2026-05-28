@@ -274,11 +274,63 @@
         footer a { color: rgba(255,255,255,0.5); text-decoration: none; margin: 0 0.5rem; }
         footer a:hover { color: white; }
 
+        /* Hamburger */
+        .nav-hamburger {
+            display: none;
+            flex-direction: column;
+            gap: 5px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 4px;
+        }
+        .nav-hamburger span {
+            display: block;
+            width: 24px;
+            height: 2px;
+            background: white;
+            border-radius: 2px;
+            transition: all 0.2s;
+        }
+        .mobile-menu {
+            display: none;
+            background: var(--primary);
+            width: 100%;
+            position: absolute;
+            top: 64px;
+            left: 0;
+            z-index: 99;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+        .mobile-menu.open { display: block; }
+        .mobile-menu a {
+            display: block;
+            color: rgba(255,255,255,0.85);
+            text-decoration: none;
+            font-size: 1rem;
+            font-weight: 500;
+            padding: 1rem 2rem;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+        .mobile-menu a:hover { color: white; background: rgba(255,255,255,0.05); }
+        .mobile-menu .nav-cta {
+            margin: 1rem 2rem;
+            display: block;
+            text-align: center;
+            border-radius: 8px;
+            background: var(--accent);
+            color: white !important;
+            font-weight: 600 !important;
+            border-bottom: none;
+        }
+        .mobile-menu .nav-cta:hover { background: #e55a2b; }
+
         @media (max-width: 900px) {
             .pricing-grid { grid-template-columns: 1fr; }
             .plan-card.featured { transform: none; }
             .hero h1 { font-size: 2.4rem; }
             .nav-links { display: none; }
+            .nav-hamburger { display: flex; }
         }
     </style>
 </head>
@@ -290,9 +342,20 @@
         <a href="/realtors">For Realtors</a>
         <a href="/">For Sellers</a>
         <a href="/about">About</a>
+        <a href="/contact">Contact</a>
         <a href="/login.html?tab=signup&type=realtor" class="nav-cta">Create Account</a>
     </div>
+    <button class="nav-hamburger" id="navHamburger" aria-label="Open menu" aria-expanded="false">
+        <span></span><span></span><span></span>
+    </button>
 </nav>
+<div class="mobile-menu" id="mobileMenu" role="navigation">
+    <a href="/realtors" onclick="closeMobileMenu()">For Realtors</a>
+    <a href="/" onclick="closeMobileMenu()">For Sellers</a>
+    <a href="/about" onclick="closeMobileMenu()">About</a>
+    <a href="/contact" onclick="closeMobileMenu()">Contact</a>
+    <a href="/login.html?tab=signup&type=realtor" class="nav-cta" onclick="closeMobileMenu()">Create Account</a>
+</div>
 
 <div class="hero">
     <div class="hero-eyebrow">Realtor Pricing</div>
@@ -404,6 +467,20 @@
     </p>
 </footer>
 
+<script>
+    const hamburger = document.getElementById('navHamburger');
+    const mobileMenu = document.getElementById('mobileMenu');
+
+    hamburger.addEventListener('click', function() {
+        const isOpen = mobileMenu.classList.toggle('open');
+        hamburger.setAttribute('aria-expanded', isOpen);
+    });
+
+    function closeMobileMenu() {
+        mobileMenu.classList.remove('open');
+        hamburger.setAttribute('aria-expanded', 'false');
+    }
+</script>
 <script>
     async function subscribe(plan) {
         const btn = document.getElementById('btn-' + plan);

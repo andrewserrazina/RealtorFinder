@@ -412,6 +412,30 @@ const emailService = {
         } catch (error) { logSendgridError('New listing alert', error); }
     },
 
+    async sendContactEmail({ name, email, subject, message }) {
+        const to = process.env.SENDGRID_FROM_EMAIL || 'hello@realtorfinder.net';
+        const body = `
+            ${h1('New Contact Form Submission')}
+            ${infoBox([
+                ['From', `${name} &lt;${email}&gt;`],
+                ['Subject', subject],
+                ['Email', `<a href="mailto:${email}" style="color:#FF6B35;text-decoration:none;">${email}</a>`]
+            ])}
+            <p style="font-size:0.8rem;color:#999;text-transform:uppercase;letter-spacing:0.06em;margin:24px 0 8px;">Message</p>
+            <div style="background:#F8F6F3;border-radius:10px;padding:20px 24px;border:1px solid #E5E1DB;color:#444;font-size:15px;line-height:1.7;white-space:pre-wrap;">${String(message).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+            ${divider()}
+            <p style="color:#999;font-size:13px;margin:0;">Reply directly to this email to respond to ${name}.</p>
+        `;
+        try {
+            await send({
+                to,
+                replyTo: email,
+                subject: `[Contact] ${subject} — from ${name}`,
+                html: emailWrap('Contact Form', body)
+            });
+        } catch (error) { logSendgridError('Contact email', error); throw error; }
+    },
+
     async sendAccountApprovedEmail(email, firstName, userType) {
         const dashUrl = userType === 'realtor' ? `${BASE_URL}/dashboard/realtor` : `${BASE_URL}/dashboard/seller`;
         const roleLabel = userType === 'realtor' ? 'For Realtors' : 'For Sellers';

@@ -293,6 +293,57 @@
         footer a { color: rgba(255,255,255,0.5); text-decoration: none; }
         footer a:hover { color: white; }
 
+        /* Hamburger */
+        .nav-hamburger {
+            display: none;
+            flex-direction: column;
+            gap: 5px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 4px;
+        }
+        .nav-hamburger span {
+            display: block;
+            width: 24px;
+            height: 2px;
+            background: white;
+            border-radius: 2px;
+            transition: all 0.2s;
+        }
+        .mobile-menu {
+            display: none;
+            background: var(--primary);
+            width: 100%;
+            position: absolute;
+            top: 64px;
+            left: 0;
+            z-index: 99;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+        .mobile-menu.open { display: block; }
+        .mobile-menu a {
+            display: block;
+            color: rgba(255,255,255,0.85);
+            text-decoration: none;
+            font-size: 1rem;
+            font-weight: 500;
+            padding: 1rem 2rem;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+        .mobile-menu a:hover { color: white; background: rgba(255,255,255,0.05); }
+        .mobile-menu .nav-cta {
+            margin: 1rem 2rem;
+            display: block;
+            text-align: center;
+            border-radius: 8px;
+            background: var(--accent);
+            color: white !important;
+            font-weight: 600 !important;
+            border-bottom: none;
+        }
+        .mobile-menu .nav-cta:hover { opacity: 0.88; }
+
         @media (max-width: 700px) {
             .hero h1 { font-size: 2.4rem; }
             .split { grid-template-columns: 1fr; }
@@ -300,6 +351,7 @@
             .values-grid { grid-template-columns: 1fr; }
             .stats-inner { grid-template-columns: 1fr; gap: 1.5rem; }
             .nav-links { display: none; }
+            .nav-hamburger { display: flex; }
         }
     </style>
 </head>
@@ -311,9 +363,20 @@
         <a href="/realtors">For Realtors</a>
         <a href="/pricing">Pricing</a>
         <a href="/about">About</a>
+        <a href="/contact">Contact</a>
         <a href="/login" class="nav-cta">Get Started</a>
     </div>
+    <button class="nav-hamburger" id="navHamburger" aria-label="Open menu" aria-expanded="false">
+        <span></span><span></span><span></span>
+    </button>
 </nav>
+<div class="mobile-menu" id="mobileMenu" role="navigation">
+    <a href="/realtors" onclick="closeMobileMenu()">For Realtors</a>
+    <a href="/pricing" onclick="closeMobileMenu()">Pricing</a>
+    <a href="/about" onclick="closeMobileMenu()">About</a>
+    <a href="/contact" onclick="closeMobileMenu()">Contact</a>
+    <a href="/login" class="nav-cta" onclick="closeMobileMenu()">Get Started</a>
+</div>
 
 <!-- Hero -->
 <section class="hero">
@@ -440,5 +503,19 @@
     <p>© 2025 RealtorFinder &nbsp;·&nbsp; <a href="/privacy">Privacy</a> &nbsp;·&nbsp; <a href="/terms">Terms</a> &nbsp;·&nbsp; <a href="/about">About</a></p>
 </footer>
 
+<script>
+    const hamburger = document.getElementById('navHamburger');
+    const mobileMenu = document.getElementById('mobileMenu');
+
+    hamburger.addEventListener('click', function() {
+        const isOpen = mobileMenu.classList.toggle('open');
+        hamburger.setAttribute('aria-expanded', isOpen);
+    });
+
+    function closeMobileMenu() {
+        mobileMenu.classList.remove('open');
+        hamburger.setAttribute('aria-expanded', 'false');
+    }
+</script>
 </body>
 </html>

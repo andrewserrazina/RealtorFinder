@@ -941,6 +941,21 @@
         <section id="profile-view" class="view-section">
             <h2 style="font-family: 'Crimson Pro', serif; font-size: 2rem; margin-bottom: 2rem;">My Profile</h2>
             <div style="max-width:600px;">
+                <!-- Profile photo -->
+                <div style="display:flex;align-items:center;gap:1.5rem;margin-bottom:2rem;padding:1.5rem;background:white;border-radius:14px;border:1px solid var(--border);">
+                    <div id="profilePhotoWrap" style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,var(--ink),#2a2a2a);display:flex;align-items:center;justify-content:center;font-family:'Crimson Pro',serif;font-size:2rem;font-weight:900;color:white;flex-shrink:0;overflow:hidden;">
+                        <span id="profilePhotoInitials"></span>
+                    </div>
+                    <div style="flex:1;">
+                        <div style="font-weight:600;margin-bottom:0.4rem;">Profile Photo</div>
+                        <div style="font-size:0.85rem;color:var(--muted);margin-bottom:0.75rem;">Shown on your public profile. JPG or PNG, max 5MB.</div>
+                        <label style="cursor:pointer;display:inline-block;padding:0.45rem 1rem;border:1.5px solid var(--border);border-radius:8px;font-size:0.85rem;font-weight:600;color:var(--ink);">
+                            Choose Photo
+                            <input type="file" id="photoInput" accept="image/*" style="display:none;" onchange="uploadProfilePhoto(this)">
+                        </label>
+                        <span id="photoStatus" style="font-size:0.8rem;color:var(--muted);margin-left:0.75rem;"></span>
+                    </div>
+                </div>
                 <div id="profileMessage" style="display:none;padding:0.875rem 1rem;border-radius:8px;margin-bottom:1rem;font-weight:500;font-size:0.9rem;"></div>
                 <form id="profileForm">
                     <div class="form-row">
@@ -1572,7 +1587,33 @@
                 form.elements.serviceAreas.value = p.service_areas || '';
                 form.elements.bio.value = p.bio || '';
                 renderProfileNudge(p);
+                // Profile photo
+                const initials = ((p.first_name||'')[0]||'') + ((p.last_name||'')[0]||'');
+                document.getElementById('profilePhotoInitials').textContent = initials.toUpperCase();
+                if (p.profile_photo) {
+                    const wrap = document.getElementById('profilePhotoWrap');
+                    wrap.innerHTML = `<img src="${p.profile_photo}" style="width:100%;height:100%;object-fit:cover;">`;
+                }
             } catch {}
+        }
+
+        async function uploadProfilePhoto(input) {
+            if (!input.files[0]) return;
+            const statusEl = document.getElementById('photoStatus');
+            statusEl.textContent = 'Uploading…';
+            const fd = new FormData();
+            fd.append('photo', input.files[0]);
+            try {
+                const res = await fetch(`${API_BASE_URL}/profile/photo`, { method: 'POST', credentials: 'include', body: fd });
+                if (!res.ok) throw new Error();
+                const { url } = await res.json();
+                const wrap = document.getElementById('profilePhotoWrap');
+                wrap.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover;">`;
+                statusEl.textContent = '✓ Photo updated';
+                setTimeout(() => { statusEl.textContent = ''; }, 3000);
+            } catch {
+                statusEl.textContent = 'Upload failed. Try again.';
+            }
         }
 
         document.getElementById('profileForm').addEventListener('submit', async (e) => {

@@ -242,7 +242,7 @@
         document.getElementById('profileContent').innerHTML = `
             <div class="profile-card">
                 <div class="profile-header">
-                    <div class="avatar">${esc(initials.toUpperCase())}</div>
+                    <div class="avatar">${r.profile_photo ? `<img src="${esc(r.profile_photo)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : esc(initials.toUpperCase())}</div>
                     <div class="profile-name-block">
                         <h1>${esc(r.first_name)} ${esc(r.last_name)}</h1>
                         ${r.company_name ? `<div class="company-name">${esc(r.company_name)}</div>` : ''}
