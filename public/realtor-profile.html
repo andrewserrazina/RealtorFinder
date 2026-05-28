@@ -278,7 +278,44 @@
                     <div class="details-grid">${detailsHtml}</div>
                 </div>
             ` : ''}
+            <div class="profile-card" id="reviewsCard">
+                <div class="section-title">Reviews</div>
+                <div id="reviewsList"><p style="color:var(--muted);font-size:0.9rem;">Loading reviews…</p></div>
+            </div>
         `;
+        loadReviews();
+    }
+
+    async function loadReviews() {
+        try {
+            const res = await fetch(`/api/realtors/${realtorId}/reviews`);
+            if (!res.ok) return;
+            const { reviews, avg, count } = await res.json();
+            const container = document.getElementById('reviewsList');
+            if (!count) {
+                container.innerHTML = '<p style="color:var(--muted);font-size:0.9rem;">No reviews yet.</p>';
+                return;
+            }
+            const stars = n => '★'.repeat(Math.round(n)) + '☆'.repeat(5 - Math.round(n));
+            container.innerHTML = `
+                <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.25rem;">
+                    <span style="font-family:'Crimson Pro',serif;font-size:2rem;font-weight:900;color:var(--primary);">${avg}</span>
+                    <span style="color:#f59e0b;font-size:1.2rem;">${stars(parseFloat(avg))}</span>
+                    <span style="color:var(--muted);font-size:0.85rem;">${count} review${count !== 1 ? 's' : ''}</span>
+                </div>
+                ${reviews.map(r => `
+                    <div style="padding:1rem 0;border-top:1px solid var(--border);">
+                        <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.4rem;">
+                            <span style="color:#f59e0b;">${stars(r.rating)}</span>
+                            <span style="font-weight:600;font-size:0.9rem;">${esc(r.first_name)} ${esc(r.last_name[0])}.</span>
+                            <span style="color:var(--muted);font-size:0.8rem;">${new Date(r.created_at).toLocaleDateString('en-US',{month:'short',year:'numeric'})}</span>
+                        </div>
+                        ${r.body ? `<p style="font-size:0.9rem;color:#444;line-height:1.6;">${esc(r.body)}</p>` : ''}
+                        ${r.listing_address ? `<p style="font-size:0.78rem;color:var(--muted);margin-top:0.3rem;">📍 ${esc(r.listing_address)}</p>` : ''}
+                    </div>
+                `).join('')}
+            `;
+        } catch {}
     }
 
     function showNotFound() {

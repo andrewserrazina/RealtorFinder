@@ -845,6 +845,37 @@
         </div>
     </div>
 
+    <!-- Review Modal -->
+    <div id="reviewModal" class="modal">
+        <div class="modal-content" style="max-width:480px;">
+            <span class="modal-close" onclick="document.getElementById('reviewModal').classList.remove('active');alert('✅ Offer accepted! The realtor has been notified.')">&times;</span>
+            <div class="modal-header">
+                <h2>Rate <span id="reviewModalName"></span></h2>
+                <p style="color:#666;">Optional — your review will appear on their public profile.</p>
+            </div>
+            <input type="hidden" id="reviewRealtorId">
+            <input type="hidden" id="reviewListingId">
+            <div style="margin-bottom:1.25rem;">
+                <div style="font-size:0.85rem;font-weight:600;margin-bottom:0.6rem;">Your Rating</div>
+                <div style="display:flex;gap:0.4rem;">
+                    <button class="star-btn" data-star="1" onclick="setStars(1)" style="font-size:1.8rem;background:none;border:none;cursor:pointer;line-height:1;">☆</button>
+                    <button class="star-btn" data-star="2" onclick="setStars(2)" style="font-size:1.8rem;background:none;border:none;cursor:pointer;line-height:1;">☆</button>
+                    <button class="star-btn" data-star="3" onclick="setStars(3)" style="font-size:1.8rem;background:none;border:none;cursor:pointer;line-height:1;">☆</button>
+                    <button class="star-btn" data-star="4" onclick="setStars(4)" style="font-size:1.8rem;background:none;border:none;cursor:pointer;line-height:1;">☆</button>
+                    <button class="star-btn" data-star="5" onclick="setStars(5)" style="font-size:1.8rem;background:none;border:none;cursor:pointer;line-height:1;">☆</button>
+                </div>
+            </div>
+            <div class="form-group" style="margin-bottom:1.25rem;">
+                <label style="font-size:0.85rem;font-weight:600;">Comments <span style="color:#999;font-weight:400;">(optional)</span></label>
+                <textarea id="reviewBody" rows="3" style="width:100%;padding:0.75rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.95rem;resize:vertical;margin-top:0.4rem;" placeholder="How was working with this agent?"></textarea>
+            </div>
+            <div style="display:flex;gap:0.75rem;">
+                <button class="btn btn-primary" style="flex:1;" onclick="submitReview()">Submit Review</button>
+                <button class="btn btn-outline" onclick="document.getElementById('reviewModal').classList.remove('active');alert('✅ Offer accepted! The realtor has been notified.')">Skip</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const API_BASE_URL = window.location.origin + '/api';
         let currentUser = null;
@@ -1276,10 +1307,42 @@
                     body: JSON.stringify({ action: 'accept' })
                 });
                 if (!res.ok) throw new Error('Failed');
+                const accepted = await res.json();
                 loadDashboard();
                 loadOffers();
-                alert('✅ Offer accepted! The realtor has been notified.');
+                // Prompt seller to leave a review
+                const offer = cachedOffers.find(o => o.id === offerId);
+                if (offer && offer.user_id) showReviewPrompt(offer.user_id, offer.realtor_name, listingId);
+                else alert('✅ Offer accepted! The realtor has been notified.');
             } catch { alert('Failed to accept offer. Please try again.'); }
+        }
+
+        function showReviewPrompt(realtorUserId, realtorName, listingId) {
+            const modal = document.getElementById('reviewModal');
+            document.getElementById('reviewModalName').textContent = realtorName;
+            document.getElementById('reviewRealtorId').value = realtorUserId;
+            document.getElementById('reviewListingId').value = listingId;
+            document.querySelectorAll('.star-btn').forEach(s => s.classList.remove('active'));
+            document.getElementById('reviewBody').value = '';
+            modal.classList.add('active');
+        }
+
+        async function submitReview() {
+            const realtorId = document.getElementById('reviewRealtorId').value;
+            const listingId = document.getElementById('reviewListingId').value;
+            const rating = document.querySelectorAll('.star-btn.active').length;
+            const body = document.getElementById('reviewBody').value.trim();
+            if (!rating) { alert('Please select a star rating.'); return; }
+            try {
+                await fetch(`${API_BASE_URL}/realtors/${realtorId}/reviews`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ rating, body, listingId: parseInt(listingId) })
+                });
+            } catch {}
+            document.getElementById('reviewModal').classList.remove('active');
+            alert('✅ Offer accepted! The realtor has been notified.');
         }
 
         // Offer detail modal
@@ -1468,6 +1531,15 @@
             loadCurrentUser();
             loadDashboard();
         });
+
+        function setStars(n) {
+            document.querySelectorAll('.star-btn').forEach(btn => {
+                const active = parseInt(btn.dataset.star) <= n;
+                btn.textContent = active ? '★' : '☆';
+                btn.classList.toggle('active', active);
+                btn.style.color = active ? '#f59e0b' : '#ccc';
+            });
+        }
 
         function esc(str) {
             return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
