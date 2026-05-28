@@ -730,6 +730,7 @@
             <div class="tab" data-view="mybids">My Bids</div>
             <div class="tab" data-view="won">Won Listings</div>
             <div class="tab" data-view="saved">Saved</div>
+            <div class="tab" data-view="analytics">Analytics</div>
             <div class="tab" data-view="profile">My Profile</div>
             <div class="tab" data-view="buyer-requests">Buyer Requests</div>
                 <div class="tab" data-view="company">My Company</div>
@@ -838,6 +839,25 @@
             <h2 style="font-family: 'Crimson Pro', serif; font-size: 2rem; margin-bottom: 0.5rem;">Saved Listings</h2>
             <p style="color:var(--muted);margin-bottom:2rem;font-size:0.95rem;">Listings you've bookmarked for later. Click the bookmark icon on any listing card to save it.</p>
             <div class="listings-grid" id="savedListingsGrid"></div>
+        </section>
+
+        <!-- Analytics View -->
+        <section id="analytics-view" class="view-section">
+            <div style="max-width:700px;">
+                <h2 style="font-family:'Crimson Pro',serif;font-size:2rem;font-weight:900;color:var(--ink);margin-bottom:0.5rem;">Your Analytics</h2>
+                <p style="color:#666;margin-bottom:2rem;">Performance stats for your proposals and activity on RealtorFinder.</p>
+                <div class="stats-row" id="analyticsStats">
+                    <div class="stat-card"><div class="stat-label">Total Proposals</div><div class="stat-value" id="statTotalProposals">—</div></div>
+                    <div class="stat-card"><div class="stat-label">Listings Won</div><div class="stat-value" id="statWon">—</div></div>
+                    <div class="stat-card"><div class="stat-label">Win Rate</div><div class="stat-value" id="statWinRate">—</div></div>
+                    <div class="stat-card"><div class="stat-label">This Month</div><div class="stat-value" id="statThisMonth">—</div></div>
+                </div>
+                <div id="planLimitInfo" style="display:none;background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;padding:1rem 1.25rem;margin-top:0.5rem;">
+                    <div style="font-weight:600;color:#c2410c;margin-bottom:0.25rem;">Basic Plan Proposal Limit</div>
+                    <div id="planLimitText" style="font-size:0.9rem;color:#c2410c;"></div>
+                    <a href="/pricing" style="font-size:0.85rem;color:#FF6B35;font-weight:600;text-decoration:none;display:inline-block;margin-top:0.5rem;">Upgrade to Professional →</a>
+                </div>
+            </div>
         </section>
 
         <!-- Buyer Requests View -->
@@ -1007,6 +1027,35 @@
                     </div>
                     <button type="submit" class="btn btn-primary" style="padding:1rem 2rem;">Save Profile</button>
                 </form>
+
+                <!-- Email Preferences -->
+                <div style="background:white;border-radius:12px;border:1px solid var(--border);padding:1.5rem;margin-top:1.5rem;">
+                    <h3 style="font-family:'Crimson Pro',serif;font-size:1.3rem;font-weight:700;margin-bottom:1rem;color:var(--ink);">Email Preferences</h3>
+                    <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;">
+                        <div>
+                            <div style="font-weight:600;font-size:0.95rem;margin-bottom:0.25rem;">New Listing Alerts</div>
+                            <div style="font-size:0.85rem;color:#666;">Get emailed when a new listing appears within 25 miles of your ZIP code.</div>
+                        </div>
+                        <label style="position:relative;display:inline-block;width:48px;height:26px;flex-shrink:0;">
+                            <input type="checkbox" id="emailAlertsToggle" style="opacity:0;width:0;height:0;" onchange="saveEmailAlerts(this.checked)">
+                            <span id="emailAlertsSlider" style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#ccc;border-radius:26px;transition:.3s;"></span>
+                        </label>
+                    </div>
+                    <div id="emailAlertsSaved" style="display:none;color:#059669;font-size:0.85rem;margin-top:0.5rem;">✓ Saved</div>
+                </div>
+
+                <!-- Change Password -->
+                <div style="background:white;border-radius:12px;border:1px solid var(--border);padding:1.5rem;margin-top:1.5rem;">
+                    <h3 style="font-family:'Crimson Pro',serif;font-size:1.3rem;font-weight:700;margin-bottom:1rem;color:var(--ink);">Change Password</h3>
+                    <div style="display:flex;flex-direction:column;gap:0.75rem;max-width:400px;">
+                        <input type="password" id="currentPassword" placeholder="Current password" style="padding:0.7rem 1rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.95rem;">
+                        <input type="password" id="newPassword" placeholder="New password (min 8 characters)" style="padding:0.7rem 1rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.95rem;">
+                        <input type="password" id="confirmPassword" placeholder="Confirm new password" style="padding:0.7rem 1rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.95rem;">
+                        <div id="passwordError" style="display:none;color:#dc2626;font-size:0.85rem;"></div>
+                        <div id="passwordSuccess" style="display:none;color:#059669;font-size:0.85rem;">✓ Password changed successfully!</div>
+                        <button onclick="changePassword()" style="background:var(--accent);color:white;border:none;padding:0.7rem 1.5rem;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.95rem;align-self:flex-start;">Update Password</button>
+                    </div>
+                </div>
             </div>
         </section>
     </div>
@@ -1174,6 +1223,8 @@
                 if (view === 'buyer-requests') loadBuyerRequests();
                 if (view === 'company') loadCompany();
                 if (view === 'saved') loadSavedListings();
+                if (view === 'analytics') loadAnalytics();
+                if (view === 'profile') { loadEmailAlerts(); }
             });
         });
 
@@ -1203,10 +1254,17 @@
                     body: JSON.stringify(data)
                 });
                 
-                if (!response.ok) throw new Error('Failed to submit bid');
-                
                 const result = await response.json();
-                
+                if (!response.ok) {
+                    if (response.status === 429) {
+                        closeBidModal();
+                        alert('⚠️ ' + result.error);
+                    } else {
+                        alert(result.error || 'Failed to submit proposal. Please try again.');
+                    }
+                    return;
+                }
+
                 closeBidModal();
                 loadDashboard();
                 alert('✅ Proposal submitted successfully!');
@@ -2089,6 +2147,78 @@
             } catch {
                 grid.innerHTML = '<p style="color:#999;padding:2rem;">Failed to load saved listings.</p>';
             }
+        }
+
+        // ===== ANALYTICS =====
+        async function loadAnalytics() {
+            try {
+                const res = await fetch(`${API_BASE_URL}/analytics/realtor`, { credentials: 'include' });
+                if (!res.ok) return;
+                const d = await res.json();
+                document.getElementById('statTotalProposals').textContent = d.total;
+                document.getElementById('statWon').textContent = d.won;
+                document.getElementById('statWinRate').textContent = d.winRate + '%';
+                document.getElementById('statThisMonth').textContent = d.thisMonth;
+                if (d.monthlyLimit !== null) {
+                    document.getElementById('planLimitInfo').style.display = 'block';
+                    document.getElementById('planLimitText').textContent = `${d.thisMonth} of ${d.monthlyLimit} proposals used this month. ${d.remaining} remaining.`;
+                }
+            } catch {}
+        }
+
+        // ===== EMAIL ALERTS =====
+        async function loadEmailAlerts() {
+            try {
+                const res = await fetch(`${API_BASE_URL}/profile`, { credentials: 'include' });
+                if (!res.ok) return;
+                const p = await res.json();
+                const toggle = document.getElementById('emailAlertsToggle');
+                const slider = document.getElementById('emailAlertsSlider');
+                const checked = p.email_alerts !== false;
+                toggle.checked = checked;
+                slider.style.background = checked ? '#FF6B35' : '#ccc';
+            } catch {}
+        }
+
+        async function saveEmailAlerts(enabled) {
+            const slider = document.getElementById('emailAlertsSlider');
+            slider.style.background = enabled ? '#FF6B35' : '#ccc';
+            try {
+                await fetch(`${API_BASE_URL}/profile/email-alerts`, {
+                    method: 'PUT', credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ enabled })
+                });
+                const saved = document.getElementById('emailAlertsSaved');
+                saved.style.display = 'block';
+                setTimeout(() => saved.style.display = 'none', 2000);
+            } catch {}
+        }
+
+        // ===== PASSWORD CHANGE =====
+        async function changePassword() {
+            const current = document.getElementById('currentPassword').value;
+            const next = document.getElementById('newPassword').value;
+            const confirm = document.getElementById('confirmPassword').value;
+            const errEl = document.getElementById('passwordError');
+            const okEl = document.getElementById('passwordSuccess');
+            errEl.style.display = 'none'; okEl.style.display = 'none';
+            if (!current || !next || !confirm) { errEl.textContent = 'All fields are required.'; errEl.style.display = 'block'; return; }
+            if (next !== confirm) { errEl.textContent = 'New passwords do not match.'; errEl.style.display = 'block'; return; }
+            if (next.length < 8) { errEl.textContent = 'Password must be at least 8 characters.'; errEl.style.display = 'block'; return; }
+            try {
+                const res = await fetch(`${API_BASE_URL}/profile/password`, {
+                    method: 'PUT', credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ currentPassword: current, newPassword: next })
+                });
+                const d = await res.json();
+                if (!res.ok) { errEl.textContent = d.error || 'Failed to change password.'; errEl.style.display = 'block'; return; }
+                okEl.style.display = 'block';
+                document.getElementById('currentPassword').value = '';
+                document.getElementById('newPassword').value = '';
+                document.getElementById('confirmPassword').value = '';
+            } catch { errEl.textContent = 'Network error. Please try again.'; errEl.style.display = 'block'; }
         }
 
         document.addEventListener('DOMContentLoaded', () => {
