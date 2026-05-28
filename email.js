@@ -531,7 +531,36 @@ const emailService = {
         try {
             await send({ to: email, subject: "You're approved — welcome to RealtorFinder!", html: emailWrap(roleLabel, body) });
         } catch (error) { logSendgridError('Account approved email', error); }
-    }
+    },
+
+    async sendListingExpiryWarning(sellerEmail, sellerName, listing) {
+        try {
+            const body = emailWrap('⚠️ Listing Expiring Soon',
+                h1(`Your listing expires in 3 days`) +
+                p(`Hi ${sellerName}, your RealtorFinder listing at <strong>${listing.address}, ${listing.city}, ${listing.state}</strong> will be automatically archived in 3 days if no realtor proposal has been accepted.`) +
+                infoBox([
+                    ['Address', `${listing.address}, ${listing.city}, ${listing.state}`],
+                    ['Listed', new Date(listing.created_at).toLocaleDateString('en-US', {month:'long', day:'numeric', year:'numeric'})],
+                    ['Expires', new Date(Date.now() + 3 * 86400000).toLocaleDateString('en-US', {month:'long', day:'numeric', year:'numeric'})],
+                ]) +
+                p(`To keep your listing active, log in and update your listing — this resets the 90-day clock. Or if you\'ve already found a great realtor, you can mark it as sold.`) +
+                btn(`${BASE_URL}/dashboard/seller`, 'View My Listing →')
+            );
+            return await send({ to: sellerEmail, subject: `Your listing at ${listing.address} expires in 3 days`, html: body });
+        } catch(err) { logSendgridError('sendListingExpiryWarning', err); }
+    },
+
+    async sendListingExpired(sellerEmail, sellerName, listing) {
+        try {
+            const body = emailWrap('📦 Listing Archived',
+                h1(`Your listing has been archived`) +
+                p(`Hi ${sellerName}, your RealtorFinder listing at <strong>${listing.address}, ${listing.city}, ${listing.state}</strong> has been archived after 90 days without an accepted proposal.`) +
+                p(`You can relist your home at any time — it\'s always free for sellers.`) +
+                btn(`${BASE_URL}/dashboard/seller`, 'Relist My Home →')
+            );
+            return await send({ to: sellerEmail, subject: `Your listing at ${listing.address} has been archived`, html: body });
+        } catch(err) { logSendgridError('sendListingExpired', err); }
+    },
 };
 
 module.exports = emailService;
