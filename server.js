@@ -1140,6 +1140,32 @@ app.get('/api/analytics/realtor', auth.requireAuth, async (req, res) => {
     }
 });
 
+// ===== PROFILE COMPLETENESS =====
+
+app.get('/api/profile/completeness', auth.requireAuth, async (req, res) => {
+    try {
+        if (req.user.user_type !== 'realtor') return res.status(403).json({ error: 'Realtors only' });
+        const { rows } = await pool.query(
+            `SELECT profile_photo, bio, service_areas, license_number, brokerage FROM users WHERE id = $1`,
+            [req.session.userId]
+        );
+        if (!rows.length) return res.status(404).json({ error: 'User not found' });
+        const p = rows[0];
+        const items = [
+            { label: 'has_photo', done: !!p.profile_photo },
+            { label: 'has_bio', done: !!(p.bio && p.bio.trim().length > 20) },
+            { label: 'has_service_areas', done: !!(p.service_areas && p.service_areas.trim()) },
+            { label: 'has_license', done: !!p.license_number },
+            { label: 'has_brokerage', done: !!p.brokerage }
+        ];
+        const score = (items.filter(i => i.done).length / 5) * 100;
+        res.json({ score, items });
+    } catch (err) {
+        console.error('Profile completeness error:', err);
+        res.status(500).json({ error: 'Failed to compute completeness' });
+    }
+});
+
 // ===== ADMIN ROUTES =====
 
 function requireAdmin(req, res, next) {
@@ -2216,6 +2242,130 @@ app.put('/api/notifications/read-all', auth.requireAuth, async (req, res) => {
         );
         res.json({ ok: true });
     } catch (err) { res.status(500).json({ error: 'Failed to mark all read' }); }
+});
+
+// ===== SAVED SEARCHES =====
+
+pool.query(`
+    CREATE TABLE IF NOT EXISTS saved_searches (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        label TEXT,
+        city TEXT,
+        zip TEXT,
+        type TEXT,
+        min_price INTEGER,
+        max_price INTEGER,
+        min_beds INTEGER,
+        min_baths NUMERIC,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+`).catch(err => console.error('saved_searches table init error:', err.message));
+
+app.post('/api/saved-searches', auth.requireAuth, async (req, res) => {
+    try {
+        const uid = req.session.userId;
+        const { label, city, zip, type, minPrice, maxPrice, minBeds, minBaths } = req.body;
+        const { rows } = await pool.query(
+            `INSERT INTO saved_searches (user_id, label, city, zip, type, min_price, max_price, min_beds, min_baths)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+            [uid, label || null, city || null, zip || null, type || null,
+             minPrice ? parseInt(minPrice) : null, maxPrice ? parseInt(maxPrice) : null,
+             minBeds ? parseInt(minBeds) : null, minBaths ? parseFloat(minBaths) : null]
+        );
+        res.status(201).json(rows[0]);
+    } catch (err) {
+        console.error('Save search error:', err);
+        res.status(500).json({ error: 'Failed to save search' });
+    }
+});
+
+app.get('/api/saved-searches', auth.requireAuth, async (req, res) => {
+    try {
+        const { rows } = await pool.query(
+            `SELECT * FROM saved_searches WHERE user_id = $1 ORDER BY created_at DESC`,
+            [req.session.userId]
+        );
+        res.json(rows);
+    } catch (err) {
+        console.error('Get saved searches error:', err);
+        res.status(500).json({ error: 'Failed to fetch saved searches' });
+    }
+});
+
+app.delete('/api/saved-searches/:id', auth.requireAuth, async (req, res) => {
+    try {
+        const { rows } = await pool.query(
+            `DELETE FROM saved_searches WHERE id = $1 AND user_id = $2 RETURNING id`,
+            [parseInt(req.params.id), req.session.userId]
+        );
+        if (!rows.length) return res.status(404).json({ error: 'Not found' });
+        res.json({ ok: true });
+    } catch (err) {
+        console.error('Delete saved search error:', err);
+        res.status(500).json({ error: 'Failed to delete saved search' });
+    }
+});
+
+app.post('/api/admin/send-listing-alerts', requireAdmin, async (req, res) => {
+    try {
+        const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+        const { rows: searches } = await pool.query(
+            `SELECT ss.*, u.email, u.first_name FROM saved_searches ss
+             JOIN users u ON u.id = ss.user_id
+             WHERE u.is_active IS NOT FALSE`
+        );
+        let totalEmails = 0;
+        for (const s of searches) {
+            const conditions = [`l.status = 'active'`, `l.created_at >= $1`];
+            const params = [since];
+            let pi = 2;
+            if (s.city) { conditions.push(`LOWER(l.city) = LOWER($${pi++})`); params.push(s.city); }
+            if (s.zip) { conditions.push(`l.zip = $${pi++}`); params.push(s.zip); }
+            if (s.type) { conditions.push(`l.property_type = $${pi++}`); params.push(s.type); }
+            if (s.min_price) { conditions.push(`l.price_numeric >= $${pi++}`); params.push(s.min_price); }
+            if (s.max_price) { conditions.push(`l.price_numeric <= $${pi++}`); params.push(s.max_price); }
+            if (s.min_beds) { conditions.push(`l.bedrooms >= $${pi++}`); params.push(s.min_beds); }
+            if (s.min_baths) { conditions.push(`l.bathrooms >= $${pi++}`); params.push(s.min_baths); }
+            const { rows: matches } = await pool.query(
+                `SELECT id, address, city, state, price, bedrooms, bathrooms FROM listings l
+                 WHERE ${conditions.join(' AND ')} LIMIT 5`,
+                params
+            );
+            if (matches.length > 0) {
+                await emailService.sendListingAlert(s.email, s.first_name, s.label || 'Your saved search', matches)
+                    .catch(err => console.error('Listing alert email failed:', err.message));
+                totalEmails++;
+            }
+        }
+        res.json({ sent: totalEmails });
+    } catch (err) {
+        console.error('Send listing alerts error:', err);
+        res.status(500).json({ error: 'Failed to send alerts' });
+    }
+});
+
+// ===== ANNOUNCE =====
+
+app.post('/api/admin/announce', requireAdmin, async (req, res) => {
+    try {
+        const { subject, message, userType } = req.body;
+        if (!subject || !message || !userType) return res.status(400).json({ error: 'subject, message, userType required' });
+        const typeFilter = userType === 'all' ? '' : `AND user_type = '${['seller','realtor','buyer'].includes(userType) ? userType : 'seller'}'`;
+        const { rows } = await pool.query(
+            `SELECT email, first_name FROM users WHERE is_active IS NOT FALSE ${typeFilter}`
+        );
+        let sent = 0;
+        for (const u of rows) {
+            await emailService.sendAnnouncement(u.email, u.first_name, subject, message)
+                .catch(err => console.error('Announcement email failed:', err.message));
+            sent++;
+        }
+        res.json({ sent });
+    } catch (err) {
+        console.error('Announce error:', err);
+        res.status(500).json({ error: 'Failed to send announcement' });
+    }
 });
 
 // ===== PAGE ROUTES (Must come AFTER API routes, BEFORE static files) =====

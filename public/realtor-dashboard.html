@@ -1113,6 +1113,19 @@
                     <div id="emailAlertsSaved" style="display:none;color:#059669;font-size:0.85rem;margin-top:0.5rem;">✓ Saved</div>
                 </div>
 
+                <!-- Profile Completeness Widget -->
+                <div id="profileCompletenessWidget" style="background:white;border-radius:12px;border:1px solid var(--border);padding:1.5rem;margin-top:1.5rem;display:none;">
+                    <h3 style="font-family:'Crimson Pro',serif;font-size:1.3rem;font-weight:700;margin-bottom:1rem;color:var(--ink);">Profile Completeness</h3>
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem;">
+                        <span id="completenessLabel" style="font-size:0.95rem;font-weight:600;color:#374151;">Loading…</span>
+                        <span id="completenessPercent" style="font-size:1.1rem;font-weight:700;color:#FF6B35;">—</span>
+                    </div>
+                    <div style="height:10px;background:#e5e7eb;border-radius:6px;overflow:hidden;margin-bottom:1rem;">
+                        <div id="completenessBar" style="height:100%;width:0%;border-radius:6px;transition:width 0.5s,background 0.5s;"></div>
+                    </div>
+                    <div id="completenessItems" style="display:flex;flex-direction:column;gap:0.5rem;"></div>
+                </div>
+
                 <!-- Change Password -->
                 <div style="background:white;border-radius:12px;border:1px solid var(--border);padding:1.5rem;margin-top:1.5rem;">
                     <h3 style="font-family:'Crimson Pro',serif;font-size:1.3rem;font-weight:700;margin-bottom:1rem;color:var(--ink);">Change Password</h3>
@@ -1310,7 +1323,7 @@
                 if (view === 'company') loadCompany();
                 if (view === 'saved') loadSavedListings();
                 if (view === 'analytics') loadAnalytics();
-                if (view === 'profile') { loadEmailAlerts(); }
+                if (view === 'profile') { loadEmailAlerts(); loadProfileCompleteness(); }
                 if (view === 'messages') loadConversations();
             });
         });
@@ -1746,6 +1759,60 @@
             document.querySelector('.dashboard-container').prepend(nudge);
         }
 
+        function renderOnboardingChecklist(p) {
+            const existing = document.getElementById('onboardingChecklist');
+            if (existing) existing.remove();
+
+            if (sessionStorage.getItem('onboarding_dismissed') === '1') return;
+
+            const hasPhoto = !!p.profile_photo;
+            const hasBio = !!(p.bio && p.bio.trim().length > 20);
+            const hasAreas = !!(p.service_areas && p.service_areas.trim());
+            const hasLicense = !!p.license_number;
+
+            const allDone = hasPhoto && hasBio && hasAreas && hasLicense;
+            if (allDone) return;
+
+            const item = (done, label) =>
+                `<div style="display:flex;align-items:center;gap:0.6rem;font-size:0.9rem;color:${done ? '#059669' : '#92400e'};">
+                    <span style="font-size:1rem;">${done ? '✅' : '⬜'}</span>
+                    <span style="${done ? 'text-decoration:line-through;opacity:0.7;' : ''}">${label}</span>
+                </div>`;
+
+            const panel = document.createElement('div');
+            panel.id = 'onboardingChecklist';
+            panel.style.cssText = 'background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:1.25rem 1.5rem;margin-bottom:1.5rem;';
+            panel.innerHTML = `
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:0.5rem;">
+                    <strong style="color:#92400e;font-size:1rem;">Complete your profile to start winning listings</strong>
+                    <button onclick="dismissOnboarding()" style="background:none;border:none;color:#b45309;font-size:0.85rem;font-weight:600;cursor:pointer;font-family:inherit;padding:0.25rem 0.5rem;">Dismiss</button>
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:0.6rem;">
+                    ${item(hasPhoto, 'Profile photo uploaded')}
+                    ${item(hasBio, 'Bio written')}
+                    ${item(hasAreas, 'Service areas set')}
+                    ${item(hasLicense, 'License number added')}
+                </div>
+                <div style="margin-top:1rem;">
+                    <button class="btn btn-primary" onclick="document.querySelector('[data-view=profile]').click()" style="padding:0.5rem 1.25rem;font-size:0.875rem;background:#d97706;border-color:#d97706;">Update Profile →</button>
+                </div>
+            `;
+            document.querySelector('.dashboard-container').prepend(panel);
+        }
+
+        function dismissOnboarding() {
+            sessionStorage.setItem('onboarding_dismissed', '1');
+            const panel = document.getElementById('onboardingChecklist');
+            if (panel) {
+                panel.style.transition = 'opacity 0.3s, max-height 0.3s';
+                panel.style.opacity = '0';
+                panel.style.overflow = 'hidden';
+                panel.style.maxHeight = panel.offsetHeight + 'px';
+                setTimeout(() => { panel.style.maxHeight = '0'; panel.style.padding = '0'; }, 10);
+                setTimeout(() => panel.remove(), 350);
+            }
+        }
+
         async function loadProfile() {
             try {
                 const res = await fetch(`${API_BASE_URL}/profile`, { credentials: 'include' });
@@ -1758,6 +1825,7 @@
                 form.elements.serviceAreas.value = p.service_areas || '';
                 form.elements.bio.value = p.bio || '';
                 renderProfileNudge(p);
+                renderOnboardingChecklist(p);
                 // Profile photo
                 const initials = ((p.first_name||'')[0]||'') + ((p.last_name||'')[0]||'');
                 document.getElementById('profilePhotoInitials').textContent = initials.toUpperCase();
@@ -1822,6 +1890,53 @@
             }
             setTimeout(() => { msgEl.style.display = 'none'; }, 4000);
         });
+
+        // ===== PROFILE COMPLETENESS =====
+        async function loadProfileCompleteness() {
+            try {
+                const res = await fetch(`${API_BASE_URL}/profile/completeness`, { credentials: 'include' });
+                if (!res.ok) return;
+                const { score, items } = await res.json();
+
+                const widget = document.getElementById('profileCompletenessWidget');
+                widget.style.display = 'block';
+
+                const bar = document.getElementById('completenessBar');
+                const pct = Math.round(score);
+                bar.style.width = pct + '%';
+                // Color: orange at low, green at 100
+                const r = Math.round(255 - (255 - 16) * pct / 100);
+                const g = Math.round(107 + (185 - 107) * pct / 100);
+                const b = Math.round(53 + (129 - 53) * pct / 100);
+                bar.style.background = pct >= 100 ? '#10B981' : `rgb(${r},${g},${b})`;
+
+                document.getElementById('completenessLabel').textContent = `Profile ${pct}% complete`;
+                document.getElementById('completenessPercent').textContent = pct + '%';
+                document.getElementById('completenessPercent').style.color = pct >= 100 ? '#10B981' : '#FF6B35';
+
+                const actionMap = {
+                    has_photo: 'Upload a profile photo above',
+                    has_bio: 'Write a bio (at least 20 characters)',
+                    has_service_areas: 'Add your service areas',
+                    has_license: 'Add your license number',
+                    has_brokerage: 'Add your brokerage via a proposal form'
+                };
+                const incomplete = items.filter(i => !i.done);
+                const itemsEl = document.getElementById('completenessItems');
+                if (incomplete.length === 0) {
+                    itemsEl.innerHTML = '<div style="color:#059669;font-size:0.9rem;font-weight:600;">✅ Your profile is 100% complete!</div>';
+                } else {
+                    itemsEl.innerHTML = incomplete.map(i => `
+                        <div style="display:flex;align-items:center;gap:0.6rem;font-size:0.875rem;color:#374151;">
+                            <span style="color:#ef4444;font-size:0.8rem;">●</span>
+                            <span>${actionMap[i.label] || i.label}</span>
+                        </div>
+                    `).join('');
+                }
+            } catch (err) {
+                console.error('completeness load error:', err);
+            }
+        }
 
         // ===== BUYER REQUESTS =====
         let buyerRequestsData = [];

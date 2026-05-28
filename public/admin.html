@@ -639,6 +639,7 @@
         <button class="tab-btn" onclick="switchTab('listings', this)">Listings</button>
         <button class="tab-btn" onclick="switchTab('leads', this)">City Leads</button>
         <button class="tab-btn" onclick="switchTab('reviews', this)">Reviews</button>
+        <button class="tab-btn" onclick="switchTab('announce', this)">Announce</button>
     </div>
 
     <!-- Stats tab -->
@@ -783,6 +784,41 @@
                         <tr><td colspan="8" class="empty-state">Loading listings…</td></tr>
                     </tbody>
                 </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Announce tab -->
+    <div class="tab-panel" id="tab-announce">
+        <div class="table-wrapper" style="padding:2rem;max-width:680px;">
+            <div class="table-header" style="margin-bottom:1.5rem;">
+                <span class="table-title">Send Announcement</span>
+            </div>
+            <div style="background:#fff8f0;border:1px solid #fbbf24;border-radius:10px;padding:1rem 1.25rem;margin-bottom:1.5rem;font-size:0.875rem;color:#92400e;">
+                ⚠️ <strong>Warning:</strong> This will email all users of the selected type. This cannot be undone.
+            </div>
+            <div style="display:flex;flex-direction:column;gap:1.25rem;">
+                <div>
+                    <label style="display:block;font-size:0.875rem;font-weight:600;color:var(--primary);margin-bottom:0.4rem;">Subject</label>
+                    <input type="text" id="announceSubject" placeholder="e.g. Important platform update" style="width:100%;padding:0.7rem 1rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.95rem;outline:none;">
+                </div>
+                <div>
+                    <label style="display:block;font-size:0.875rem;font-weight:600;color:var(--primary);margin-bottom:0.4rem;">Audience</label>
+                    <select id="announceAudience" style="width:100%;padding:0.7rem 1rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.95rem;outline:none;background:white;">
+                        <option value="all">All Users</option>
+                        <option value="seller">Sellers</option>
+                        <option value="realtor">Realtors</option>
+                        <option value="buyer">Buyers</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="display:block;font-size:0.875rem;font-weight:600;color:var(--primary);margin-bottom:0.4rem;">Message</label>
+                    <textarea id="announceMessage" rows="7" placeholder="Write your message here…" style="width:100%;padding:0.75rem 1rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.95rem;resize:vertical;outline:none;"></textarea>
+                </div>
+                <div>
+                    <button onclick="sendAnnouncement()" style="background:var(--accent);color:white;border:none;padding:0.75rem 2rem;border-radius:8px;font-weight:600;font-size:0.95rem;cursor:pointer;font-family:inherit;">Send Announcement</button>
+                </div>
+                <div id="announceResult" style="display:none;padding:0.75rem 1rem;border-radius:8px;font-size:0.9rem;font-weight:500;"></div>
             </div>
         </div>
     </div>
@@ -932,6 +968,42 @@
         btn.classList.add('active');
         document.getElementById('tab-' + name).classList.add('active');
         if (name === 'reviews') loadAdminReviews();
+    }
+
+    // ── Announce ──────────────────────────────────────────────────────────────
+
+    async function sendAnnouncement() {
+        const subject = document.getElementById('announceSubject').value.trim();
+        const userType = document.getElementById('announceAudience').value;
+        const message = document.getElementById('announceMessage').value.trim();
+        const resultEl = document.getElementById('announceResult');
+
+        if (!subject || !message) {
+            resultEl.textContent = 'Please fill in the subject and message.';
+            resultEl.style.cssText = 'display:block;background:#fee2e2;color:#991b1b;';
+            return;
+        }
+
+        resultEl.textContent = 'Sending…';
+        resultEl.style.cssText = 'display:block;background:#fef3c7;color:#92400e;';
+
+        try {
+            const res = await fetch('/api/admin/announce', {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ subject, message, userType })
+            });
+            const d = await res.json();
+            if (!res.ok) throw new Error(d.error || 'Failed to send');
+            resultEl.textContent = `✓ Sent to ${d.sent} user${d.sent !== 1 ? 's' : ''}.`;
+            resultEl.style.cssText = 'display:block;background:#d1fae5;color:#065f46;';
+            showToast(`Announcement sent to ${d.sent} users`, 'success');
+        } catch (err) {
+            resultEl.textContent = `Error: ${err.message}`;
+            resultEl.style.cssText = 'display:block;background:#fee2e2;color:#991b1b;';
+            showToast('Failed to send announcement', 'error');
+        }
     }
 
     // ── Reviews ───────────────────────────────────────────────────────────────
