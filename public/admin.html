@@ -695,6 +695,11 @@
                     <span class="stat-label">Waitlist</span>
                 </div>
             </div>
+            <div style="padding:0 28px 28px;">
+                <h3 style="font-size:1.1rem;font-weight:700;color:#0A2540;margin-bottom:16px;">City Pages</h3>
+                <button class="btn-action btn-reactivate" onclick="seedCities()">Seed All City Pages</button>
+                <span id="seed-cities-result" style="margin-left:14px;font-size:0.9rem;color:#6b7280;"></span>
+            </div>
         </div>
     </div>
 
@@ -1309,6 +1314,19 @@
         } finally {
             btn.disabled = false;
             btn.textContent = 'Approve All Waitlisted';
+        }
+    }
+
+    async function seedCities() {
+        const resultEl = document.getElementById('seed-cities-result');
+        resultEl.textContent = 'Seeding…';
+        try {
+            const res = await fetch('/api/admin/seed-cities', { method: 'POST', credentials: 'include' });
+            if (!res.ok) throw new Error('Request failed');
+            const data = await res.json();
+            resultEl.textContent = 'Seeded ' + data.seeded + ' city pages';
+        } catch (e) {
+            resultEl.textContent = 'Error: ' + e.message;
         }
     }
 

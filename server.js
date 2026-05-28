@@ -1322,6 +1322,28 @@ app.get('/api/admin/reviews', requireAdmin, async (req, res) => {
     }
 });
 
+app.post('/api/admin/seed-cities', requireAdmin, async (req, res) => {
+    const allCities = require('./cities');
+    const stateNames = { MA:'Massachusetts', CT:'Connecticut', RI:'Rhode Island', VT:'Vermont', NH:'New Hampshire', ME:'Maine' };
+    let seeded = 0;
+    for (const c of allCities) {
+        try {
+            await db.upsertCityPage({
+                slug: c.slug, name: c.name, stateCode: c.state,
+                stateName: stateNames[c.state] || c.state,
+                county: c.county || null, zip: c.zip || null,
+                population: c.population || null, medianPrice: c.median_price || null,
+                priceTrend: c.price_trend || null, avgDom: c.avg_dom || null,
+                description: c.description || null, neighborhoods: c.neighborhoods || null,
+                nearby: c.nearby || null, sellerHook: c.seller_hook || null,
+                realtorHook: c.realtor_hook || null, isPublished: true,
+            });
+            seeded++;
+        } catch(e) { console.error('Seed error for', c.slug, e.message); }
+    }
+    res.json({ seeded });
+});
+
 app.delete('/api/admin/listings/:id', requireAdmin, async (req, res) => {
     try {
         const listing = await db.adminDeleteListing(parseInt(req.params.id));
