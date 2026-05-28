@@ -800,7 +800,7 @@
             <div class="tab" data-view="saved">Saved</div>
             <div class="tab" data-view="analytics">Analytics</div>
             <div class="tab" data-view="profile">My Profile</div>
-            <div class="tab" data-view="buyer-requests">Buyer Requests</div>
+            <div class="tab" data-view="buyer-requests">Buyer Requests <span id="buyerMatchBadge" style="display:none;background:var(--accent);color:white;border-radius:50%;width:16px;height:16px;font-size:0.65rem;font-weight:700;text-align:center;line-height:16px;margin-left:4px;vertical-align:middle;"></span></div>
             <div class="tab" data-view="company">My Company</div>
             <div class="tab" data-view="messages" id="msgTab">Messages <span id="msgTabBadge" style="display:none;background:var(--accent);color:white;border-radius:50%;width:16px;height:16px;font-size:0.65rem;font-weight:700;text-align:center;line-height:16px;display:none;margin-left:4px;vertical-align:middle;"></span></div>
         </div>
@@ -2454,6 +2454,18 @@
                 const badge = document.getElementById('notifBadge');
                 if (unread > 0) { badge.textContent = unread > 9 ? '9+' : unread; badge.style.display = 'flex'; }
                 else { badge.style.display = 'none'; }
+
+                // Update buyer match badge
+                const buyerMatchBadge = document.getElementById('buyerMatchBadge');
+                if (buyerMatchBadge) {
+                    const unreadMatches = (notifications || []).filter(n => n.type === 'buyer_match' && !n.read_at).length;
+                    if (unreadMatches > 0) {
+                        buyerMatchBadge.textContent = unreadMatches > 9 ? '9+' : unreadMatches;
+                        buyerMatchBadge.style.display = 'inline-block';
+                    } else {
+                        buyerMatchBadge.style.display = 'none';
+                    }
+                }
                 const list = document.getElementById('notifList');
                 if (!notifications.length) { list.innerHTML = '<div style="padding:2rem;text-align:center;color:#aaa;font-size:0.9rem;">No notifications yet</div>'; return; }
                 list.innerHTML = notifications.map(n => `

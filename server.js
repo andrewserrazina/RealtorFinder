@@ -392,11 +392,47 @@ app.post('/api/buyer-requests', auth.requireAuth, async (req, res) => {
         };
         const coords = await geocodeAddress(`${user.zip_code}, USA`);
         if (coords) { data.latitude = coords.latitude; data.longitude = coords.longitude; }
-        const request = await db.createBuyerRequest(req.session.userId, data);
-        emailService.sendBuyerRequestConfirmation(request).catch(err =>
+        const newRequest = await db.createBuyerRequest(req.session.userId, data);
+        emailService.sendBuyerRequestConfirmation(newRequest).catch(err =>
             console.error('Buyer request email failed:', err.message)
         );
-        res.status(201).json(request);
+
+        // Fire-and-forget: find matching realtors and notify them
+        (async () => {
+            try {
+                const req_data = newRequest;
+                if (!req_data.target_areas) return;
+
+                const terms = req_data.target_areas.split(',').map(t => t.trim()).filter(Boolean).slice(0, 5);
+                if (!terms.length) return;
+
+                const conditions = terms.map((_, i) => `u.service_areas ILIKE $${i + 1}`);
+                const params = terms.map(t => `%${t}%`);
+
+                const { rows: matchedRealtors } = await pool.query(
+                    `SELECT u.id, u.first_name, u.last_name, u.email
+                     FROM users u
+                     WHERE u.user_type = 'realtor'
+                       AND u.is_approved = true
+                       AND u.is_active IS NOT FALSE
+                       AND (${conditions.join(' OR ')})
+                     LIMIT 20`,
+                    params
+                );
+
+                for (const realtor of matchedRealtors) {
+                    pool.query(
+                        `INSERT INTO notifications (user_id, type, title, body, link)
+                         VALUES ($1, 'buyer_match', 'New Buyer Looking in Your Area', $2, '/dashboard/realtor')`,
+                        [realtor.id, `A buyer is looking for a ${req_data.property_type || 'home'} in ${req_data.target_areas} with a budget of ${req_data.budget_min ? '$' + Number(req_data.budget_min).toLocaleString() : 'unspecified'}–${req_data.budget_max ? '$' + Number(req_data.budget_max).toLocaleString() : 'open'}.`]
+                    ).catch(() => {});
+
+                    emailService.sendBuyerMatchEmail(realtor.email, realtor.first_name, req_data).catch(() => {});
+                }
+            } catch(e) { console.error('Buyer matching error:', e.message); }
+        })();
+
+        res.status(201).json(newRequest);
     } catch (error) {
         console.error('Error creating buyer request:', error);
         res.status(500).json({ error: 'Failed to create buyer request' });
@@ -635,7 +671,9 @@ function formatListing(listing) {
         date: formatDate(listing.created_at),
         offerCount: parseInt(listing.offer_count) || 0,
         userId: listing.user_id,
-        status: listing.status || 'active'
+        status: listing.status || 'active',
+        shareToken: listing.share_token || null,
+        shareViews: parseInt(listing.share_views) || 0
     };
 }
 
@@ -732,7 +770,12 @@ app.post('/api/listings', auth.requireAuth, async (req, res) => {
         };
 
         const newListing = await db.createListing(listingData);
-        
+
+        // Generate share token
+        const shareToken = require('crypto').randomBytes(12).toString('hex');
+        await pool.query(`UPDATE listings SET share_token = $1 WHERE id = $2`, [shareToken, newListing.id]);
+        newListing.share_token = shareToken;
+
         // Send confirmation email to seller
         await emailService.sendListingConfirmation(newListing);
 
@@ -2034,7 +2077,7 @@ app.get('/api/realtors/search', async (req, res) => {
         const page  = Math.max(1, parseInt(req.query.page)  || 1);
         const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 12));
         const offset = (page - 1) * limit;
-        const { zip, name } = req.query;
+        const { zip, name, state, city } = req.query;
 
         const conditions = [
             `u.user_type = 'realtor'`,
@@ -2051,6 +2094,14 @@ app.get('/api/realtors/search', async (req, res) => {
             params.push(name);
             conditions.push(`CONCAT(u.first_name, ' ', u.last_name) ILIKE '%' || $${params.length} || '%'`);
         }
+        if (state) {
+            params.push(`%${state}%`);
+            conditions.push(`u.service_areas ILIKE $${params.length}`);
+        }
+        if (city) {
+            params.push(`%${city}%`);
+            conditions.push(`u.service_areas ILIKE $${params.length}`);
+        }
 
         const where = conditions.join(' AND ');
 
@@ -2065,6 +2116,7 @@ app.get('/api/realtors/search', async (req, res) => {
         const { rows } = await pool.query(
             `SELECT u.id, u.first_name, u.last_name, u.bio, u.years_experience,
                     u.license_number, u.service_areas, u.subscription_plan, u.zip_code,
+                    u.profile_photo, u.brokerage,
                     c.name AS company_name, c.plan AS company_plan
              FROM users u
              LEFT JOIN companies c ON u.company_id = c.id
@@ -2262,6 +2314,8 @@ pool.query(`
 
 pool.query(`ALTER TABLE listings ADD COLUMN IF NOT EXISTS expiry_warning_sent BOOLEAN DEFAULT FALSE`).catch(() => {});
 pool.query(`ALTER TABLE listings ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ`).catch(() => {});
+pool.query(`ALTER TABLE listings ADD COLUMN IF NOT EXISTS share_token TEXT`).catch(() => {});
+pool.query(`ALTER TABLE listings ADD COLUMN IF NOT EXISTS share_views INTEGER DEFAULT 0`).catch(() => {});
 
 // List conversations for current user
 app.get('/api/messages/conversations', auth.requireAuth, async (req, res) => {
@@ -2596,6 +2650,20 @@ app.post('/api/admin/announce', requireAdmin, async (req, res) => {
     }
 });
 
+// ===== LISTING SHARE REDIRECT =====
+
+app.get('/s/:token', async (req, res) => {
+    try {
+        const { rows } = await pool.query(
+            `SELECT id FROM listings WHERE share_token = $1 AND status != 'inactive'`,
+            [req.params.token]
+        );
+        if (!rows.length) return res.redirect('/');
+        await pool.query(`UPDATE listings SET share_views = COALESCE(share_views, 0) + 1 WHERE id = $1`, [rows[0].id]);
+        res.redirect(`/listing/${rows[0].id}`);
+    } catch { res.redirect('/'); }
+});
+
 // ===== PAGE ROUTES (Must come AFTER API routes, BEFORE static files) =====
 
 // Password reset page
@@ -2707,6 +2775,11 @@ app.get('/', (req, res) => {
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
     res.sendFile(path.join(__dirname, 'public', 'landing.html'));
+});
+
+// Public realtor directory page
+app.get('/realtors/directory', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'realtor-directory.html'));
 });
 
 // Realtor landing page

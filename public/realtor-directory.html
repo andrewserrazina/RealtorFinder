@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Find a Realtor — RealtorFinder</title>
+    <meta name="description" content="Browse verified New England realtors by state, city, or name. Compare experience, specialties, and connect directly.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://realtorfinder.net/realtors/directory">
+    <meta property="og:title" content="Find a Realtor — RealtorFinder">
+    <meta property="og:description" content="Browse verified New England realtors by state, city, or name.">
+    <meta property="og:image" content="https://realtorfinder.net/og-default.png">
+    <meta name="twitter:card" content="summary_large_image">
+    <!-- Google Analytics 4 -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-BRGVVNKT65"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-BRGVVNKT65');
+    </script>
+    <!-- Microsoft Clarity -->
+    <script type="text/javascript">
+        (function(c,l,a,r,i,t,y){
+            c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+            t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+            y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+        })(window, document, "clarity", "script", "wxvaz0g7tq");
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Work+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #0A2540;
+            --accent: #FF6B35;
+            --soft-bg: #F8F6F3;
+            --text: #1A1A1A;
+            --text-light: #5A5A5A;
+            --border: #E5E1DB;
+            --success: #10B981;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Work Sans', sans-serif; color: var(--text); background: #fff; }
+
+        /* NAV */
+        nav {
+            position: sticky; top: 0; z-index: 100;
+            background: rgba(255,255,255,0.97); backdrop-filter: blur(8px);
+            border-bottom: 1px solid var(--border);
+            padding: 0 2rem; height: 64px;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .nav-logo { font-family: 'Playfair Display', serif; font-size: 1.3rem; color: var(--primary); text-decoration: none; font-weight: 700; }
+        .nav-links { display: flex; align-items: center; gap: 1.5rem; }
+        .nav-links a { text-decoration: none; color: var(--text-light); font-size: 0.9rem; font-weight: 500; transition: color 0.2s; }
+        .nav-links a:hover { color: var(--primary); }
+        .btn { display: inline-block; padding: 0.55rem 1.25rem; border-radius: 6px; font-size: 0.9rem; font-weight: 600; text-decoration: none; cursor: pointer; border: none; transition: all 0.2s; }
+        .btn-primary { background: var(--accent); color: white; }
+        .btn-primary:hover { background: #e85a24; }
+        .btn-outline { background: transparent; border: 1.5px solid var(--border); color: var(--text); }
+        .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+
+        /* HERO */
+        .hero {
+            background: linear-gradient(135deg, var(--primary) 0%, #1a3a5c 100%);
+            color: white; padding: 4rem 2rem 3rem; text-align: center;
+        }
+        .hero h1 { font-family: 'Playfair Display', serif; font-size: clamp(2rem, 5vw, 3rem); margin-bottom: 0.75rem; }
+        .hero p { font-size: 1.1rem; opacity: 0.85; max-width: 560px; margin: 0 auto 2rem; line-height: 1.6; }
+        .hero-stats { display: flex; justify-content: center; gap: 3rem; flex-wrap: wrap; }
+        .hero-stat { text-align: center; }
+        .hero-stat .num { font-size: 1.8rem; font-weight: 700; color: var(--accent); }
+        .hero-stat .label { font-size: 0.85rem; opacity: 0.75; margin-top: 0.2rem; }
+
+        /* FILTER BAR */
+        .filter-bar {
+            background: white; border-bottom: 1px solid var(--border);
+            padding: 1.25rem 2rem; display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end;
+            position: sticky; top: 64px; z-index: 90; box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .filter-group { display: flex; flex-direction: column; gap: 0.3rem; flex: 1; min-width: 140px; }
+        .filter-group label { font-size: 0.78rem; font-weight: 600; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.05em; }
+        .filter-group select, .filter-group input {
+            padding: 0.55rem 0.75rem; border: 1.5px solid var(--border); border-radius: 6px;
+            font-size: 0.9rem; font-family: inherit; color: var(--text); background: white;
+            transition: border-color 0.2s; width: 100%;
+        }
+        .filter-group select:focus, .filter-group input:focus { outline: none; border-color: var(--accent); }
+        .filter-actions { display: flex; gap: 0.5rem; align-items: flex-end; }
+
+        /* RESULTS */
+        .results-bar {
+            padding: 1.25rem 2rem 0.5rem; display: flex; justify-content: space-between; align-items: center;
+            max-width: 1280px; margin: 0 auto;
+        }
+        .results-count { font-size: 0.9rem; color: var(--text-light); }
+        .results-count strong { color: var(--text); }
+
+        /* GRID */
+        .directory-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem; padding: 1rem 2rem 4rem; max-width: 1280px; margin: 0 auto;
+        }
+
+        /* REALTOR CARD */
+        .realtor-card {
+            background: white; border: 1px solid var(--border); border-radius: 12px;
+            overflow: hidden; transition: box-shadow 0.2s, transform 0.2s;
+            display: flex; flex-direction: column;
+        }
+        .realtor-card:hover { box-shadow: 0 8px 24px rgba(0,0,0,0.1); transform: translateY(-2px); }
+        .card-photo {
+            width: 100%; height: 180px; background: var(--soft-bg);
+            display: flex; align-items: center; justify-content: center; overflow: hidden;
+        }
+        .card-photo img { width: 100%; height: 100%; object-fit: cover; }
+        .card-photo-placeholder {
+            width: 72px; height: 72px; border-radius: 50%;
+            background: var(--primary); color: white;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.8rem; font-weight: 700; font-family: 'Playfair Display', serif;
+        }
+        .card-body { padding: 1.25rem; flex: 1; display: flex; flex-direction: column; }
+        .card-name { font-size: 1.05rem; font-weight: 700; color: var(--primary); margin-bottom: 0.2rem; }
+        .card-brokerage { font-size: 0.82rem; color: var(--text-light); margin-bottom: 0.6rem; }
+        .card-meta { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.75rem; }
+        .card-tag {
+            padding: 0.25rem 0.6rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600;
+            background: var(--soft-bg); color: var(--text-light);
+        }
+        .card-tag.tier-pro { background: #fef3c7; color: #92400e; }
+        .card-tag.tier-premium { background: #ede9fe; color: #5b21b6; }
+        .card-tag.tier-enterprise { background: #d1fae5; color: #065f46; }
+        .card-areas { font-size: 0.82rem; color: var(--text-light); line-height: 1.5; margin-bottom: auto; }
+        .card-footer { margin-top: 1rem; display: flex; gap: 0.5rem; }
+        .card-footer .btn { flex: 1; text-align: center; font-size: 0.85rem; padding: 0.5rem; }
+
+        /* LOAD MORE */
+        .load-more-wrap { text-align: center; padding: 1rem 0 3rem; }
+
+        /* EMPTY STATE */
+        .empty-state { text-align: center; padding: 4rem 2rem; color: var(--text-light); grid-column: 1/-1; }
+        .empty-state h3 { font-size: 1.3rem; margin-bottom: 0.5rem; color: var(--text); }
+
+        /* SKELETON */
+        .skeleton { background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 8px; }
+        @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+        .skeleton-card { height: 320px; border-radius: 12px; }
+
+        /* FOOTER */
+        footer { background: var(--primary); color: rgba(255,255,255,0.7); text-align: center; padding: 2rem; font-size: 0.85rem; }
+        footer a { color: rgba(255,255,255,0.85); text-decoration: none; }
+        footer a:hover { color: white; }
+
+        @media (max-width: 768px) {
+            .filter-bar { top: 56px; padding: 1rem; }
+            .filter-group { min-width: 100%; }
+            .directory-grid { padding: 1rem 1rem 3rem; gap: 1rem; }
+            .hero { padding: 2.5rem 1rem 2rem; }
+            .hero-stats { gap: 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">RealtorFinder</a>
+    <div class="nav-links">
+        <a href="/about">About</a>
+        <a href="/features">Features</a>
+        <a href="/realtors/directory" style="color:var(--accent);">Find a Realtor</a>
+        <a href="/dashboard/buyer" class="btn btn-primary" style="padding:0.45rem 1rem;">Post a Request</a>
+    </div>
+</nav>
+
+<section class="hero">
+    <h1>Find Your Perfect Realtor</h1>
+    <p>Browse verified agents across New England. Filter by location and connect directly — no middlemen, no cold calls.</p>
+    <div class="hero-stats">
+        <div class="hero-stat">
+            <div class="num" id="statTotal">—</div>
+            <div class="label">Active Realtors</div>
+        </div>
+        <div class="hero-stat">
+            <div class="num">6</div>
+            <div class="label">States Covered</div>
+        </div>
+        <div class="hero-stat">
+            <div class="num">170+</div>
+            <div class="label">Cities & Towns</div>
+        </div>
+    </div>
+</section>
+
+<div class="filter-bar">
+    <div class="filter-group">
+        <label>State</label>
+        <select id="filterState">
+            <option value="">All States</option>
+            <option value="MA">Massachusetts</option>
+            <option value="CT">Connecticut</option>
+            <option value="RI">Rhode Island</option>
+            <option value="VT">Vermont</option>
+            <option value="NH">New Hampshire</option>
+            <option value="ME">Maine</option>
+        </select>
+    </div>
+    <div class="filter-group">
+        <label>City / Town</label>
+        <input type="text" id="filterCity" placeholder="e.g. Boston, Portland…">
+    </div>
+    <div class="filter-group">
+        <label>Realtor Name</label>
+        <input type="text" id="filterName" placeholder="Search by name…">
+    </div>
+    <div class="filter-actions">
+        <button class="btn btn-primary" onclick="applyFilters()">Search</button>
+        <button class="btn btn-outline" onclick="clearFilters()">Clear</button>
+    </div>
+</div>
+
+<div class="results-bar">
+    <div class="results-count" id="resultsCount">Loading realtors…</div>
+</div>
+
+<div class="directory-grid" id="directoryGrid">
+    <!-- Skeletons while loading -->
+    <div class="skeleton skeleton-card"></div>
+    <div class="skeleton skeleton-card"></div>
+    <div class="skeleton skeleton-card"></div>
+    <div class="skeleton skeleton-card"></div>
+    <div class="skeleton skeleton-card"></div>
+    <div class="skeleton skeleton-card"></div>
+</div>
+
+<div class="load-more-wrap" id="loadMoreWrap" style="display:none;">
+    <button class="btn btn-outline" onclick="loadMore()" id="loadMoreBtn" style="min-width:160px;">Load More</button>
+</div>
+
+<footer>
+    <p>&copy; 2025 RealtorFinder &nbsp;·&nbsp; <a href="/about">About</a> &nbsp;·&nbsp; <a href="/features">Features</a> &nbsp;·&nbsp; <a href="/realtors/directory">Find a Realtor</a></p>
+</footer>
+
+<script>
+    const API = '';
+    let currentPage = 1;
+    let totalRealtors = 0;
+    let allLoaded = false;
+    let currentFilters = {};
+
+    function esc(s) {
+        if (!s) return '';
+        return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function tierClass(plan) {
+        if (!plan) return '';
+        const p = plan.toLowerCase();
+        if (p.includes('enterprise')) return 'tier-enterprise';
+        if (p.includes('premium')) return 'tier-premium';
+        if (p.includes('pro')) return 'tier-pro';
+        return '';
+    }
+
+    function tierLabel(plan) {
+        if (!plan || plan === 'free') return '';
+        return plan.charAt(0).toUpperCase() + plan.slice(1).toLowerCase();
+    }
+
+    function initials(first, last) {
+        return ((first || '')[0] || '') + ((last || '')[0] || '');
+    }
+
+    function renderRealtors(realtors, append = false) {
+        const grid = document.getElementById('directoryGrid');
+        if (!append) grid.innerHTML = '';
+
+        if (!realtors.length && !append) {
+            grid.innerHTML = `<div class="empty-state">
+                <h3>No realtors found</h3>
+                <p>Try adjusting your filters or searching a different area.</p>
+            </div>`;
+            return;
+        }
+
+        const cards = realtors.map(r => {
+            const photoHtml = r.profile_photo
+                ? `<img src="${esc(r.profile_photo)}" alt="${esc(r.first_name)} ${esc(r.last_name)}" loading="lazy">`
+                : `<div class="card-photo-placeholder">${esc(initials(r.first_name, r.last_name))}</div>`;
+
+            const tier = tierLabel(r.subscription_plan || r.company_plan);
+            const tierBadge = tier ? `<span class="card-tag ${tierClass(r.subscription_plan || r.company_plan)}">${esc(tier)}</span>` : '';
+
+            const yrsExp = r.years_experience ? `<span class="card-tag">${r.years_experience} yrs exp</span>` : '';
+
+            const areas = r.service_areas
+                ? r.service_areas.split(',').slice(0, 4).map(a => a.trim()).filter(Boolean).join(', ')
+                : '';
+
+            return `<div class="realtor-card">
+                <div class="card-photo">${photoHtml}</div>
+                <div class="card-body">
+                    <div class="card-name">${esc(r.first_name)} ${esc(r.last_name)}</div>
+                    ${r.brokerage ? `<div class="card-brokerage">${esc(r.brokerage)}</div>` : (r.company_name ? `<div class="card-brokerage">${esc(r.company_name)}</div>` : '')}
+                    <div class="card-meta">
+                        ${tierBadge}
+                        ${yrsExp}
+                    </div>
+                    ${areas ? `<div class="card-areas">📍 ${esc(areas)}</div>` : ''}
+                    <div class="card-footer">
+                        <a href="/realtor/${r.id}" class="btn btn-outline">View Profile</a>
+                        <a href="/dashboard/buyer" class="btn btn-primary">Request Match</a>
+                    </div>
+                </div>
+            </div>`;
+        }).join('');
+
+        grid.insertAdjacentHTML('beforeend', cards);
+    }
+
+    async function loadRealtors(page = 1, append = false) {
+        const grid = document.getElementById('directoryGrid');
+        if (!append) {
+            grid.innerHTML = `
+                <div class="skeleton skeleton-card"></div>
+                <div class="skeleton skeleton-card"></div>
+                <div class="skeleton skeleton-card"></div>
+                <div class="skeleton skeleton-card"></div>
+                <div class="skeleton skeleton-card"></div>
+                <div class="skeleton skeleton-card"></div>
+            `;
+        }
+
+        const params = new URLSearchParams({ page, limit: 12, ...currentFilters });
+        try {
+            const res = await fetch(`${API}/api/realtors/search?${params}`);
+            if (!res.ok) throw new Error('Failed to load');
+            const data = await res.json();
+            const realtors = data.realtors || data;
+            totalRealtors = data.total || realtors.length;
+
+            const countEl = document.getElementById('resultsCount');
+            countEl.innerHTML = `Showing <strong>${Math.min(page * 12, totalRealtors)}</strong> of <strong>${totalRealtors}</strong> realtors`;
+
+            if (page === 1) document.getElementById('statTotal').textContent = totalRealtors;
+
+            renderRealtors(realtors, append);
+
+            allLoaded = realtors.length < 12;
+            const wrap = document.getElementById('loadMoreWrap');
+            wrap.style.display = (allLoaded || !realtors.length) ? 'none' : 'block';
+            document.getElementById('loadMoreBtn').disabled = false;
+        } catch(e) {
+            if (!append) {
+                document.getElementById('directoryGrid').innerHTML = `<div class="empty-state">
+                    <h3>Could not load realtors</h3>
+                    <p>Please try again in a moment.</p>
+                </div>`;
+            }
+            document.getElementById('resultsCount').textContent = '';
+        }
+    }
+
+    function applyFilters() {
+        currentFilters = {};
+        const state = document.getElementById('filterState').value.trim();
+        const city = document.getElementById('filterCity').value.trim();
+        const name = document.getElementById('filterName').value.trim();
+        if (state) currentFilters.state = state;
+        if (city) currentFilters.city = city;
+        if (name) currentFilters.name = name;
+        currentPage = 1;
+        allLoaded = false;
+        loadRealtors(1, false);
+    }
+
+    function clearFilters() {
+        document.getElementById('filterState').value = '';
+        document.getElementById('filterCity').value = '';
+        document.getElementById('filterName').value = '';
+        currentFilters = {};
+        currentPage = 1;
+        allLoaded = false;
+        loadRealtors(1, false);
+    }
+
+    function loadMore() {
+        if (allLoaded) return;
+        currentPage++;
+        document.getElementById('loadMoreBtn').disabled = true;
+        loadRealtors(currentPage, true);
+    }
+
+    // Enter key on filters triggers search
+    ['filterCity', 'filterName'].forEach(id => {
+        document.getElementById(id).addEventListener('keydown', e => {
+            if (e.key === 'Enter') applyFilters();
+        });
+    });
+    document.getElementById('filterState').addEventListener('change', applyFilters);
+
+    // Initial load
+    loadRealtors(1, false);
+</script>
+</body>
+</html>

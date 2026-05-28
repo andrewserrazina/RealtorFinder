@@ -561,6 +561,29 @@ const emailService = {
             return await send({ to: sellerEmail, subject: `Your listing at ${listing.address} has been archived`, html: body });
         } catch(err) { logSendgridError('sendListingExpired', err); }
     },
+
+    async sendBuyerMatchEmail(realtorEmail, realtorName, request) {
+        try {
+            const budget = [
+                request.budget_min ? '$' + Number(request.budget_min).toLocaleString() : null,
+                request.budget_max ? '$' + Number(request.budget_max).toLocaleString() : null,
+            ].filter(Boolean).join(' – ') || 'Not specified';
+            const body = emailWrap('🏡 New Buyer Match',
+                h1(`A buyer is looking in your area`) +
+                p(`Hi ${realtorName}, a buyer just submitted a request that matches your service area. Here are their details:`) +
+                infoBox([
+                    ['Target Areas', request.target_areas || '—'],
+                    ['Property Type', request.property_type || 'Any'],
+                    ['Budget', budget],
+                    ['Min Bedrooms', request.bedrooms_min ? request.bedrooms_min + '+' : 'Any'],
+                    ['Timeline', request.timeline || '—'],
+                ]) +
+                p(`Log in to your RealtorFinder dashboard to view this buyer request and respond directly.`) +
+                btn(`${BASE_URL}/dashboard/realtor`, 'View Buyer Request →')
+            );
+            return await send({ to: realtorEmail, subject: `New buyer looking in ${request.target_areas || 'your area'}`, html: body });
+        } catch(err) { logSendgridError('sendBuyerMatchEmail', err); }
+    },
 };
 
 module.exports = emailService;

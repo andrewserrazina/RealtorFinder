@@ -1471,17 +1471,42 @@
                             <span>📏 ${listing.sqft.toLocaleString()} sqft</span>
                         </div>
                         <p style="margin-top:1rem;color:#666;">${listing.description}</p>
-                        <p style="margin-top:0.5rem;font-size:0.9rem;color:#999;">${listing.date} &nbsp;·&nbsp; 👁 ${listing.view_count || 0} views &nbsp;·&nbsp; 📬 ${listing.offerCount || 0} proposals &nbsp;·&nbsp; 📅 ${Math.floor((Date.now() - new Date(listing.created_at).getTime()) / 86400000)} days on market</p>
+                        <p style="margin-top:0.5rem;font-size:0.9rem;color:#999;">${listing.date} &nbsp;·&nbsp; 👁 ${listing.view_count || 0} views &nbsp;·&nbsp; 🔗 ${listing.shareViews || 0} share views &nbsp;·&nbsp; 📬 ${listing.offerCount || 0} proposals &nbsp;·&nbsp; 📅 ${Math.floor((Date.now() - new Date(listing.created_at).getTime()) / 86400000)} days on market</p>
                     </div>
                     <div class="listing-actions">
                         <button class="btn btn-primary" onclick="viewOffers(${listing.id})">${listing.offerCount || 0} Offers</button>
                         <a href="/listing/${listing.id}" target="_blank" class="btn btn-secondary" style="font-size:0.85rem;text-align:center;">View Listing</a>
+                        ${listing.shareToken ? `<button class="btn btn-outline" onclick="copyShareLink('${listing.shareToken}')" style="font-size:0.85rem;">🔗 Share</button>` : ''}
                         <button class="btn btn-outline" onclick="openEditModal(${listing.id})">Edit</button>
                         ${status !== 'sold' ? `<button class="btn btn-outline" onclick="markListingSold(${listing.id})" style="font-size:0.85rem;">Mark Sold</button>` : ''}
                         <button class="btn btn-outline" onclick="deleteListing(${listing.id})" style="font-size:0.85rem;border-color:#ef4444;color:#ef4444;">Delete</button>
                     </div>
                 </div>
             `}).join('');
+        }
+
+        function showToast(message) {
+            const toast = document.createElement('div');
+            toast.style.cssText = 'position:fixed;top:20px;right:20px;background:#0A2540;color:white;padding:0.85rem 1.5rem;border-radius:10px;font-weight:600;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,0.2);font-size:0.95rem;';
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        function copyShareLink(shareToken) {
+            const url = `${window.location.origin}/s/${shareToken}`;
+            navigator.clipboard.writeText(url).then(() => {
+                showToast('Share link copied!');
+            }).catch(() => {
+                // Fallback for older browsers
+                const el = document.createElement('textarea');
+                el.value = url;
+                document.body.appendChild(el);
+                el.select();
+                document.execCommand('copy');
+                document.body.removeChild(el);
+                showToast('Share link copied!');
+            });
         }
 
         function renderRecentActivity(listings) {
