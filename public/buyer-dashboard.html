@@ -23,6 +23,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV/XN/WLs=" crossorigin=""></script>
     <style>
         :root {
             --ink: #1a1a1a;
@@ -643,11 +645,14 @@
         .saved-card-meta { display: flex; gap: 1rem; font-size: 0.85rem; color: #888; }
 
         /* Browse listings */
-        .browse-filters { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 2rem; padding: 1.25rem; background: white; border: 1px solid var(--border); border-radius: 12px; align-items: flex-end; }
-        .browse-filters .fg { display: flex; flex-direction: column; gap: 0.35rem; flex: 1; min-width: 130px; }
+        .browse-filters { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1.25rem; padding: 1.25rem; background: white; border: 1px solid var(--border); border-radius: 12px; align-items: flex-end; }
+        .browse-filters .fg { display: flex; flex-direction: column; gap: 0.35rem; flex: 1; min-width: 120px; }
         .browse-filters label { font-size: 0.8rem; font-weight: 600; color: #666; text-transform: uppercase; letter-spacing: 0.5px; }
         .browse-filters input, .browse-filters select { padding: 0.6rem 0.75rem; border: 1px solid var(--border); border-radius: 8px; font-family: inherit; font-size: 0.9rem; outline: none; }
         .browse-filters input:focus, .browse-filters select:focus { border-color: var(--accent); }
+        .browse-view-toggle { display: flex; gap: 0; margin-bottom: 1.25rem; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; width: fit-content; }
+        .browse-view-toggle button { padding: 0.5rem 1.25rem; font-size: 0.875rem; font-weight: 600; font-family: inherit; border: none; background: white; color: #666; cursor: pointer; transition: background 0.15s, color 0.15s; }
+        .browse-view-toggle button.active { background: var(--accent); color: white; }
         .browse-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; }
         .browse-card { background: white; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; transition: box-shadow 0.2s; cursor: pointer; }
         .browse-card:hover { box-shadow: 0 8px 30px rgba(0,0,0,0.08); }
@@ -656,6 +661,12 @@
         .browse-card-price { font-family: 'Crimson Pro', serif; font-size: 1.5rem; font-weight: 700; margin-bottom: 0.25rem; }
         .browse-card-addr { font-size: 0.9rem; color: #666; margin-bottom: 0.75rem; }
         .browse-card-meta { display: flex; gap: 1rem; font-size: 0.85rem; color: #888; }
+        #browseMap { height: 520px; border-radius: 12px; border: 1px solid var(--border); display: none; }
+        .leaflet-popup-content { font-family: 'DM Sans', sans-serif; }
+        .map-popup-price { font-family: 'Crimson Pro', serif; font-size: 1.2rem; font-weight: 700; margin-bottom: 0.2rem; }
+        .map-popup-addr { font-size: 0.8rem; color: #666; margin-bottom: 0.5rem; }
+        .map-popup-meta { font-size: 0.8rem; color: #888; margin-bottom: 0.6rem; }
+        .map-popup-link { display: inline-block; padding: 0.3rem 0.75rem; background: var(--accent); color: white; border-radius: 6px; font-size: 0.8rem; font-weight: 600; text-decoration: none; }
 
         /* Realtor comparison */
         .compare-bar { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 2px solid var(--accent); padding: 0.875rem 2rem; display: flex; align-items: center; gap: 1.5rem; z-index: 200; box-shadow: 0 -4px 20px rgba(0,0,0,0.1); transition: transform 0.3s; }
@@ -767,6 +778,8 @@
             .browse-filters .fg {
                 min-width: unset;
             }
+
+            #browseMap { height: 360px; }
 
             .compare-bar {
                 flex-direction: column;
@@ -907,6 +920,10 @@
                         <input type="text" id="bFilterCity" placeholder="Any city">
                     </div>
                     <div class="fg">
+                        <label>Zip</label>
+                        <input type="text" id="bFilterZip" placeholder="Any zip" maxlength="10">
+                    </div>
+                    <div class="fg">
                         <label>Type</label>
                         <select id="bFilterType">
                             <option value="">All Types</option>
@@ -931,14 +948,29 @@
                             <option value="2">2+</option>
                             <option value="3">3+</option>
                             <option value="4">4+</option>
+                            <option value="5">5+</option>
+                        </select>
+                    </div>
+                    <div class="fg">
+                        <label>Min Baths</label>
+                        <select id="bFilterBaths">
+                            <option value="">Any</option>
+                            <option value="1">1+</option>
+                            <option value="2">2+</option>
+                            <option value="3">3+</option>
                         </select>
                     </div>
                     <div style="display:flex;gap:0.5rem;align-items:flex-end;">
-                        <button class="btn btn-primary" onclick="applyBrowseFilters()" style="padding:0.6rem 1.25rem;font-size:0.9rem;">Filter</button>
+                        <button class="btn btn-primary" onclick="applyBrowseFilters()" style="padding:0.6rem 1.25rem;font-size:0.9rem;">Search</button>
                         <button class="btn btn-outline" onclick="clearBrowseFilters()" style="padding:0.6rem 1rem;font-size:0.9rem;">Clear</button>
                     </div>
                 </div>
+                <div class="browse-view-toggle">
+                    <button id="toggleGrid" class="active" onclick="setBrowseView('grid')">Grid</button>
+                    <button id="toggleMap" onclick="setBrowseView('map')">Map</button>
+                </div>
                 <div class="browse-grid" id="browseGrid"><div class="empty-state"><div class="empty-state-icon">🏠</div><h3>Loading listings…</h3></div></div>
+                <div id="browseMap"></div>
             </section>
 
             <!-- Saved Listings View -->
@@ -1475,40 +1507,65 @@
         }
 
         // ─── Browse Listings ──────────────────────────────────────────────────────
-        let allBrowseListings = [];
+        let browseListings = [];
+        let browseViewMode = 'grid'; // 'grid' | 'map'
+        let leafletMap = null;
+        let leafletMarkers = [];
+
+        function buildFilterParams() {
+            const params = new URLSearchParams({ limit: 100 });
+            const city = document.getElementById('bFilterCity').value.trim();
+            const zip = document.getElementById('bFilterZip').value.trim();
+            const type = document.getElementById('bFilterType').value;
+            const minPrice = document.getElementById('bFilterMinPrice').value;
+            const maxPrice = document.getElementById('bFilterMaxPrice').value;
+            const minBeds = document.getElementById('bFilterBeds').value;
+            const minBaths = document.getElementById('bFilterBaths').value;
+            if (city) params.set('city', city);
+            if (zip) params.set('zip', zip);
+            if (type) params.set('type', type);
+            if (minPrice) params.set('minPrice', minPrice);
+            if (maxPrice) params.set('maxPrice', maxPrice);
+            if (minBeds) params.set('minBeds', minBeds);
+            if (minBaths) params.set('minBaths', minBaths);
+            return params;
+        }
+
         async function loadBrowseListings() {
-            if (allBrowseListings.length) { renderBrowse(allBrowseListings); return; }
+            const grid = document.getElementById('browseGrid');
+            grid.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🏠</div><h3>Loading listings…</h3></div>';
             try {
-                const res = await fetch(`${API_BASE_URL}/listings`, { credentials: 'include' });
+                const params = buildFilterParams();
+                const res = await fetch(`${API_BASE_URL}/listings?${params}`, { credentials: 'include' });
                 if (!res.ok) throw new Error();
-                allBrowseListings = await res.json();
-                renderBrowse(allBrowseListings);
+                const data = await res.json();
+                browseListings = Array.isArray(data) ? data : (data.listings || []);
+                if (browseViewMode === 'map') renderMap(browseListings);
+                else renderBrowse(browseListings);
             } catch(e) {
-                document.getElementById('browseGrid').innerHTML = '<div class="empty-state"><h3>Failed to load listings</h3></div>';
+                grid.innerHTML = '<div class="empty-state"><h3>Failed to load listings</h3></div>';
             }
         }
-        function applyBrowseFilters() {
-            const city = document.getElementById('bFilterCity').value.trim().toLowerCase();
-            const type = document.getElementById('bFilterType').value;
-            const minP = parseFloat(document.getElementById('bFilterMinPrice').value) || 0;
-            const maxP = parseFloat(document.getElementById('bFilterMaxPrice').value) || Infinity;
-            const beds = parseInt(document.getElementById('bFilterBeds').value) || 0;
-            const filtered = allBrowseListings.filter(l =>
-                (!city || (l.city || '').toLowerCase().includes(city)) &&
-                (!type || l.property_type === type) &&
-                (l.price >= minP) &&
-                (l.price <= maxP) &&
-                (!beds || (l.bedrooms || 0) >= beds)
-            );
-            renderBrowse(filtered);
-        }
+
+        function applyBrowseFilters() { loadBrowseListings(); }
+
         function clearBrowseFilters() {
-            ['bFilterCity','bFilterType','bFilterMinPrice','bFilterMaxPrice','bFilterBeds'].forEach(id => {
+            ['bFilterCity','bFilterZip','bFilterType','bFilterMinPrice','bFilterMaxPrice','bFilterBeds','bFilterBaths'].forEach(id => {
                 const el = document.getElementById(id);
                 if (el) el.value = '';
             });
-            renderBrowse(allBrowseListings);
+            loadBrowseListings();
         }
+
+        function setBrowseView(mode) {
+            browseViewMode = mode;
+            document.getElementById('toggleGrid').classList.toggle('active', mode === 'grid');
+            document.getElementById('toggleMap').classList.toggle('active', mode === 'map');
+            document.getElementById('browseGrid').style.display = mode === 'grid' ? 'grid' : 'none';
+            document.getElementById('browseMap').style.display = mode === 'map' ? 'block' : 'none';
+            if (mode === 'map') renderMap(browseListings);
+        }
+
         function renderBrowse(listings) {
             const grid = document.getElementById('browseGrid');
             if (!listings.length) {
@@ -1530,6 +1587,49 @@
                     </div>
                 </div>`;
             }).join('');
+        }
+
+        function renderMap(listings) {
+            const mapEl = document.getElementById('browseMap');
+            const withCoords = listings.filter(l => l.lat && l.lng);
+
+            if (!leafletMap) {
+                const center = withCoords.length
+                    ? [withCoords[0].lat, withCoords[0].lng]
+                    : [42.3601, -71.0589]; // default: Boston
+                leafletMap = L.map('browseMap').setView(center, 10);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+                    maxZoom: 19
+                }).addTo(leafletMap);
+            }
+
+            leafletMarkers.forEach(m => m.remove());
+            leafletMarkers = [];
+
+            if (!withCoords.length) {
+                mapEl.innerHTML += '<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:white;padding:1rem 1.5rem;border-radius:8px;border:1px solid #ddd;z-index:1000;font-size:0.9rem;color:#666;">No listings with location data match your filters.</div>';
+                return;
+            }
+
+            const bounds = [];
+            withCoords.forEach(l => {
+                const img = l.image_urls && l.image_urls.length ? l.image_urls[0] : '';
+                const popup = `
+                    <div style="min-width:180px;">
+                        ${img ? `<img src="${img}" style="width:100%;height:110px;object-fit:cover;border-radius:6px;margin-bottom:0.5rem;">` : ''}
+                        <div class="map-popup-price">$${Number(l.price).toLocaleString()}</div>
+                        <div class="map-popup-addr">${esc2(l.address)}<br>${esc2(l.city)}, ${esc2(l.state)}</div>
+                        <div class="map-popup-meta">${[l.bedrooms ? l.bedrooms+'bd' : '', l.bathrooms ? l.bathrooms+'ba' : '', l.sqft ? Number(l.sqft).toLocaleString()+' sqft' : ''].filter(Boolean).join(' · ')}</div>
+                        <a href="/listing/${l.id}" target="_blank" class="map-popup-link">View Listing</a>
+                    </div>`;
+                const marker = L.marker([l.lat, l.lng]).addTo(leafletMap).bindPopup(popup);
+                leafletMarkers.push(marker);
+                bounds.push([l.lat, l.lng]);
+            });
+
+            if (bounds.length) leafletMap.fitBounds(bounds, { padding: [40, 40], maxZoom: 13 });
+            setTimeout(() => leafletMap.invalidateSize(), 50);
         }
 
         // ─── Saved Listings ───────────────────────────────────────────────────────

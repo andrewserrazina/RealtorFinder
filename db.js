@@ -162,7 +162,7 @@ const db = {
 
     // Filtered listings with pagination (realtors — active only)
     async getFilteredListings(filters = {}, page = 1, limit = 20) {
-        const { city, type, minPrice, maxPrice, minBeds } = filters;
+        const { city, type, minPrice, maxPrice, minBeds, maxBeds, minBaths, zip, swLat, swLng, neLat, neLng } = filters;
         const offset = (page - 1) * limit;
         const params = [];
         const conditions = ["(l.status = 'active' OR l.status IS NULL)", "l.deleted_at IS NULL"];
@@ -170,6 +170,10 @@ const db = {
         if (city) {
             params.push(`%${city.trim()}%`);
             conditions.push(`l.city ILIKE $${params.length}`);
+        }
+        if (zip) {
+            params.push(zip.trim());
+            conditions.push(`l.zip = $${params.length}`);
         }
         if (type) {
             params.push(type);
@@ -179,6 +183,14 @@ const db = {
             params.push(parseInt(minBeds));
             conditions.push(`l.bedrooms >= $${params.length}`);
         }
+        if (maxBeds) {
+            params.push(parseInt(maxBeds));
+            conditions.push(`l.bedrooms <= $${params.length}`);
+        }
+        if (minBaths) {
+            params.push(parseFloat(minBaths));
+            conditions.push(`l.bathrooms >= $${params.length}`);
+        }
         if (minPrice) {
             params.push(parseInt(minPrice));
             conditions.push(`CAST(REGEXP_REPLACE(l.price, '[^0-9]', '', 'g') AS BIGINT) >= $${params.length}`);
@@ -186,6 +198,12 @@ const db = {
         if (maxPrice) {
             params.push(parseInt(maxPrice));
             conditions.push(`CAST(REGEXP_REPLACE(l.price, '[^0-9]', '', 'g') AS BIGINT) <= $${params.length}`);
+        }
+        if (swLat && swLng && neLat && neLng) {
+            params.push(parseFloat(swLat), parseFloat(neLat));
+            conditions.push(`l.latitude BETWEEN $${params.length - 1} AND $${params.length}`);
+            params.push(parseFloat(swLng), parseFloat(neLng));
+            conditions.push(`l.longitude BETWEEN $${params.length - 1} AND $${params.length}`);
         }
 
         const where = `WHERE ${conditions.join(' AND ')}`;
