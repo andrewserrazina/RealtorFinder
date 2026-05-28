@@ -649,13 +649,17 @@ app.get('/api/listings', async (req, res) => {
         }
 
         // Realtors/public: filtered, paginated, active only
-        const { city, type, minPrice, maxPrice, minBeds, page = 1, limit = 20 } = req.query;
+        const { city, type, minPrice, maxPrice, minBeds, maxBeds, minBaths, zip, swLat, swLng, neLat, neLng, page = 1, limit = 50 } = req.query;
         const filters = {};
         if (city) filters.city = city;
+        if (zip) filters.zip = zip;
         if (type) filters.type = type;
         if (minPrice) filters.minPrice = minPrice;
         if (maxPrice) filters.maxPrice = maxPrice;
         if (minBeds) filters.minBeds = minBeds;
+        if (maxBeds) filters.maxBeds = maxBeds;
+        if (minBaths) filters.minBaths = minBaths;
+        if (swLat && swLng && neLat && neLng) { filters.swLat = swLat; filters.swLng = swLng; filters.neLat = neLat; filters.neLng = neLng; }
 
         const result = await db.getFilteredListings(filters, parseInt(page), Math.min(parseInt(limit), 50));
         res.json({
