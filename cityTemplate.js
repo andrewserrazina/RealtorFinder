@@ -1,9 +1,100 @@
 // cityTemplate.js — Generates SEO-optimized HTML for city landing pages
 
+function generateNESection(city, stateCode) {
+    const stateContent = {
+        MA: {
+            headline: 'Selling in Massachusetts',
+            body: `The Massachusetts market moves fast. Spring listings in ${city.name} routinely draw multiple offers within days — the right realtor makes all the difference. Most homes here are traditional New England styles: colonials, capes, and split-levels, many with oil heat, older roofing, and private wells or town water depending on the area.`,
+            tips: [
+                'Spring (April–June) is peak season — list early to capture the most buyers',
+                'Disclosure laws require sellers to reveal known material defects',
+                'Oil heat systems are common — budget for a pre-sale tank inspection',
+                'Historic homes may have lead paint or knob-and-tube wiring',
+                'Title V septic inspections are required at sale in many towns',
+            ]
+        },
+        CT: {
+            headline: 'Selling in Connecticut',
+            body: `Connecticut's market has surged as remote work drives buyers out of New York City. ${city.name} offers a compelling mix of New England character and value — but sellers need a local agent who understands what buyers are actually paying. Fairfield County properties command premium prices from NYC commuters and hedge fund professionals.`,
+            tips: [
+                'CT has some of the highest property taxes in the country — buyers factor this into offers',
+                'NYC commuter proximity drives strong demand in Fairfield and New Haven counties',
+                'Shoreline properties carry seasonal premium pricing',
+                'Connecticut requires a Real Property Transfer Tax at closing',
+                'Older homes are common — budget for oil tank sweeps and asbestos disclosure',
+            ]
+        },
+        RI: {
+            headline: 'Selling in Rhode Island',
+            body: `Rhode Island packs remarkable real estate diversity into the smallest state in the nation. From Providence's vibrant urban neighborhoods to Newport's historic mansions and South County's coastal retreats, the Ocean State offers something for every buyer. ${city.name}'s market reflects Rhode Island's tight inventory and rising prices.`,
+            tips: [
+                'RI has one of the lowest housing inventories in New England — a seller\'s advantage',
+                'Coastal and waterfront properties in Washington and Newport counties command significant premiums',
+                'Providence\'s arts district continues to draw Boston spillover buyers',
+                'Rhode Island requires Lead Disclosure for homes built before 1978',
+                'Septic system inspections (DEM approval) are required in many RI towns at sale',
+            ]
+        },
+        VT: {
+            headline: 'Selling in Vermont',
+            body: `Vermont's real estate market has transformed dramatically since 2020, with remote workers and second-home buyers from Boston and New York pushing prices to record levels. ${city.name} has seen strong appreciation as buyers seek Vermont's combination of natural beauty, safety, and quality of life.`,
+            tips: [
+                'Vermont has a 1.25% property transfer tax — sellers should be aware it affects buyer budgets',
+                'Ski property near Stowe, Killington, and Mad River Glen commands strong seasonal premiums',
+                'Many VT homes use propane or oil heat — inspection is key',
+                'Act 250 environmental regulations may affect properties with significant land',
+                'Fall foliage season (late Sept–Oct) brings peak buyer interest for vacation homes',
+            ]
+        },
+        NH: {
+            headline: 'Selling in New Hampshire',
+            body: `New Hampshire's lack of income tax and sales tax makes it one of the most tax-friendly states in the Northeast — a powerful draw for Massachusetts and Connecticut buyers looking to lower their cost of living without leaving New England. ${city.name}'s market benefits from this sustained demand.`,
+            tips: [
+                'No state income or sales tax is NH\'s biggest draw for out-of-state buyers',
+                'Southern NH towns are popular with MA commuters seeking more space',
+                'Lakes Region properties carry strong vacation home premiums',
+                'White Mountains towns see strong second-home and investment demand',
+                'Septic and well inspections are standard — budget for these at listing time',
+            ]
+        },
+        ME: {
+            headline: 'Selling in Maine',
+            body: `Maine has experienced one of the most dramatic real estate booms in the country since 2020, driven by remote workers, retirees, and second-home buyers from Boston and beyond. ${city.name}'s market reflects a state where inventory remains tight and buyer demand continues to outpace supply.`,
+            tips: [
+                'Maine\'s coastal properties — especially in York and Cumberland counties — command significant premiums',
+                'Portland and the greater Portland metro are among the fastest-appreciating markets in New England',
+                'Maine requires a Real Estate Transfer Tax split between buyer and seller',
+                'Private wells and septic systems are common — inspection required at sale in most towns',
+                'Winter listings attract serious buyers — less competition, faster closings',
+            ]
+        }
+    };
+    const c = stateContent[stateCode] || stateContent['MA'];
+    const tipsHtml = c.tips.map(t => `<li style="padding:8px 0;border-bottom:1px solid var(--border);font-size:0.95rem;display:flex;gap:10px;align-items:flex-start;"><span style="color:var(--accent);font-weight:700;flex-shrink:0;">✓</span>${t}</li>`).join('');
+    return `
+<section class="section section-alt">
+    <div style="max-width:1000px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:start;">
+        <div>
+            <div class="eyebrow">Local Market Insight</div>
+            <h2 style="margin-bottom:16px;">${c.headline}</h2>
+            <p style="font-size:1.02rem;color:var(--muted);line-height:1.8;margin-bottom:24px;">${c.body}</p>
+            <a href="/login?tab=signup&type=seller" style="display:inline-block;background:var(--accent);color:white;padding:13px 28px;border-radius:8px;font-weight:700;font-size:0.95rem;text-decoration:none;">List My ${city.name} Home Free →</a>
+        </div>
+        <div style="background:white;border:1px solid var(--border);border-radius:16px;padding:32px;">
+            <div style="font-family:'Playfair Display',serif;font-size:1.15rem;font-weight:700;color:var(--primary);margin-bottom:16px;">What Sellers in ${city.name} Should Know</div>
+            <ul style="list-style:none;">${tipsHtml}</ul>
+        </div>
+    </div>
+    <div style="max-width:1000px;margin:0 auto;"></div>
+</section>`;
+}
+
 function generateCityPage(city, liveData = {}) {
     const { listingCount = 0, realtorCount = 0 } = liveData;
     const stateCode = (city.state_code || 'MA').toUpperCase();
     const stateName = city.state_name || 'Massachusetts';
+    const neStates = ['MA', 'CT', 'RI', 'VT', 'NH', 'ME'];
+    const neContent = neStates.includes(stateCode) ? generateNESection(city, stateCode) : '';
     const title = `Sell Your Home in ${city.name}, ${stateCode} | RealtorFinder`;
     const metaDesc = `List your ${city.name}, ${stateCode} home on RealtorFinder and let local realtors compete for your listing. Free for sellers. Realtors: bid on ${city.name} listings before they hit Zillow.`;
     const canonicalUrl = `https://www.realtorfinder.net/locations/${stateCode.toLowerCase()}/${city.slug}`;
@@ -365,7 +456,7 @@ function generateCityPage(city, liveData = {}) {
         <div class="stat-num">${city.avg_dom || '—'}<span>${city.avg_dom ? ' days' : ''}</span></div>
         <div class="stat-label">Avg. Days on Market</div>
     </div>
-    ${realtorCount > 0 ? `<div class="stat"><div class="stat-num">${realtorCount}</div><div class="stat-label">Active Realtors</div></div>` : `<div class="stat"><div class="stat-num">$0</div><div class="stat-label">Cost to List for Sellers</div></div>`}
+    ${listingCount > 0 ? `<div class="stat"><div class="stat-num">${listingCount}</div><div class="stat-label">Active Listings</div></div>` : realtorCount > 0 ? `<div class="stat"><div class="stat-num">${realtorCount}</div><div class="stat-label">Active Realtors</div></div>` : `<div class="stat"><div class="stat-num">$0</div><div class="stat-label">Cost to List</div></div>`}
 </div>
 
 <!-- WHO IS THIS FOR -->
@@ -457,6 +548,8 @@ function generateCityPage(city, liveData = {}) {
     </div>
 </section>
 
+${neContent}
+
 <!-- NEARBY CITIES -->
 <section class="section section-alt section-center">
     <div class="eyebrow">Also Serving</div>
@@ -464,6 +557,15 @@ function generateCityPage(city, liveData = {}) {
     <p class="section-intro">RealtorFinder connects sellers and realtors across ${city.county ? city.county + ' County and ' : ''}${stateName}, including ${city.nearby || 'nearby communities'}.</p>
     <div class="nearby-links" id="nearbyLinks"></div>
     <p style="margin-top:20px;"><a href="/locations/${stateCode.toLowerCase()}" style="color:var(--accent);font-weight:600;">View all ${stateName} cities →</a></p>
+</section>
+
+<!-- LIVE LISTINGS -->
+<section class="section section-center" id="live-listings-section">
+    <div class="eyebrow">Currently on RealtorFinder</div>
+    <h2>Active Listings in ${city.name}</h2>
+    <p class="section-intro">Homes in ${city.name} listed right now — sellers looking for the right realtor.</p>
+    <div id="liveListingsGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1.25rem;max-width:1100px;margin:0 auto 2rem;text-align:left;"></div>
+    <p id="noListingsMsg" style="display:none;color:var(--muted);font-size:1rem;margin-bottom:1.5rem;">No active listings in ${city.name} yet — <button onclick="openLead('seller')" style="background:none;border:none;color:var(--accent);font-weight:600;cursor:pointer;font-size:1rem;text-decoration:underline;">be the first to list your home</button>.</p>
 </section>
 
 <!-- INLINE LEAD CAPTURE -->
@@ -669,6 +771,31 @@ function generateCityPage(city, liveData = {}) {
         </div>
     </div>
 </div>
+
+<script>
+(async function() {
+    try {
+        const r = await fetch('/api/listings?city=${encodeURIComponent(city.name)}&limit=6');
+        const data = await r.json();
+        const listings = Array.isArray(data) ? data : (data.listings || []);
+        const grid = document.getElementById('liveListingsGrid');
+        if (!listings.length) {
+            document.getElementById('noListingsMsg').style.display = 'block';
+            return;
+        }
+        grid.innerHTML = listings.map(l => {
+            const img = l.image_urls && l.image_urls.length ? l.image_urls[0] : '';
+            return '<a href="/listing/' + l.id + '" style="display:block;background:white;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;text-decoration:none;color:inherit;transition:box-shadow 0.2s;" onmouseover="this.style.boxShadow=\'0 8px 24px rgba(0,0,0,0.1)\'" onmouseout="this.style.boxShadow=\'none\'">'
+                + (img ? '<div style="height:160px;background:center/cover url(' + JSON.stringify(img) + ')"></div>' : '<div style="height:160px;background:#e8ded8;display:flex;align-items:center;justify-content:center;font-size:2rem;">🏠</div>')
+                + '<div style="padding:1rem;">'
+                + '<div style="font-family:\'Playfair Display\',serif;font-size:1.3rem;font-weight:900;color:#0A2540;margin-bottom:0.25rem;">$' + Number(l.price).toLocaleString() + '</div>'
+                + '<div style="font-size:0.85rem;color:#6b7280;margin-bottom:0.5rem;">' + (l.address || '') + '</div>'
+                + '<div style="font-size:0.82rem;color:#9ca3af;">' + [l.bedrooms ? l.bedrooms + ' bd' : '', l.bathrooms ? l.bathrooms + ' ba' : '', l.sqft ? Number(l.sqft).toLocaleString() + ' sqft' : ''].filter(Boolean).join(' · ') + '</div>'
+                + '</div></a>';
+        }).join('');
+    } catch(e) {}
+})();
+</script>
 
 </body>
 </html>`;

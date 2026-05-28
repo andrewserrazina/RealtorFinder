@@ -1418,15 +1418,34 @@
             }
         }
 
+        function showNewListingForm() {
+            openNewListingModal();
+        }
+
         function renderMyListings(listings) {
             const container = document.getElementById('myListingsGrid');
             if (listings.length === 0) {
+                const firstName = (currentUser && currentUser.firstName) ? currentUser.firstName : 'there';
                 container.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-state-icon">🏠</div>
-                        <h3>No listings yet</h3>
-                        <p>Create your first listing to start receiving offers from realtors</p>
-                        <button class="btn btn-primary" onclick="openNewListingModal()" style="margin-top: 1rem;">Create Listing</button>
+                    <div style="background:white;border:1px solid var(--border);border-radius:16px;padding:3rem 2.5rem;text-align:center;max-width:640px;margin:0 auto;">
+                        <div style="font-size:3.5rem;margin-bottom:1.25rem;">🏠</div>
+                        <h2 style="font-family:'Crimson Pro',serif;font-size:2rem;font-weight:700;color:var(--ink);margin-bottom:0.5rem;">Welcome to RealtorFinder, ${escSafe(firstName)}!</h2>
+                        <p style="color:#666;font-size:1.05rem;margin-bottom:2.5rem;">You're just a few steps away from getting competing realtor proposals.</p>
+                        <div style="text-align:left;display:inline-block;margin-bottom:2.5rem;">
+                            <div style="display:flex;align-items:flex-start;gap:1rem;margin-bottom:1.25rem;">
+                                <div style="background:var(--accent);color:white;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;font-size:0.95rem;">1</div>
+                                <div><strong style="display:block;color:var(--ink);margin-bottom:0.15rem;">Create your listing</strong><span style="color:#666;font-size:0.9rem;">Add your property details, price, and photos.</span></div>
+                            </div>
+                            <div style="display:flex;align-items:flex-start;gap:1rem;margin-bottom:1.25rem;">
+                                <div style="background:var(--soft-accent);color:var(--ink);border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;font-size:0.95rem;">2</div>
+                                <div><strong style="display:block;color:var(--ink);margin-bottom:0.15rem;">Review realtor proposals</strong><span style="color:#666;font-size:0.9rem;">Licensed agents compete for your listing with their best offers.</span></div>
+                            </div>
+                            <div style="display:flex;align-items:flex-start;gap:1rem;">
+                                <div style="background:var(--soft-accent);color:var(--ink);border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;font-size:0.95rem;">3</div>
+                                <div><strong style="display:block;color:var(--ink);margin-bottom:0.15rem;">Choose your agent</strong><span style="color:#666;font-size:0.9rem;">Pick the realtor you trust and get your home sold.</span></div>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary" onclick="showNewListingForm()" style="padding:1rem 2.5rem;font-size:1.1rem;border-radius:50px;">Create Your First Listing</button>
                     </div>
                 `;
                 return;
@@ -1994,6 +2013,8 @@
         function esc(str) {
             return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
         }
+
+        function escSafe(str) { return esc(str); }
 
         async function changePassword() {
             const current = document.getElementById('currentPassword').value;

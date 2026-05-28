@@ -476,6 +476,45 @@ const emailService = {
         } catch (error) { logSendgridError('Message notification', error); }
     },
 
+    async sendListingAlert(userEmail, userName, searchLabel, matchingListings) {
+        const listingsHtml = matchingListings.slice(0, 5).map(l => {
+            const addr = [l.address, l.city, l.state].filter(Boolean).join(', ');
+            const price = l.price ? '$' + Number(l.price).toLocaleString() : '—';
+            const specs = [l.bedrooms ? l.bedrooms + ' bd' : null, l.bathrooms ? l.bathrooms + ' ba' : null].filter(Boolean).join(' · ');
+            return `<div style="padding:12px 16px;border-bottom:1px solid #f0ece7;">
+                <div style="font-weight:700;font-size:14px;color:#0A2540;margin-bottom:2px;">${addr}</div>
+                <div style="font-size:18px;font-weight:900;color:#FF6B35;font-family:Georgia,serif;margin-bottom:4px;">${price}</div>
+                ${specs ? `<div style="font-size:13px;color:#666;">${specs}</div>` : ''}
+            </div>`;
+        }).join('');
+        const body = `
+            ${h1('New Listings Match Your Search 🔍')}
+            ${p(`Hi ${userName}, we found ${matchingListings.length} new listing${matchingListings.length !== 1 ? 's' : ''} matching your saved search <strong>"${searchLabel}"</strong>.`)}
+            <div style="border:1px solid #E5E1DB;border-radius:10px;overflow:hidden;margin:24px 0;">
+                ${listingsHtml}
+            </div>
+            ${btn(`${BASE_URL}/dashboard/buyer`, 'Browse Listings')}
+            ${divider()}
+            <p style="color:#999;font-size:13px;margin:0;">The RealtorFinder Team</p>
+        `;
+        try {
+            await send({ to: userEmail, subject: `New listings match "${searchLabel}" — RealtorFinder`, html: emailWrap('Listing Alert', body) });
+        } catch (error) { logSendgridError('Listing alert email', error); }
+    },
+
+    async sendAnnouncement(userEmail, userName, subject, messageBody) {
+        const body = `
+            ${h1(subject)}
+            ${p(`Hi ${userName},`)}
+            <div style="color:#444;font-size:15px;line-height:1.7;white-space:pre-wrap;">${String(messageBody).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+            ${divider()}
+            <p style="color:#999;font-size:13px;margin:0;">The RealtorFinder Team<br><a href="${BASE_URL}" style="color:#FF6B35;text-decoration:none;">realtorfinder.net</a></p>
+        `;
+        try {
+            await send({ to: userEmail, subject, html: emailWrap(null, body) });
+        } catch (error) { logSendgridError('Announcement email', error); }
+    },
+
     async sendAccountApprovedEmail(email, firstName, userType) {
         const dashUrl = userType === 'realtor' ? `${BASE_URL}/dashboard/realtor` : `${BASE_URL}/dashboard/seller`;
         const roleLabel = userType === 'realtor' ? 'For Realtors' : 'For Sellers';

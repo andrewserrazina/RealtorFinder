@@ -965,6 +965,22 @@
                         <button class="btn btn-outline" onclick="clearBrowseFilters()" style="padding:0.6rem 1rem;font-size:0.9rem;">Clear</button>
                     </div>
                 </div>
+                <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;flex-wrap:wrap;">
+                    <button class="btn btn-outline" onclick="saveCurrentSearch()" style="padding:0.5rem 1.1rem;font-size:0.875rem;border-color:var(--accent);color:var(--accent);">🔔 Save this search</button>
+                    <span id="saveSearchStatus" style="font-size:0.85rem;color:#666;"></span>
+                </div>
+
+                <!-- Saved Searches Panel -->
+                <div id="savedSearchesPanel" style="background:white;border:1px solid var(--border);border-radius:12px;padding:1.25rem 1.5rem;margin-bottom:1.25rem;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;">
+                        <strong style="font-size:0.95rem;color:var(--ink);">Saved Searches</strong>
+                        <button onclick="toggleSavedSearchesPanel()" id="savedSearchesToggle" style="background:none;border:none;font-size:0.8rem;color:var(--accent);cursor:pointer;font-family:inherit;font-weight:600;">Hide</button>
+                    </div>
+                    <div id="savedSearchesList" style="display:flex;flex-direction:column;gap:0.5rem;">
+                        <span style="font-size:0.9rem;color:#aaa;">Loading saved searches…</span>
+                    </div>
+                </div>
+
                 <div class="browse-view-toggle">
                     <button id="toggleGrid" class="active" onclick="setBrowseView('grid')">Grid</button>
                     <button id="toggleMap" onclick="setBrowseView('map')">Map</button>
@@ -1369,7 +1385,7 @@
             document.querySelector(`[data-view="${view}"]`).classList.add('active');
             document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
             document.getElementById(`${view}-view`).classList.add('active');
-            if (view === 'browse') loadBrowseListings();
+            if (view === 'browse') { loadBrowseListings(); loadSavedSearches(); }
             if (view === 'saved') loadSavedListings();
         }
 
@@ -1447,7 +1463,7 @@
                 item.classList.add('active');
                 document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
                 document.getElementById(`${view}-view`).classList.add('active');
-                if (view === 'browse') loadBrowseListings();
+                if (view === 'browse') { loadBrowseListings(); loadSavedSearches(); }
                 if (view === 'saved') loadSavedListings();
             });
         });
@@ -1630,6 +1646,107 @@
 
             if (bounds.length) leafletMap.fitBounds(bounds, { padding: [40, 40], maxZoom: 13 });
             setTimeout(() => leafletMap.invalidateSize(), 50);
+        }
+
+        // ─── Saved Searches ───────────────────────────────────────────────────────
+        let savedSearchesPanelVisible = true;
+
+        function toggleSavedSearchesPanel() {
+            savedSearchesPanelVisible = !savedSearchesPanelVisible;
+            document.getElementById('savedSearchesList').style.display = savedSearchesPanelVisible ? 'flex' : 'none';
+            document.getElementById('savedSearchesToggle').textContent = savedSearchesPanelVisible ? 'Hide' : 'Show';
+        }
+
+        async function saveCurrentSearch() {
+            const city = document.getElementById('bFilterCity').value.trim();
+            const zip = document.getElementById('bFilterZip').value.trim();
+            const type = document.getElementById('bFilterType').value;
+            const minPrice = document.getElementById('bFilterMinPrice').value;
+            const maxPrice = document.getElementById('bFilterMaxPrice').value;
+            const minBeds = document.getElementById('bFilterBeds').value;
+            const minBaths = document.getElementById('bFilterBaths').value;
+
+            const labelInput = prompt('Name this saved search (optional):', city || 'My Search');
+            if (labelInput === null) return; // cancelled
+
+            const status = document.getElementById('saveSearchStatus');
+            status.textContent = 'Saving…';
+            try {
+                const res = await fetch(`${API_BASE_URL}/saved-searches`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ label: labelInput || null, city: city || null, zip: zip || null, type: type || null, minPrice: minPrice || null, maxPrice: maxPrice || null, minBeds: minBeds || null, minBaths: minBaths || null })
+                });
+                if (!res.ok) throw new Error();
+                status.textContent = '✓ Search saved!';
+                setTimeout(() => { status.textContent = ''; }, 3000);
+                loadSavedSearches();
+            } catch {
+                status.textContent = 'Failed to save.';
+                setTimeout(() => { status.textContent = ''; }, 3000);
+            }
+        }
+
+        async function loadSavedSearches() {
+            const list = document.getElementById('savedSearchesList');
+            try {
+                const res = await fetch(`${API_BASE_URL}/saved-searches`, { credentials: 'include' });
+                if (!res.ok) throw new Error();
+                const searches = await res.json();
+                if (!searches.length) {
+                    list.innerHTML = '<span style="font-size:0.875rem;color:#aaa;">No saved searches yet. Use filters above and click "Save this search".</span>';
+                    return;
+                }
+                list.innerHTML = searches.map(s => {
+                    const parts = [
+                        s.city ? `City: ${s.city}` : null,
+                        s.zip ? `ZIP: ${s.zip}` : null,
+                        s.type ? `Type: ${s.type}` : null,
+                        s.min_price ? `Min: $${Number(s.min_price).toLocaleString()}` : null,
+                        s.max_price ? `Max: $${Number(s.max_price).toLocaleString()}` : null,
+                        s.min_beds ? `${s.min_beds}+ beds` : null,
+                        s.min_baths ? `${s.min_baths}+ baths` : null
+                    ].filter(Boolean).join(' · ');
+                    return `<div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:0.5rem 0;border-bottom:1px solid var(--border);">
+                        <div>
+                            <span style="font-weight:600;font-size:0.875rem;color:var(--ink);">${esc2(s.label || 'Saved Search')}</span>
+                            ${parts ? `<div style="font-size:0.8rem;color:#888;margin-top:0.1rem;">${parts}</div>` : ''}
+                        </div>
+                        <div style="display:flex;gap:0.4rem;flex-shrink:0;">
+                            <button class="btn btn-outline" onclick="runSavedSearch(${s.id})" style="padding:0.35rem 0.75rem;font-size:0.8rem;">Run</button>
+                            <button class="btn btn-danger" onclick="deleteSavedSearch(${s.id})" style="padding:0.35rem 0.65rem;font-size:0.8rem;">✕</button>
+                        </div>
+                    </div>`;
+                }).join('');
+            } catch {
+                list.innerHTML = '<span style="font-size:0.875rem;color:#aaa;">Could not load saved searches.</span>';
+            }
+        }
+
+        async function deleteSavedSearch(id) {
+            try {
+                await fetch(`${API_BASE_URL}/saved-searches/${id}`, { method: 'DELETE', credentials: 'include' });
+                loadSavedSearches();
+            } catch { showToast('Failed to delete saved search.', 'error'); }
+        }
+
+        async function runSavedSearch(id) {
+            try {
+                const res = await fetch(`${API_BASE_URL}/saved-searches`, { credentials: 'include' });
+                if (!res.ok) throw new Error();
+                const searches = await res.json();
+                const s = searches.find(x => x.id === id);
+                if (!s) return;
+                document.getElementById('bFilterCity').value = s.city || '';
+                document.getElementById('bFilterZip').value = s.zip || '';
+                document.getElementById('bFilterType').value = s.type || '';
+                document.getElementById('bFilterMinPrice').value = s.min_price || '';
+                document.getElementById('bFilterMaxPrice').value = s.max_price || '';
+                document.getElementById('bFilterBeds').value = s.min_beds || '';
+                document.getElementById('bFilterBaths').value = s.min_baths || '';
+                loadBrowseListings();
+            } catch { showToast('Failed to run saved search.', 'error'); }
         }
 
         // ─── Saved Listings ───────────────────────────────────────────────────────
