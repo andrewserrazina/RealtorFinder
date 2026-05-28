@@ -1987,6 +1987,20 @@ app.get('/api/realtors/:id/reviews', async (req, res) => {
     } catch (err) { res.status(500).json({ error: 'Failed to fetch reviews' }); }
 });
 
+// ===== REALTOR REVIEWS TABLE INIT =====
+pool.query(`
+    CREATE TABLE IF NOT EXISTS realtor_reviews (
+        id SERIAL PRIMARY KEY,
+        realtor_id INTEGER REFERENCES users(id),
+        seller_id INTEGER REFERENCES users(id),
+        listing_id INTEGER REFERENCES listings(id),
+        rating INTEGER NOT NULL CHECK(rating BETWEEN 1 AND 5),
+        body TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE(seller_id, listing_id)
+    )
+`).catch(err => console.error('realtor_reviews table init error:', err.message));
+
 // ===== MESSAGING =====
 
 // Ensure messages table exists
@@ -2093,6 +2107,26 @@ app.post('/api/messages', auth.requireAuth, async (req, res) => {
             VALUES ($1, 'message', 'New Message', $2, '/dashboard/' || (SELECT user_type FROM users WHERE id=$1))
             ON CONFLICT DO NOTHING
         `, [toUserId, `You have a new message`]).catch(() => {});
+
+        // Fire-and-forget email notification
+        (async () => {
+            try {
+                const [recipientRes, senderRes] = await Promise.all([
+                    pool.query(`SELECT email FROM users WHERE id = $1`, [toUserId]),
+                    pool.query(`SELECT first_name, last_name FROM users WHERE id = $1`, [uid])
+                ]);
+                if (!recipientRes.rows.length) return;
+                const recipientEmail = recipientRes.rows[0].email;
+                const s = senderRes.rows[0] || {};
+                const senderName = [s.first_name, s.last_name].filter(Boolean).join(' ') || 'Someone';
+                let listingAddress = null;
+                if (listingId) {
+                    const lRes = await pool.query(`SELECT address FROM listings WHERE id = $1`, [listingId]);
+                    if (lRes.rows.length) listingAddress = lRes.rows[0].address;
+                }
+                await emailService.sendMessageNotification(recipientEmail, senderName, listingAddress);
+            } catch (_) {}
+        })();
 
         res.status(201).json(rows[0]);
     } catch (err) {
