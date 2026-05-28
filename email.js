@@ -383,6 +383,35 @@ const emailService = {
         } catch (error) { logSendgridError('Email verification', error); throw error; }
     },
 
+    async sendNewListingAlert(realtor, listing, distanceMiles) {
+        const price = listing.price ? '$' + Number(listing.price).toLocaleString() : 'Price not listed';
+        const address = [listing.address, listing.city, listing.state].filter(Boolean).join(', ');
+        const specs = [
+            listing.bedrooms    ? `${listing.bedrooms} bed`  : null,
+            listing.bathrooms   ? `${listing.bathrooms} bath` : null,
+            listing.sqft        ? `${Number(listing.sqft).toLocaleString()} sqft` : null,
+            listing.property_type || null
+        ].filter(Boolean).join(' · ');
+        const dist = distanceMiles != null ? `~${Math.round(distanceMiles)} miles from your ZIP` : 'In your area';
+        const body = `
+            ${h1('New Listing Near You 🏠')}
+            ${p(`Hi ${realtor.first_name}, a seller just listed their home on RealtorFinder — and it's in your market.`)}
+            <div style="background:#F8F6F3;border-radius:12px;padding:20px 24px;margin:20px 0;border:1px solid #E5E1DB;">
+                <div style="font-size:18px;font-weight:700;color:#0A2540;margin-bottom:4px;">${address}</div>
+                <div style="font-size:22px;font-weight:900;color:#FF6B35;font-family:Georgia,serif;margin-bottom:8px;">${price}</div>
+                ${specs ? `<div style="color:#6B7280;font-size:14px;margin-bottom:8px;">${specs}</div>` : ''}
+                <div style="display:inline-block;background:#E0F2FE;color:#0369a1;font-size:12px;font-weight:700;padding:3px 10px;border-radius:20px;">📍 ${dist}</div>
+            </div>
+            ${p("The seller is reviewing proposals now. Submit yours to get in front of a motivated homeowner before other agents do.")}
+            ${btn(`${BASE_URL}/dashboard/realtor`, 'Submit a Proposal')}
+            ${divider()}
+            <p style="color:#999;font-size:12px;margin:0;">You're receiving this because you're a RealtorFinder agent in this market. <a href="${BASE_URL}/dashboard/realtor" style="color:#FF6B35;">Manage preferences</a></p>
+        `;
+        try {
+            await send({ to: realtor.email, subject: `New Listing Near You — ${address}`, html: emailWrap('For Realtors', body) });
+        } catch (error) { logSendgridError('New listing alert', error); }
+    },
+
     async sendAccountApprovedEmail(email, firstName, userType) {
         const dashUrl = userType === 'realtor' ? `${BASE_URL}/dashboard/realtor` : `${BASE_URL}/dashboard/seller`;
         const roleLabel = userType === 'realtor' ? 'For Realtors' : 'For Sellers';

@@ -101,6 +101,43 @@ function geocodeAddress(address) {
     });
 }
 
+// Haversine distance in miles between two lat/lng points
+function haversineMiles(lat1, lon1, lat2, lon2) {
+    const R = 3958.8;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLon/2)**2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+// Fire-and-forget: email nearby approved realtors about a new listing
+async function notifyNearbyRealtors(listing) {
+    try {
+        if (!listing.latitude || !listing.longitude) return;
+        const { rows } = await pool.query(
+            `SELECT id, first_name, email, zip_code FROM users
+             WHERE user_type = 'realtor' AND is_approved = true AND is_active IS NOT FALSE
+               AND email IS NOT NULL AND zip_code IS NOT NULL`
+        );
+        const RADIUS_MILES = 50;
+        const MAX_EMAILS = 200;
+        let sent = 0;
+        for (const realtor of rows) {
+            if (sent >= MAX_EMAILS) break;
+            const coords = await geocodeAddress(`${realtor.zip_code}, USA`);
+            if (!coords) continue;
+            const dist = haversineMiles(listing.latitude, listing.longitude, coords.latitude, coords.longitude);
+            if (dist <= RADIUS_MILES) {
+                await emailService.sendNewListingAlert(realtor, listing, dist);
+                sent++;
+            }
+        }
+        if (sent > 0) console.log(`📬 Notified ${sent} realtors about listing ${listing.id}`);
+    } catch (err) {
+        console.error('notifyNearbyRealtors error:', err.message);
+    }
+}
+
 // Simple in-memory rate limiter (windowMs = window in ms, max = max requests per window per IP)
 function createRateLimiter(windowMs, max, message) {
     const hits = new Map();
@@ -691,9 +728,12 @@ app.post('/api/listings', auth.requireAuth, async (req, res) => {
 
         const newListing = await db.createListing(listingData);
         
-        // Send confirmation email
+        // Send confirmation email to seller
         await emailService.sendListingConfirmation(newListing);
-        
+
+        // Notify nearby realtors (fire-and-forget — don't block the response)
+        notifyNearbyRealtors(newListing);
+
         res.status(201).json({
             ...newListing,
             date: formatDate(newListing.created_at)
