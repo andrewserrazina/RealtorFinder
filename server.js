@@ -1538,7 +1538,7 @@ app.get('/sitemap-index.xml', async (req, res) => {
 app.get('/sitemap-static.xml', (req, res) => {
     const base = (process.env.FRONTEND_URL || 'https://realtorfinder.net').replace(/\/$/, '');
     const today = new Date().toISOString().split('T')[0];
-    const urls = ['/', '/realtors', '/pricing', '/buyers', '/locations', '/login'];
+    const urls = ['/', '/realtors', '/pricing', '/about', '/buyers', '/locations', '/login'];
     const entries = urls.map(u => `  <url><loc>${base}${u}</loc><lastmod>${today}</lastmod><priority>${u === '/' ? '1.0' : '0.7'}</priority></url>`).join('\n');
     res.type('application/xml');
     res.send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${entries}\n</urlset>`);
@@ -1561,6 +1561,23 @@ app.get('/sitemap-:stateCode\\.xml', async (req, res) => {
 
 // Legacy sitemap.xml redirect
 app.get('/sitemap.xml', (req, res) => res.redirect(301, '/sitemap-index.xml'));
+
+// Public listing detail (no auth required)
+app.get('/api/listings/:id/public', async (req, res) => {
+    try {
+        const { rows } = await pool.query(
+            `SELECT id, address, city, state, zip, price, zestimate, property_type,
+                    bedrooms, bathrooms, sqft, description, image_urls, status, created_at
+             FROM listings WHERE id = $1 AND status != 'inactive'`,
+            [parseInt(req.params.id)]
+        );
+        if (!rows.length) return res.status(404).json({ error: 'Listing not found' });
+        res.json(rows[0]);
+    } catch (err) {
+        console.error('Public listing error:', err);
+        res.status(500).json({ error: 'Failed to load listing' });
+    }
+});
 
 // Founding realtor spot counter (public)
 app.get('/api/realtors/founding-count', async (req, res) => {
@@ -1606,6 +1623,11 @@ app.get('/reset-password', (req, res) => {
 // Public realtor profile page
 app.get('/realtor/:id', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'realtor-profile.html'));
+});
+
+// Public listing detail page
+app.get('/listing/:id', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'listing-detail.html'));
 });
 
 // Login page
@@ -1694,6 +1716,9 @@ app.get('/privacy', (req, res) => {
 });
 app.get('/terms', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'terms.html'));
+});
+app.get('/about', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'about.html'));
 });
 
 // Admin panel
