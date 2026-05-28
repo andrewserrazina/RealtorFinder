@@ -119,7 +119,7 @@ async function notifyNearbyRealtors(listing) {
              WHERE user_type = 'realtor' AND is_approved = true AND is_active IS NOT FALSE
                AND email IS NOT NULL AND zip_code IS NOT NULL`
         );
-        const RADIUS_MILES = 50;
+        const RADIUS_MILES = 25;
         const MAX_EMAILS = 200;
         let sent = 0;
         for (const realtor of rows) {
