@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FAQ — RealtorFinder</title>
+    <meta name="description" content="Frequently asked questions about RealtorFinder — for home sellers and licensed realtors. Learn how it works, what it costs, and how to get started.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://realtorfinder.net/faq">
+    <meta property="og:title" content="FAQ — RealtorFinder">
+    <meta property="og:description" content="Frequently asked questions about RealtorFinder — for home sellers and licensed realtors.">
+    <meta property="og:image" content="https://realtorfinder.net/og-default.png">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="FAQ — RealtorFinder">
+    <meta name="twitter:description" content="Frequently asked questions about RealtorFinder — for home sellers and licensed realtors.">
+    <meta name="twitter:image" content="https://realtorfinder.net/og-default.png">
+    <!-- Google Analytics 4 -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-BRGVVNKT65"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-BRGVVNKT65');
+    </script>
+    <!-- Microsoft Clarity -->
+    <script type="text/javascript">
+        (function(c,l,a,r,i,t,y){
+            c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+            t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+            y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+        })(window, document, "clarity", "script", "wxvaz0g7tq");
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@600;700;900&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #0A2540;
+            --accent: #FF6B35;
+            --soft-bg: #F8F6F3;
+            --text: #1A1A1A;
+            --border: #E5E1DB;
+            --muted: #6B7280;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'DM Sans', sans-serif; background: var(--soft-bg); color: var(--text); }
+
+        /* Nav */
+        nav {
+            background: var(--primary);
+            padding: 0 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 64px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .nav-logo {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.6rem;
+            font-weight: 900;
+            color: white;
+            text-decoration: none;
+        }
+        .nav-logo span { color: var(--accent); }
+        .nav-links { display: flex; gap: 2rem; align-items: center; }
+        .nav-links a { color: rgba(255,255,255,0.8); text-decoration: none; font-size: 0.95rem; font-weight: 500; }
+        .nav-links a:hover { color: white; }
+        .nav-cta {
+            background: var(--accent);
+            color: white !important;
+            padding: 0.5rem 1.25rem;
+            border-radius: 8px;
+            font-weight: 600 !important;
+        }
+        .nav-cta:hover { background: #e55a2b; }
+
+        /* Hamburger */
+        .nav-hamburger {
+            display: none;
+            flex-direction: column;
+            gap: 5px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 4px;
+        }
+        .nav-hamburger span {
+            display: block;
+            width: 24px;
+            height: 2px;
+            background: white;
+            border-radius: 2px;
+            transition: all 0.2s;
+        }
+        .mobile-menu {
+            display: none;
+            background: var(--primary);
+            width: 100%;
+            position: absolute;
+            top: 64px;
+            left: 0;
+            z-index: 99;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+        .mobile-menu.open { display: block; }
+        .mobile-menu a {
+            display: block;
+            color: rgba(255,255,255,0.85);
+            text-decoration: none;
+            font-size: 1rem;
+            font-weight: 500;
+            padding: 1rem 2rem;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+        .mobile-menu a:hover { color: white; background: rgba(255,255,255,0.05); }
+        .mobile-menu .nav-cta {
+            margin: 1rem 2rem;
+            display: block;
+            text-align: center;
+            border-radius: 8px;
+            background: var(--accent);
+            color: white !important;
+            font-weight: 600 !important;
+            border-bottom: none;
+        }
+        .mobile-menu .nav-cta:hover { background: #e55a2b; }
+
+        /* Hero */
+        .hero {
+            text-align: center;
+            padding: 5rem 2rem 3rem;
+            max-width: 700px;
+            margin: 0 auto;
+        }
+        .hero-eyebrow {
+            display: inline-block;
+            background: #FFF0EB;
+            color: var(--accent);
+            font-weight: 600;
+            font-size: 0.85rem;
+            padding: 0.35rem 1rem;
+            border-radius: 20px;
+            margin-bottom: 1.5rem;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+        .hero h1 {
+            font-family: 'Crimson Pro', serif;
+            font-size: 3.2rem;
+            font-weight: 900;
+            color: var(--primary);
+            line-height: 1.1;
+            margin-bottom: 1.25rem;
+        }
+        .hero p {
+            font-size: 1.15rem;
+            color: var(--muted);
+            line-height: 1.7;
+            margin-bottom: 2.5rem;
+        }
+
+        /* Tabs */
+        .tab-bar {
+            display: flex;
+            gap: 0.75rem;
+            justify-content: center;
+        }
+        .tab-btn {
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 600;
+            padding: 0.6rem 1.6rem;
+            border-radius: 30px;
+            border: 2px solid var(--border);
+            background: white;
+            color: var(--muted);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .tab-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+        .tab-btn.active {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+        }
+
+        /* FAQ section */
+        .faq-section {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 2.5rem 2rem 5rem;
+        }
+
+        .faq-group { display: none; }
+        .faq-group.visible { display: block; }
+
+        .faq-item {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            margin-bottom: 0.75rem;
+            overflow: hidden;
+            transition: box-shadow 0.2s;
+        }
+        .faq-item:hover {
+            box-shadow: 0 4px 16px rgba(10,37,64,0.07);
+        }
+        .faq-item.open {
+            box-shadow: 0 4px 20px rgba(10,37,64,0.1);
+        }
+
+        .faq-q {
+            width: 100%;
+            background: none;
+            border: none;
+            padding: 1.25rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            cursor: pointer;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--primary);
+            text-align: left;
+        }
+        .faq-q:hover { color: var(--accent); }
+
+        .faq-icon {
+            flex-shrink: 0;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: var(--soft-bg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            line-height: 1;
+            color: var(--muted);
+            transition: transform 0.25s, background 0.2s, color 0.2s;
+        }
+        .faq-item.open .faq-icon {
+            transform: rotate(45deg);
+            background: var(--accent);
+            color: white;
+        }
+
+        .faq-a-wrap {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.35s ease;
+        }
+        .faq-item.open .faq-a-wrap {
+            max-height: 400px;
+        }
+        .faq-a {
+            padding: 0 1.5rem 1.25rem;
+            font-size: 0.95rem;
+            color: var(--muted);
+            line-height: 1.75;
+            border-top: 1px solid var(--border);
+            padding-top: 1rem;
+        }
+
+        /* Footer */
+        footer {
+            background: #060F1A;
+            color: rgba(255,255,255,0.5);
+            text-align: center;
+            padding: 2rem;
+            font-size: 0.85rem;
+        }
+        footer a { color: rgba(255,255,255,0.5); text-decoration: none; margin: 0 0.5rem; }
+        footer a:hover { color: white; }
+
+        @media (max-width: 640px) {
+            .hero h1 { font-size: 2.4rem; }
+            .nav-links { display: none; }
+            .nav-hamburger { display: flex; }
+            .faq-q { font-size: 0.95rem; padding: 1.1rem 1.25rem; }
+            .faq-a { padding: 0 1.25rem 1.1rem; padding-top: 0.9rem; }
+        }
+    </style>
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Realtor<span>Finder</span></a>
+    <div class="nav-links">
+        <a href="/realtors">For Realtors</a>
+        <a href="/pricing">Pricing</a>
+        <a href="/about">About</a>
+        <a href="/login" class="nav-cta">Get Started</a>
+    </div>
+    <button class="nav-hamburger" id="navHamburger" aria-label="Open menu" aria-expanded="false">
+        <span></span><span></span><span></span>
+    </button>
+</nav>
+<div class="mobile-menu" id="mobileMenu" role="navigation">
+    <a href="/realtors" onclick="closeMobileMenu()">For Realtors</a>
+    <a href="/pricing" onclick="closeMobileMenu()">Pricing</a>
+    <a href="/about" onclick="closeMobileMenu()">About</a>
+    <a href="/login" class="nav-cta" onclick="closeMobileMenu()">Get Started</a>
+</div>
+
+<div class="hero">
+    <div class="hero-eyebrow">FAQ</div>
+    <h1>Frequently Asked Questions</h1>
+    <p>Everything you need to know about how RealtorFinder works — whether you're selling your home or growing your real estate business.</p>
+    <div class="tab-bar">
+        <button class="tab-btn active" data-tab="sellers" onclick="switchTab('sellers')">For Sellers</button>
+        <button class="tab-btn" data-tab="realtors" onclick="switchTab('realtors')">For Realtors</button>
+    </div>
+</div>
+
+<div class="faq-section">
+
+    <!-- Sellers -->
+    <div class="faq-group visible" id="tab-sellers">
+
+        <div class="faq-item">
+            <button class="faq-q" onclick="toggleFaq(this)" aria-expanded="false">
+                Is RealtorFinder free for sellers?
+                <span class="faq-icon">+</span>
+            </button>
+            <div class="faq-a-wrap" role="region">
+                <div class="faq-a">Yes, completely free. You list your home, receive proposals from licensed realtors, and choose your agent — all at no cost. Realtors pay a subscription to access the platform.</div>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <button class="faq-q" onclick="toggleFaq(this)" aria-expanded="false">
+                How is this different from Zillow or Realtor.com?
+                <span class="faq-icon">+</span>
+            </button>
+            <div class="faq-a-wrap" role="region">
+                <div class="faq-a">Those sites help buyers find homes. RealtorFinder helps sellers find the right agent. Instead of cold calls and pushy door-knocking, qualified realtors come to you with detailed proposals including their commission rate, strategy, and experience.</div>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <button class="faq-q" onclick="toggleFaq(this)" aria-expanded="false">
+                Do I have to accept any offers?
+                <span class="faq-icon">+</span>
+            </button>
+            <div class="faq-a-wrap" role="region">
+                <div class="faq-a">No. You're never obligated to accept any proposal. Review as many as you like and only respond to the ones that interest you.</div>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <button class="faq-q" onclick="toggleFaq(this)" aria-expanded="false">
+                How do I know the realtors are legitimate?
+                <span class="faq-icon">+</span>
+            </button>
+            <div class="faq-a-wrap" role="region">
+                <div class="faq-a">All realtors on RealtorFinder go through an account approval process. We encourage agents to add their license number to their profile, which you can verify with your state's real estate commission.</div>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <button class="faq-q" onclick="toggleFaq(this)" aria-expanded="false">
+                What information do I need to list my home?
+                <span class="faq-icon">+</span>
+            </button>
+            <div class="faq-a-wrap" role="region">
+                <div class="faq-a">Just the address, asking price, property type, number of beds/baths, square footage, and a brief description. You can also add photos and your Zestimate for context.</div>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <button class="faq-q" onclick="toggleFaq(this)" aria-expanded="false">
+                What happens after I accept a proposal?
+                <span class="faq-icon">+</span>
+            </button>
+            <div class="faq-a-wrap" role="region">
+                <div class="faq-a">The realtor is notified immediately and their contact details are shared with you. From there, you connect directly to move forward with the listing agreement.</div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Realtors -->
+    <div class="faq-group" id="tab-realtors">
+
+        <div class="faq-item">
+            <button class="faq-q" onclick="toggleFaq(this)" aria-expanded="false">
+                How does the subscription work?
+                <span class="faq-icon">+</span>
+            </button>
+            <div class="faq-a-wrap" role="region">
+                <div class="faq-a">RealtorFinder offers three plans: Basic ($99/mo), Professional ($249/mo), and Firm ($499/mo). Each tier unlocks more markets and features. You can view full plan details on the <a href="/pricing" style="color:var(--accent);text-decoration:none;font-weight:600;">Pricing page</a>.</div>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <button class="faq-q" onclick="toggleFaq(this)" aria-expanded="false">
+                How do I find listings in my area?
+                <span class="faq-icon">+</span>
+            </button>
+            <div class="faq-a-wrap" role="region">
+                <div class="faq-a">Once your account is approved, you'll see all active listings within 25 miles of your ZIP code on your dashboard. You'll also receive email alerts when new listings appear in your area.</div>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <button class="faq-q" onclick="toggleFaq(this)" aria-expanded="false">
+                What's a Founding Realtor?
+                <span class="faq-icon">+</span>
+            </button>
+            <div class="faq-a-wrap" role="region">
+                <div class="faq-a">The first 100 realtors to join RealtorFinder receive Founding Member status — a permanent badge on their profile and a rate-locked subscription price. These spots are limited.</div>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <button class="faq-q" onclick="toggleFaq(this)" aria-expanded="false">
+                Can I submit proposals on multiple listings?
+                <span class="faq-icon">+</span>
+            </button>
+            <div class="faq-a-wrap" role="region">
+                <div class="faq-a">Yes. You can submit proposals on as many active listings as you like. Track all your pending, accepted, and declined proposals in the My Bids tab.</div>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <button class="faq-q" onclick="toggleFaq(this)" aria-expanded="false">
+                What happens when a seller accepts my proposal?
+                <span class="faq-icon">+</span>
+            </button>
+            <div class="faq-a-wrap" role="region">
+                <div class="faq-a">You'll receive an email notification with the seller's contact information. You can also see the details in your Won Listings tab on your dashboard.</div>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <button class="faq-q" onclick="toggleFaq(this)" aria-expanded="false">
+                Is there a contract or commitment?
+                <span class="faq-icon">+</span>
+            </button>
+            <div class="faq-a-wrap" role="region">
+                <div class="faq-a">No long-term contract. You can cancel your subscription at any time. If you cancel, your access continues until the end of your billing period.</div>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+
+<footer>
+    <p>
+        &copy; 2025 RealtorFinder &nbsp;·&nbsp;
+        <a href="/privacy">Privacy</a>
+        <a href="/terms">Terms</a>
+        <a href="/about">About</a>
+        <a href="/contact">Contact</a>
+    </p>
+</footer>
+
+<script>
+    // Tab switching
+    function switchTab(tab) {
+        document.querySelectorAll('.faq-group').forEach(g => g.classList.remove('visible'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById('tab-' + tab).classList.add('visible');
+        document.querySelector('[data-tab="' + tab + '"]').classList.add('active');
+        // Close all open items when switching tabs
+        document.querySelectorAll('.faq-item.open').forEach(item => {
+            item.classList.remove('open');
+            item.querySelector('.faq-q').setAttribute('aria-expanded', 'false');
+        });
+        gtag('event', 'faq_tab_switch', { tab });
+    }
+
+    // Accordion toggle
+    function toggleFaq(btn) {
+        const item = btn.closest('.faq-item');
+        const isOpen = item.classList.contains('open');
+
+        // Close any currently open item in this tab
+        const group = item.closest('.faq-group');
+        group.querySelectorAll('.faq-item.open').forEach(openItem => {
+            openItem.classList.remove('open');
+            openItem.querySelector('.faq-q').setAttribute('aria-expanded', 'false');
+        });
+
+        if (!isOpen) {
+            item.classList.add('open');
+            btn.setAttribute('aria-expanded', 'true');
+            gtag('event', 'faq_expand', { question: btn.textContent.trim().slice(0, 80) });
+        }
+    }
+
+    // Mobile nav
+    const hamburger = document.getElementById('navHamburger');
+    const mobileMenu = document.getElementById('mobileMenu');
+
+    hamburger.addEventListener('click', function() {
+        const isOpen = mobileMenu.classList.toggle('open');
+        hamburger.setAttribute('aria-expanded', isOpen);
+    });
+
+    function closeMobileMenu() {
+        mobileMenu.classList.remove('open');
+        hamburger.setAttribute('aria-expanded', 'false');
+    }
+</script>
+
+</body>
+</html>
