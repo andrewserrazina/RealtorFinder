@@ -203,6 +203,11 @@
             .btn-group { flex-direction: column; }
         }
     </style>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#0A2540">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="RealtorFinder">
 </head>
 <body>
     <a href="/" class="logo">Realtor<span>Finder</span></a>
@@ -244,6 +249,11 @@
             } catch (_) {}
             window.location.href = '/';
         }
+    </script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
+      }
     </script>
 </body>
 </html>

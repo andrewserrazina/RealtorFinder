@@ -187,6 +187,11 @@
             .stats-row { gap: 1.25rem; }
         }
     </style>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#0A2540">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="RealtorFinder">
 </head>
 <body>
 
@@ -297,12 +302,8 @@
             if (!res.ok) return;
             const { reviews, avg, count } = await res.json();
             const container = document.getElementById('reviewsList');
-            if (!count) {
-                container.innerHTML = '<p style="color:var(--muted);font-size:0.9rem;">No reviews yet.</p>';
-                return;
-            }
             const stars = n => '★'.repeat(Math.round(n)) + '☆'.repeat(5 - Math.round(n));
-            container.innerHTML = `
+            const reviewsHtml = count ? `
                 <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.25rem;">
                     <span style="font-family:'Crimson Pro',serif;font-size:2rem;font-weight:900;color:var(--primary);">${avg}</span>
                     <span style="color:#f59e0b;font-size:1.2rem;">${stars(parseFloat(avg))}</span>
@@ -310,17 +311,64 @@
                 </div>
                 ${reviews.map(r => `
                     <div style="padding:1rem 0;border-top:1px solid var(--border);">
-                        <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.4rem;">
+                        <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.4rem;flex-wrap:wrap;">
                             <span style="color:#f59e0b;">${stars(r.rating)}</span>
-                            <span style="font-weight:600;font-size:0.9rem;">${esc(r.first_name)} ${esc(r.last_name[0])}.</span>
+                            <span style="font-weight:600;font-size:0.9rem;">${esc(r.first_name)} ${esc((r.last_name||'')[0])}.</span>
                             <span style="color:var(--muted);font-size:0.8rem;">${new Date(r.created_at).toLocaleDateString('en-US',{month:'short',year:'numeric'})}</span>
+                            ${r.verified_sale ? '<span style="background:#d1fae5;color:#065f46;font-size:0.72rem;padding:2px 8px;border-radius:20px;font-weight:700;">✓ Verified Sale</span>' : ''}
                         </div>
-                        ${r.body ? `<p style="font-size:0.9rem;color:#444;line-height:1.6;">${esc(r.body)}</p>` : ''}
+                        ${r.comment ? `<p style="font-size:0.9rem;color:#444;line-height:1.6;">${esc(r.comment)}</p>` : ''}
                         ${r.listing_address ? `<p style="font-size:0.78rem;color:var(--muted);margin-top:0.3rem;">📍 ${esc(r.listing_address)}</p>` : ''}
                     </div>
                 `).join('')}
-            `;
+            ` : '<p style="color:var(--muted);font-size:0.9rem;">No reviews yet.</p>';
+            container.innerHTML = reviewsHtml + `
+                <div id="reviewFormSection" style="margin-top:1.5rem;padding-top:1.5rem;border-top:1px solid var(--border);">
+                    <h3 style="font-size:1rem;font-weight:700;margin-bottom:1rem;">Leave a Review</h3>
+                    <div style="display:flex;gap:0.5rem;margin-bottom:1rem;" id="starRating">
+                        ${[1,2,3,4,5].map(n => `<span data-star="${n}" onclick="selectStar(${n})" style="font-size:2rem;cursor:pointer;color:#d1d5db;transition:color 0.15s;">★</span>`).join('')}
+                    </div>
+                    <textarea id="reviewComment" rows="3" placeholder="Share your experience working with this realtor..." style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-size:0.9rem;resize:vertical;margin-bottom:0.75rem;"></textarea>
+                    <div id="reviewError" style="display:none;color:#ef4444;font-size:0.85rem;margin-bottom:0.75rem;"></div>
+                    <button onclick="submitReview()" style="background:var(--accent);color:white;border:none;border-radius:8px;padding:10px 20px;font-weight:700;cursor:pointer;">Submit Review</button>
+                </div>`;
         } catch {}
+    }
+
+    let selectedRating = 0;
+    function selectStar(n) {
+        selectedRating = n;
+        document.querySelectorAll('#starRating [data-star]').forEach(el => {
+            el.style.color = parseInt(el.dataset.star) <= n ? '#f59e0b' : '#d1d5db';
+        });
+    }
+
+    async function submitReview() {
+        const errEl = document.getElementById('reviewError');
+        errEl.style.display = 'none';
+        if (!selectedRating) { errEl.textContent = 'Please select a star rating.'; errEl.style.display = 'block'; return; }
+        const comment = document.getElementById('reviewComment').value;
+        const listingId = new URLSearchParams(window.location.search).get('listing_id') || null;
+        try {
+            const res = await fetch('/api/reviews', {
+                method: 'POST', credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ realtor_id: parseInt(realtorId), listing_id: listingId ? parseInt(listingId) : null, rating: selectedRating, comment })
+            });
+            const d = await res.json();
+            if (!res.ok) { errEl.textContent = d.error || 'Failed to submit review.'; errEl.style.display = 'block'; return; }
+            document.getElementById('reviewFormSection').innerHTML = '<p style="color:#065f46;font-weight:600;">Thank you for your review!</p>';
+            loadReviews();
+        } catch { errEl.textContent = 'Network error. Please try again.'; errEl.style.display = 'block'; }
+    }
+
+    // Auto-scroll to review form if ?review=1
+    function checkAutoReview() {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('review') === '1') {
+            const card = document.getElementById('reviewsCard');
+            if (card) { card.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+        }
     }
 
     function showNotFound() {
@@ -336,7 +384,12 @@
         return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
 
-    loadProfile();
+    loadProfile().then(() => setTimeout(checkAutoReview, 600));
 </script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
+      }
+    </script>
 </body>
 </html>

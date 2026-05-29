@@ -797,6 +797,11 @@
             }
         }
     </style>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#0A2540">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="RealtorFinder">
 </head>
 <body>
     <header>
@@ -840,6 +845,10 @@
                         <span class="nav-icon">📬</span>
                         <span>Offers Received</span>
                         <span class="badge" id="offerCount">0</span>
+                    </div>
+                    <div class="nav-item" data-view="proposals">
+                        <span class="nav-icon">📋</span>
+                        <span>Proposals</span>
                     </div>
                     <div class="nav-item" data-view="messages">
                         <span class="nav-icon">💬</span>
@@ -904,6 +913,15 @@
                     <p class="page-subtitle">Review and manage realtor proposals</p>
                 </div>
                 <div id="offersContainer"></div>
+            </section>
+
+            <!-- Proposals View -->
+            <section id="proposals-view" class="view-section">
+                <div class="page-header">
+                    <h1 class="page-title">Proposals</h1>
+                    <p class="page-subtitle">View structured proposals from realtors, ranked by commission rate</p>
+                </div>
+                <div id="proposalsByListing"></div>
             </section>
 
             <!-- Messages View -->
@@ -2065,6 +2083,96 @@
                 document.getElementById('confirmPassword').value = '';
             } catch { errEl.textContent = 'Network error. Please try again.'; errEl.style.display = 'block'; }
         }
+
+        // ===== PROPOSALS (Feature 1) =====
+
+        async function loadProposals() {
+            try {
+                const listingsRes = await fetch('/api/listings', { credentials: 'include' });
+                if (!listingsRes.ok) return;
+                const listings = await listingsRes.json();
+                const container = document.getElementById('proposalsByListing');
+                if (!listings.length) {
+                    container.innerHTML = '<p style="color:#666;padding:2rem 0;">No listings yet. Create a listing to receive proposals.</p>';
+                    return;
+                }
+                container.innerHTML = '';
+                for (const listing of listings) {
+                    const propRes = await fetch(`/api/proposals/listing/${listing.id}`, { credentials: 'include' });
+                    if (!propRes.ok) continue;
+                    const proposals = await propRes.json();
+                    const card = document.createElement('div');
+                    card.style.cssText = 'background:white;border-radius:12px;padding:1.5rem;margin-bottom:1.5rem;border:1px solid var(--border);box-shadow:0 2px 8px rgba(0,0,0,0.05);';
+                    const listingTitle = `${listing.address || 'Listing'} — ${proposals.length} proposal${proposals.length !== 1 ? 's' : ''}`;
+                    if (!proposals.length) {
+                        card.innerHTML = `<h3 style="margin-bottom:0.5rem;">${esc(listingTitle)}</h3><p style="color:#666;font-size:0.9rem;">No proposals yet.</p>`;
+                    } else {
+                        const rows = proposals.map((p, i) => {
+                            const isLowest = i === 0;
+                            const name = esc(`${p.first_name || ''} ${p.last_name || ''}`.trim());
+                            const badge = isLowest ? '<span style="background:#d1fae5;color:#065f46;font-size:0.75rem;padding:2px 8px;border-radius:20px;font-weight:600;margin-left:6px;">Lowest ★</span>' : '';
+                            const status = p.status === 'accepted' ? '<span style="background:#d1fae5;color:#065f46;font-size:0.75rem;padding:2px 8px;border-radius:20px;font-weight:600;">Accepted</span>'
+                                         : p.status === 'declined' ? '<span style="background:#fee2e2;color:#991b1b;font-size:0.75rem;padding:2px 8px;border-radius:20px;font-weight:600;">Declined</span>'
+                                         : '';
+                            const acceptBtn = p.status === 'pending' ? `<button onclick="acceptProposal(${p.id}, ${listing.id})" style="background:var(--accent);color:white;border:none;border-radius:6px;padding:6px 14px;cursor:pointer;font-size:0.85rem;">Accept</button>` : status;
+                            return `<tr style="${isLowest ? 'background:#f0fdf4;' : ''}">
+                                <td style="padding:10px 12px;font-weight:600;">${name}${badge}</td>
+                                <td style="padding:10px 12px;font-weight:700;color:${isLowest ? '#065f46' : 'var(--accent)'};">${p.commission_pct}%</td>
+                                <td style="padding:10px 12px;color:#666;font-size:0.85rem;">${esc(p.timeline || '—')}</td>
+                                <td style="padding:10px 12px;color:#444;font-size:0.85rem;max-width:200px;">${esc(p.cover_note || '—').slice(0, 80)}${(p.cover_note || '').length > 80 ? '…' : ''}</td>
+                                <td style="padding:10px 12px;">${acceptBtn}</td>
+                            </tr>`;
+                        }).join('');
+                        card.innerHTML = `
+                            <h3 style="margin-bottom:1rem;font-family:'Crimson Pro',serif;">${esc(listingTitle)}</h3>
+                            <div style="overflow-x:auto;">
+                                <table style="width:100%;border-collapse:collapse;font-size:0.9rem;">
+                                    <thead>
+                                        <tr style="border-bottom:2px solid var(--border);">
+                                            <th style="padding:8px 12px;text-align:left;color:#666;font-weight:600;">Realtor</th>
+                                            <th style="padding:8px 12px;text-align:left;color:#666;font-weight:600;">Commission</th>
+                                            <th style="padding:8px 12px;text-align:left;color:#666;font-weight:600;">Timeline</th>
+                                            <th style="padding:8px 12px;text-align:left;color:#666;font-weight:600;">Note</th>
+                                            <th style="padding:8px 12px;text-align:left;color:#666;font-weight:600;">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>${rows}</tbody>
+                                </table>
+                            </div>`;
+                    }
+                    container.appendChild(card);
+                }
+            } catch(e) { console.error('loadProposals error:', e); }
+        }
+
+        async function acceptProposal(proposalId, listingId) {
+            if (!confirm('Accept this proposal? All other proposals for this listing will be declined.')) return;
+            try {
+                const res = await fetch(`/api/proposals/${proposalId}/accept`, {
+                    method: 'PUT', credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                if (res.ok) {
+                    alert('Proposal accepted! The realtor has been notified.');
+                    loadProposals();
+                } else {
+                    const d = await res.json();
+                    alert(d.error || 'Failed to accept proposal');
+                }
+            } catch { alert('Network error. Please try again.'); }
+        }
+
+        // Hook proposals view load into nav
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('.nav-item[data-view="proposals"]').forEach(el => {
+                el.addEventListener('click', loadProposals);
+            });
+        });
+    </script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
+      }
     </script>
 </body>
 </html>

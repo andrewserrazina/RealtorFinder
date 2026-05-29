@@ -584,6 +584,69 @@ const emailService = {
             return await send({ to: realtorEmail, subject: `New buyer looking in ${request.target_areas || 'your area'}`, html: body });
         } catch(err) { logSendgridError('sendBuyerMatchEmail', err); }
     },
+
+    // ─── Proposal Emails ─────────────────────────────────────────────────────
+
+    async sendProposalNotification(sellerEmail, sellerName, listingAddress, realtorName, commissionPct) {
+        const body = `
+            ${h1('New Proposal Received! 📋')}
+            ${p(`Hi ${sellerName}, <strong>${realtorName}</strong> has submitted a structured proposal for your property at <strong>${listingAddress}</strong>.`)}
+            ${infoBox([
+                ['Realtor', realtorName],
+                ['Commission', `${commissionPct}%`],
+                ['Property', listingAddress]
+            ])}
+            ${p('Log in to your seller dashboard to review all proposals — ranked by commission rate to help you find the best deal.')}
+            ${btn(`${BASE_URL}/dashboard/seller`, 'Review Proposals')}
+            ${divider()}
+            <p style="color:#999;font-size:13px;margin:0;">The RealtorFinder Team</p>
+        `;
+        try {
+            await send({ to: sellerEmail, subject: `New proposal from ${realtorName} — ${listingAddress}`, html: emailWrap('For Sellers', body) });
+        } catch (error) { logSendgridError('Proposal notification', error); }
+    },
+
+    async sendProposalAccepted(realtorEmail, realtorName, listingAddress) {
+        const body = `
+            ${h1('🏆 Your Proposal Was Accepted!')}
+            ${p(`Congratulations ${realtorName}! The seller has accepted your proposal for <strong>${listingAddress}</strong>.`)}
+            <div style="background:linear-gradient(135deg,#0A2540,#0d3659);border-radius:12px;padding:28px 32px;margin:24px 0;color:white;text-align:center;">
+                <div style="font-size:40px;margin-bottom:8px;">🏆</div>
+                <div style="font-family:Georgia,serif;font-size:24px;font-weight:900;">You got the listing!</div>
+                <div style="font-size:14px;opacity:0.8;margin-top:8px;">${listingAddress}</div>
+            </div>
+            ${p('The seller will be in touch shortly. Log in to your dashboard to see their contact details.')}
+            ${btn(`${BASE_URL}/dashboard/realtor`, 'View My Dashboard')}
+            ${divider()}
+            <p style="color:#999;font-size:13px;margin:0;">The RealtorFinder Team</p>
+        `;
+        try {
+            await send({ to: realtorEmail, subject: `🏆 Proposal Accepted — ${listingAddress}`, html: emailWrap('For Realtors', body) });
+        } catch (error) { logSendgridError('Proposal accepted email', error); }
+    },
+
+    // ─── Review Request Emails ────────────────────────────────────────────────
+
+    async sendReviewRequestEmail(sellerEmail, sellerName, realtorId, realtorName, listingAddress) {
+        const reviewUrl = `${BASE_URL}/realtor/${realtorId}?review=1`;
+        const body = `
+            ${h1('How Was Your Experience? ⭐')}
+            ${p(`Hi ${sellerName}, your property at <strong>${listingAddress}</strong> has been marked as sold. Congratulations!`)}
+            ${p(`We'd love to hear about your experience working with <strong>${realtorName}</strong>. Your honest review helps other sellers choose the right agent.`)}
+            <div style="background:#F8F6F3;border-radius:12px;padding:24px;margin:24px 0;border:1px solid #E5E1DB;text-align:center;">
+                <div style="font-size:32px;margin-bottom:12px;">⭐⭐⭐⭐⭐</div>
+                <div style="font-size:16px;color:#0A2540;font-weight:600;margin-bottom:8px;">Leave a Review for ${realtorName}</div>
+                <div style="font-size:13px;color:#6B7280;">Takes less than 2 minutes</div>
+            </div>
+            ${btn(reviewUrl, 'Write My Review')}
+            ${divider()}
+            ${p('Your review will earn a "✓ Verified Sale" badge — showing other sellers this is based on a real transaction.')}
+            <p style="color:#999;font-size:13px;margin:0;">The RealtorFinder Team</p>
+        `;
+        try {
+            await send({ to: sellerEmail, subject: `How was working with ${realtorName}? Leave a review`, html: emailWrap('For Sellers', body) });
+        } catch (error) { logSendgridError('Review request email', error); }
+    },
 };
 
 module.exports = emailService;
