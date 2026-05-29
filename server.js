@@ -18,11 +18,49 @@ const auth = require('./auth');
 const cities = require('./cities');
 const { generateCityPage } = require('./cityTemplate');
 
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Trust proxy - important for Render
 app.set('trust proxy', 1);
+
+// Security headers
+app.use(helmet({
+    contentSecurityPolicy: false, // Disabled — we use inline scripts and external CDNs
+    crossOriginEmbedderPolicy: false
+}));
+
+app.use((req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    next();
+});
+
+// Rate limiters
+const authLimiterStrict = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 10,
+    message: { error: 'Too many attempts, please try again later.' },
+    standardHeaders: true,
+    legacyHeaders: false
+});
+
+const apiLimiter = rateLimit({
+    windowMs: 60 * 1000, // 1 minute
+    max: 100,
+    message: { error: 'Too many requests, please slow down.' },
+    standardHeaders: true,
+    legacyHeaders: false
+});
+
+const uploadLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 20,
+    message: { error: 'Too many uploads, please wait.' }
+});
 
 // Middleware
 const allowedOrigin = process.env.FRONTEND_URL || true; // set FRONTEND_URL=https://yourdomain.com in production
@@ -162,6 +200,10 @@ const waitlistLimiter = createRateLimiter(60 * 60 * 1000, 5,  'Too many signups 
 
 // ===== API ROUTES =====
 
+// Apply rate limiters — auth routes get the strict one first, then general API limiter covers all /api/*
+app.use('/api/auth', authLimiterStrict);
+app.use('/api', apiLimiter);
+
 // ===== AUTHENTICATION ROUTES =====
 
 // Signup
@@ -177,8 +219,16 @@ app.post('/api/auth/signup', authLimiter, async (req, res) => {
             return res.status(400).json({ error: 'Invalid user type' });
         }
 
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            return res.status(400).json({ error: 'Invalid email format' });
+        }
+
         if (password.length < 8) {
             return res.status(400).json({ error: 'Password must be at least 8 characters' });
+        }
+
+        if (firstName.length > 100 || lastName.length > 100) {
+            return res.status(400).json({ error: 'Name must be 100 characters or less' });
         }
 
         const user = await auth.createUser(email, password, userType, firstName, lastName, zipCode);
@@ -763,6 +813,18 @@ app.post('/api/listings', auth.requireAuth, async (req, res) => {
         if (!address || !price || !type || !bedrooms || !bathrooms || !sqft || !description || !ownerName || !ownerEmail || !ownerPhone) {
             return res.status(400).json({ error: 'All fields are required' });
         }
+
+        if (isNaN(Number(price)) || Number(price) <= 0) {
+            return res.status(400).json({ error: 'Price must be a positive number' });
+        }
+
+        if (String(address).length > 200) {
+            return res.status(400).json({ error: 'Address must be 200 characters or less' });
+        }
+
+        if (String(description).length > 5000) {
+            return res.status(400).json({ error: 'Description must be 5000 characters or less' });
+        }
         
         const fullAddress = `${addressParts[0]}, ${city}, ${state || ''} ${zip || ''}`.trim();
         const coords = await geocodeAddress(fullAddress);
@@ -1086,7 +1148,7 @@ app.put('/api/listings/:id/images', auth.requireAuth, async (req, res) => {
 });
 
 // Upload images for a listing
-app.post('/api/listings/:id/images', upload.array('images', 10), async (req, res) => {
+app.post('/api/listings/:id/images', uploadLimiter, upload.array('images', 10), async (req, res) => {
     try {
         const listingId = req.params.id;
         const imageUrls = [];
@@ -1164,7 +1226,7 @@ app.put('/api/profile', auth.requireAuth, async (req, res) => {
 });
 
 // Upload profile photo
-app.post('/api/profile/photo', auth.requireAuth, upload.single('photo'), async (req, res) => {
+app.post('/api/profile/photo', auth.requireAuth, uploadLimiter, upload.single('photo'), async (req, res) => {
     try {
         if (!req.file) return res.status(400).json({ error: 'No photo provided' });
         const result = await uploadToCloudinary(req.file.buffer);
@@ -1260,7 +1322,7 @@ app.get('/api/profile/completeness', auth.requireAuth, async (req, res) => {
 // ===== LICENSE VERIFICATION ROUTES =====
 
 // Upload license document
-app.post('/api/profile/license-doc', auth.requireAuth, upload.single('license_doc'), async (req, res) => {
+app.post('/api/profile/license-doc', auth.requireAuth, uploadLimiter, upload.single('license_doc'), async (req, res) => {
     try {
         if (!req.file) return res.status(400).json({ error: 'No file provided' });
         const result = await uploadToCloudinary(req.file.buffer);
@@ -2006,6 +2068,16 @@ app.get('/locations/:stateCode', async (req, res, next) => {
         VT: { tagline: 'Four seasons of demand — and a booming buyer pool', desc: 'Vermont\'s real estate market has been transformed by remote work. Buyers from Boston, New York, and beyond are snapping up homes in Burlington, Stowe, and dozens of small towns across the Green Mountains. Low inventory and rising prices have made Vermont one of the fastest-appreciating states in the Northeast.', highlights: ['Remote work has permanently expanded the Vermont buyer pool', 'Ski resort towns (Stowe, Killington, Mad River) command vacation premiums', 'Burlington metro is the hottest market in northern New England', 'Fall foliage season drives peak second-home buyer interest'], color: '#1b4332' },
         NH: { tagline: 'No income tax. No sales tax. No wonder buyers keep coming.', desc: 'New Hampshire\'s tax advantage is its superpower. Buyers fleeing Massachusetts and Connecticut income taxes flood into southern NH communities like Derry, Londonderry, Bedford, and Windham. The seacoast offers ocean access without Maine\'s remoteness, and the Lakes Region draws second-home buyers year-round.', highlights: ['No state income or sales tax — powerful draw from MA and CT', 'Southern NH commuter towns see Boston-level buyer demand', 'Portsmouth and seacoast rank among NH\'s most desirable markets', 'Lakes Region and White Mountains drive strong vacation home demand'], color: '#0c2d6b' },
         ME: { tagline: 'The way life should be — and the market to prove it', desc: 'Maine has experienced one of the most dramatic real estate booms in the country since 2020. Portland is now one of the fastest-appreciating markets in the nation. Remote workers, retirees, and coastal lifestyle seekers have pushed prices to record highs while inventory remains historically tight.', highlights: ['Portland metro is among the top 5 fastest-appreciating markets in the US', 'York County seacoast (Kennebunk, York, Kittery) sees premium coastal demand', 'Mid-coast (Rockland, Camden, Brunswick) attracts lifestyle and retirement buyers', 'Statewide inventory at historic lows — a strong seller\'s market'], color: '#1c3d5a' },
+        NY: { tagline: 'Upstate opportunity meets Westchester sophistication', desc: 'New York\'s real estate market extends far beyond Manhattan — from Westchester County\'s Metro-North commuter towns where NYC buyers find value and space, to upstate cities like Buffalo and Rochester that are experiencing dramatic revivals as remote work expands the buyer pool. Affordability and appreciation potential combine in markets that national attention has only recently discovered.', highlights: ['Westchester County delivers NYC commuter access at a fraction of borough prices', 'Buffalo ranked among the fastest-appreciating cities in the Northeast', 'Rochester and Syracuse benefit from university and semiconductor investment', 'Capital Region (Albany/Schenectady) offers affordability with government stability'], color: '#1a2f5e' },
+        NJ: { tagline: 'Manhattan\'s most accessible suburbs — with a state all their own', desc: 'New Jersey\'s real estate market is powered by its proximity to New York City and Philadelphia, offering buyers transit-connected communities at prices well below the boroughs while still delivering true urban amenity. From Hudson County\'s Manhattan-view waterfront to Ocean County\'s Jersey Shore communities, New Jersey covers remarkable range.', highlights: ['Hudson County (Jersey City, Hoboken) delivers the fastest Manhattan commutes outside NYC', 'Ocean and Monmouth counties offer Jersey Shore lifestyle with year-round residential appeal', 'Edison and Woodbridge attract buyers with top schools and transit access', 'Statewide appreciation driven by NYC and Philadelphia overflow demand'], color: '#0c3b6e' },
+        FL: { tagline: 'Sun, growth, and no state income tax — Florida\'s market is open for business', desc: 'Florida has become America\'s premier domestic migration destination — a state where no income tax, year-round sunshine, and diverse metros from Miami\'s international glamour to Tampa\'s waterfront revival and Jacksonville\'s affordability attract buyers from every region of the country. Population growth continues to outpace housing supply, keeping seller conditions favorable across the state.', highlights: ['No state income tax — a powerful draw for high-income buyers from NY, CA, and IL', 'Miami\'s international buyer pool drives premium prices and global demand', 'Tampa Bay emerged as one of the top US metros for relocation since 2020', 'Central Florida (Orlando) leads the state in population growth and new construction'], color: '#0e4d8f' },
+        TX: { tagline: 'No state income tax, explosive growth, and a market built for sellers', desc: 'Texas is the nation\'s most dynamic real estate market — a massive, diverse state where no income tax, a booming economy, and population growth that has added millions of residents over the past decade keep buyer demand consistently strong. From Houston\'s diverse energy-sector economy to Austin\'s tech boom and Dallas-Fort Worth\'s corporate migration machine, Texas delivers opportunity at every price point.', highlights: ['No state income tax draws buyers from California, Illinois, and the Northeast', 'DFW metroplex is the top corporate relocation destination in the country', 'Austin and Plano attract high-earning tech and corporate buyers', 'Houston and San Antonio offer major-city scale at accessible price points'], color: '#8b1a1a' },
+        CA: { tagline: 'The world\'s most recognized real estate market — with opportunity at every price point', desc: 'California\'s real estate market is the largest and most complex in the nation, encompassing Silicon Valley\'s trillion-dollar tech economy, Los Angeles\'s entertainment-industry wealth, San Diego\'s military and biotech base, and Central Valley cities offering genuine affordability within the Golden State. Despite well-publicized challenges, California remains a market of exceptional long-term fundamentals.', highlights: ['Silicon Valley produces the highest-earning buyer pool in the world', 'Los Angeles and San Diego offer coastal California lifestyle with diverse price ranges', 'Central Valley cities (Fresno, Bakersfield, Sacramento) provide in-state affordability', 'No other state matches California\'s combination of economic diversity and market size'], color: '#1a3a6b' },
+        GA: { tagline: 'The capital of the New South — where growth meets affordability', desc: 'Georgia\'s real estate market is anchored by Atlanta\'s extraordinary corporate growth but extends across a diverse state where coastal Savannah\'s historic charm, Augusta\'s military stability, and college-town Athens all deliver strong market fundamentals. Georgia offers buyers and sellers the benefits of a fast-growing Sun Belt economy with price points well below comparable Northeast and West Coast markets.', highlights: ['Atlanta is the Southeast\'s top corporate relocation destination', 'Savannah\'s tourism economy and historic district command coastal premiums', 'Military bases stabilize Augusta and Columbus real estate markets', 'Athens and Roswell attract university and North Fulton buyers seeking value'], color: '#8b3a1a' },
+        NC: { tagline: 'Research Triangle tech, Charlotte banking, and coastal living — North Carolina delivers it all', desc: 'North Carolina has emerged as one of America\'s most balanced real estate markets — combining the Research Triangle\'s tech and pharmaceutical economy, Charlotte\'s financial sector growth, and coastal Wilmington\'s year-round beach lifestyle with home prices that remain significantly more accessible than comparable Northeast or West Coast metros.', highlights: ['Raleigh-Durham Research Triangle attracts major tech and pharmaceutical investment', 'Charlotte is the Southeast\'s second-largest banking center after New York', 'Cary and suburban Wake County rank among America\'s best-managed communities', 'Wilmington and the Carolina coast draw retirees and remote workers from the East Coast'], color: '#1a4a2e' },
+        IL: { tagline: 'World-class Chicago anchors a state full of affordable opportunity', desc: 'Illinois\'s real estate market offers an extraordinary range — from Chicago\'s world-class neighborhoods that deliver cultural richness and value unmatched by any comparable global city, to affordable mid-sized markets like Rockford, Springfield, and Peoria where home prices remain among the most accessible in the Midwest. Chicago\'s transit-connected suburbs add strong commuter options at every price point.', highlights: ['Chicago delivers world-class urban living at prices well below comparable global cities', 'Naperville and the DuPage County suburbs rank among America\'s best-managed communities', 'Aurora and Elgin offer Metra access to Chicago at entry-level prices', 'Springfield and Peoria provide state capital and manufacturing stability'], color: '#1a2a4a' },
+        WA: { tagline: 'Amazon and Boeing country — Pacific Northwest real estate at its finest', desc: 'Washington State\'s real estate market is powered by one of the world\'s strongest technology economies, with Amazon, Microsoft, and Boeing creating a buyer base of high-earning professionals that keeps King and Snohomish county markets among the most competitive in the nation. No state income tax amplifies the appeal, and Puget Sound\'s spectacular scenery makes every listing a lifestyle statement.', highlights: ['No state income tax — a major draw for high-income tech workers', 'Amazon and Microsoft headquarters drive King County\'s premium buyer pool', 'Tacoma and Everett offer Sounder rail access to Seattle at meaningful price discounts', 'Spokane delivers eastern Washington affordability with strong healthcare employment'], color: '#1a3d4a' },
+        CO: { tagline: 'The Rocky Mountain lifestyle — in one of America\'s fastest-growing states', desc: 'Colorado\'s real estate market combines outdoor recreation lifestyle, a booming tech and aerospace economy, and a Front Range population corridor that has added hundreds of thousands of residents from across the country. Denver\'s urban neighborhoods, Fort Collins\'s college-town character, and Colorado Springs\'s military stability give sellers diverse, well-supported markets at every price point.', highlights: ['Denver offers Rocky Mountain lifestyle at prices below comparable coastal cities', 'Fort Collins and Boulder corridor attract University of Colorado and CSU buyers', 'Colorado Springs is anchored by multiple military installations and space industry growth', 'Strong in-migration from California and Illinois fuels statewide demand'], color: '#1a3a2a' },
     };
     const sd = stateData[stateCode] || { tagline: `Real estate markets across ${stateName}`, desc: `Find sellers and realtors across ${stateName} on RealtorFinder.`, highlights: [], color: '#0A2540' };
 
@@ -2894,6 +2966,7 @@ app.post('/api/messages', auth.requireAuth, async (req, res) => {
         const uid = req.session.userId;
         const { toUserId, listingId, body } = req.body;
         if (!toUserId || !body || !body.trim()) return res.status(400).json({ error: 'toUserId and body required' });
+        if (body.length > 2000) return res.status(400).json({ error: 'Message body must be 2000 characters or less' });
 
         const { rows } = await pool.query(`
             INSERT INTO messages (from_user_id, to_user_id, listing_id, body)
@@ -3431,6 +3504,84 @@ async function runListingExpiryJob() {
 }
 runListingExpiryJob();
 setInterval(runListingExpiryJob, 24 * 60 * 60 * 1000).unref();
+
+// Create drip_emails table if not exists
+pool.query(`
+    CREATE TABLE IF NOT EXISTS drip_emails (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      sequence_step INTEGER NOT NULL DEFAULT 1,
+      sent_at TIMESTAMPTZ DEFAULT NOW(),
+      UNIQUE(user_id, sequence_step)
+    )
+`).catch(err => console.error('drip_emails table creation error:', err.message));
+
+// Drip email onboarding job — sends 3-step sequences to sellers, realtors, and buyers
+async function runDripEmailJob() {
+    try {
+        // Step 1: send to users who signed up 1+ days ago and haven't received step 1
+        const { rows: step1Users } = await pool.query(`
+            SELECT u.id, u.email, u.first_name, u.user_type
+            FROM users u
+            WHERE u.is_active IS NOT FALSE
+              AND u.created_at < NOW() - INTERVAL '1 day'
+              AND NOT EXISTS (SELECT 1 FROM drip_emails d WHERE d.user_id = u.id AND d.sequence_step = 1)
+            LIMIT 50
+        `);
+        for (const user of step1Users) {
+            try {
+                if (user.user_type === 'seller') await emailService.sendSellerDrip1(user.email, user.first_name);
+                else if (user.user_type === 'realtor') await emailService.sendRealtorDrip1(user.email, user.first_name);
+                else if (user.user_type === 'buyer') await emailService.sendBuyerDrip1(user.email, user.first_name);
+                await pool.query(`INSERT INTO drip_emails (user_id, sequence_step) VALUES ($1, 1) ON CONFLICT DO NOTHING`, [user.id]);
+            } catch(e) { console.error('Drip step 1 error:', e.message); }
+        }
+
+        // Step 2: 3+ days after signup, step 1 already sent
+        const { rows: step2Users } = await pool.query(`
+            SELECT u.id, u.email, u.first_name, u.user_type
+            FROM users u
+            WHERE u.is_active IS NOT FALSE
+              AND u.created_at < NOW() - INTERVAL '3 days'
+              AND EXISTS (SELECT 1 FROM drip_emails d WHERE d.user_id = u.id AND d.sequence_step = 1)
+              AND NOT EXISTS (SELECT 1 FROM drip_emails d WHERE d.user_id = u.id AND d.sequence_step = 2)
+            LIMIT 50
+        `);
+        for (const user of step2Users) {
+            try {
+                if (user.user_type === 'seller') await emailService.sendSellerDrip2(user.email, user.first_name);
+                else if (user.user_type === 'realtor') await emailService.sendRealtorDrip2(user.email, user.first_name);
+                else if (user.user_type === 'buyer') await emailService.sendBuyerDrip2(user.email, user.first_name);
+                await pool.query(`INSERT INTO drip_emails (user_id, sequence_step) VALUES ($1, 2) ON CONFLICT DO NOTHING`, [user.id]);
+            } catch(e) { console.error('Drip step 2 error:', e.message); }
+        }
+
+        // Step 3: 7+ days after signup, step 2 already sent
+        const { rows: step3Users } = await pool.query(`
+            SELECT u.id, u.email, u.first_name, u.user_type
+            FROM users u
+            WHERE u.is_active IS NOT FALSE
+              AND u.created_at < NOW() - INTERVAL '7 days'
+              AND EXISTS (SELECT 1 FROM drip_emails d WHERE d.user_id = u.id AND d.sequence_step = 2)
+              AND NOT EXISTS (SELECT 1 FROM drip_emails d WHERE d.user_id = u.id AND d.sequence_step = 3)
+            LIMIT 50
+        `);
+        for (const user of step3Users) {
+            try {
+                if (user.user_type === 'seller') await emailService.sendSellerDrip3(user.email, user.first_name);
+                else if (user.user_type === 'realtor') await emailService.sendRealtorDrip3(user.email, user.first_name);
+                else if (user.user_type === 'buyer') await emailService.sendBuyerDrip3(user.email, user.first_name);
+                await pool.query(`INSERT INTO drip_emails (user_id, sequence_step) VALUES ($1, 3) ON CONFLICT DO NOTHING`, [user.id]);
+            } catch(e) { console.error('Drip step 3 error:', e.message); }
+        }
+
+        console.log(`Drip job: sent ${step1Users.length + step2Users.length + step3Users.length} emails`);
+    } catch(e) { console.error('Drip job error:', e.message); }
+}
+
+// Run every 6 hours
+runDripEmailJob();
+setInterval(runDripEmailJob, 6 * 60 * 60 * 1000).unref();
 
 // Start server
 app.listen(PORT, () => {

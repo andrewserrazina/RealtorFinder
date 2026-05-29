@@ -678,6 +678,271 @@ const emailService = {
         } catch (error) { logSendgridError('Listing rejected email', error); }
     },
 
+    // ─── Drip Email Sequences ─────────────────────────────────────────────────
+
+    // Seller drip: Step 1 — sent 1 day after signup
+    async sendSellerDrip1(email, name) {
+        const body = `
+            ${h1('3 Tips to Attract Top Realtors to Your Listing')}
+            ${p(`Hi ${name}, welcome to RealtorFinder! To help you get the most out of your listing, here are three things the best sellers do to attract competitive proposals from top realtors.`)}
+            <div style="background:#F8F6F3;border-radius:12px;padding:24px 28px;margin:24px 0;border:1px solid #E5E1DB;">
+                <div style="margin-bottom:20px;">
+                    <div style="font-size:15px;font-weight:700;color:#0A2540;margin-bottom:6px;">1. Write a Clear, Honest Description</div>
+                    <p style="color:#444;font-size:14px;line-height:1.7;margin:0;">Realtors review dozens of listings. A detailed description — recent upgrades, neighborhood highlights, schools, proximity to amenities — signals that you're a serious seller and helps agents pitch your home confidently.</p>
+                </div>
+                <div style="margin-bottom:20px;">
+                    <div style="font-size:15px;font-weight:700;color:#0A2540;margin-bottom:6px;">2. Price it Realistically</div>
+                    <p style="color:#444;font-size:14px;line-height:1.7;margin:0;">Realtors know the market. Listings priced in line with recent comparables attract more proposals — and better ones. If you're unsure, let the proposals come in and use them as a data point.</p>
+                </div>
+                <div>
+                    <div style="font-size:15px;font-weight:700;color:#0A2540;margin-bottom:6px;">3. Be Responsive</div>
+                    <p style="color:#444;font-size:14px;line-height:1.7;margin:0;">Realtors who submit proposals are actively interested. The sellers who respond quickly to agent questions get better follow-up and ultimately better outcomes. Check your dashboard daily.</p>
+                </div>
+            </div>
+            ${p("Your listing is working for you right now. Log in to see the proposals coming in and read each agent's cover note carefully.")}
+            ${btn(`${BASE_URL}/dashboard/seller`, 'View My Dashboard')}
+            ${divider()}
+            <p style="color:#999;font-size:13px;margin:0;">The RealtorFinder Team</p>
+        `;
+        try {
+            await send({ to: email, subject: '3 tips to attract top realtors to your listing', html: emailWrap('For Sellers', body) });
+        } catch (error) { logSendgridError('Seller drip 1', error); }
+    },
+
+    // Seller drip: Step 2 — sent 3 days after signup
+    async sendSellerDrip2(email, name) {
+        const body = `
+            ${h1('How to Evaluate Realtor Proposals on RealtorFinder')}
+            ${p(`Hi ${name}, as proposals come in, you'll want to compare them thoughtfully. Here's what to look for beyond the commission rate.`)}
+            <div style="background:#F8F6F3;border-radius:12px;padding:24px 28px;margin:24px 0;border:1px solid #E5E1DB;">
+                <div style="margin-bottom:20px;">
+                    <div style="font-size:15px;font-weight:700;color:#0A2540;margin-bottom:6px;">Commission Rates</div>
+                    <p style="color:#444;font-size:14px;line-height:1.7;margin:0;">Most listing agents charge 2–3% of the sale price. A lower rate isn't always better — consider what's included. Some agents offer full-service marketing at 2.5%; others at 3% may provide a more hands-on approach.</p>
+                </div>
+                <div style="margin-bottom:20px;">
+                    <div style="font-size:15px;font-weight:700;color:#0A2540;margin-bottom:6px;">Cover Notes</div>
+                    <p style="color:#444;font-size:14px;line-height:1.7;margin:0;">Read each agent's proposal note carefully. The best realtors personalize their pitch — they'll reference your specific home, neighborhood, and local market conditions. Generic notes are a red flag.</p>
+                </div>
+                <div>
+                    <div style="font-size:15px;font-weight:700;color:#0A2540;margin-bottom:6px;">Timeline Expectations</div>
+                    <p style="color:#444;font-size:14px;line-height:1.7;margin:0;">Does the agent's timeline match yours? If you need to sell quickly, look for agents who specialize in fast listings. If you're willing to wait for the right price, an agent with a longer runway strategy may serve you better.</p>
+                </div>
+            </div>
+            ${p("Take your time — there's no rush to accept the first proposal. The right match between seller and agent makes all the difference.")}
+            ${btn(`${BASE_URL}/dashboard/seller`, 'Review My Proposals')}
+            ${divider()}
+            <p style="color:#999;font-size:13px;margin:0;">The RealtorFinder Team</p>
+        `;
+        try {
+            await send({ to: email, subject: 'How to evaluate realtor proposals on RealtorFinder', html: emailWrap('For Sellers', body) });
+        } catch (error) { logSendgridError('Seller drip 2', error); }
+    },
+
+    // Seller drip: Step 3 — sent 7 days after signup
+    async sendSellerDrip3(email, name) {
+        const body = `
+            ${h1('Your Listing Is Working for You — Here\'s What\'s Next')}
+            ${p(`Hi ${name}, your listing has been live for a week now. Here's a quick guide to the next steps so you're ready when the right proposal comes in.`)}
+            <div style="background:#F8F6F3;border-radius:12px;padding:24px 28px;margin:24px 0;border:1px solid #E5E1DB;">
+                <div style="margin-bottom:20px;">
+                    <div style="font-size:15px;font-weight:700;color:#0A2540;margin-bottom:6px;">Messaging Realtors</div>
+                    <p style="color:#444;font-size:14px;line-height:1.7;margin:0;">You can message any realtor who has submitted a proposal directly through your dashboard. Ask about their marketing strategy, recent sales in your area, or anything else that matters to you.</p>
+                </div>
+                <div style="margin-bottom:20px;">
+                    <div style="font-size:15px;font-weight:700;color:#0A2540;margin-bottom:6px;">Accepting a Proposal</div>
+                    <p style="color:#444;font-size:14px;line-height:1.7;margin:0;">When you're ready, click "Accept" on any proposal. The realtor will receive your contact information immediately and will reach out to schedule a consultation and begin the listing process.</p>
+                </div>
+                <div>
+                    <div style="font-size:15px;font-weight:700;color:#0A2540;margin-bottom:6px;">After Acceptance</div>
+                    <p style="color:#444;font-size:14px;line-height:1.7;margin:0;">Once you've accepted a proposal and sold your home, you can mark your listing as sold from your dashboard. This removes it from the active listings and notifies any remaining agents — keeping the platform clean and professional.</p>
+                </div>
+            </div>
+            ${p("Questions? Just reply to this email — we're here to help you find the right agent.")}
+            ${btn(`${BASE_URL}/dashboard/seller`, 'Go to My Dashboard')}
+            ${divider()}
+            <p style="color:#999;font-size:13px;margin:0;">The RealtorFinder Team</p>
+        `;
+        try {
+            await send({ to: email, subject: 'Your listing is working for you — here\'s what\'s next', html: emailWrap('For Sellers', body) });
+        } catch (error) { logSendgridError('Seller drip 3', error); }
+    },
+
+    // Realtor drip: Step 1 — sent 1 day after signup
+    async sendRealtorDrip1(email, name) {
+        const body = `
+            ${h1('How to Win Listings on RealtorFinder')}
+            ${p(`Hi ${name}, welcome to RealtorFinder! You now have direct access to motivated sellers who are actively looking for an agent. Here's how to stand out from the competition.`)}
+            <div style="background:#F8F6F3;border-radius:12px;padding:24px 28px;margin:24px 0;border:1px solid #E5E1DB;">
+                <div style="margin-bottom:20px;">
+                    <div style="font-size:15px;font-weight:700;color:#0A2540;margin-bottom:6px;">Write a Compelling Proposal</div>
+                    <p style="color:#444;font-size:14px;line-height:1.7;margin:0;">Sellers read every proposal. The ones that win reference the specific home, neighborhood, and why you — specifically — are the right agent for that listing. Avoid copy-paste pitches. Show you've done your homework.</p>
+                </div>
+                <div style="margin-bottom:20px;">
+                    <div style="font-size:15px;font-weight:700;color:#0A2540;margin-bottom:6px;">Set the Right Commission</div>
+                    <p style="color:#444;font-size:14px;line-height:1.7;margin:0;">Competitive doesn't mean lowest. A 2.5% proposal with a strong pitch often beats a 2% proposal with no context. Be clear about what's included — photography, staging consultations, digital marketing, open houses.</p>
+                </div>
+                <div>
+                    <div style="font-size:15px;font-weight:700;color:#0A2540;margin-bottom:6px;">Complete Your Profile First</div>
+                    <p style="color:#444;font-size:14px;line-height:1.7;margin:0;">Before submitting proposals, make sure your profile is complete. Sellers click through to review your background. A photo, bio, and verified license build trust before you even say a word.</p>
+                </div>
+            </div>
+            ${p("New listings are added daily. Log in to browse what's available in your area and submit your first proposal today.")}
+            ${btn(`${BASE_URL}/dashboard/realtor`, 'Browse Active Listings')}
+            ${divider()}
+            <p style="color:#999;font-size:13px;margin:0;">The RealtorFinder Team</p>
+        `;
+        try {
+            await send({ to: email, subject: 'How to win listings on RealtorFinder', html: emailWrap('For Realtors', body) });
+        } catch (error) { logSendgridError('Realtor drip 1', error); }
+    },
+
+    // Realtor drip: Step 2 — sent 3 days after signup
+    async sendRealtorDrip2(email, name) {
+        const body = `
+            ${h1('Your Profile Is Your First Impression')}
+            ${p(`Hi ${name}, before a seller reads your proposal, they often check your profile. Here's how to make sure it works in your favor.`)}
+            <div style="background:#F8F6F3;border-radius:12px;padding:24px 28px;margin:24px 0;border:1px solid #E5E1DB;">
+                <div style="margin-bottom:20px;">
+                    <div style="font-size:15px;font-weight:700;color:#0A2540;margin-bottom:6px;">Profile Photo</div>
+                    <p style="color:#444;font-size:14px;line-height:1.7;margin:0;">Profiles with a professional headshot get significantly more clicks. Use a clear, recent photo — not a logo. Sellers are choosing someone to trust with their most valuable asset; a real face matters.</p>
+                </div>
+                <div style="margin-bottom:20px;">
+                    <div style="font-size:15px;font-weight:700;color:#0A2540;margin-bottom:6px;">Bio and Service Areas</div>
+                    <p style="color:#444;font-size:14px;line-height:1.7;margin:0;">Write a 2–3 sentence bio that highlights your experience, specialty, and local market knowledge. Add your service areas — this is how we match you to buyer requests in your territory.</p>
+                </div>
+                <div style="margin-bottom:20px;">
+                    <div style="font-size:15px;font-weight:700;color:#0A2540;margin-bottom:6px;">License Verification</div>
+                    <p style="color:#444;font-size:14px;line-height:1.7;margin:0;">Upload your license document to get the Verified License badge on your profile. This badge is a strong trust signal — sellers specifically look for it when comparing agents.</p>
+                </div>
+                <div>
+                    <div style="font-size:15px;font-weight:700;color:#0A2540;margin-bottom:6px;">Your First Review</div>
+                    <p style="color:#444;font-size:14px;line-height:1.7;margin:0;">Already worked with a past seller? Ask them to leave a review on your RealtorFinder profile. Verified Sale reviews are prominently displayed and carry significant weight with prospective sellers.</p>
+                </div>
+            </div>
+            ${btn(`${BASE_URL}/dashboard/realtor`, 'Update My Profile')}
+            ${divider()}
+            <p style="color:#999;font-size:13px;margin:0;">The RealtorFinder Team</p>
+        `;
+        try {
+            await send({ to: email, subject: 'Your profile is your first impression', html: emailWrap('For Realtors', body) });
+        } catch (error) { logSendgridError('Realtor drip 2', error); }
+    },
+
+    // Realtor drip: Step 3 — sent 7 days after signup
+    async sendRealtorDrip3(email, name) {
+        const body = `
+            ${h1('Buyer Requests — A New Source of Leads')}
+            ${p(`Hi ${name}, in addition to seller listings, RealtorFinder has a second source of leads you may not have explored yet: buyer requests.`)}
+            <div style="background:linear-gradient(135deg,#0A2540,#0d3659);border-radius:12px;padding:28px 32px;margin:24px 0;color:white;">
+                <div style="font-family:Georgia,serif;font-size:20px;font-weight:900;margin-bottom:12px;">What Are Buyer Requests?</div>
+                <p style="font-size:14px;line-height:1.8;opacity:0.9;margin:0;">Buyers post what they're looking for — budget, target areas, property type, timeline — and agents respond directly. It's the reverse of the traditional model: instead of prospecting for buyers, motivated buyers come to you.</p>
+            </div>
+            <div style="background:#F8F6F3;border-radius:12px;padding:24px 28px;margin:24px 0;border:1px solid #E5E1DB;">
+                <div style="margin-bottom:20px;">
+                    <div style="font-size:15px;font-weight:700;color:#0A2540;margin-bottom:6px;">How Matching Works</div>
+                    <p style="color:#444;font-size:14px;line-height:1.7;margin:0;">When a buyer posts a request in your service areas, you'll receive an email notification and an in-app alert. You can also browse all active requests from your dashboard and filter by location, budget, and property type.</p>
+                </div>
+                <div>
+                    <div style="font-size:15px;font-weight:700;color:#0A2540;margin-bottom:6px;">How to Respond</div>
+                    <p style="color:#444;font-size:14px;line-height:1.7;margin:0;">Click into any buyer request and submit a brief introduction — who you are, your experience in their target area, and why you'd be a great fit. The buyer reviews all responses and reaches out to the agents they want to connect with.</p>
+                </div>
+            </div>
+            ${p("Buyer requests are a great way to build pipeline when the seller listing market is slow. Check your dashboard now to see what's active in your area.")}
+            ${btn(`${BASE_URL}/dashboard/realtor`, 'Browse Buyer Requests')}
+            ${divider()}
+            <p style="color:#999;font-size:13px;margin:0;">The RealtorFinder Team</p>
+        `;
+        try {
+            await send({ to: email, subject: 'Buyer requests — a new source of leads', html: emailWrap('For Realtors', body) });
+        } catch (error) { logSendgridError('Realtor drip 3', error); }
+    },
+
+    // Buyer drip: Step 1 — sent 1 day after signup
+    async sendBuyerDrip1(email, name) {
+        const body = `
+            ${h1('How to Find Your Perfect Home on RealtorFinder')}
+            ${p(`Hi ${name}, welcome to RealtorFinder! Here's a quick guide to getting the most out of the platform as you search for your next home.`)}
+            <div style="background:#F8F6F3;border-radius:12px;padding:24px 28px;margin:24px 0;border:1px solid #E5E1DB;">
+                <div style="margin-bottom:20px;">
+                    <div style="font-size:15px;font-weight:700;color:#0A2540;margin-bottom:6px;">Browse Listings</div>
+                    <p style="color:#444;font-size:14px;line-height:1.7;margin:0;">Head to your dashboard to browse active listings from motivated sellers. Every home on RealtorFinder is listed by a real seller — no phantom listings, no stale data.</p>
+                </div>
+                <div style="margin-bottom:20px;">
+                    <div style="font-size:15px;font-weight:700;color:#0A2540;margin-bottom:6px;">Use the Map View</div>
+                    <p style="color:#444;font-size:14px;line-height:1.7;margin:0;">Switch to map view to see listings plotted by location. This is especially useful if you're looking in a specific school district, neighborhood, or within a certain commute radius.</p>
+                </div>
+                <div>
+                    <div style="font-size:15px;font-weight:700;color:#0A2540;margin-bottom:6px;">Filter by What Matters</div>
+                    <p style="color:#444;font-size:14px;line-height:1.7;margin:0;">Narrow down results by number of bedrooms, bathrooms, price range, zip code, and property type. Save your search criteria to get notified when new matching listings come in.</p>
+                </div>
+            </div>
+            ${p("Start with a broad search and narrow from there. The right home is out there — let's find it.")}
+            ${btn(`${BASE_URL}/dashboard/buyer`, 'Browse Listings Now')}
+            ${divider()}
+            <p style="color:#999;font-size:13px;margin:0;">The RealtorFinder Team</p>
+        `;
+        try {
+            await send({ to: email, subject: 'How to find your perfect home on RealtorFinder', html: emailWrap('For Buyers', body) });
+        } catch (error) { logSendgridError('Buyer drip 1', error); }
+    },
+
+    // Buyer drip: Step 2 — sent 3 days after signup
+    async sendBuyerDrip2(email, name) {
+        const body = `
+            ${h1('Post a Buyer Request — Let Realtors Come to You')}
+            ${p(`Hi ${name}, did you know you can post a buyer request on RealtorFinder and have licensed agents reach out to you directly? It's one of the most powerful features on the platform — and it's completely free for buyers.`)}
+            <div style="background:linear-gradient(135deg,#0A2540,#0d3659);border-radius:12px;padding:28px 32px;margin:24px 0;color:white;">
+                <div style="font-family:Georgia,serif;font-size:20px;font-weight:900;margin-bottom:12px;">How Buyer Requests Work</div>
+                <div style="font-size:14px;line-height:2;opacity:0.9;">
+                    1. &nbsp;Post your criteria — budget, areas, property type, timeline<br>
+                    2. &nbsp;Licensed buyer's agents in your target areas see your request<br>
+                    3. &nbsp;Agents who specialize in what you need send you introductions<br>
+                    4. &nbsp;You review and choose who to connect with — no pressure
+                </div>
+            </div>
+            <div style="background:#F8F6F3;border-radius:12px;padding:24px 28px;margin:24px 0;border:1px solid #E5E1DB;">
+                <div style="font-size:15px;font-weight:700;color:#0A2540;margin-bottom:8px;">What to Include in Your Request</div>
+                <p style="color:#444;font-size:14px;line-height:1.7;margin:0;">Be as specific as possible about your budget range, target neighborhoods or zip codes, minimum bedroom/bathroom count, and your timeline (are you ready to move in 30 days, or still in the early research phase?). The more detail you provide, the better the agents who respond will be matched to your needs.</p>
+            </div>
+            ${p("It takes less than 2 minutes to post a request — and it could save you weeks of searching on your own.")}
+            ${btn(`${BASE_URL}/dashboard/buyer`, 'Post a Buyer Request')}
+            ${divider()}
+            <p style="color:#999;font-size:13px;margin:0;">The RealtorFinder Team</p>
+        `;
+        try {
+            await send({ to: email, subject: 'Post a buyer request — let realtors come to you', html: emailWrap('For Buyers', body) });
+        } catch (error) { logSendgridError('Buyer drip 2', error); }
+    },
+
+    // Buyer drip: Step 3 — sent 7 days after signup
+    async sendBuyerDrip3(email, name) {
+        const body = `
+            ${h1('How to Choose the Right Realtor')}
+            ${p(`Hi ${name}, whether you're browsing listings or comparing agents who responded to your buyer request, choosing the right realtor is one of the most important decisions in your home purchase. Here's what to look for.`)}
+            <div style="background:#F8F6F3;border-radius:12px;padding:24px 28px;margin:24px 0;border:1px solid #E5E1DB;">
+                <div style="margin-bottom:20px;">
+                    <div style="font-size:15px;font-weight:700;color:#0A2540;margin-bottom:6px;">Browse the Realtor Directory</div>
+                    <p style="color:#444;font-size:14px;line-height:1.7;margin:0;">RealtorFinder has a searchable directory of all agents on the platform. You can filter by service area and compare profiles side by side before reaching out. Use it to research any agent who contacts you.</p>
+                </div>
+                <div style="margin-bottom:20px;">
+                    <div style="font-size:15px;font-weight:700;color:#0A2540;margin-bottom:6px;">What the Verified License Badge Means</div>
+                    <p style="color:#444;font-size:14px;line-height:1.7;margin:0;">Agents with a green Verified License badge have had their real estate license document reviewed and confirmed by the RealtorFinder team. Always prefer working with a verified agent — it's a simple but important layer of protection.</p>
+                </div>
+                <div>
+                    <div style="font-size:15px;font-weight:700;color:#0A2540;margin-bottom:6px;">How to Read Reviews</div>
+                    <p style="color:#444;font-size:14px;line-height:1.7;margin:0;">Reviews marked "Verified Sale" are from real sellers who transacted through the platform. These carry more weight than generic ratings. Look for specifics — how did the agent handle negotiations, communication, and closing-day surprises?</p>
+                </div>
+            </div>
+            ${p("Take your time, compare a few agents, and don't feel pressured to commit before you're comfortable. The right agent will feel like a partner, not a salesperson.")}
+            ${btn(`${BASE_URL}/realtors/directory`, 'Browse the Realtor Directory')}
+            ${divider()}
+            <p style="color:#999;font-size:13px;margin:0;">The RealtorFinder Team</p>
+        `;
+        try {
+            await send({ to: email, subject: 'How to choose the right realtor', html: emailWrap('For Buyers', body) });
+        } catch (error) { logSendgridError('Buyer drip 3', error); }
+    },
+
     // ─── Review Request Emails ────────────────────────────────────────────────
 
     async sendReviewRequestEmail(sellerEmail, sellerName, realtorId, realtorName, listingAddress) {

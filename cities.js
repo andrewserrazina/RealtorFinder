@@ -6,4 +6,15 @@ module.exports = [
   ...require('./cities/vt'),
   ...require('./cities/nh'),
   ...require('./cities/me'),
+  // National expansion
+  ...require('./cities/ny'),
+  ...require('./cities/nj'),
+  ...require('./cities/fl'),
+  ...require('./cities/tx'),
+  ...require('./cities/ca'),
+  ...require('./cities/ga'),
+  ...require('./cities/nc'),
+  ...require('./cities/il'),
+  ...require('./cities/wa'),
+  ...require('./cities/co'),
 ];
