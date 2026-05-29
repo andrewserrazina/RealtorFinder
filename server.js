@@ -18,11 +18,49 @@ const auth = require('./auth');
 const cities = require('./cities');
 const { generateCityPage } = require('./cityTemplate');
 
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Trust proxy - important for Render
 app.set('trust proxy', 1);
+
+// Security headers
+app.use(helmet({
+    contentSecurityPolicy: false, // Disabled — we use inline scripts and external CDNs
+    crossOriginEmbedderPolicy: false
+}));
+
+app.use((req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    next();
+});
+
+// Rate limiters
+const authLimiterStrict = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 10,
+    message: { error: 'Too many attempts, please try again later.' },
+    standardHeaders: true,
+    legacyHeaders: false
+});
+
+const apiLimiter = rateLimit({
+    windowMs: 60 * 1000, // 1 minute
+    max: 100,
+    message: { error: 'Too many requests, please slow down.' },
+    standardHeaders: true,
+    legacyHeaders: false
+});
+
+const uploadLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 20,
+    message: { error: 'Too many uploads, please wait.' }
+});
 
 // Middleware
 const allowedOrigin = process.env.FRONTEND_URL || true; // set FRONTEND_URL=https://yourdomain.com in production
@@ -162,6 +200,10 @@ const waitlistLimiter = createRateLimiter(60 * 60 * 1000, 5,  'Too many signups 
 
 // ===== API ROUTES =====
 
+// Apply rate limiters — auth routes get the strict one first, then general API limiter covers all /api/*
+app.use('/api/auth', authLimiterStrict);
+app.use('/api', apiLimiter);
+
 // ===== AUTHENTICATION ROUTES =====
 
 // Signup
@@ -177,8 +219,16 @@ app.post('/api/auth/signup', authLimiter, async (req, res) => {
             return res.status(400).json({ error: 'Invalid user type' });
         }
 
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            return res.status(400).json({ error: 'Invalid email format' });
+        }
+
         if (password.length < 8) {
             return res.status(400).json({ error: 'Password must be at least 8 characters' });
+        }
+
+        if (firstName.length > 100 || lastName.length > 100) {
+            return res.status(400).json({ error: 'Name must be 100 characters or less' });
         }
 
         const user = await auth.createUser(email, password, userType, firstName, lastName, zipCode);
@@ -763,6 +813,18 @@ app.post('/api/listings', auth.requireAuth, async (req, res) => {
         if (!address || !price || !type || !bedrooms || !bathrooms || !sqft || !description || !ownerName || !ownerEmail || !ownerPhone) {
             return res.status(400).json({ error: 'All fields are required' });
         }
+
+        if (isNaN(Number(price)) || Number(price) <= 0) {
+            return res.status(400).json({ error: 'Price must be a positive number' });
+        }
+
+        if (String(address).length > 200) {
+            return res.status(400).json({ error: 'Address must be 200 characters or less' });
+        }
+
+        if (String(description).length > 5000) {
+            return res.status(400).json({ error: 'Description must be 5000 characters or less' });
+        }
         
         const fullAddress = `${addressParts[0]}, ${city}, ${state || ''} ${zip || ''}`.trim();
         const coords = await geocodeAddress(fullAddress);
@@ -1086,7 +1148,7 @@ app.put('/api/listings/:id/images', auth.requireAuth, async (req, res) => {
 });
 
 // Upload images for a listing
-app.post('/api/listings/:id/images', upload.array('images', 10), async (req, res) => {
+app.post('/api/listings/:id/images', uploadLimiter, upload.array('images', 10), async (req, res) => {
     try {
         const listingId = req.params.id;
         const imageUrls = [];
@@ -1164,7 +1226,7 @@ app.put('/api/profile', auth.requireAuth, async (req, res) => {
 });
 
 // Upload profile photo
-app.post('/api/profile/photo', auth.requireAuth, upload.single('photo'), async (req, res) => {
+app.post('/api/profile/photo', auth.requireAuth, uploadLimiter, upload.single('photo'), async (req, res) => {
     try {
         if (!req.file) return res.status(400).json({ error: 'No photo provided' });
         const result = await uploadToCloudinary(req.file.buffer);
@@ -1260,7 +1322,7 @@ app.get('/api/profile/completeness', auth.requireAuth, async (req, res) => {
 // ===== LICENSE VERIFICATION ROUTES =====
 
 // Upload license document
-app.post('/api/profile/license-doc', auth.requireAuth, upload.single('license_doc'), async (req, res) => {
+app.post('/api/profile/license-doc', auth.requireAuth, uploadLimiter, upload.single('license_doc'), async (req, res) => {
     try {
         if (!req.file) return res.status(400).json({ error: 'No file provided' });
         const result = await uploadToCloudinary(req.file.buffer);
@@ -2894,6 +2956,7 @@ app.post('/api/messages', auth.requireAuth, async (req, res) => {
         const uid = req.session.userId;
         const { toUserId, listingId, body } = req.body;
         if (!toUserId || !body || !body.trim()) return res.status(400).json({ error: 'toUserId and body required' });
+        if (body.length > 2000) return res.status(400).json({ error: 'Message body must be 2000 characters or less' });
 
         const { rows } = await pool.query(`
             INSERT INTO messages (from_user_id, to_user_id, listing_id, body)
@@ -3431,6 +3494,84 @@ async function runListingExpiryJob() {
 }
 runListingExpiryJob();
 setInterval(runListingExpiryJob, 24 * 60 * 60 * 1000).unref();
+
+// Create drip_emails table if not exists
+pool.query(`
+    CREATE TABLE IF NOT EXISTS drip_emails (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      sequence_step INTEGER NOT NULL DEFAULT 1,
+      sent_at TIMESTAMPTZ DEFAULT NOW(),
+      UNIQUE(user_id, sequence_step)
+    )
+`).catch(err => console.error('drip_emails table creation error:', err.message));
+
+// Drip email onboarding job — sends 3-step sequences to sellers, realtors, and buyers
+async function runDripEmailJob() {
+    try {
+        // Step 1: send to users who signed up 1+ days ago and haven't received step 1
+        const { rows: step1Users } = await pool.query(`
+            SELECT u.id, u.email, u.first_name, u.user_type
+            FROM users u
+            WHERE u.is_active IS NOT FALSE
+              AND u.created_at < NOW() - INTERVAL '1 day'
+              AND NOT EXISTS (SELECT 1 FROM drip_emails d WHERE d.user_id = u.id AND d.sequence_step = 1)
+            LIMIT 50
+        `);
+        for (const user of step1Users) {
+            try {
+                if (user.user_type === 'seller') await emailService.sendSellerDrip1(user.email, user.first_name);
+                else if (user.user_type === 'realtor') await emailService.sendRealtorDrip1(user.email, user.first_name);
+                else if (user.user_type === 'buyer') await emailService.sendBuyerDrip1(user.email, user.first_name);
+                await pool.query(`INSERT INTO drip_emails (user_id, sequence_step) VALUES ($1, 1) ON CONFLICT DO NOTHING`, [user.id]);
+            } catch(e) { console.error('Drip step 1 error:', e.message); }
+        }
+
+        // Step 2: 3+ days after signup, step 1 already sent
+        const { rows: step2Users } = await pool.query(`
+            SELECT u.id, u.email, u.first_name, u.user_type
+            FROM users u
+            WHERE u.is_active IS NOT FALSE
+              AND u.created_at < NOW() - INTERVAL '3 days'
+              AND EXISTS (SELECT 1 FROM drip_emails d WHERE d.user_id = u.id AND d.sequence_step = 1)
+              AND NOT EXISTS (SELECT 1 FROM drip_emails d WHERE d.user_id = u.id AND d.sequence_step = 2)
+            LIMIT 50
+        `);
+        for (const user of step2Users) {
+            try {
+                if (user.user_type === 'seller') await emailService.sendSellerDrip2(user.email, user.first_name);
+                else if (user.user_type === 'realtor') await emailService.sendRealtorDrip2(user.email, user.first_name);
+                else if (user.user_type === 'buyer') await emailService.sendBuyerDrip2(user.email, user.first_name);
+                await pool.query(`INSERT INTO drip_emails (user_id, sequence_step) VALUES ($1, 2) ON CONFLICT DO NOTHING`, [user.id]);
+            } catch(e) { console.error('Drip step 2 error:', e.message); }
+        }
+
+        // Step 3: 7+ days after signup, step 2 already sent
+        const { rows: step3Users } = await pool.query(`
+            SELECT u.id, u.email, u.first_name, u.user_type
+            FROM users u
+            WHERE u.is_active IS NOT FALSE
+              AND u.created_at < NOW() - INTERVAL '7 days'
+              AND EXISTS (SELECT 1 FROM drip_emails d WHERE d.user_id = u.id AND d.sequence_step = 2)
+              AND NOT EXISTS (SELECT 1 FROM drip_emails d WHERE d.user_id = u.id AND d.sequence_step = 3)
+            LIMIT 50
+        `);
+        for (const user of step3Users) {
+            try {
+                if (user.user_type === 'seller') await emailService.sendSellerDrip3(user.email, user.first_name);
+                else if (user.user_type === 'realtor') await emailService.sendRealtorDrip3(user.email, user.first_name);
+                else if (user.user_type === 'buyer') await emailService.sendBuyerDrip3(user.email, user.first_name);
+                await pool.query(`INSERT INTO drip_emails (user_id, sequence_step) VALUES ($1, 3) ON CONFLICT DO NOTHING`, [user.id]);
+            } catch(e) { console.error('Drip step 3 error:', e.message); }
+        }
+
+        console.log(`Drip job: sent ${step1Users.length + step2Users.length + step3Users.length} emails`);
+    } catch(e) { console.error('Drip job error:', e.message); }
+}
+
+// Run every 6 hours
+runDripEmailJob();
+setInterval(runDripEmailJob, 6 * 60 * 60 * 1000).unref();
 
 // Start server
 app.listen(PORT, () => {
