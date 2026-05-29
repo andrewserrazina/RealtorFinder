@@ -1122,6 +1122,20 @@
                     <button type="submit" class="btn btn-primary" style="padding:1rem 2rem;">Save Profile</button>
                 </form>
 
+                <!-- License Document -->
+                <div id="licenseDocSection" style="background:white;border-radius:12px;border:1px solid var(--border);padding:1.5rem;margin-top:1.5rem;">
+                    <h3 style="font-family:'Crimson Pro',serif;font-size:1.3rem;font-weight:700;margin-bottom:0.5rem;color:var(--ink);">License Document</h3>
+                    <p style="font-size:0.85rem;color:#666;margin-bottom:1rem;">Upload your real estate license document for verification. Verified realtors display a green badge on their profile.</p>
+                    <div id="licenseDocStatus" style="margin-bottom:1rem;"></div>
+                    <div id="licenseDocUploadArea">
+                        <label style="cursor:pointer;display:inline-block;padding:0.55rem 1.25rem;border:1.5px solid var(--border);border-radius:8px;font-size:0.875rem;font-weight:600;color:var(--ink);">
+                            Choose Document
+                            <input type="file" id="licenseDocInput" accept="image/*,.pdf" style="display:none;" onchange="uploadLicenseDoc(this)">
+                        </label>
+                        <span id="licenseDocUploadStatus" style="font-size:0.8rem;color:var(--muted);margin-left:0.75rem;"></span>
+                    </div>
+                </div>
+
                 <!-- Email Preferences -->
                 <div style="background:white;border-radius:12px;border:1px solid var(--border);padding:1.5rem;margin-top:1.5rem;">
                     <h3 style="font-family:'Crimson Pro',serif;font-size:1.3rem;font-weight:700;margin-bottom:1rem;color:var(--ink);">Email Preferences</h3>
@@ -1860,7 +1874,37 @@
                     const wrap = document.getElementById('profilePhotoWrap');
                     wrap.innerHTML = `<img src="${p.profile_photo}" style="width:100%;height:100%;object-fit:cover;">`;
                 }
+                // License doc status
+                const licenseStatusEl = document.getElementById('licenseDocStatus');
+                if (p.license_verified) {
+                    licenseStatusEl.innerHTML = '<span style="display:inline-block;background:#d1fae5;color:#065f46;padding:6px 14px;border-radius:8px;font-size:0.9rem;font-weight:600;">&#x2713; License Verified</span>';
+                } else if (p.license_doc_url) {
+                    if (p.license_rejection_note) {
+                        licenseStatusEl.innerHTML = `<span style="display:inline-block;background:#fee2e2;color:#991b1b;padding:6px 14px;border-radius:8px;font-size:0.9rem;font-weight:600;">&#x2716; Rejected</span><p style="margin-top:0.5rem;font-size:0.85rem;color:#b91c1c;">${p.license_rejection_note}</p>`;
+                    } else {
+                        licenseStatusEl.innerHTML = '<span style="display:inline-block;background:#fef3c7;color:#92400e;padding:6px 14px;border-radius:8px;font-size:0.9rem;font-weight:600;">&#x1F4CB; Document Under Review</span>';
+                    }
+                } else {
+                    licenseStatusEl.innerHTML = '<span style="font-size:0.85rem;color:#6b7280;">No document uploaded yet.</span>';
+                }
             } catch {}
+        }
+
+        async function uploadLicenseDoc(input) {
+            if (!input.files[0]) return;
+            const statusEl = document.getElementById('licenseDocUploadStatus');
+            statusEl.textContent = 'Uploading…';
+            const fd = new FormData();
+            fd.append('license_doc', input.files[0]);
+            try {
+                const res = await fetch(`${API_BASE_URL}/profile/license-doc`, { method: 'POST', credentials: 'include', body: fd });
+                if (!res.ok) throw new Error();
+                statusEl.textContent = '✓ Uploaded — pending review';
+                document.getElementById('licenseDocStatus').innerHTML = '<span style="display:inline-block;background:#fef3c7;color:#92400e;padding:6px 14px;border-radius:8px;font-size:0.9rem;font-weight:600;">&#x1F4CB; Document Under Review</span>';
+                setTimeout(() => { statusEl.textContent = ''; }, 4000);
+            } catch {
+                statusEl.textContent = 'Upload failed. Try again.';
+            }
         }
 
         async function uploadProfilePhoto(input) {

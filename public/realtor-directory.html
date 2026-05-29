@@ -244,7 +244,7 @@
 </div>
 
 <footer>
-    <p>&copy; 2025 RealtorFinder &nbsp;·&nbsp; <a href="/about">About</a> &nbsp;·&nbsp; <a href="/features">Features</a> &nbsp;·&nbsp; <a href="/realtors/directory">Find a Realtor</a></p>
+    <p>&copy; 2025 RealtorFinder &nbsp;·&nbsp; <a href="/about">About</a> &nbsp;·&nbsp; <a href="/features">Features</a> &nbsp;·&nbsp; <a href="/realtors/directory">Find a Realtor</a> &nbsp;·&nbsp; <a href="/privacy">Privacy</a> &nbsp;·&nbsp; <a href="/terms">Terms</a> &nbsp;·&nbsp; <a href="/cookies">Cookies</a></p>
 </footer>
 
 <script>
@@ -306,7 +306,7 @@
             return `<div class="realtor-card">
                 <div class="card-photo">${photoHtml}</div>
                 <div class="card-body">
-                    <div class="card-name">${esc(r.first_name)} ${esc(r.last_name)}</div>
+                    <div class="card-name">${esc(r.first_name)} ${esc(r.last_name)} ${r.license_verified ? '<span style="display:inline-block;background:#ECFDF5;color:#059669;font-size:0.7rem;font-weight:700;padding:2px 7px;border-radius:20px;vertical-align:middle;">✓ Verified</span>' : ''}</div>
                     ${r.brokerage ? `<div class="card-brokerage">${esc(r.brokerage)}</div>` : (r.company_name ? `<div class="card-brokerage">${esc(r.company_name)}</div>` : '')}
                     <div class="card-meta">
                         ${tierBadge}

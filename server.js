@@ -2,6 +2,7 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const cookieParser = require('cookie-parser');
 const session = require('express-session');
 const pgSession = require('connect-pg-simple')(session);
 require('dotenv').config();
@@ -59,6 +60,8 @@ app.use(session({
         sameSite: 'lax' // Back to lax since same domain
     }
 }));
+
+app.use(cookieParser());
 
 // Attach user to all requests
 app.use(auth.attachUser);
@@ -1254,6 +1257,24 @@ app.get('/api/profile/completeness', auth.requireAuth, async (req, res) => {
     }
 });
 
+// ===== LICENSE VERIFICATION ROUTES =====
+
+// Upload license document
+app.post('/api/profile/license-doc', auth.requireAuth, upload.single('license_doc'), async (req, res) => {
+    try {
+        if (!req.file) return res.status(400).json({ error: 'No file provided' });
+        const result = await uploadToCloudinary(req.file.buffer);
+        await pool.query(
+            `UPDATE users SET license_doc_url = $1, license_verified = FALSE, license_rejection_note = NULL WHERE id = $2`,
+            [result.secure_url, req.session.userId]
+        );
+        res.json({ url: result.secure_url });
+    } catch (err) {
+        console.error('License doc upload error:', err);
+        res.status(500).json({ error: 'Failed to upload license document' });
+    }
+});
+
 // ===== ADMIN ROUTES =====
 
 function requireAdmin(req, res, next) {
@@ -1440,6 +1461,168 @@ app.delete('/api/admin/listings/:id', requireAdmin, async (req, res) => {
     } catch (error) {
         console.error('Admin delete listing error:', error);
         res.status(500).json({ error: 'Failed to delete listing' });
+    }
+});
+
+// ===== LICENSE QUEUE (admin) =====
+
+app.get('/api/admin/license-queue', requireAdmin, async (req, res) => {
+    try {
+        const { rows } = await pool.query(
+            `SELECT id, first_name, last_name, email, license_number, license_doc_url, created_at
+             FROM users
+             WHERE user_type = 'realtor'
+               AND license_doc_url IS NOT NULL
+               AND license_verified = FALSE
+             ORDER BY created_at ASC`
+        );
+        res.json(rows);
+    } catch (err) {
+        console.error('License queue error:', err);
+        res.status(500).json({ error: 'Failed to fetch license queue' });
+    }
+});
+
+app.put('/api/admin/license-verify/:userId', requireAdmin, async (req, res) => {
+    try {
+        const { approved, note } = req.body;
+        const userId = parseInt(req.params.userId);
+        let userRow;
+        if (approved) {
+            const { rows } = await pool.query(
+                `UPDATE users SET license_verified = TRUE, license_verified_at = NOW(), license_rejection_note = NULL
+                 WHERE id = $1 RETURNING email, first_name`,
+                [userId]
+            );
+            userRow = rows[0];
+            if (userRow) {
+                emailService.sendLicenseApproved(userRow.email, userRow.first_name)
+                    .catch(err => console.error('License approved email failed:', err.message));
+            }
+        } else {
+            const { rows } = await pool.query(
+                `UPDATE users SET license_verified = FALSE, license_doc_url = NULL, license_rejection_note = $1
+                 WHERE id = $2 RETURNING email, first_name`,
+                [note || null, userId]
+            );
+            userRow = rows[0];
+            if (userRow) {
+                emailService.sendLicenseRejected(userRow.email, userRow.first_name, note)
+                    .catch(err => console.error('License rejected email failed:', err.message));
+            }
+        }
+        res.json({ ok: true });
+    } catch (err) {
+        console.error('License verify error:', err);
+        res.status(500).json({ error: 'Failed to process license verification' });
+    }
+});
+
+// ===== ADMIN MODERATION: LISTINGS =====
+
+app.put('/api/admin/listings/:id/status', requireAdmin, async (req, res) => {
+    try {
+        const { status, note } = req.body;
+        if (!['active', 'rejected', 'archived'].includes(status)) {
+            return res.status(400).json({ error: 'Invalid status' });
+        }
+        const { rows } = await pool.query(
+            `UPDATE listings SET status = $1 WHERE id = $2
+             RETURNING id, address, city, state, user_id`,
+            [status, parseInt(req.params.id)]
+        );
+        if (!rows.length) return res.status(404).json({ error: 'Listing not found' });
+        const listing = rows[0];
+        if (status === 'rejected') {
+            const sellerRes = await pool.query(
+                `SELECT email, first_name FROM users WHERE id = $1`, [listing.user_id]
+            );
+            if (sellerRes.rows.length) {
+                const seller = sellerRes.rows[0];
+                const address = [listing.address, listing.city, listing.state].filter(Boolean).join(', ');
+                emailService.sendListingRejected(seller.email, seller.first_name, address, note)
+                    .catch(err => console.error('Listing rejected email failed:', err.message));
+            }
+        }
+        res.json({ ok: true });
+    } catch (err) {
+        console.error('Admin listing status error:', err);
+        res.status(500).json({ error: 'Failed to update listing status' });
+    }
+});
+
+// ===== ADMIN MODERATION: REVIEWS =====
+
+app.delete('/api/admin/reviews/:id', requireAdmin, async (req, res) => {
+    try {
+        const { rows } = await pool.query(
+            `DELETE FROM realtor_reviews WHERE id = $1 RETURNING id`,
+            [parseInt(req.params.id)]
+        );
+        if (!rows.length) return res.status(404).json({ error: 'Review not found' });
+        res.json({ ok: true });
+    } catch (err) {
+        console.error('Admin delete review error:', err);
+        res.status(500).json({ error: 'Failed to delete review' });
+    }
+});
+
+// ===== ADMIN IMPERSONATION =====
+
+app.post('/api/admin/impersonate/:userId', requireAdmin, async (req, res) => {
+    try {
+        const targetId = parseInt(req.params.userId);
+        const { rows } = await pool.query(
+            `SELECT id, first_name, last_name, user_type FROM users WHERE id = $1`,
+            [targetId]
+        );
+        if (!rows.length) return res.status(404).json({ error: 'User not found' });
+        const target = rows[0];
+        req.session.impersonating = req.session.userId;
+        req.session.userId = targetId;
+        req.session.userType = target.user_type;
+        req.session.firstName = target.first_name;
+        req.session.lastName = target.last_name;
+        res.json({ ok: true, userType: target.user_type });
+    } catch (err) {
+        console.error('Impersonate error:', err);
+        res.status(500).json({ error: 'Failed to impersonate user' });
+    }
+});
+
+app.post('/api/admin/impersonate/end', auth.requireAuth, async (req, res) => {
+    try {
+        if (!req.session.impersonating) return res.status(400).json({ error: 'Not in impersonation mode' });
+        const origId = req.session.impersonating;
+        const { rows } = await pool.query(
+            `SELECT id, first_name, last_name, user_type FROM users WHERE id = $1`,
+            [origId]
+        );
+        if (!rows.length) return res.status(404).json({ error: 'Original user not found' });
+        const orig = rows[0];
+        req.session.userId = origId;
+        req.session.userType = orig.user_type;
+        req.session.firstName = orig.first_name;
+        req.session.lastName = orig.last_name;
+        delete req.session.impersonating;
+        res.json({ ok: true });
+    } catch (err) {
+        console.error('End impersonation error:', err);
+        res.status(500).json({ error: 'Failed to end impersonation' });
+    }
+});
+
+app.get('/api/admin/impersonate/status', auth.requireAuth, async (req, res) => {
+    try {
+        if (!req.session.impersonating) return res.json({ impersonating: false, originalName: '' });
+        const { rows } = await pool.query(
+            `SELECT first_name, last_name FROM users WHERE id = $1`,
+            [req.session.impersonating]
+        );
+        const name = rows.length ? `${rows[0].first_name || ''} ${rows[0].last_name || ''}`.trim() : 'Admin';
+        res.json({ impersonating: true, originalName: name });
+    } catch (err) {
+        res.json({ impersonating: false, originalName: '' });
     }
 });
 
@@ -2161,7 +2344,7 @@ app.get('/api/realtors/search', async (req, res) => {
         const { rows } = await pool.query(
             `SELECT u.id, u.first_name, u.last_name, u.bio, u.years_experience,
                     u.license_number, u.service_areas, u.subscription_plan, u.zip_code,
-                    u.profile_photo, u.brokerage,
+                    u.profile_photo, u.brokerage, u.license_verified,
                     c.name AS company_name, c.plan AS company_plan
              FROM users u
              LEFT JOIN companies c ON u.company_id = c.id
@@ -2196,7 +2379,8 @@ app.get('/api/realtors/:id/public', async (req, res) => {
         const { rows } = await pool.query(
             `SELECT u.id, u.first_name, u.last_name, u.bio, u.years_experience,
                     u.license_number, u.service_areas, u.subscription_plan, u.zip_code,
-                    u.profile_photo, c.name AS company_name, c.plan AS company_plan
+                    u.profile_photo, u.license_verified, u.license_doc_url, u.license_rejection_note,
+                    c.name AS company_name, c.plan AS company_plan
              FROM users u
              LEFT JOIN companies c ON u.company_id = c.id
              WHERE u.id = $1 AND u.user_type = 'realtor' AND u.is_active IS NOT FALSE`,
@@ -2624,6 +2808,12 @@ pool.query(`
 // ===== REFERRAL COLUMNS (Feature 4) =====
 pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_code TEXT UNIQUE`).catch(() => {});
 pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS referred_by INTEGER REFERENCES users(id)`).catch(() => {});
+
+// ===== LICENSE VERIFICATION COLUMNS =====
+pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS license_doc_url TEXT`).catch(() => {});
+pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS license_verified BOOLEAN DEFAULT FALSE`).catch(() => {});
+pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS license_verified_at TIMESTAMPTZ`).catch(() => {});
+pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS license_rejection_note TEXT`).catch(() => {});
 
 // List conversations for current user
 app.get('/api/messages/conversations', auth.requireAuth, async (req, res) => {
@@ -3079,6 +3269,10 @@ app.get('/', (req, res) => {
         res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
         return res.sendFile(path.join(__dirname, 'public', 'realtors.html'));
     }
+    if (!req.cookies || !req.cookies.ab_variant) {
+        const variant = Math.random() < 0.5 ? 'a' : 'b';
+        res.cookie('ab_variant', variant, { maxAge: 30 * 24 * 60 * 60 * 1000, httpOnly: false });
+    }
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
@@ -3138,6 +3332,9 @@ app.get('/privacy', (req, res) => {
 });
 app.get('/terms', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'terms.html'));
+});
+app.get('/cookies', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'cookies.html'));
 });
 app.get('/features', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'features.html'));

@@ -625,6 +625,59 @@ const emailService = {
         } catch (error) { logSendgridError('Proposal accepted email', error); }
     },
 
+    // ─── License Verification Emails ─────────────────────────────────────────
+
+    async sendLicenseApproved(email, name) {
+        const body = `
+            ${h1('Your License Has Been Verified! ✅')}
+            ${p(`Hi ${name}, great news — your real estate license document has been reviewed and verified by the RealtorFinder team.`)}
+            <div style="background:linear-gradient(135deg,#d1fae5,#a7f3d0);border-radius:12px;padding:24px 32px;margin:24px 0;text-align:center;">
+                <div style="font-size:40px;margin-bottom:8px;">✓</div>
+                <div style="font-family:Georgia,serif;font-size:20px;font-weight:900;color:#065f46;">License Verified</div>
+                <div style="font-size:14px;color:#047857;margin-top:8px;">Your profile now displays a Verified License badge</div>
+            </div>
+            ${p("Your public profile now shows a green Verified License badge, which helps build trust with sellers browsing the platform.")}
+            ${btn(`${BASE_URL}/dashboard/realtor`, 'View My Profile')}
+            ${divider()}
+            <p style="color:#999;font-size:13px;margin:0;">The RealtorFinder Team</p>
+        `;
+        try {
+            await send({ to: email, subject: 'License Verified — RealtorFinder', html: emailWrap('License Verified', body) });
+        } catch (error) { logSendgridError('License approved email', error); }
+    },
+
+    async sendLicenseRejected(email, name, note) {
+        const body = `
+            ${h1('Action Required: License Document')}
+            ${p(`Hi ${name}, we were unable to verify your license document submission on RealtorFinder.`)}
+            ${note ? `<div style="background:#fef2f2;border-left:4px solid #ef4444;border-radius:0 10px 10px 0;padding:16px 20px;margin:20px 0;"><div style="font-weight:700;font-size:13px;color:#b91c1c;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.05em;">Reason</div><p style="color:#444;font-size:14px;margin:0;">${note}</p></div>` : ''}
+            ${p("Please upload a clear, valid copy of your real estate license from your dashboard. Make sure the document is readable and shows your name, license number, and expiration date.")}
+            ${btn(`${BASE_URL}/dashboard/realtor`, 'Re-upload License Document')}
+            ${divider()}
+            <p style="color:#999;font-size:13px;margin:0;">The RealtorFinder Team</p>
+        `;
+        try {
+            await send({ to: email, subject: 'License Document — Action Required', html: emailWrap('License Review', body) });
+        } catch (error) { logSendgridError('License rejected email', error); }
+    },
+
+    // ─── Admin Moderation Emails ──────────────────────────────────────────────
+
+    async sendListingRejected(sellerEmail, sellerName, listingAddress, note) {
+        const body = `
+            ${h1('Update on Your Listing')}
+            ${p(`Hi ${sellerName}, your RealtorFinder listing at <strong>${listingAddress}</strong> has been reviewed by our team.`)}
+            ${note ? `<div style="background:#fef2f2;border-left:4px solid #ef4444;border-radius:0 10px 10px 0;padding:16px 20px;margin:20px 0;"><div style="font-weight:700;font-size:13px;color:#b91c1c;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.05em;">Reason</div><p style="color:#444;font-size:14px;margin:0;">${note}</p></div>` : ''}
+            ${p("If you have questions, please contact our support team by replying to this email.")}
+            ${btn(`${BASE_URL}/dashboard/seller`, 'View My Dashboard')}
+            ${divider()}
+            <p style="color:#999;font-size:13px;margin:0;">The RealtorFinder Team</p>
+        `;
+        try {
+            await send({ to: sellerEmail, subject: `Update on Your Listing — ${listingAddress}`, html: emailWrap('For Sellers', body) });
+        } catch (error) { logSendgridError('Listing rejected email', error); }
+    },
+
     // ─── Review Request Emails ────────────────────────────────────────────────
 
     async sendReviewRequestEmail(sellerEmail, sellerName, realtorId, realtorName, listingAddress) {

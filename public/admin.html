@@ -638,12 +638,20 @@
     </div>
 
     <!-- Tabs -->
+    <!-- Impersonation banner -->
+    <div id="impersonation-banner" style="display:none;background:#f59e0b;color:#fff;padding:0.75rem 2rem;text-align:center;font-size:0.9rem;font-weight:600;">
+        ⚠️ Impersonating user — <span id="impersonate-original-name"></span> &nbsp;
+        <button onclick="endImpersonation()" style="background:#fff;color:#92400e;border:none;padding:4px 14px;border-radius:6px;font-weight:700;cursor:pointer;font-size:0.85rem;">End Session</button>
+    </div>
+
     <div class="tabs">
         <button class="tab-btn" onclick="switchTab('stats', this)">Stats</button>
         <button class="tab-btn active" onclick="switchTab('users', this)">Users</button>
         <button class="tab-btn" onclick="switchTab('listings', this)">Listings</button>
         <button class="tab-btn" onclick="switchTab('leads', this)">City Leads</button>
         <button class="tab-btn" onclick="switchTab('reviews', this)">Reviews</button>
+        <button class="tab-btn" onclick="switchTab('license-queue', this)">License Queue</button>
+        <button class="tab-btn" onclick="switchTab('impersonate', this)">Impersonate</button>
         <button class="tab-btn" onclick="switchTab('announce', this)">Announce</button>
     </div>
 
@@ -851,12 +859,72 @@
                             <th>Review</th>
                             <th>Listing</th>
                             <th>Date</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody id="reviews-tbody">
-                        <tr><td colspan="7" class="empty-state">Loading reviews…</td></tr>
+                        <tr><td colspan="8" class="empty-state">Loading reviews…</td></tr>
                     </tbody>
                 </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- License Queue tab -->
+    <div class="tab-panel" id="tab-license-queue">
+        <div class="table-wrapper">
+            <div class="table-header">
+                <span class="table-title">License Verification Queue</span>
+                <span class="table-count" id="license-queue-count">Loading…</span>
+            </div>
+            <div class="table-scroll">
+                <table id="license-queue-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>License #</th>
+                            <th>Document</th>
+                            <th>Submitted</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="license-queue-tbody">
+                        <tr><td colspan="7" class="empty-state">Loading…</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <!-- Rejection note form (hidden by default) -->
+        <div id="reject-note-form" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;border-radius:12px;padding:1.5rem;box-shadow:0 20px 60px rgba(0,0,0,0.2);z-index:999;width:420px;max-width:90vw;">
+            <h3 style="margin-bottom:1rem;font-size:1.1rem;color:#0A2540;">Rejection Reason</h3>
+            <textarea id="reject-note-text" rows="4" placeholder="Explain why the document was rejected…" style="width:100%;padding:0.75rem;border:1px solid #e5e1db;border-radius:8px;font-family:inherit;font-size:0.95rem;resize:vertical;margin-bottom:1rem;"></textarea>
+            <input type="hidden" id="reject-note-user-id">
+            <div style="display:flex;gap:0.75rem;">
+                <button onclick="submitRejection()" style="flex:1;background:#ef4444;color:white;border:none;padding:0.75rem;border-radius:8px;font-weight:600;cursor:pointer;font-family:inherit;">Reject</button>
+                <button onclick="document.getElementById('reject-note-form').style.display='none'" style="flex:1;background:#e5e1db;color:#374151;border:none;padding:0.75rem;border-radius:8px;font-weight:600;cursor:pointer;font-family:inherit;">Cancel</button>
+            </div>
+        </div>
+        <div id="reject-note-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:998;" onclick="document.getElementById('reject-note-form').style.display='none';document.getElementById('reject-note-overlay').style.display='none';"></div>
+    </div>
+
+    <!-- Impersonate tab -->
+    <div class="tab-panel" id="tab-impersonate">
+        <div class="table-wrapper" style="padding:2rem;max-width:500px;">
+            <div class="table-header" style="margin-bottom:1.5rem;">
+                <span class="table-title">Impersonate User</span>
+            </div>
+            <div style="background:#fff8f0;border:1px solid #fbbf24;border-radius:10px;padding:1rem 1.25rem;margin-bottom:1.5rem;font-size:0.875rem;color:#92400e;">
+                ⚠️ <strong>Warning:</strong> You will be acting as this user. All actions will be performed as them.
+            </div>
+            <div style="display:flex;flex-direction:column;gap:1rem;">
+                <div>
+                    <label style="display:block;font-size:0.875rem;font-weight:600;color:var(--primary);margin-bottom:0.4rem;">User ID or Email</label>
+                    <input type="text" id="impersonateInput" placeholder="e.g. 42 or user@example.com" style="width:100%;padding:0.7rem 1rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.95rem;outline:none;">
+                </div>
+                <button onclick="startImpersonation()" style="background:var(--accent);color:white;border:none;padding:0.75rem 2rem;border-radius:8px;font-weight:600;font-size:0.95rem;cursor:pointer;font-family:inherit;">Impersonate User</button>
+                <div id="impersonate-result" style="display:none;padding:0.75rem 1rem;border-radius:8px;font-size:0.9rem;font-weight:500;"></div>
             </div>
         </div>
     </div>
@@ -978,6 +1046,7 @@
         btn.classList.add('active');
         document.getElementById('tab-' + name).classList.add('active');
         if (name === 'reviews') loadAdminReviews();
+        if (name === 'license-queue') loadLicenseQueue();
     }
 
     // ── Announce ──────────────────────────────────────────────────────────────
@@ -1034,11 +1103,153 @@
                     <td style="max-width:240px;white-space:normal;">${escHtml(r.body || '—')}</td>
                     <td>${escHtml(r.listing_address || '—')}</td>
                     <td>${new Date(r.created_at).toLocaleDateString()}</td>
+                    <td><button class="btn-action btn-delete" onclick="deleteReview(${r.id}, this)">Delete</button></td>
                 </tr>`).join('') :
-                '<tr><td colspan="7" class="empty-state">No reviews yet.</td></tr>';
+                '<tr><td colspan="8" class="empty-state">No reviews yet.</td></tr>';
         } catch {
             document.getElementById('reviews-tbody').innerHTML =
-                '<tr><td colspan="7" class="empty-state">Failed to load reviews.</td></tr>';
+                '<tr><td colspan="8" class="empty-state">Failed to load reviews.</td></tr>';
+        }
+    }
+
+    async function deleteReview(id, btn) {
+        if (!confirm('Permanently delete this review? This cannot be undone.')) return;
+        btn.disabled = true;
+        try {
+            const res = await fetch(`/api/admin/reviews/${id}`, { method: 'DELETE', credentials: 'include' });
+            if (!res.ok) throw new Error();
+            btn.closest('tr').remove();
+            showToast('Review deleted.', 'success');
+        } catch {
+            showToast('Failed to delete review.', 'error');
+            btn.disabled = false;
+        }
+    }
+
+    // ── License Queue ─────────────────────────────────────────────────────────
+
+    async function loadLicenseQueue() {
+        try {
+            const res = await fetch('/api/admin/license-queue', { credentials: 'include' });
+            if (!res.ok) throw new Error();
+            const queue = await res.json();
+            document.getElementById('license-queue-count').textContent = queue.length + ' pending';
+            document.getElementById('license-queue-tbody').innerHTML = queue.length ? queue.map(u => `
+                <tr id="license-row-${u.id}">
+                    <td class="id-cell">#${u.id}</td>
+                    <td class="name-cell">${escHtml((u.first_name || '') + ' ' + (u.last_name || ''))}</td>
+                    <td><a href="mailto:${escHtml(u.email)}" style="color:var(--accent)">${escHtml(u.email)}</a></td>
+                    <td>${escHtml(u.license_number || '—')}</td>
+                    <td><a href="${escHtml(u.license_doc_url)}" target="_blank" style="color:var(--accent);font-weight:600;">View Doc ↗</a></td>
+                    <td class="td-muted">${fmtDate(u.created_at)}</td>
+                    <td style="display:flex;gap:0.4rem;">
+                        <button class="btn-action btn-reactivate" onclick="approveLicense(${u.id}, this)">Approve</button>
+                        <button class="btn-action btn-delete" onclick="openRejectForm(${u.id})">Reject</button>
+                    </td>
+                </tr>`).join('') :
+                '<tr><td colspan="7" class="empty-state">No pending license verifications.</td></tr>';
+        } catch {
+            document.getElementById('license-queue-tbody').innerHTML =
+                '<tr><td colspan="7" class="empty-state">Failed to load queue.</td></tr>';
+        }
+    }
+
+    async function approveLicense(userId, btn) {
+        if (!confirm('Approve this license?')) return;
+        btn.disabled = true;
+        try {
+            const res = await fetch(`/api/admin/license-verify/${userId}`, {
+                method: 'PUT', credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ approved: true })
+            });
+            if (!res.ok) throw new Error();
+            document.getElementById('license-row-' + userId)?.remove();
+            showToast('License approved — realtor notified.', 'success');
+        } catch {
+            showToast('Failed to approve license.', 'error');
+            btn.disabled = false;
+        }
+    }
+
+    function openRejectForm(userId) {
+        document.getElementById('reject-note-user-id').value = userId;
+        document.getElementById('reject-note-text').value = '';
+        document.getElementById('reject-note-form').style.display = 'block';
+        document.getElementById('reject-note-overlay').style.display = 'block';
+    }
+
+    async function submitRejection() {
+        const userId = document.getElementById('reject-note-user-id').value;
+        const note = document.getElementById('reject-note-text').value.trim();
+        try {
+            const res = await fetch(`/api/admin/license-verify/${userId}`, {
+                method: 'PUT', credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ approved: false, note })
+            });
+            if (!res.ok) throw new Error();
+            document.getElementById('license-row-' + userId)?.remove();
+            document.getElementById('reject-note-form').style.display = 'none';
+            document.getElementById('reject-note-overlay').style.display = 'none';
+            showToast('License rejected — realtor notified.', 'success');
+        } catch {
+            showToast('Failed to reject license.', 'error');
+        }
+    }
+
+    // ── Impersonation ─────────────────────────────────────────────────────────
+
+    async function checkImpersonationStatus() {
+        try {
+            const res = await fetch('/api/admin/impersonate/status', { credentials: 'include' });
+            if (!res.ok) return;
+            const data = await res.json();
+            if (data.impersonating) {
+                document.getElementById('impersonation-banner').style.display = 'block';
+                document.getElementById('impersonate-original-name').textContent = data.originalName;
+            }
+        } catch {}
+    }
+
+    async function startImpersonation() {
+        const input = document.getElementById('impersonateInput').value.trim();
+        const resultEl = document.getElementById('impersonate-result');
+        if (!input) { showToast('Enter a user ID or email', 'error'); return; }
+
+        // Try to resolve email to ID first
+        let userId = parseInt(input);
+        if (isNaN(userId)) {
+            // Look up by email from loaded users data
+            const found = usersData.find(u => u.email === input);
+            if (!found) { showToast('User not found in loaded list. Load Users tab first or use ID.', 'error'); return; }
+            userId = found.id;
+        }
+
+        try {
+            const res = await fetch(`/api/admin/impersonate/${userId}`, {
+                method: 'POST', credentials: 'include'
+            });
+            const d = await res.json();
+            if (!res.ok) throw new Error(d.error || 'Failed');
+            const dashMap = { seller: '/dashboard/seller', realtor: '/dashboard/realtor', buyer: '/dashboard/buyer' };
+            const dest = dashMap[d.userType] || '/dashboard/seller';
+            showToast('Impersonating user — redirecting…', 'success');
+            setTimeout(() => { window.location.href = dest; }, 800);
+        } catch (err) {
+            resultEl.textContent = 'Error: ' + err.message;
+            resultEl.style.cssText = 'display:block;background:#fee2e2;color:#991b1b;';
+            showToast('Failed to impersonate user', 'error');
+        }
+    }
+
+    async function endImpersonation() {
+        try {
+            const res = await fetch('/api/admin/impersonate/end', { method: 'POST', credentials: 'include' });
+            if (!res.ok) throw new Error();
+            window.location.href = '/admin';
+        } catch {
+            showToast('Failed to end impersonation', 'error');
         }
     }
 
@@ -1337,6 +1548,7 @@
 
     // ── Boot ──────────────────────────────────────────────────────────────────
     checkAuth();
+    checkImpersonationStatus();
 </script>
     <script>
       if ('serviceWorker' in navigator) {

@@ -267,7 +267,7 @@
                         ${r.company_name ? `<div class="company-name">${esc(r.company_name)}</div>` : ''}
                         <div class="badges">
                             ${isFeatured ? '<span class="badge badge-featured">⭐ Featured Agent</span>' : ''}
-                            ${hasLicense ? '<span class="badge badge-verified">✓ Licensed</span>' : ''}
+                            ${r.license_verified ? '<span class="badge badge-verified" style="background:#ECFDF5;color:#059669;">✓ Verified License</span>' : (hasLicense ? '<span class="badge badge-verified">✓ Licensed</span>' : '')}
                             ${serviceAreas.map(a => `<span class="badge badge-area">${esc(a)}</span>`).join('')}
                         </div>
                     </div>
