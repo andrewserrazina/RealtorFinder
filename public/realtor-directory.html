@@ -253,6 +253,46 @@
     let totalRealtors = 0;
     let allLoaded = false;
     let currentFilters = {};
+    let savedRealtorIds = new Set();
+    let currentUserId = null;
+
+    // Load current user and saved realtors
+    async function initUserState() {
+        try {
+            const res = await fetch('/api/auth/me', { credentials: 'include' });
+            if (!res.ok) return;
+            const user = await res.json();
+            currentUserId = user.id;
+            const savedRes = await fetch('/api/saved-realtors', { credentials: 'include' });
+            if (savedRes.ok) {
+                const saved = await savedRes.json();
+                savedRealtorIds = new Set(saved.map(r => r.id));
+            }
+        } catch {}
+    }
+
+    async function toggleSaveRealtor(realtorId, btn) {
+        if (!currentUserId) { window.location.href = '/login'; return; }
+        const isSaved = savedRealtorIds.has(realtorId);
+        try {
+            const res = await fetch(`/api/saved-realtors/${realtorId}`, {
+                method: isSaved ? 'DELETE' : 'POST',
+                credentials: 'include'
+            });
+            if (!res.ok) throw new Error('Failed');
+            if (isSaved) {
+                savedRealtorIds.delete(realtorId);
+                btn.textContent = '♡';
+                btn.title = 'Save realtor';
+                btn.style.color = '#999';
+            } else {
+                savedRealtorIds.add(realtorId);
+                btn.textContent = '♥';
+                btn.title = 'Saved';
+                btn.style.color = '#ef4444';
+            }
+        } catch { alert('Could not update saved realtors. Please try again.'); }
+    }
 
     function esc(s) {
         if (!s) return '';
@@ -303,6 +343,13 @@
                 ? r.service_areas.split(',').slice(0, 4).map(a => a.trim()).filter(Boolean).join(', ')
                 : '';
 
+            const isSaved = savedRealtorIds.has(r.id);
+            const heartBtn = `<button
+                onclick="toggleSaveRealtor(${r.id}, this)"
+                title="${isSaved ? 'Saved' : 'Save realtor'}"
+                style="background:none;border:1px solid #e5e7eb;border-radius:8px;padding:0.45rem 0.6rem;cursor:pointer;font-size:1.1rem;color:${isSaved ? '#ef4444' : '#999'};line-height:1;"
+            >${isSaved ? '♥' : '♡'}</button>`;
+
             return `<div class="realtor-card">
                 <div class="card-photo">${photoHtml}</div>
                 <div class="card-body">
@@ -316,6 +363,7 @@
                     <div class="card-footer">
                         <a href="/realtor/${r.id}" class="btn btn-outline">View Profile</a>
                         <a href="/dashboard/buyer" class="btn btn-primary">Request Match</a>
+                        ${heartBtn}
                     </div>
                 </div>
             </div>`;
@@ -406,7 +454,7 @@
     document.getElementById('filterState').addEventListener('change', applyFilters);
 
     // Initial load
-    loadRealtors(1, false);
+    initUserState().then(() => loadRealtors(1, false));
 </script>
     <script>
       if ('serviceWorker' in navigator) {

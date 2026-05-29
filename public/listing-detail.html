@@ -338,6 +338,49 @@
             <div class="skeleton" style="height:48px;width:100%;border-radius:10px;"></div>
         </div>
     </div>
+
+    <!-- Request a Showing Section -->
+    <div id="showingSection" style="max-width:680px;margin:2rem auto;padding:0 1.5rem;display:none;">
+        <div style="background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:2rem;">
+            <h3 style="font-family:'Crimson Pro',serif;font-size:1.5rem;font-weight:700;color:#0a2540;margin:0 0 0.5rem;">Request a Showing</h3>
+            <p style="color:#666;font-size:0.9rem;margin:0 0 1.5rem;">Choose a date and time to visit this property.</p>
+            <div id="showingFormArea">
+                <div id="showingLoginPrompt" style="display:none;text-align:center;padding:1rem 0;">
+                    <p style="color:#666;margin-bottom:1rem;">Sign in to request a showing.</p>
+                    <a href="/login" style="background:#FF6B35;color:white;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:600;">Sign In</a>
+                </div>
+                <form id="showingForm" style="display:none;" onsubmit="submitShowing(event)">
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
+                        <div>
+                            <label style="display:block;font-size:0.85rem;font-weight:600;margin-bottom:0.35rem;color:#374151;">Preferred Date *</label>
+                            <input type="date" id="showingDate" required style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:0.95rem;">
+                        </div>
+                        <div>
+                            <label style="display:block;font-size:0.85rem;font-weight:600;margin-bottom:0.35rem;color:#374151;">Preferred Time *</label>
+                            <select id="showingTime" required style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:0.95rem;">
+                                <option value="">Select a time</option>
+                                <option>9:00 AM</option>
+                                <option>10:00 AM</option>
+                                <option>11:00 AM</option>
+                                <option>12:00 PM</option>
+                                <option>1:00 PM</option>
+                                <option>2:00 PM</option>
+                                <option>3:00 PM</option>
+                                <option>4:00 PM</option>
+                                <option>5:00 PM</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div style="margin-bottom:1rem;">
+                        <label style="display:block;font-size:0.85rem;font-weight:600;margin-bottom:0.35rem;color:#374151;">Message (optional)</label>
+                        <textarea id="showingMessage" rows="3" placeholder="Any questions or notes for the seller…" style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:0.95rem;font-family:inherit;resize:vertical;"></textarea>
+                    </div>
+                    <div id="showingFormMsg" style="display:none;padding:0.75rem;border-radius:8px;margin-bottom:1rem;font-size:0.9rem;"></div>
+                    <button type="submit" id="showingSubmitBtn" style="background:#FF6B35;color:white;border:none;border-radius:8px;padding:12px 28px;font-size:0.95rem;font-weight:700;cursor:pointer;width:100%;">Request Showing</button>
+                </form>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -354,6 +397,10 @@
             renderGallery(l);
             renderMain(l);
             renderCta(l);
+            // Show showing section for active listings
+            if (!l.status || l.status === 'active') {
+                initShowingSection();
+            }
         } catch {
             showNotFound();
         }
@@ -486,6 +533,66 @@
     }
 
     loadListing();
+
+    // ===== SHOWING REQUEST =====
+    async function initShowingSection() {
+        const section = document.getElementById('showingSection');
+        section.style.display = 'block';
+        try {
+            const res = await fetch('/api/auth/me', { credentials: 'include' });
+            if (!res.ok) {
+                document.getElementById('showingLoginPrompt').style.display = 'block';
+                return;
+            }
+            // Set min date to tomorrow
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            document.getElementById('showingDate').min = tomorrow.toISOString().split('T')[0];
+            document.getElementById('showingForm').style.display = 'block';
+        } catch {
+            document.getElementById('showingLoginPrompt').style.display = 'block';
+        }
+    }
+
+    async function submitShowing(e) {
+        e.preventDefault();
+        const btn = document.getElementById('showingSubmitBtn');
+        const msgEl = document.getElementById('showingFormMsg');
+        const date = document.getElementById('showingDate').value;
+        const time = document.getElementById('showingTime').value;
+        const message = document.getElementById('showingMessage').value.trim();
+
+        btn.disabled = true;
+        btn.textContent = 'Submitting…';
+        msgEl.style.display = 'none';
+
+        try {
+            const res = await fetch('/api/showings', {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ listing_id: listingId, requested_date: date, requested_time: time, message })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Failed to submit');
+
+            msgEl.textContent = '✓ Showing request submitted! You\'ll receive a confirmation email when it\'s confirmed.';
+            msgEl.style.cssText = 'display:block;background:#d1fae5;color:#065f46;padding:0.75rem;border-radius:8px;margin-bottom:1rem;font-size:0.9rem;';
+            document.getElementById('showingForm').reset();
+            btn.disabled = false;
+            btn.textContent = 'Request Showing';
+        } catch (err) {
+            msgEl.textContent = err.message || 'Failed to submit showing request.';
+            msgEl.style.cssText = 'display:block;background:rgba(239,68,68,0.1);color:#991b1b;padding:0.75rem;border-radius:8px;margin-bottom:1rem;font-size:0.9rem;';
+            btn.disabled = false;
+            btn.textContent = 'Request Showing';
+        }
+    }
+
+    // Init showing section after listing loads
+    document.addEventListener('DOMContentLoaded', () => {
+        // initShowingSection will be called after loadListing completes
+    });
 </script>
     <script>
       if ('serviceWorker' in navigator) {

@@ -37,7 +37,7 @@ async function send(msg) {
 }
 
 // ─── Base branded template ───────────────────────────────────────────────────
-function emailWrap(accentBar, bodyHtml) {
+function emailWrap(accentBar, bodyHtml, unsubscribeUrl = null) {
     return `
 <!DOCTYPE html>
 <html>
@@ -67,6 +67,7 @@ function emailWrap(accentBar, bodyHtml) {
               <a href="${BASE_URL}/terms" style="color:#FF6B35;text-decoration:none;">Terms of Service</a>
             </p>
             <p style="color:#bbb;font-size:11px;margin:0;">You're receiving this because you have an account at realtorfinder.net</p>
+            ${unsubscribeUrl ? `<p style="color:#bbb;font-size:11px;margin:6px 0 0;"><a href="${unsubscribeUrl}" style="color:#bbb;text-decoration:underline;">Unsubscribe from marketing emails</a></p>` : ''}
           </td>
         </tr>
       </table>
@@ -681,7 +682,7 @@ const emailService = {
     // ─── Drip Email Sequences ─────────────────────────────────────────────────
 
     // Seller drip: Step 1 — sent 1 day after signup
-    async sendSellerDrip1(email, name) {
+    async sendSellerDrip1(email, name, unsubscribeToken) {
         const body = `
             ${h1('3 Tips to Attract Top Realtors to Your Listing')}
             ${p(`Hi ${name}, welcome to RealtorFinder! To help you get the most out of your listing, here are three things the best sellers do to attract competitive proposals from top realtors.`)}
@@ -705,12 +706,12 @@ const emailService = {
             <p style="color:#999;font-size:13px;margin:0;">The RealtorFinder Team</p>
         `;
         try {
-            await send({ to: email, subject: '3 tips to attract top realtors to your listing', html: emailWrap('For Sellers', body) });
+            await send({ to: email, subject: '3 tips to attract top realtors to your listing', html: emailWrap('For Sellers', body, unsubscribeToken ? `${BASE_URL}/unsubscribe/${unsubscribeToken}` : null) });
         } catch (error) { logSendgridError('Seller drip 1', error); }
     },
 
     // Seller drip: Step 2 — sent 3 days after signup
-    async sendSellerDrip2(email, name) {
+    async sendSellerDrip2(email, name, unsubscribeToken) {
         const body = `
             ${h1('How to Evaluate Realtor Proposals on RealtorFinder')}
             ${p(`Hi ${name}, as proposals come in, you'll want to compare them thoughtfully. Here's what to look for beyond the commission rate.`)}
@@ -734,12 +735,12 @@ const emailService = {
             <p style="color:#999;font-size:13px;margin:0;">The RealtorFinder Team</p>
         `;
         try {
-            await send({ to: email, subject: 'How to evaluate realtor proposals on RealtorFinder', html: emailWrap('For Sellers', body) });
+            await send({ to: email, subject: 'How to evaluate realtor proposals on RealtorFinder', html: emailWrap('For Sellers', body, unsubscribeToken ? `${BASE_URL}/unsubscribe/${unsubscribeToken}` : null) });
         } catch (error) { logSendgridError('Seller drip 2', error); }
     },
 
     // Seller drip: Step 3 — sent 7 days after signup
-    async sendSellerDrip3(email, name) {
+    async sendSellerDrip3(email, name, unsubscribeToken) {
         const body = `
             ${h1('Your Listing Is Working for You — Here\'s What\'s Next')}
             ${p(`Hi ${name}, your listing has been live for a week now. Here's a quick guide to the next steps so you're ready when the right proposal comes in.`)}
@@ -768,7 +769,7 @@ const emailService = {
     },
 
     // Realtor drip: Step 1 — sent 1 day after signup
-    async sendRealtorDrip1(email, name) {
+    async sendRealtorDrip1(email, name, unsubscribeToken) {
         const body = `
             ${h1('How to Win Listings on RealtorFinder')}
             ${p(`Hi ${name}, welcome to RealtorFinder! You now have direct access to motivated sellers who are actively looking for an agent. Here's how to stand out from the competition.`)}
@@ -792,12 +793,12 @@ const emailService = {
             <p style="color:#999;font-size:13px;margin:0;">The RealtorFinder Team</p>
         `;
         try {
-            await send({ to: email, subject: 'How to win listings on RealtorFinder', html: emailWrap('For Realtors', body) });
+            await send({ to: email, subject: 'How to win listings on RealtorFinder', html: emailWrap('For Realtors', body, unsubscribeToken ? `${BASE_URL}/unsubscribe/${unsubscribeToken}` : null) });
         } catch (error) { logSendgridError('Realtor drip 1', error); }
     },
 
     // Realtor drip: Step 2 — sent 3 days after signup
-    async sendRealtorDrip2(email, name) {
+    async sendRealtorDrip2(email, name, unsubscribeToken) {
         const body = `
             ${h1('Your Profile Is Your First Impression')}
             ${p(`Hi ${name}, before a seller reads your proposal, they often check your profile. Here's how to make sure it works in your favor.`)}
@@ -824,12 +825,12 @@ const emailService = {
             <p style="color:#999;font-size:13px;margin:0;">The RealtorFinder Team</p>
         `;
         try {
-            await send({ to: email, subject: 'Your profile is your first impression', html: emailWrap('For Realtors', body) });
+            await send({ to: email, subject: 'Your profile is your first impression', html: emailWrap('For Realtors', body, unsubscribeToken ? `${BASE_URL}/unsubscribe/${unsubscribeToken}` : null) });
         } catch (error) { logSendgridError('Realtor drip 2', error); }
     },
 
     // Realtor drip: Step 3 — sent 7 days after signup
-    async sendRealtorDrip3(email, name) {
+    async sendRealtorDrip3(email, name, unsubscribeToken) {
         const body = `
             ${h1('Buyer Requests — A New Source of Leads')}
             ${p(`Hi ${name}, in addition to seller listings, RealtorFinder has a second source of leads you may not have explored yet: buyer requests.`)}
@@ -853,12 +854,12 @@ const emailService = {
             <p style="color:#999;font-size:13px;margin:0;">The RealtorFinder Team</p>
         `;
         try {
-            await send({ to: email, subject: 'Buyer requests — a new source of leads', html: emailWrap('For Realtors', body) });
+            await send({ to: email, subject: 'Buyer requests — a new source of leads', html: emailWrap('For Realtors', body, unsubscribeToken ? `${BASE_URL}/unsubscribe/${unsubscribeToken}` : null) });
         } catch (error) { logSendgridError('Realtor drip 3', error); }
     },
 
     // Buyer drip: Step 1 — sent 1 day after signup
-    async sendBuyerDrip1(email, name) {
+    async sendBuyerDrip1(email, name, unsubscribeToken) {
         const body = `
             ${h1('How to Find Your Perfect Home on RealtorFinder')}
             ${p(`Hi ${name}, welcome to RealtorFinder! Here's a quick guide to getting the most out of the platform as you search for your next home.`)}
@@ -882,12 +883,12 @@ const emailService = {
             <p style="color:#999;font-size:13px;margin:0;">The RealtorFinder Team</p>
         `;
         try {
-            await send({ to: email, subject: 'How to find your perfect home on RealtorFinder', html: emailWrap('For Buyers', body) });
+            await send({ to: email, subject: 'How to find your perfect home on RealtorFinder', html: emailWrap('For Buyers', body, unsubscribeToken ? `${BASE_URL}/unsubscribe/${unsubscribeToken}` : null) });
         } catch (error) { logSendgridError('Buyer drip 1', error); }
     },
 
     // Buyer drip: Step 2 — sent 3 days after signup
-    async sendBuyerDrip2(email, name) {
+    async sendBuyerDrip2(email, name, unsubscribeToken) {
         const body = `
             ${h1('Post a Buyer Request — Let Realtors Come to You')}
             ${p(`Hi ${name}, did you know you can post a buyer request on RealtorFinder and have licensed agents reach out to you directly? It's one of the most powerful features on the platform — and it's completely free for buyers.`)}
@@ -910,12 +911,12 @@ const emailService = {
             <p style="color:#999;font-size:13px;margin:0;">The RealtorFinder Team</p>
         `;
         try {
-            await send({ to: email, subject: 'Post a buyer request — let realtors come to you', html: emailWrap('For Buyers', body) });
+            await send({ to: email, subject: 'Post a buyer request — let realtors come to you', html: emailWrap('For Buyers', body, unsubscribeToken ? `${BASE_URL}/unsubscribe/${unsubscribeToken}` : null) });
         } catch (error) { logSendgridError('Buyer drip 2', error); }
     },
 
     // Buyer drip: Step 3 — sent 7 days after signup
-    async sendBuyerDrip3(email, name) {
+    async sendBuyerDrip3(email, name, unsubscribeToken) {
         const body = `
             ${h1('How to Choose the Right Realtor')}
             ${p(`Hi ${name}, whether you're browsing listings or comparing agents who responded to your buyer request, choosing the right realtor is one of the most important decisions in your home purchase. Here's what to look for.`)}
@@ -939,7 +940,7 @@ const emailService = {
             <p style="color:#999;font-size:13px;margin:0;">The RealtorFinder Team</p>
         `;
         try {
-            await send({ to: email, subject: 'How to choose the right realtor', html: emailWrap('For Buyers', body) });
+            await send({ to: email, subject: 'How to choose the right realtor', html: emailWrap('For Buyers', body, unsubscribeToken ? `${BASE_URL}/unsubscribe/${unsubscribeToken}` : null) });
         } catch (error) { logSendgridError('Buyer drip 3', error); }
     },
 
@@ -964,6 +965,65 @@ const emailService = {
         try {
             await send({ to: sellerEmail, subject: `How was working with ${realtorName}? Leave a review`, html: emailWrap('For Sellers', body) });
         } catch (error) { logSendgridError('Review request email', error); }
+    },
+
+    // ─── Showing Request Emails ───────────────────────────────────────────────
+
+    async sendShowingRequest(recipientEmail, recipientName, buyerName, listingAddress, date, time, message) {
+        const body = `
+            ${h1('New Showing Request 🏠')}
+            ${p(`Hi ${recipientName}, a showing has been requested for <strong>${listingAddress}</strong>.`)}
+            ${infoBox([
+                ['Buyer', buyerName],
+                ['Date', date],
+                ['Time', time],
+                ['Message', message || '(none)']
+            ])}
+            ${btn(`${BASE_URL}/dashboard/seller`, 'View Showing Requests')}
+            ${divider()}
+            <p style="color:#999;font-size:13px;margin:0;">The RealtorFinder Team</p>
+        `;
+        try {
+            await send({ to: recipientEmail, subject: `Showing Request — ${listingAddress}`, html: emailWrap('Showing Request', body) });
+        } catch (error) { logSendgridError('Showing request email', error); }
+    },
+
+    async sendShowingConfirmed(buyerEmail, buyerName, listingAddress, date, time) {
+        const body = `
+            ${h1('Your Showing is Confirmed! ✅')}
+            ${p(`Hi ${buyerName}, great news — your showing request has been confirmed.`)}
+            ${infoBox([
+                ['Property', listingAddress],
+                ['Date', date],
+                ['Time', time],
+                ['Status', 'Confirmed']
+            ])}
+            ${btn(`${BASE_URL}/dashboard/buyer`, 'View My Showings')}
+            ${divider()}
+            <p style="color:#999;font-size:13px;margin:0;">The RealtorFinder Team</p>
+        `;
+        try {
+            await send({ to: buyerEmail, subject: `Showing Confirmed — ${listingAddress}`, html: emailWrap('Confirmed', body) });
+        } catch (error) { logSendgridError('Showing confirmed email', error); }
+    },
+
+    async sendShowingCancelled(recipientEmail, recipientName, listingAddress, date, time) {
+        const body = `
+            ${h1('Showing Cancelled')}
+            ${p(`Hi ${recipientName}, a showing has been cancelled.`)}
+            ${infoBox([
+                ['Property', listingAddress],
+                ['Date', date],
+                ['Time', time],
+                ['Status', 'Cancelled']
+            ])}
+            ${btn(`${BASE_URL}/dashboard/seller`, 'View Your Dashboard')}
+            ${divider()}
+            <p style="color:#999;font-size:13px;margin:0;">The RealtorFinder Team</p>
+        `;
+        try {
+            await send({ to: recipientEmail, subject: `Showing Cancelled — ${listingAddress}`, html: emailWrap('Cancelled', body) });
+        } catch (error) { logSendgridError('Showing cancelled email', error); }
     },
 };
 

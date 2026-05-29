@@ -859,6 +859,14 @@
                         <span>Saved</span>
                         <span class="badge" id="savedCount" style="display:none;">0</span>
                     </div>
+                    <div class="nav-item" data-view="showings">
+                        <span class="nav-icon">🏠</span>
+                        <span>Showings</span>
+                    </div>
+                    <div class="nav-item" data-view="saved-realtors">
+                        <span class="nav-icon">❤️</span>
+                        <span>Saved Realtors</span>
+                    </div>
                 </div>
             </nav>
         </aside>
@@ -1001,6 +1009,24 @@
                     <p class="page-subtitle">Homes you've bookmarked for later</p>
                 </div>
                 <div class="saved-grid" id="savedGrid"><div class="empty-state"><div class="empty-state-icon">🔖</div><h3>No saved listings yet</h3><p>Browse listings and bookmark ones you like.</p></div></div>
+            </section>
+
+            <!-- Showings View -->
+            <section id="showings-view" class="view-section">
+                <div class="page-header">
+                    <h1 class="page-title">My Showings</h1>
+                    <p class="page-subtitle">Showing requests you've submitted</p>
+                </div>
+                <div id="buyerShowingsList"></div>
+            </section>
+
+            <!-- Saved Realtors View -->
+            <section id="saved-realtors-view" class="view-section">
+                <div class="page-header">
+                    <h1 class="page-title">Saved Realtors</h1>
+                    <p class="page-subtitle">Realtors you've saved from the directory</p>
+                </div>
+                <div id="savedRealtorsList"></div>
             </section>
         </main>
     </div>
@@ -1470,6 +1496,8 @@
                 document.getElementById(`${view}-view`).classList.add('active');
                 if (view === 'browse') { loadBrowseListings(); loadSavedSearches(); }
                 if (view === 'saved') loadSavedListings();
+                if (view === 'showings') loadBuyerShowings();
+                if (view === 'saved-realtors') loadSavedRealtors();
             });
         });
 
@@ -1871,6 +1899,96 @@
         }
         function closeCompareModal() {
             document.getElementById('compareModal').classList.remove('active');
+        }
+
+        // ===== SHOWINGS (BUYER) =====
+        async function loadBuyerShowings() {
+            const container = document.getElementById('buyerShowingsList');
+            container.innerHTML = '<div style="color:#999;padding:2rem;text-align:center;">Loading…</div>';
+            try {
+                const res = await fetch(`${API_BASE_URL}/showings/my`, { credentials: 'include' });
+                if (!res.ok) throw new Error('Failed');
+                const showings = await res.json();
+                if (!showings.length) {
+                    container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">🏠</div><h3>No showings requested yet</h3><p>Visit a listing page to request a showing.</p></div>`;
+                    return;
+                }
+                const statusColors = { pending: '#f59e0b', confirmed: '#10b981', cancelled: '#ef4444' };
+                container.innerHTML = showings.map(s => {
+                    const addr = [s.address, s.city, s.state].filter(Boolean).join(', ');
+                    const statusColor = statusColors[s.status] || '#999';
+                    return `<div style="background:white;border:1px solid var(--border);border-radius:14px;padding:1.25rem 1.5rem;margin-bottom:1rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;">
+                        <div>
+                            <div style="font-weight:700;color:var(--ink);margin-bottom:0.25rem;">${addr}</div>
+                            <div style="color:#666;font-size:0.9rem;">📅 ${s.requested_date} &nbsp; 🕐 ${s.requested_time}</div>
+                            ${s.message ? `<div style="color:#555;font-size:0.85rem;margin-top:0.25rem;">"${s.message}"</div>` : ''}
+                        </div>
+                        <div style="display:flex;align-items:center;gap:1rem;">
+                            <span style="font-size:0.85rem;font-weight:700;color:${statusColor};">● ${s.status.charAt(0).toUpperCase() + s.status.slice(1)}</span>
+                            ${s.status !== 'cancelled' ? `<button class="btn btn-outline" style="font-size:0.8rem;padding:0.4rem 0.8rem;" onclick="cancelBuyerShowing(${s.id})">Cancel</button>` : ''}
+                        </div>
+                    </div>`;
+                }).join('');
+            } catch {
+                container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">⚠️</div><h3>Could not load showings</h3></div>`;
+            }
+        }
+
+        async function cancelBuyerShowing(id) {
+            if (!confirm('Cancel this showing request?')) return;
+            try {
+                const res = await fetch(`${API_BASE_URL}/showings/${id}/cancel`, { method: 'PUT', credentials: 'include' });
+                if (!res.ok) throw new Error((await res.json()).error || 'Failed');
+                showToast('Showing cancelled.');
+                loadBuyerShowings();
+            } catch (err) { showToast(err.message || 'Failed to cancel', 'error'); }
+        }
+
+        // ===== SAVED REALTORS =====
+        async function loadSavedRealtors() {
+            const container = document.getElementById('savedRealtorsList');
+            container.innerHTML = '<div style="color:#999;padding:2rem;text-align:center;">Loading…</div>';
+            try {
+                const res = await fetch(`${API_BASE_URL}/saved-realtors`, { credentials: 'include' });
+                if (!res.ok) throw new Error('Failed');
+                const realtors = await res.json();
+                if (!realtors.length) {
+                    container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">❤️</div><h3>No saved realtors yet</h3><p>Browse the <a href="/realtors/directory" style="color:var(--accent);">realtor directory</a> and heart save agents you like.</p></div>`;
+                    return;
+                }
+                container.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1rem;">${realtors.map(r => {
+                    const initials = ((r.first_name||'')[0]||'') + ((r.last_name||'')[0]||'');
+                    const photoHtml = r.profile_photo
+                        ? `<img src="${esc2(r.profile_photo)}" style="width:56px;height:56px;object-fit:cover;border-radius:50%;">`
+                        : `<div style="width:56px;height:56px;border-radius:50%;background:var(--accent);color:white;display:flex;align-items:center;justify-content:center;font-size:1.1rem;font-weight:700;">${esc2(initials.toUpperCase())}</div>`;
+                    const areas = r.service_areas ? r.service_areas.split(',').slice(0,3).map(a=>a.trim()).join(', ') : '';
+                    return `<div style="background:white;border:1px solid var(--border);border-radius:14px;padding:1.25rem;">
+                        <div style="display:flex;align-items:center;gap:0.875rem;margin-bottom:0.875rem;">
+                            ${photoHtml}
+                            <div>
+                                <div style="font-weight:700;color:var(--ink);">${esc2(r.first_name)} ${esc2(r.last_name)} ${r.license_verified ? '<span style="font-size:0.7rem;background:#ECFDF5;color:#059669;padding:2px 7px;border-radius:20px;">✓</span>' : ''}</div>
+                                ${r.brokerage ? `<div style="font-size:0.85rem;color:#666;">${esc2(r.brokerage)}</div>` : ''}
+                            </div>
+                        </div>
+                        ${areas ? `<div style="font-size:0.85rem;color:#666;margin-bottom:0.875rem;">📍 ${esc2(areas)}</div>` : ''}
+                        <div style="display:flex;gap:0.5rem;">
+                            <a href="/realtor/${r.id}" class="btn btn-outline" style="flex:1;text-align:center;font-size:0.85rem;padding:0.5rem;">View Profile</a>
+                            <button class="btn btn-outline" onclick="unsaveRealtor(${r.id}, this)" style="font-size:0.85rem;padding:0.5rem;color:#ef4444;border-color:#ef4444;">Unsave</button>
+                        </div>
+                    </div>`;
+                }).join('')}</div>`;
+            } catch {
+                container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">⚠️</div><h3>Could not load saved realtors</h3></div>`;
+            }
+        }
+
+        async function unsaveRealtor(realtorId, btn) {
+            try {
+                const res = await fetch(`${API_BASE_URL}/saved-realtors/${realtorId}`, { method: 'DELETE', credentials: 'include' });
+                if (!res.ok) throw new Error('Failed');
+                showToast('Realtor removed from saved.');
+                loadSavedRealtors();
+            } catch (err) { showToast(err.message || 'Failed to unsave', 'error'); }
         }
     </script>
 

@@ -24,6 +24,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <script src="https://js.stripe.com/v3/"></script>
     <style>
         :root {
             --ink: #0a2540;
@@ -806,6 +807,7 @@
             <div class="tab" data-view="analytics">Analytics</div>
             <div class="tab" data-view="profile">My Profile</div>
             <div class="tab" data-view="buyer-requests">Buyer Requests <span id="buyerMatchBadge" style="display:none;background:var(--accent);color:white;border-radius:50%;width:16px;height:16px;font-size:0.65rem;font-weight:700;text-align:center;line-height:16px;margin-left:4px;vertical-align:middle;"></span></div>
+            <div class="tab" data-view="showings">Showings</div>
             <div class="tab" data-view="my-proposals">My Proposals</div>
             <div class="tab" data-view="referrals">Referrals</div>
             <div class="tab" data-view="company">My Company</div>
@@ -919,16 +921,42 @@
 
         <!-- Analytics View -->
         <section id="analytics-view" class="view-section">
-            <div style="max-width:700px;">
+            <div style="max-width:800px;">
                 <h2 style="font-family:'Crimson Pro',serif;font-size:2rem;font-weight:900;color:var(--ink);margin-bottom:0.5rem;">Your Analytics</h2>
-                <p style="color:#666;margin-bottom:2rem;">Performance stats for your proposals and activity on RealtorFinder.</p>
+                <p style="color:#666;margin-bottom:2rem;">Performance stats for your proposals, profile views, and activity on RealtorFinder.</p>
+
+                <!-- Profile Views row -->
+                <h3 style="font-size:1rem;font-weight:700;color:var(--ink);margin:0 0 0.75rem;">Profile Views</h3>
+                <div class="stats-row" style="margin-bottom:1.5rem;">
+                    <div class="stat-card"><div class="stat-label">Last 7 Days</div><div class="stat-value" id="statViews7">—</div></div>
+                    <div class="stat-card"><div class="stat-label">Last 30 Days</div><div class="stat-value" id="statViews30">—</div></div>
+                    <div class="stat-card"><div class="stat-label">All Time</div><div class="stat-value" id="statViewsAll">—</div></div>
+                    <div class="stat-card"><div class="stat-label">Avg Response</div><div class="stat-value" id="statResponseTime" style="font-size:1rem;">—</div></div>
+                </div>
+
+                <!-- Views sparkline -->
+                <div id="viewsSparkline" style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:1.25rem;margin-bottom:1.5rem;display:none;">
+                    <div style="font-size:0.85rem;font-weight:600;color:#666;margin-bottom:0.75rem;">Profile views — last 7 days</div>
+                    <div id="sparklineBars" style="display:flex;align-items:flex-end;gap:6px;height:60px;"></div>
+                </div>
+
+                <!-- Proposals row -->
+                <h3 style="font-size:1rem;font-weight:700;color:var(--ink);margin:0 0 0.75rem;">Proposals</h3>
                 <div class="stats-row" id="analyticsStats">
                     <div class="stat-card"><div class="stat-label">Total Proposals</div><div class="stat-value" id="statTotalProposals">—</div></div>
                     <div class="stat-card"><div class="stat-label">Listings Won</div><div class="stat-value" id="statWon">—</div></div>
                     <div class="stat-card"><div class="stat-label">Win Rate</div><div class="stat-value" id="statWinRate">—</div></div>
                     <div class="stat-card"><div class="stat-label">This Month</div><div class="stat-value" id="statThisMonth">—</div></div>
                 </div>
-                <div id="planLimitInfo" style="display:none;background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;padding:1rem 1.25rem;margin-top:0.5rem;">
+
+                <!-- Proposals breakdown bar -->
+                <div id="proposalBreakdown" style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:1.25rem;margin-top:1rem;display:none;">
+                    <div style="font-size:0.85rem;font-weight:600;color:#666;margin-bottom:0.75rem;">Proposal status breakdown</div>
+                    <div id="proposalBar" style="display:flex;height:20px;border-radius:6px;overflow:hidden;gap:2px;"></div>
+                    <div id="proposalLegend" style="display:flex;gap:1.5rem;margin-top:0.5rem;font-size:0.8rem;"></div>
+                </div>
+
+                <div id="planLimitInfo" style="display:none;background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;padding:1rem 1.25rem;margin-top:1rem;">
                     <div style="font-weight:600;color:#c2410c;margin-bottom:0.25rem;">Basic Plan Proposal Limit</div>
                     <div id="planLimitText" style="font-size:0.9rem;color:#c2410c;"></div>
                     <a href="/pricing" style="font-size:0.85rem;color:#FF6B35;font-weight:600;text-decoration:none;display:inline-block;margin-top:0.5rem;">Upgrade to Professional →</a>
@@ -976,6 +1004,13 @@
                 <span class="page-info" id="buyerPageInfo">Page 1 of 1</span>
                 <button class="btn btn-outline" id="buyerNextPage" onclick="changeBuyerPage(1)">Next →</button>
             </div>
+        </section>
+
+        <!-- Showings View -->
+        <section id="showings-view" class="view-section">
+            <h2 style="font-family:'Crimson Pro',serif;font-size:2rem;margin-bottom:0.5rem;">Showing Requests</h2>
+            <p style="color:#666;margin-bottom:2rem;">Buyers who have requested showings on listings you represent.</p>
+            <div id="showingsList" class="bids-list"></div>
         </section>
 
         <!-- My Proposals View (Feature 1) -->
@@ -1217,6 +1252,22 @@
         </div>
     </div>
 
+    <!-- Pay-Per-Lead Modal -->
+    <div id="leadPayModal" class="modal">
+        <div class="modal-content" style="max-width:460px;">
+            <span class="modal-close" onclick="closeLeadPayModal()">&times;</span>
+            <div class="modal-header">
+                <h2>Unlock Lead — $9.99</h2>
+                <p class="modal-subtitle">Pay once to view full contact details for this buyer</p>
+            </div>
+            <div id="leadPayError" style="display:none;background:rgba(239,68,68,0.1);color:#991b1b;padding:0.75rem;border-radius:8px;margin-bottom:1rem;font-size:0.9rem;"></div>
+            <div id="cardElementWrap" style="border:1px solid var(--border);border-radius:8px;padding:0.875rem;margin-bottom:1rem;background:#fff;">
+                <div id="cardElement"></div>
+            </div>
+            <button id="leadPayBtn" class="btn btn-primary" style="width:100%;padding:1rem;" onclick="submitLeadPayment()">Pay $9.99</button>
+        </div>
+    </div>
+
     <!-- Bid Modal -->
     <div id="bidModal" class="modal">
         <div class="modal-content">
@@ -1359,6 +1410,7 @@
                 }
 
                 if (view === 'buyer-requests') loadBuyerRequests();
+                if (view === 'showings') loadShowings();
                 if (view === 'company') loadCompany();
                 if (view === 'saved') loadSavedListings();
                 if (view === 'analytics') loadAnalytics();
@@ -2019,6 +2071,7 @@
 
         async function loadBuyerRequests() {
             try {
+                await loadPurchasedLeads();
                 const params = new URLSearchParams({ page: currentBuyerPage, limit: 20, ...buyerRequestFilters });
                 const res = await fetch(`${API_BASE_URL}/buyer-requests?${params}`, { credentials: 'include' });
                 if (!res.ok) throw new Error('Failed to load buyer requests');
@@ -2062,6 +2115,9 @@
                 return;
             }
 
+            const userPlan = currentUser ? (currentUser.subscription_plan || 'free') : 'free';
+            const isPaidPlan = userPlan !== 'free';
+
             container.innerHTML = requests.map(req => {
                 const firstName = req.first_name || req.firstName || 'Buyer';
                 const lastName = req.last_name || req.lastName || '';
@@ -2079,27 +2135,32 @@
                 const truncatedNotes = notes.length > 120 ? notes.substring(0, 120) + '…' : notes;
                 const alreadyResponded = respondedRequests.has(req.id);
 
+                const isUnlocked = isPaidPlan || purchasedLeadIds.has(req.id);
+                const areasDisplay = isUnlocked
+                    ? `<span>📍 ${areas}</span>`
+                    : `<span style="filter:blur(4px);user-select:none;" title="Unlock to see">📍 ████████████</span>`;
+
+                const actionBtn = alreadyResponded
+                    ? `<button class="btn btn-outline" disabled style="opacity:0.6;cursor:not-allowed;">Connected ✓</button>`
+                    : isUnlocked
+                        ? `<button class="btn btn-primary" onclick="openConnectModal(${req.id}, '${firstName.replace(/'/g, "\\'")}')">Connect</button>`
+                        : `<button class="btn btn-primary" onclick="openLeadPayModal(${req.id})" style="background:#16a34a;border-color:#16a34a;">🔓 Unlock Lead — $9.99</button>`;
+
                 return `
                     <div class="bid-card">
                         <div class="bid-info">
                             <h3>${displayName}</h3>
                             <div class="bid-price">${budgetStr}</div>
                             <div class="bid-details">
-                                <span>📍 ${areas}</span>
+                                ${areasDisplay}
                                 <span>🏠 ${propType}</span>
                                 ${minBeds ? `<span>🛏️ ${minBeds}+ beds</span>` : ''}
                                 <span>⏱️ ${timeline}</span>
                             </div>
-                            ${truncatedNotes ? `<div style="margin-top:0.75rem;color:#555;font-size:0.9rem;">${truncatedNotes}</div>` : ''}
+                            ${isUnlocked && truncatedNotes ? `<div style="margin-top:0.75rem;color:#555;font-size:0.9rem;">${truncatedNotes}</div>` : ''}
+                            ${!isUnlocked && !isPaidPlan ? `<div style="margin-top:0.75rem;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:0.5rem 0.75rem;font-size:0.85rem;color:#15803d;">Pro subscribers see all leads free. <a href="/pricing" style="color:#FF6B35;font-weight:600;">Upgrade →</a></div>` : ''}
                         </div>
-                        <div>
-                            <button
-                                class="btn ${alreadyResponded ? 'btn-outline' : 'btn-primary'}"
-                                onclick="openConnectModal(${req.id}, '${firstName.replace(/'/g, "\\'")}')"
-                                ${alreadyResponded ? 'disabled' : ''}
-                                style="${alreadyResponded ? 'opacity:0.6;cursor:not-allowed;' : ''}"
-                            >${alreadyResponded ? 'Connected ✓' : 'Connect'}</button>
-                        </div>
+                        <div>${actionBtn}</div>
                     </div>
                 `;
             }).join('');
@@ -2200,6 +2261,153 @@
             e.preventDefault();
             if (currentConnectRequestId !== null) submitConnection(currentConnectRequestId);
         });
+
+        // ===== PAY-PER-LEAD =====
+        let stripeInstance = null;
+        let stripeCardElement = null;
+        let currentLeadRequestId = null;
+        let purchasedLeadIds = new Set();
+
+        async function loadPurchasedLeads() {
+            try {
+                const res = await fetch(`${API_BASE_URL}/leads/purchased`, { credentials: 'include' });
+                if (!res.ok) return;
+                const ids = await res.json();
+                purchasedLeadIds = new Set(ids);
+            } catch {}
+        }
+
+        function openLeadPayModal(requestId) {
+            currentLeadRequestId = requestId;
+            document.getElementById('leadPayError').style.display = 'none';
+            document.getElementById('leadPayBtn').disabled = false;
+            document.getElementById('leadPayBtn').textContent = 'Pay $9.99';
+            document.getElementById('leadPayModal').classList.add('active');
+
+            if (!stripeInstance && window.Stripe && window.STRIPE_PUBLISHABLE_KEY) {
+                stripeInstance = Stripe(window.STRIPE_PUBLISHABLE_KEY);
+            }
+            if (stripeInstance) {
+                const elements = stripeInstance.elements();
+                if (stripeCardElement) {
+                    try { stripeCardElement.destroy(); } catch {}
+                }
+                stripeCardElement = elements.create('card', { style: { base: { fontSize: '16px', color: '#0a2540' } } });
+                stripeCardElement.mount('#cardElement');
+            } else {
+                document.getElementById('cardElementWrap').innerHTML = '<p style="color:#999;font-size:0.9rem;">Stripe payment not configured in this environment.</p>';
+            }
+        }
+
+        function closeLeadPayModal() {
+            document.getElementById('leadPayModal').classList.remove('active');
+            currentLeadRequestId = null;
+        }
+
+        async function submitLeadPayment() {
+            if (!currentLeadRequestId) return;
+            const btn = document.getElementById('leadPayBtn');
+            const errEl = document.getElementById('leadPayError');
+            btn.disabled = true;
+            btn.textContent = 'Processing…';
+            errEl.style.display = 'none';
+            try {
+                // Create payment intent
+                const res = await fetch(`${API_BASE_URL}/leads/purchase`, {
+                    method: 'POST', credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ buyer_request_id: currentLeadRequestId })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Failed to initiate payment');
+
+                if (!stripeInstance || !stripeCardElement) {
+                    throw new Error('Stripe not initialized');
+                }
+
+                // Confirm card payment
+                const { paymentIntent, error } = await stripeInstance.confirmCardPayment(data.clientSecret, {
+                    payment_method: { card: stripeCardElement }
+                });
+                if (error) throw new Error(error.message);
+
+                // Confirm with backend
+                const confirmRes = await fetch(`${API_BASE_URL}/leads/confirm`, {
+                    method: 'POST', credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ payment_intent_id: paymentIntent.id })
+                });
+                if (!confirmRes.ok) throw new Error('Payment confirmed but backend failed to update');
+
+                purchasedLeadIds.add(currentLeadRequestId);
+                closeLeadPayModal();
+                renderBuyerRequests(buyerRequestsData);
+                showToast('Lead unlocked! Full contact details are now visible.', 'success');
+            } catch (err) {
+                errEl.textContent = err.message || 'Payment failed. Please try again.';
+                errEl.style.display = 'block';
+                btn.disabled = false;
+                btn.textContent = 'Pay $9.99';
+            }
+        }
+
+        // ===== SHOWINGS =====
+        async function loadShowings() {
+            const container = document.getElementById('showingsList');
+            container.innerHTML = '<div style="color:#999;padding:2rem;text-align:center;">Loading…</div>';
+            try {
+                const res = await fetch(`${API_BASE_URL}/showings/my`, { credentials: 'include' });
+                if (!res.ok) throw new Error('Failed to load');
+                const showings = await res.json();
+                if (!showings.length) {
+                    container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">🏠</div><h3>No showing requests yet</h3><p>Showing requests for listings you represent will appear here.</p></div>`;
+                    return;
+                }
+                container.innerHTML = showings.map(s => {
+                    const addr = [s.address, s.city, s.state].filter(Boolean).join(', ');
+                    const statusColors = { pending: '#f59e0b', confirmed: '#10b981', cancelled: '#ef4444' };
+                    const statusColor = statusColors[s.status] || '#999';
+                    const buyerName = s.buyer_first ? `${s.buyer_first} ${s.buyer_last || ''}`.trim() : 'Buyer';
+                    return `<div class="bid-card">
+                        <div class="bid-info">
+                            <h3>${addr}</h3>
+                            <div class="bid-details">
+                                <span>👤 ${buyerName}</span>
+                                <span>📅 ${s.requested_date}</span>
+                                <span>🕐 ${s.requested_time}</span>
+                                <span style="color:${statusColor};font-weight:600;">● ${s.status.charAt(0).toUpperCase() + s.status.slice(1)}</span>
+                            </div>
+                            ${s.message ? `<div style="margin-top:0.5rem;color:#555;font-size:0.9rem;">"${s.message}"</div>` : ''}
+                        </div>
+                        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+                            ${s.status === 'pending' ? `<button class="btn btn-primary" onclick="confirmShowing(${s.id})" style="font-size:0.85rem;padding:0.5rem 1rem;">Confirm</button>` : ''}
+                            ${s.status !== 'cancelled' ? `<button class="btn btn-outline" onclick="cancelShowing(${s.id})" style="font-size:0.85rem;padding:0.5rem 1rem;">Cancel</button>` : ''}
+                        </div>
+                    </div>`;
+                }).join('');
+            } catch (err) {
+                container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">⚠️</div><h3>Could not load showings</h3></div>`;
+            }
+        }
+
+        async function confirmShowing(id) {
+            try {
+                const res = await fetch(`${API_BASE_URL}/showings/${id}/confirm`, { method: 'PUT', credentials: 'include' });
+                if (!res.ok) throw new Error((await res.json()).error || 'Failed');
+                showToast('Showing confirmed!', 'success');
+                loadShowings();
+            } catch (err) { showToast(err.message || 'Failed to confirm showing', 'error'); }
+        }
+
+        async function cancelShowing(id) {
+            if (!confirm('Cancel this showing?')) return;
+            try {
+                const res = await fetch(`${API_BASE_URL}/showings/${id}/cancel`, { method: 'PUT', credentials: 'include' });
+                if (!res.ok) throw new Error((await res.json()).error || 'Failed');
+                showToast('Showing cancelled.', 'success');
+                loadShowings();
+            } catch (err) { showToast(err.message || 'Failed to cancel showing', 'error'); }
+        }
 
         // ===== END BUYER REQUESTS =====
 
@@ -2435,18 +2643,70 @@
         // ===== ANALYTICS =====
         async function loadAnalytics() {
             try {
-                const res = await fetch(`${API_BASE_URL}/analytics/realtor`, { credentials: 'include' });
-                if (!res.ok) return;
-                const d = await res.json();
-                document.getElementById('statTotalProposals').textContent = d.total;
-                document.getElementById('statWon').textContent = d.won;
-                document.getElementById('statWinRate').textContent = d.winRate + '%';
-                document.getElementById('statThisMonth').textContent = d.thisMonth;
-                if (d.monthlyLimit !== null) {
-                    document.getElementById('planLimitInfo').style.display = 'block';
-                    document.getElementById('planLimitText').textContent = `${d.thisMonth} of ${d.monthlyLimit} proposals used this month. ${d.remaining} remaining.`;
+                // Load both old and new analytics in parallel
+                const [resOld, resNew] = await Promise.all([
+                    fetch(`${API_BASE_URL}/analytics/realtor`, { credentials: 'include' }),
+                    fetch(`${API_BASE_URL}/realtors/me/analytics`, { credentials: 'include' })
+                ]);
+
+                if (resOld.ok) {
+                    const d = await resOld.json();
+                    document.getElementById('statTotalProposals').textContent = d.total;
+                    document.getElementById('statWon').textContent = d.won;
+                    document.getElementById('statWinRate').textContent = d.winRate + '%';
+                    document.getElementById('statThisMonth').textContent = d.thisMonth;
+                    if (d.monthlyLimit !== null) {
+                        document.getElementById('planLimitInfo').style.display = 'block';
+                        document.getElementById('planLimitText').textContent = `${d.thisMonth} of ${d.monthlyLimit} proposals used this month. ${d.remaining} remaining.`;
+                    }
                 }
-            } catch {}
+
+                if (resNew.ok) {
+                    const a = await resNew.json();
+                    // Profile views
+                    document.getElementById('statViews7').textContent = a.profileViews.last7Days;
+                    document.getElementById('statViews30').textContent = a.profileViews.last30Days;
+                    document.getElementById('statViewsAll').textContent = a.profileViews.allTime;
+                    document.getElementById('statResponseTime').textContent = a.responseTime;
+
+                    // Win rate from new endpoint
+                    document.getElementById('statWinRate').textContent = a.proposals.winRate;
+
+                    // Sparkline
+                    const byDay = a.profileViews.byDay || [];
+                    if (byDay.length) {
+                        document.getElementById('viewsSparkline').style.display = 'block';
+                        const maxV = Math.max(...byDay.map(d => parseInt(d.cnt)), 1);
+                        document.getElementById('sparklineBars').innerHTML = byDay.map(d => {
+                            const pct = Math.max(8, Math.round((parseInt(d.cnt) / maxV) * 100));
+                            const label = new Date(d.day).toLocaleDateString('en-US', { weekday: 'short' });
+                            return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;">
+                                <div style="background:var(--accent);width:100%;border-radius:3px 3px 0 0;height:${pct}%;min-height:4px;" title="${d.cnt} view(s)"></div>
+                                <div style="font-size:0.65rem;color:#999;">${label}</div>
+                            </div>`;
+                        }).join('');
+                    }
+
+                    // Proposal breakdown bar
+                    const total = a.proposals.total;
+                    if (total > 0) {
+                        document.getElementById('proposalBreakdown').style.display = 'block';
+                        const colors = { accepted: '#10b981', pending: '#f59e0b', declined: '#ef4444' };
+                        const labels = { accepted: 'Accepted', pending: 'Pending', declined: 'Declined' };
+                        const segments = ['accepted', 'pending', 'declined'].map(s => {
+                            const cnt = a.proposals[s] || 0;
+                            const pct = Math.round((cnt / total) * 100);
+                            return { s, cnt, pct };
+                        }).filter(x => x.cnt > 0);
+                        document.getElementById('proposalBar').innerHTML = segments.map(x =>
+                            `<div style="flex:${x.pct};background:${colors[x.s]};border-radius:3px;" title="${x.cnt} ${labels[x.s]}"></div>`
+                        ).join('');
+                        document.getElementById('proposalLegend').innerHTML = segments.map(x =>
+                            `<span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${colors[x.s]};margin-right:4px;vertical-align:middle;"></span>${labels[x.s]}: ${x.cnt}</span>`
+                        ).join('');
+                    }
+                }
+            } catch (err) { console.error('Analytics error:', err); }
         }
 
         // ===== EMAIL ALERTS =====
@@ -2809,6 +3069,14 @@
             document.querySelectorAll('.tab[data-view="referrals"]').forEach(el => {
                 el.addEventListener('click', loadReferrals);
             });
+            document.querySelectorAll('.tab[data-view="showings"]').forEach(el => {
+                el.addEventListener('click', loadShowings);
+            });
+
+            // Load Stripe publishable key
+            fetch('/api/config/stripe-key').then(r => r.ok ? r.json() : null).then(d => {
+                if (d && d.publishableKey) window.STRIPE_PUBLISHABLE_KEY = d.publishableKey;
+            }).catch(() => {});
         });
     </script>
     <!-- Proposal Modal (Feature 1) -->
