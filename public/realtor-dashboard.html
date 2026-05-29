@@ -117,11 +117,16 @@
             margin: 0 auto;
             padding: 0 2rem;
             display: flex;
-            gap: 2rem;
+            gap: 0;
+            overflow-x: auto;
+            flex-wrap: nowrap;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
         }
+        .tabs::-webkit-scrollbar { display: none; }
+        .tab { white-space: nowrap; padding: 1.25rem 1.1rem; margin-right: 0.25rem; }
 
         .tab {
-            padding: 1.25rem 0;
             cursor: pointer;
             font-weight: 600;
             color: #666;
@@ -1749,9 +1754,14 @@
 
         async function initMap() {
             const statusEl = document.getElementById('mapStatusText');
-            statusEl.textContent = `Locating ZIP code ${currentUser?.zipCode}…`;
+            const zip = currentUser?.zipCode;
+            if (!zip) {
+                statusEl.innerHTML = 'Add your ZIP code in <a href="#" onclick="document.querySelector(\'[data-view=profile]\').click();return false;" style="color:var(--accent);">My Profile</a> to see listings near you.';
+                return;
+            }
+            statusEl.textContent = `Locating ZIP code ${zip}…`;
 
-            const center = await geocodeZip(currentUser.zipCode);
+            const center = await geocodeZip(zip);
             if (!center) {
                 statusEl.textContent = 'Could not locate your ZIP code. Please update your profile.';
                 return;
@@ -1917,7 +1927,6 @@
                 form.elements.yearsExperience.value = p.years_experience || '';
                 form.elements.serviceAreas.value = p.service_areas || '';
                 form.elements.bio.value = p.bio || '';
-                renderProfileNudge(p);
                 renderOnboardingChecklist(p);
                 // Profile photo
                 const initials = ((p.first_name||'')[0]||'') + ((p.last_name||'')[0]||'');
@@ -3033,7 +3042,7 @@
                 const isTopReferrer = data.referral_count >= 5;
                 container.innerHTML = `
                     <div style="background:white;border-radius:16px;padding:2rem;border:1px solid var(--border);max-width:600px;">
-                        ${isTopReferrer ? '<div style="background:linear-gradient(135deg,#f59e0b,#d97706);color:white;border-radius:8px;padding:10px 16px;margin-bottom:1.5rem;font-weight:700;font-size:0.95rem;">⭐ Top Referrer — You\'ve referred ${data.referral_count} realtors!</div>' : ''}
+                        ${isTopReferrer ? `<div style="background:linear-gradient(135deg,#f59e0b,#d97706);color:white;border-radius:8px;padding:10px 16px;margin-bottom:1.5rem;font-weight:700;font-size:0.95rem;">⭐ Top Referrer — You've referred ${data.referral_count} realtors!</div>` : ''}
                         <h3 style="margin-bottom:0.5rem;">Your Referral Link</h3>
                         <p style="color:#666;font-size:0.9rem;margin-bottom:1.25rem;">Share this link with other realtors. When they sign up, you get credit. Reach 5 referrals to earn the Top Referrer badge.</p>
                         <div style="display:flex;gap:0.75rem;margin-bottom:1.5rem;">
