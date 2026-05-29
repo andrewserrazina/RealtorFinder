@@ -1841,6 +1841,10 @@ app.get('/api/config/maps-key', (req, res) => {
     res.json({ mapboxKey: process.env.MAPBOX_API_KEY || null });
 });
 
+app.get('/api/config/stripe-key', (req, res) => {
+    res.json({ publishableKey: process.env.STRIPE_PUBLISHABLE_KEY || null });
+});
+
 // ===== STRIPE ROUTES =====
 
 const STRIPE_PRICE_IDS = {
@@ -2459,6 +2463,11 @@ app.get('/api/realtors/:id/public', async (req, res) => {
             [parseInt(req.params.id)]
         );
         if (!rows.length) return res.status(404).json({ error: 'Realtor not found' });
+        // Track profile view (fire-and-forget)
+        pool.query(
+            `INSERT INTO profile_views (realtor_id, viewer_ip) VALUES ($1, $2)`,
+            [parseInt(req.params.id), req.ip]
+        ).catch(() => {});
         res.json(rows[0]);
     } catch (err) {
         console.error('Public profile error:', err);
@@ -2802,6 +2811,360 @@ app.get('/api/realtors/:id/response-time', async (req, res) => {
         else label = 'Typically responds within a few days';
         res.json({ label, avg_hours: Math.round(avg * 10) / 10, sample_count: count });
     } catch(err) { res.status(500).json({ error: 'Failed' }); }
+});
+
+// ===== FEATURE 1: PAY-PER-LEAD =====
+
+// Purchase a lead (free plan realtors only)
+app.post('/api/leads/purchase', auth.requireAuth, async (req, res) => {
+    if (!stripe) return res.status(503).json({ error: 'stripe_not_configured' });
+    try {
+        if (req.user.user_type !== 'realtor') return res.status(403).json({ error: 'Realtors only' });
+        const { buyer_request_id } = req.body;
+        if (!buyer_request_id) return res.status(400).json({ error: 'buyer_request_id required' });
+
+        const userRow = await pool.query(`SELECT subscription_plan FROM users WHERE id = $1`, [req.session.userId]);
+        const plan = userRow.rows[0]?.subscription_plan || 'free';
+        if (plan !== 'free') {
+            return res.status(400).json({ error: 'Pro subscribers see all leads for free — upgrade your plan to access this feature.' });
+        }
+
+        // Check no existing purchase
+        const existing = await pool.query(
+            `SELECT id FROM lead_purchases WHERE realtor_id = $1 AND buyer_request_id = $2`,
+            [req.session.userId, buyer_request_id]
+        );
+        if (existing.rows.length) return res.status(400).json({ error: 'You have already purchased this lead' });
+
+        const paymentIntent = await stripe.paymentIntents.create({
+            amount: 999,
+            currency: 'usd',
+            metadata: { realtor_id: String(req.session.userId), buyer_request_id: String(buyer_request_id) }
+        });
+
+        await pool.query(
+            `INSERT INTO lead_purchases (realtor_id, buyer_request_id, stripe_payment_intent_id, amount_cents)
+             VALUES ($1, $2, $3, 999) ON CONFLICT DO NOTHING`,
+            [req.session.userId, buyer_request_id, paymentIntent.id]
+        );
+
+        res.json({ clientSecret: paymentIntent.client_secret, amount: 999 });
+    } catch (err) {
+        console.error('POST /api/leads/purchase error:', err);
+        res.status(500).json({ error: 'Failed to create payment' });
+    }
+});
+
+// Confirm a lead payment
+app.post('/api/leads/confirm', auth.requireAuth, async (req, res) => {
+    if (!stripe) return res.status(503).json({ error: 'stripe_not_configured' });
+    try {
+        if (req.user.user_type !== 'realtor') return res.status(403).json({ error: 'Realtors only' });
+        const { payment_intent_id } = req.body;
+        if (!payment_intent_id) return res.status(400).json({ error: 'payment_intent_id required' });
+
+        const pi = await stripe.paymentIntents.retrieve(payment_intent_id);
+        if (pi.status !== 'succeeded') return res.status(400).json({ error: 'Payment not completed' });
+
+        res.json({ ok: true });
+    } catch (err) {
+        console.error('POST /api/leads/confirm error:', err);
+        res.status(500).json({ error: 'Failed to confirm payment' });
+    }
+});
+
+// Get purchased lead IDs for current realtor
+app.get('/api/leads/purchased', auth.requireAuth, async (req, res) => {
+    try {
+        if (req.user.user_type !== 'realtor') return res.status(403).json({ error: 'Realtors only' });
+        const { rows } = await pool.query(
+            `SELECT buyer_request_id FROM lead_purchases WHERE realtor_id = $1`,
+            [req.session.userId]
+        );
+        res.json(rows.map(r => r.buyer_request_id));
+    } catch (err) {
+        console.error('GET /api/leads/purchased error:', err);
+        res.status(500).json({ error: 'Failed to fetch purchased leads' });
+    }
+});
+
+// ===== FEATURE 2: SHOWING REQUESTS =====
+
+const VALID_TIMES = ['9:00 AM','10:00 AM','11:00 AM','12:00 PM','1:00 PM','2:00 PM','3:00 PM','4:00 PM','5:00 PM'];
+
+// Request a showing
+app.post('/api/showings', auth.requireAuth, async (req, res) => {
+    try {
+        const { listing_id, requested_date, requested_time, message } = req.body;
+        if (!listing_id || !requested_date || !requested_time) {
+            return res.status(400).json({ error: 'listing_id, requested_date, and requested_time are required' });
+        }
+        if (!VALID_TIMES.includes(requested_time)) {
+            return res.status(400).json({ error: 'Invalid time. Choose a time between 9:00 AM and 5:00 PM.' });
+        }
+        const reqDate = new Date(requested_date);
+        const today = new Date(); today.setHours(0,0,0,0);
+        if (reqDate <= today) return res.status(400).json({ error: 'requested_date must be a future date' });
+
+        const { rows } = await pool.query(
+            `INSERT INTO showings (listing_id, buyer_id, requested_date, requested_time, message)
+             VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+            [listing_id, req.session.userId, requested_date, requested_time, message || null]
+        );
+        const showing = rows[0];
+
+        // Fire-and-forget: notify seller and accepted proposal realtor
+        (async () => {
+            try {
+                const listingRes = await pool.query(
+                    `SELECT l.id, l.address, l.city, l.state, u.email as seller_email, u.first_name as seller_name
+                     FROM listings l JOIN users u ON u.id = l.user_id WHERE l.id = $1`,
+                    [listing_id]
+                );
+                if (!listingRes.rows.length) return;
+                const lr = listingRes.rows[0];
+                const addr = [lr.address, lr.city, lr.state].filter(Boolean).join(', ');
+                const buyerRes = await pool.query(`SELECT first_name, last_name FROM users WHERE id = $1`, [req.session.userId]);
+                const buyerName = buyerRes.rows.length ? `${buyerRes.rows[0].first_name} ${buyerRes.rows[0].last_name}` : 'A buyer';
+
+                await emailService.sendShowingRequest(lr.seller_email, lr.seller_name, buyerName, addr, requested_date, requested_time, message || '').catch(() => {});
+
+                const proposalRes = await pool.query(
+                    `SELECT u.email, u.first_name FROM proposals p JOIN users u ON u.id = p.realtor_id
+                     WHERE p.listing_id = $1 AND p.status = 'accepted' LIMIT 1`,
+                    [listing_id]
+                );
+                if (proposalRes.rows.length) {
+                    const pr = proposalRes.rows[0];
+                    await emailService.sendShowingRequest(pr.email, pr.first_name, buyerName, addr, requested_date, requested_time, message || '').catch(() => {});
+                }
+            } catch(e) { console.error('Showing notification error:', e.message); }
+        })();
+
+        res.status(201).json(showing);
+    } catch (err) {
+        console.error('POST /api/showings error:', err);
+        res.status(500).json({ error: 'Failed to create showing request' });
+    }
+});
+
+// Get showings for current user
+app.get('/api/showings/my', auth.requireAuth, async (req, res) => {
+    try {
+        const uid = req.session.userId;
+        const userType = req.user.user_type;
+
+        if (userType === 'buyer') {
+            const { rows } = await pool.query(
+                `SELECT s.*, l.address, l.city, l.state FROM showings s
+                 JOIN listings l ON l.id = s.listing_id
+                 WHERE s.buyer_id = $1 ORDER BY s.created_at DESC`,
+                [uid]
+            );
+            return res.json(rows);
+        }
+
+        // seller or realtor
+        const { rows } = await pool.query(
+            `SELECT s.*, l.address, l.city, l.state,
+                    b.first_name AS buyer_first, b.last_name AS buyer_last, b.email AS buyer_email
+             FROM showings s
+             JOIN listings l ON l.id = s.listing_id
+             JOIN users b ON b.id = s.buyer_id
+             WHERE l.user_id = $1
+                OR EXISTS (SELECT 1 FROM proposals p WHERE p.listing_id = l.id AND p.realtor_id = $1 AND p.status = 'accepted')
+             ORDER BY s.created_at DESC`,
+            [uid]
+        );
+        res.json(rows);
+    } catch (err) {
+        console.error('GET /api/showings/my error:', err);
+        res.status(500).json({ error: 'Failed to fetch showings' });
+    }
+});
+
+// Confirm a showing
+app.put('/api/showings/:id/confirm', auth.requireAuth, async (req, res) => {
+    try {
+        const showingId = parseInt(req.params.id);
+        const { rows } = await pool.query(
+            `UPDATE showings SET status = 'confirmed', confirmed_by = $1, confirmed_at = NOW()
+             WHERE id = $2 RETURNING *`,
+            [req.session.userId, showingId]
+        );
+        if (!rows.length) return res.status(404).json({ error: 'Showing not found' });
+        const showing = rows[0];
+
+        // Email buyer
+        (async () => {
+            try {
+                const buyerRes = await pool.query(`SELECT email, first_name FROM users WHERE id = $1`, [showing.buyer_id]);
+                if (!buyerRes.rows.length) return;
+                const listingRes = await pool.query(`SELECT address, city, state FROM listings WHERE id = $1`, [showing.listing_id]);
+                if (!listingRes.rows.length) return;
+                const lr = listingRes.rows[0];
+                const addr = [lr.address, lr.city, lr.state].filter(Boolean).join(', ');
+                await emailService.sendShowingConfirmed(buyerRes.rows[0].email, buyerRes.rows[0].first_name, addr, showing.requested_date, showing.requested_time).catch(() => {});
+            } catch(e) { console.error('Showing confirmed email error:', e.message); }
+        })();
+
+        res.json({ success: true, showing });
+    } catch (err) {
+        console.error('PUT /api/showings/:id/confirm error:', err);
+        res.status(500).json({ error: 'Failed to confirm showing' });
+    }
+});
+
+// Cancel a showing
+app.put('/api/showings/:id/cancel', auth.requireAuth, async (req, res) => {
+    try {
+        const showingId = parseInt(req.params.id);
+        const { rows } = await pool.query(
+            `UPDATE showings SET status = 'cancelled' WHERE id = $1 RETURNING *`,
+            [showingId]
+        );
+        if (!rows.length) return res.status(404).json({ error: 'Showing not found' });
+        const showing = rows[0];
+
+        // Fire-and-forget: email the other party
+        (async () => {
+            try {
+                const listingRes = await pool.query(`SELECT address, city, state, user_id FROM listings WHERE id = $1`, [showing.listing_id]);
+                if (!listingRes.rows.length) return;
+                const lr = listingRes.rows[0];
+                const addr = [lr.address, lr.city, lr.state].filter(Boolean).join(', ');
+                const cancellerIsbuyer = req.session.userId === showing.buyer_id;
+                if (cancellerIsbuyer) {
+                    // notify seller
+                    const sellerRes = await pool.query(`SELECT email, first_name FROM users WHERE id = $1`, [lr.user_id]);
+                    if (sellerRes.rows.length) {
+                        await emailService.sendShowingCancelled(sellerRes.rows[0].email, sellerRes.rows[0].first_name, addr, showing.requested_date, showing.requested_time).catch(() => {});
+                    }
+                } else {
+                    // notify buyer
+                    const buyerRes = await pool.query(`SELECT email, first_name FROM users WHERE id = $1`, [showing.buyer_id]);
+                    if (buyerRes.rows.length) {
+                        await emailService.sendShowingCancelled(buyerRes.rows[0].email, buyerRes.rows[0].first_name, addr, showing.requested_date, showing.requested_time).catch(() => {});
+                    }
+                }
+            } catch(e) { console.error('Showing cancelled email error:', e.message); }
+        })();
+
+        res.json({ success: true });
+    } catch (err) {
+        console.error('PUT /api/showings/:id/cancel error:', err);
+        res.status(500).json({ error: 'Failed to cancel showing' });
+    }
+});
+
+// ===== FEATURE 3: REALTOR PERFORMANCE ANALYTICS =====
+
+// Track profile view — injected into existing GET /api/realtors/:id/public above
+
+// Analytics endpoint for current realtor
+app.get('/api/realtors/me/analytics', auth.requireAuth, async (req, res) => {
+    try {
+        if (req.user.user_type !== 'realtor') return res.status(403).json({ error: 'Realtors only' });
+        const uid = req.session.userId;
+
+        const [views7, views30, viewsAll, proposalStats, listingStats, rtStats] = await Promise.all([
+            pool.query(`SELECT COUNT(*) AS cnt FROM profile_views WHERE realtor_id = $1 AND viewed_at >= NOW() - INTERVAL '7 days'`, [uid]),
+            pool.query(`SELECT COUNT(*) AS cnt FROM profile_views WHERE realtor_id = $1 AND viewed_at >= NOW() - INTERVAL '30 days'`, [uid]),
+            pool.query(`SELECT COUNT(*) AS cnt FROM profile_views WHERE realtor_id = $1`, [uid]),
+            pool.query(`SELECT status, COUNT(*) AS cnt FROM proposals WHERE realtor_id = $1 GROUP BY status`, [uid]),
+            pool.query(`SELECT COUNT(DISTINCT p.listing_id) AS active_bids, SUM(CASE WHEN p.status='accepted' THEN 1 ELSE 0 END) AS won FROM proposals p WHERE p.realtor_id = $1`, [uid]),
+            pool.query(`SELECT AVG(response_hours) AS avg_hours FROM realtor_response_times WHERE realtor_id = $1`, [uid])
+        ]);
+
+        const proposalMap = {};
+        for (const r of proposalStats.rows) proposalMap[r.status] = parseInt(r.cnt);
+        const totalProposals = Object.values(proposalMap).reduce((s, v) => s + v, 0);
+        const accepted = proposalMap['accepted'] || 0;
+        const pending = proposalMap['pending'] || 0;
+        const declined = proposalMap['declined'] || 0;
+        const winRate = totalProposals > 0 ? Math.round((accepted / totalProposals) * 100) + '%' : '0%';
+
+        const avgHours = parseFloat(rtStats.rows[0]?.avg_hours);
+        let responseTime = 'N/A';
+        if (!isNaN(avgHours)) {
+            if (avgHours < 1) responseTime = '< 1 hour';
+            else if (avgHours < 24) responseTime = Math.round(avgHours) + ' hours';
+            else responseTime = Math.round(avgHours / 24) + ' days';
+        }
+
+        // Profile views per day for last 7 days
+        const viewsByDay = await pool.query(
+            `SELECT DATE(viewed_at) AS day, COUNT(*) AS cnt
+             FROM profile_views WHERE realtor_id = $1 AND viewed_at >= NOW() - INTERVAL '7 days'
+             GROUP BY day ORDER BY day`,
+            [uid]
+        );
+
+        res.json({
+            profileViews: {
+                last7Days: parseInt(views7.rows[0].cnt),
+                last30Days: parseInt(views30.rows[0].cnt),
+                allTime: parseInt(viewsAll.rows[0].cnt),
+                byDay: viewsByDay.rows
+            },
+            proposals: { total: totalProposals, accepted, pending, declined, winRate },
+            listings: {
+                activeBids: parseInt(listingStats.rows[0]?.active_bids) || 0,
+                wonListings: parseInt(listingStats.rows[0]?.won) || 0
+            },
+            responseTime
+        });
+    } catch (err) {
+        console.error('GET /api/realtors/me/analytics error:', err);
+        res.status(500).json({ error: 'Failed to fetch analytics' });
+    }
+});
+
+// ===== FEATURE 4: SAVED REALTORS =====
+
+app.post('/api/saved-realtors/:realtorId', auth.requireAuth, async (req, res) => {
+    try {
+        await pool.query(
+            `INSERT INTO saved_realtors (buyer_id, realtor_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+            [req.session.userId, parseInt(req.params.realtorId)]
+        );
+        res.json({ saved: true });
+    } catch (err) {
+        console.error('POST /api/saved-realtors error:', err);
+        res.status(500).json({ error: 'Failed to save realtor' });
+    }
+});
+
+app.delete('/api/saved-realtors/:realtorId', auth.requireAuth, async (req, res) => {
+    try {
+        await pool.query(
+            `DELETE FROM saved_realtors WHERE buyer_id = $1 AND realtor_id = $2`,
+            [req.session.userId, parseInt(req.params.realtorId)]
+        );
+        res.json({ saved: false });
+    } catch (err) {
+        console.error('DELETE /api/saved-realtors error:', err);
+        res.status(500).json({ error: 'Failed to unsave realtor' });
+    }
+});
+
+app.get('/api/saved-realtors', auth.requireAuth, async (req, res) => {
+    try {
+        const { rows } = await pool.query(
+            `SELECT u.id, u.first_name, u.last_name, u.profile_photo, u.brokerage,
+                    u.service_areas, u.years_experience, u.subscription_plan, u.license_verified,
+                    sr.saved_at
+             FROM saved_realtors sr
+             JOIN users u ON u.id = sr.realtor_id
+             WHERE sr.buyer_id = $1
+             ORDER BY sr.saved_at DESC`,
+            [req.session.userId]
+        );
+        res.json(rows);
+    } catch (err) {
+        console.error('GET /api/saved-realtors error:', err);
+        res.status(500).json({ error: 'Failed to fetch saved realtors' });
+    }
 });
 
 // ===== REALTOR REVIEWS TABLE INIT =====
@@ -3613,6 +3976,56 @@ async function runDripEmailJob() {
 // Run every 6 hours
 runDripEmailJob();
 setInterval(runDripEmailJob, 6 * 60 * 60 * 1000).unref();
+
+// ===== DB TABLES: NEW FEATURES =====
+
+pool.query(`
+    CREATE TABLE IF NOT EXISTS lead_purchases (
+      id SERIAL PRIMARY KEY,
+      realtor_id INTEGER NOT NULL REFERENCES users(id),
+      buyer_request_id INTEGER NOT NULL REFERENCES buyer_requests(id),
+      stripe_payment_intent_id TEXT,
+      amount_cents INTEGER NOT NULL DEFAULT 999,
+      purchased_at TIMESTAMPTZ DEFAULT NOW(),
+      UNIQUE(realtor_id, buyer_request_id)
+    )
+`).catch(err => console.error('lead_purchases table init error:', err.message));
+
+pool.query(`
+    CREATE TABLE IF NOT EXISTS showings (
+      id SERIAL PRIMARY KEY,
+      listing_id INTEGER NOT NULL REFERENCES listings(id),
+      buyer_id INTEGER NOT NULL REFERENCES users(id),
+      requested_date DATE NOT NULL,
+      requested_time TEXT NOT NULL,
+      message TEXT,
+      status TEXT NOT NULL DEFAULT 'pending',
+      confirmed_by INTEGER REFERENCES users(id),
+      confirmed_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+`).catch(err => console.error('showings table init error:', err.message));
+
+pool.query(`
+    CREATE TABLE IF NOT EXISTS profile_views (
+      id SERIAL PRIMARY KEY,
+      realtor_id INTEGER NOT NULL REFERENCES users(id),
+      viewer_ip TEXT,
+      viewed_at TIMESTAMPTZ DEFAULT NOW()
+    )
+`).catch(err => console.error('profile_views table init error:', err.message));
+
+pool.query(`CREATE INDEX IF NOT EXISTS idx_profile_views_realtor ON profile_views(realtor_id)`).catch(() => {});
+
+pool.query(`
+    CREATE TABLE IF NOT EXISTS saved_realtors (
+      id SERIAL PRIMARY KEY,
+      buyer_id INTEGER NOT NULL REFERENCES users(id),
+      realtor_id INTEGER NOT NULL REFERENCES users(id),
+      saved_at TIMESTAMPTZ DEFAULT NOW(),
+      UNIQUE(buyer_id, realtor_id)
+    )
+`).catch(err => console.error('saved_realtors table init error:', err.message));
 
 // Start server
 app.listen(PORT, () => {

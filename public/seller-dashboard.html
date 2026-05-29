@@ -850,6 +850,10 @@
                         <span class="nav-icon">📋</span>
                         <span>Proposals</span>
                     </div>
+                    <div class="nav-item" data-view="showings">
+                        <span class="nav-icon">🏠</span>
+                        <span>Showings</span>
+                    </div>
                     <div class="nav-item" data-view="messages">
                         <span class="nav-icon">💬</span>
                         <span>Messages</span>
@@ -922,6 +926,15 @@
                     <p class="page-subtitle">View structured proposals from realtors, ranked by commission rate</p>
                 </div>
                 <div id="proposalsByListing"></div>
+            </section>
+
+            <!-- Showings View -->
+            <section id="showings-view" class="view-section">
+                <div class="page-header">
+                    <h1 class="page-title">Showing Requests</h1>
+                    <p class="page-subtitle">Buyers who want to view your listings</p>
+                </div>
+                <div id="sellerShowingsList"></div>
             </section>
 
             <!-- Messages View -->
@@ -1235,6 +1248,7 @@
                 
                 if (view === 'offers') loadOffers();
                 if (view === 'messages') loadConversations();
+                if (view === 'showings') loadSellerShowings();
             });
         });
 
@@ -2168,6 +2182,59 @@
                 el.addEventListener('click', loadProposals);
             });
         });
+
+        // ===== SHOWINGS (SELLER) =====
+        async function loadSellerShowings() {
+            const container = document.getElementById('sellerShowingsList');
+            container.innerHTML = '<div style="color:#999;padding:2rem;text-align:center;">Loading…</div>';
+            try {
+                const res = await fetch(API_BASE_URL + '/showings/my', { credentials: 'include' });
+                if (!res.ok) throw new Error('Failed');
+                const showings = await res.json();
+                if (!showings.length) {
+                    container.innerHTML = `<div style="text-align:center;padding:3rem;color:#999;"><div style="font-size:2.5rem;margin-bottom:1rem;">🏠</div><h3 style="color:#374151;margin-bottom:0.5rem;">No showing requests yet</h3><p>When buyers request showings on your listings, they'll appear here.</p></div>`;
+                    return;
+                }
+                const statusColors = { pending: '#f59e0b', confirmed: '#10b981', cancelled: '#ef4444' };
+                container.innerHTML = showings.map(s => {
+                    const addr = [s.address, s.city, s.state].filter(Boolean).join(', ');
+                    const statusColor = statusColors[s.status] || '#999';
+                    const buyerName = s.buyer_first ? `${s.buyer_first} ${s.buyer_last || ''}`.trim() : 'Buyer';
+                    return `<div style="background:white;border:1px solid #e1e8ed;border-radius:12px;padding:1.25rem 1.5rem;margin-bottom:1rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;">
+                        <div>
+                            <div style="font-weight:700;color:#0a2540;margin-bottom:0.25rem;">${addr}</div>
+                            <div style="color:#666;font-size:0.9rem;">👤 ${buyerName} &nbsp; 📅 ${s.requested_date} &nbsp; 🕐 ${s.requested_time}</div>
+                            ${s.message ? `<div style="color:#555;font-size:0.85rem;margin-top:0.25rem;">"${s.message}"</div>` : ''}
+                            ${s.buyer_email ? `<div style="color:#FF6B35;font-size:0.85rem;margin-top:0.25rem;">${s.buyer_email}</div>` : ''}
+                        </div>
+                        <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+                            <span style="font-size:0.85rem;font-weight:700;color:${statusColor};">● ${s.status.charAt(0).toUpperCase() + s.status.slice(1)}</span>
+                            ${s.status === 'pending' ? `<button onclick="sellerConfirmShowing(${s.id})" style="background:#10b981;color:white;border:none;border-radius:8px;padding:8px 16px;cursor:pointer;font-weight:600;font-size:0.85rem;">Confirm</button>` : ''}
+                            ${s.status !== 'cancelled' ? `<button onclick="sellerCancelShowing(${s.id})" style="background:none;border:1px solid #e1e8ed;border-radius:8px;padding:8px 14px;cursor:pointer;font-size:0.85rem;">Cancel</button>` : ''}
+                        </div>
+                    </div>`;
+                }).join('');
+            } catch {
+                container.innerHTML = `<div style="text-align:center;padding:3rem;color:#999;">Could not load showings.</div>`;
+            }
+        }
+
+        async function sellerConfirmShowing(id) {
+            try {
+                const res = await fetch(API_BASE_URL + `/showings/${id}/confirm`, { method: 'PUT', credentials: 'include' });
+                if (!res.ok) throw new Error((await res.json()).error || 'Failed');
+                loadSellerShowings();
+            } catch (err) { alert(err.message || 'Failed to confirm showing'); }
+        }
+
+        async function sellerCancelShowing(id) {
+            if (!confirm('Cancel this showing?')) return;
+            try {
+                const res = await fetch(API_BASE_URL + `/showings/${id}/cancel`, { method: 'PUT', credentials: 'include' });
+                if (!res.ok) throw new Error((await res.json()).error || 'Failed');
+                loadSellerShowings();
+            } catch (err) { alert(err.message || 'Failed to cancel showing'); }
+        }
     </script>
     <script>
       if ('serviceWorker' in navigator) {

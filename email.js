@@ -966,6 +966,65 @@ const emailService = {
             await send({ to: sellerEmail, subject: `How was working with ${realtorName}? Leave a review`, html: emailWrap('For Sellers', body) });
         } catch (error) { logSendgridError('Review request email', error); }
     },
+
+    // ─── Showing Request Emails ───────────────────────────────────────────────
+
+    async sendShowingRequest(recipientEmail, recipientName, buyerName, listingAddress, date, time, message) {
+        const body = `
+            ${h1('New Showing Request 🏠')}
+            ${p(`Hi ${recipientName}, a showing has been requested for <strong>${listingAddress}</strong>.`)}
+            ${infoBox([
+                ['Buyer', buyerName],
+                ['Date', date],
+                ['Time', time],
+                ['Message', message || '(none)']
+            ])}
+            ${btn(`${BASE_URL}/dashboard/seller`, 'View Showing Requests')}
+            ${divider()}
+            <p style="color:#999;font-size:13px;margin:0;">The RealtorFinder Team</p>
+        `;
+        try {
+            await send({ to: recipientEmail, subject: `Showing Request — ${listingAddress}`, html: emailWrap('Showing Request', body) });
+        } catch (error) { logSendgridError('Showing request email', error); }
+    },
+
+    async sendShowingConfirmed(buyerEmail, buyerName, listingAddress, date, time) {
+        const body = `
+            ${h1('Your Showing is Confirmed! ✅')}
+            ${p(`Hi ${buyerName}, great news — your showing request has been confirmed.`)}
+            ${infoBox([
+                ['Property', listingAddress],
+                ['Date', date],
+                ['Time', time],
+                ['Status', 'Confirmed']
+            ])}
+            ${btn(`${BASE_URL}/dashboard/buyer`, 'View My Showings')}
+            ${divider()}
+            <p style="color:#999;font-size:13px;margin:0;">The RealtorFinder Team</p>
+        `;
+        try {
+            await send({ to: buyerEmail, subject: `Showing Confirmed — ${listingAddress}`, html: emailWrap('Confirmed', body) });
+        } catch (error) { logSendgridError('Showing confirmed email', error); }
+    },
+
+    async sendShowingCancelled(recipientEmail, recipientName, listingAddress, date, time) {
+        const body = `
+            ${h1('Showing Cancelled')}
+            ${p(`Hi ${recipientName}, a showing has been cancelled.`)}
+            ${infoBox([
+                ['Property', listingAddress],
+                ['Date', date],
+                ['Time', time],
+                ['Status', 'Cancelled']
+            ])}
+            ${btn(`${BASE_URL}/dashboard/seller`, 'View Your Dashboard')}
+            ${divider()}
+            <p style="color:#999;font-size:13px;margin:0;">The RealtorFinder Team</p>
+        `;
+        try {
+            await send({ to: recipientEmail, subject: `Showing Cancelled — ${listingAddress}`, html: emailWrap('Cancelled', body) });
+        } catch (error) { logSendgridError('Showing cancelled email', error); }
+    },
 };
 
 module.exports = emailService;

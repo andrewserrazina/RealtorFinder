@@ -219,9 +219,42 @@
 </div>
 
 <script>
-    const realtorId = window.location.pathname.split('/').pop();
+    const realtorId = parseInt(window.location.pathname.split('/').pop());
+    let isRealtorSaved = false;
+    let currentUserId = null;
+
+    async function initSaveState() {
+        try {
+            const res = await fetch('/api/auth/me', { credentials: 'include' });
+            if (!res.ok) return;
+            const user = await res.json();
+            currentUserId = user.id;
+            const savedRes = await fetch('/api/saved-realtors', { credentials: 'include' });
+            if (savedRes.ok) {
+                const saved = await savedRes.json();
+                isRealtorSaved = saved.some(r => r.id === realtorId);
+            }
+        } catch {}
+    }
+
+    async function toggleSaveProfile() {
+        if (!currentUserId) { window.location.href = '/login'; return; }
+        const btn = document.getElementById('saveRealtorBtn');
+        try {
+            const res = await fetch(`/api/saved-realtors/${realtorId}`, {
+                method: isRealtorSaved ? 'DELETE' : 'POST',
+                credentials: 'include'
+            });
+            if (!res.ok) throw new Error('Failed');
+            isRealtorSaved = !isRealtorSaved;
+            btn.textContent = isRealtorSaved ? '♥ Saved' : '♡ Save Realtor';
+            btn.style.color = isRealtorSaved ? '#ef4444' : '';
+            btn.style.borderColor = isRealtorSaved ? '#ef4444' : '';
+        } catch { alert('Could not update. Please try again.'); }
+    }
 
     async function loadProfile() {
+        await initSaveState();
         try {
             const [profileRes, rtRes] = await Promise.all([
                 fetch(`/api/realtors/${realtorId}/public`),
@@ -270,6 +303,7 @@
                             ${r.license_verified ? '<span class="badge badge-verified" style="background:#ECFDF5;color:#059669;">✓ Verified License</span>' : (hasLicense ? '<span class="badge badge-verified">✓ Licensed</span>' : '')}
                             ${serviceAreas.map(a => `<span class="badge badge-area">${esc(a)}</span>`).join('')}
                         </div>
+                        <button id="saveRealtorBtn" onclick="toggleSaveProfile()" style="margin-top:0.75rem;background:none;border:1px solid #e5e7eb;border-radius:20px;padding:6px 16px;cursor:pointer;font-size:0.9rem;font-weight:600;color:${isRealtorSaved ? '#ef4444' : '#666'};border-color:${isRealtorSaved ? '#ef4444' : '#e5e7eb'};">${isRealtorSaved ? '♥ Saved' : '♡ Save Realtor'}</button>
                     </div>
                 </div>
 
