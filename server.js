@@ -3235,6 +3235,18 @@ app.get('/s/:token', async (req, res) => {
     } catch { res.redirect('/'); }
 });
 
+// ===== EMAIL UNSUBSCRIBE =====
+app.get('/unsubscribe/:token', async (req, res) => {
+    try {
+        const { rows } = await pool.query(
+            `UPDATE users SET email_unsubscribed = true WHERE unsubscribe_token = $1 RETURNING first_name`,
+            [req.params.token]
+        );
+        if (!rows.length) return res.redirect('/?unsubscribed=notfound');
+        res.redirect('/?unsubscribed=1');
+    } catch { res.redirect('/'); }
+});
+
 // ===== PAGE ROUTES (Must come AFTER API routes, BEFORE static files) =====
 
 // Password reset page
@@ -3505,6 +3517,9 @@ async function runListingExpiryJob() {
 runListingExpiryJob();
 setInterval(runListingExpiryJob, 24 * 60 * 60 * 1000).unref();
 
+pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS email_unsubscribed BOOLEAN DEFAULT FALSE`).catch(() => {});
+pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS unsubscribe_token TEXT UNIQUE`).catch(() => {});
+
 // Create drip_emails table if not exists
 pool.query(`
     CREATE TABLE IF NOT EXISTS drip_emails (
@@ -3517,31 +3532,45 @@ pool.query(`
 `).catch(err => console.error('drip_emails table creation error:', err.message));
 
 // Drip email onboarding job — sends 3-step sequences to sellers, realtors, and buyers
+async function ensureUnsubscribeToken(userId) {
+    const token = require('crypto').randomBytes(16).toString('hex');
+    const { rows } = await pool.query(
+        `UPDATE users SET unsubscribe_token = $1 WHERE id = $2 AND unsubscribe_token IS NULL RETURNING unsubscribe_token`,
+        [token, userId]
+    );
+    if (rows.length) return rows[0].unsubscribe_token;
+    const { rows: existing } = await pool.query(`SELECT unsubscribe_token FROM users WHERE id = $1`, [userId]);
+    return existing[0]?.unsubscribe_token;
+}
+
 async function runDripEmailJob() {
     try {
+        const baseWhere = `u.is_active IS NOT FALSE AND u.email_unsubscribed IS NOT TRUE`;
+
         // Step 1: send to users who signed up 1+ days ago and haven't received step 1
         const { rows: step1Users } = await pool.query(`
-            SELECT u.id, u.email, u.first_name, u.user_type
+            SELECT u.id, u.email, u.first_name, u.user_type, u.unsubscribe_token
             FROM users u
-            WHERE u.is_active IS NOT FALSE
+            WHERE ${baseWhere}
               AND u.created_at < NOW() - INTERVAL '1 day'
               AND NOT EXISTS (SELECT 1 FROM drip_emails d WHERE d.user_id = u.id AND d.sequence_step = 1)
             LIMIT 50
         `);
         for (const user of step1Users) {
             try {
-                if (user.user_type === 'seller') await emailService.sendSellerDrip1(user.email, user.first_name);
-                else if (user.user_type === 'realtor') await emailService.sendRealtorDrip1(user.email, user.first_name);
-                else if (user.user_type === 'buyer') await emailService.sendBuyerDrip1(user.email, user.first_name);
+                const token = user.unsubscribe_token || await ensureUnsubscribeToken(user.id);
+                if (user.user_type === 'seller') await emailService.sendSellerDrip1(user.email, user.first_name, token);
+                else if (user.user_type === 'realtor') await emailService.sendRealtorDrip1(user.email, user.first_name, token);
+                else if (user.user_type === 'buyer') await emailService.sendBuyerDrip1(user.email, user.first_name, token);
                 await pool.query(`INSERT INTO drip_emails (user_id, sequence_step) VALUES ($1, 1) ON CONFLICT DO NOTHING`, [user.id]);
             } catch(e) { console.error('Drip step 1 error:', e.message); }
         }
 
         // Step 2: 3+ days after signup, step 1 already sent
         const { rows: step2Users } = await pool.query(`
-            SELECT u.id, u.email, u.first_name, u.user_type
+            SELECT u.id, u.email, u.first_name, u.user_type, u.unsubscribe_token
             FROM users u
-            WHERE u.is_active IS NOT FALSE
+            WHERE ${baseWhere}
               AND u.created_at < NOW() - INTERVAL '3 days'
               AND EXISTS (SELECT 1 FROM drip_emails d WHERE d.user_id = u.id AND d.sequence_step = 1)
               AND NOT EXISTS (SELECT 1 FROM drip_emails d WHERE d.user_id = u.id AND d.sequence_step = 2)
@@ -3549,18 +3578,19 @@ async function runDripEmailJob() {
         `);
         for (const user of step2Users) {
             try {
-                if (user.user_type === 'seller') await emailService.sendSellerDrip2(user.email, user.first_name);
-                else if (user.user_type === 'realtor') await emailService.sendRealtorDrip2(user.email, user.first_name);
-                else if (user.user_type === 'buyer') await emailService.sendBuyerDrip2(user.email, user.first_name);
+                const token = user.unsubscribe_token || await ensureUnsubscribeToken(user.id);
+                if (user.user_type === 'seller') await emailService.sendSellerDrip2(user.email, user.first_name, token);
+                else if (user.user_type === 'realtor') await emailService.sendRealtorDrip2(user.email, user.first_name, token);
+                else if (user.user_type === 'buyer') await emailService.sendBuyerDrip2(user.email, user.first_name, token);
                 await pool.query(`INSERT INTO drip_emails (user_id, sequence_step) VALUES ($1, 2) ON CONFLICT DO NOTHING`, [user.id]);
             } catch(e) { console.error('Drip step 2 error:', e.message); }
         }
 
         // Step 3: 7+ days after signup, step 2 already sent
         const { rows: step3Users } = await pool.query(`
-            SELECT u.id, u.email, u.first_name, u.user_type
+            SELECT u.id, u.email, u.first_name, u.user_type, u.unsubscribe_token
             FROM users u
-            WHERE u.is_active IS NOT FALSE
+            WHERE ${baseWhere}
               AND u.created_at < NOW() - INTERVAL '7 days'
               AND EXISTS (SELECT 1 FROM drip_emails d WHERE d.user_id = u.id AND d.sequence_step = 2)
               AND NOT EXISTS (SELECT 1 FROM drip_emails d WHERE d.user_id = u.id AND d.sequence_step = 3)
@@ -3568,9 +3598,10 @@ async function runDripEmailJob() {
         `);
         for (const user of step3Users) {
             try {
-                if (user.user_type === 'seller') await emailService.sendSellerDrip3(user.email, user.first_name);
-                else if (user.user_type === 'realtor') await emailService.sendRealtorDrip3(user.email, user.first_name);
-                else if (user.user_type === 'buyer') await emailService.sendBuyerDrip3(user.email, user.first_name);
+                const token = user.unsubscribe_token || await ensureUnsubscribeToken(user.id);
+                if (user.user_type === 'seller') await emailService.sendSellerDrip3(user.email, user.first_name, token);
+                else if (user.user_type === 'realtor') await emailService.sendRealtorDrip3(user.email, user.first_name, token);
+                else if (user.user_type === 'buyer') await emailService.sendBuyerDrip3(user.email, user.first_name, token);
                 await pool.query(`INSERT INTO drip_emails (user_id, sequence_step) VALUES ($1, 3) ON CONFLICT DO NOTHING`, [user.id]);
             } catch(e) { console.error('Drip step 3 error:', e.message); }
         }
