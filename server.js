@@ -814,7 +814,8 @@ app.post('/api/listings', auth.requireAuth, async (req, res) => {
             return res.status(400).json({ error: 'All fields are required' });
         }
 
-        if (isNaN(Number(price)) || Number(price) <= 0) {
+        const numericPrice = parseFloat(String(price).replace(/[^0-9.]/g, ''));
+        if (isNaN(numericPrice) || numericPrice <= 0) {
             return res.status(400).json({ error: 'Price must be a positive number' });
         }
 
@@ -834,7 +835,7 @@ app.post('/api/listings', auth.requireAuth, async (req, res) => {
             city,
             state: state || '',
             zip: zip || '',
-            price,
+            price: numericPrice,
             zestimate: zestimate || null,
             type,
             bedrooms: parseInt(bedrooms),
@@ -2420,7 +2421,8 @@ app.get('/api/realtors/search', async (req, res) => {
         const { rows } = await pool.query(
             `SELECT u.id, u.first_name, u.last_name, u.bio, u.years_experience,
                     u.license_number, u.service_areas, u.subscription_plan, u.zip_code,
-                    u.profile_photo, u.brokerage, u.license_verified,
+                    u.profile_photo, u.brokerage,
+                    COALESCE(u.license_verified, false) AS license_verified,
                     c.name AS company_name, c.plan AS company_plan
              FROM users u
              LEFT JOIN companies c ON u.company_id = c.id
