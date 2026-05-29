@@ -3980,6 +3980,17 @@ setInterval(runDripEmailJob, 6 * 60 * 60 * 1000).unref();
 // ===== DB TABLES: NEW FEATURES =====
 
 pool.query(`
+    CREATE TABLE IF NOT EXISTS buyer_request_responses (
+      id SERIAL PRIMARY KEY,
+      buyer_request_id INTEGER NOT NULL REFERENCES buyer_requests(id) ON DELETE CASCADE,
+      realtor_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      message TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      UNIQUE(buyer_request_id, realtor_user_id)
+    )
+`).catch(() => {});
+
+pool.query(`
     CREATE TABLE IF NOT EXISTS lead_purchases (
       id SERIAL PRIMARY KEY,
       realtor_id INTEGER NOT NULL REFERENCES users(id),
