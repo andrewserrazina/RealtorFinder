@@ -1174,6 +1174,11 @@
     src="https://www.facebook.com/tr?id=1189752893170212&ev=PageView&noscript=1"
     /></noscript>
     <!-- End Meta Pixel Code -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#0A2540">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="RealtorFinder">
 </head>
 <body id="top">
     <nav>
@@ -1190,16 +1195,18 @@
     <section class="hero">
         <div class="hero-container">
             <div class="hero-content">
-                <h1>Sell Your Home.<br><span class="highlight">Let Agents Compete</span> for You.</h1>
-                <p>List your property once and receive competing proposals from qualified realtors. Compare commission rates, marketing plans, and experience—all in one place.</p>
+                <h1 id="hero-headline">Sell Your Home.<br><span class="highlight">Let Agents Compete</span> for You.</h1>
+                <p id="hero-subhead">List your property once and receive competing proposals from qualified realtors. Compare commission rates, marketing plans, and experience—all in one place.</p>
                 <p class="subtext"><strong>Coming Soon</strong> • Be the first to know when we launch</p>
-                
+
                 <p class="hero-value-prop">List once. Let licensed realtors compete for your business. Pick the best deal — for free.</p>
 
+                <div id="hero-cta">
                 <form id="waitlistForm" class="search-box">
                     <input type="email" id="emailInput" placeholder="Enter your email address" required>
-                    <button type="submit">Join Waitlist</button>
+                    <button type="submit" onclick="if(typeof gtag!=='undefined')gtag('event','cta_click',{variant:document.cookie.includes('ab_variant=b')?'b':'a'})">Join Waitlist</button>
                 </form>
+                </div>
                 <div id="successMessage" class="success-message">✓ Thanks! You're on the waitlist. We'll email you when we launch.</div>
                 <div id="errorMessage" class="error-message">Please enter a valid email address.</div>
 
@@ -1255,6 +1262,23 @@
             </div>
         </div>
     </section>
+
+    <script>
+    (function() {
+        var variant = document.cookie.split(';').map(function(c){return c.trim();}).find(function(c){return c.startsWith('ab_variant=');});
+        if (variant && variant.split('=')[1] === 'b') {
+            var h = document.getElementById('hero-headline');
+            var s = document.getElementById('hero-subhead');
+            var c = document.getElementById('hero-cta');
+            if (h) h.textContent = 'Find Your Dream Home in New England';
+            if (s) s.textContent = 'Browse listings, compare realtors, and connect directly — all in one place.';
+            if (c) c.innerHTML = '<a href="/dashboard/buyer" class="btn btn-primary" style="display:inline-block;background:#FF6B35;color:#fff;padding:1rem 2.5rem;border-radius:50px;font-size:1.1rem;font-weight:600;text-decoration:none;cursor:pointer;" onclick="if(typeof gtag!==\'undefined\')gtag(\'event\',\'cta_click\',{variant:\'b\'})">Browse Listings</a><a href="/realtors/directory" style="display:inline-block;margin-left:1rem;background:transparent;color:#0A2540;border:2px solid #0A2540;padding:1rem 2.5rem;border-radius:50px;font-size:1.1rem;font-weight:600;text-decoration:none;">Find a Realtor</a>';
+            if (typeof gtag !== 'undefined') gtag('event', 'ab_variant_view', { variant: 'b' });
+        } else {
+            if (typeof gtag !== 'undefined') gtag('event', 'ab_variant_view', { variant: 'a' });
+        }
+    })();
+    </script>
 
     <section class="features" id="features">
         <div class="features-container">
@@ -1556,6 +1580,7 @@
                     <li><a href="#">Contact</a></li>
                     <li><a href="/privacy">Privacy Policy</a></li>
                     <li><a href="/terms">Terms of Service</a></li>
+                    <li><a href="/cookies">Cookie Policy</a></li>
                 </ul>
             </div>
         </div>
@@ -1664,6 +1689,11 @@
             localStorage.setItem('rf_cookies_accepted', '1');
             document.getElementById('cookieBanner').style.display = 'none';
         }
+    </script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
+      }
     </script>
 </body>
 </html>

@@ -363,6 +363,11 @@
             .nav-hamburger { display: flex; }
         }
     </style>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#0A2540">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="RealtorFinder">
 </head>
 <body>
 
@@ -511,7 +516,7 @@
 </div>
 
 <footer>
-    <p>© 2025 RealtorFinder &nbsp;·&nbsp; <a href="/privacy">Privacy</a> &nbsp;·&nbsp; <a href="/terms">Terms</a> &nbsp;·&nbsp; <a href="/about">About</a></p>
+    <p>© 2025 RealtorFinder &nbsp;·&nbsp; <a href="/privacy">Privacy</a> &nbsp;·&nbsp; <a href="/terms">Terms</a> &nbsp;·&nbsp; <a href="/cookies">Cookies</a> &nbsp;·&nbsp; <a href="/about">About</a></p>
 </footer>
 
 <script>
@@ -528,5 +533,10 @@
         hamburger.setAttribute('aria-expanded', 'false');
     }
 </script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
+      }
+    </script>
 </body>
 </html>

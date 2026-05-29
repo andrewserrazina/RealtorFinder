@@ -38,6 +38,7 @@ const db = {
         const result = await pool.query(
             `SELECT id, address, city, state, zip, price, property_type, bedrooms, bathrooms, sqft,
                     description, image_urls, created_at, user_id, status, COALESCE(view_count, 0) AS view_count,
+                    share_token, COALESCE(share_views, 0) AS share_views,
                     (SELECT COUNT(*) FROM offers WHERE listing_id = listings.id) as offer_count
              FROM listings
              WHERE user_id = $1 AND deleted_at IS NULL

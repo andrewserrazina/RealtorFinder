@@ -3,445 +3,150 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Privacy Policy - RealtorFinder.net</title>
-    <meta name="description" content="Learn how RealtorFinder.net collects, uses, and protects your personal information.">
+    <title>Privacy Policy — RealtorFinder</title>
+    <meta name="description" content="RealtorFinder Privacy Policy. Learn how we collect, use, and protect your personal information.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Work+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --primary: #0A2540;
-            --accent: #FF6B35;
-            --soft-bg: #F8F6F3;
-            --text: #1A1A1A;
-            --text-light: #5A5A5A;
-            --border: #E5E1DB;
-            --success: #10B981;
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Work Sans', sans-serif;
-            background: var(--soft-bg);
-            color: var(--text);
-            line-height: 1.7;
-            overflow-x: hidden;
-        }
-
-        /* Navigation */
-        nav {
-            position: sticky;
-            top: 0;
-            width: 100%;
-            background: rgba(248, 246, 243, 0.96);
-            backdrop-filter: blur(10px);
-            border-bottom: 1px solid var(--border);
-            z-index: 1000;
-        }
-
-        .nav-container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 1.25rem 3rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .logo {
-            font-family: 'Playfair Display', serif;
-            font-size: 1.8rem;
-            font-weight: 900;
-            color: var(--primary);
-            letter-spacing: -0.5px;
-            text-decoration: none;
-        }
-
-        .logo span {
-            color: var(--accent);
-        }
-
-        .nav-links {
-            display: flex;
-            gap: 2.5rem;
-            align-items: center;
-        }
-
-        .nav-links a {
-            text-decoration: none;
-            color: var(--text);
-            font-weight: 500;
-            font-size: 0.95rem;
-            transition: color 0.2s;
-        }
-
-        .nav-links a:hover {
-            color: var(--accent);
-        }
-
-        .nav-cta {
-            background: var(--primary);
-            color: #fff !important;
-            padding: 0.55rem 1.4rem;
-            border-radius: 6px;
-            font-weight: 600 !important;
-            transition: background 0.2s !important;
-        }
-
-        .nav-cta:hover {
-            background: var(--accent) !important;
-            color: #fff !important;
-        }
-
-        /* Page Header */
-        .page-header {
-            background: var(--primary);
-            color: #fff;
-            padding: 5rem 2rem 3.5rem;
-            text-align: center;
-        }
-
-        .page-header h1 {
-            font-family: 'Playfair Display', serif;
-            font-size: clamp(2rem, 5vw, 3rem);
-            font-weight: 900;
-            margin-bottom: 0.75rem;
-        }
-
-        .page-header p {
-            font-size: 1.05rem;
-            opacity: 0.75;
-            font-weight: 300;
-        }
-
-        /* Content */
-        .content-wrapper {
-            max-width: 860px;
-            margin: 0 auto;
-            padding: 3.5rem 2rem 5rem;
-        }
-
-        .meta-note {
-            background: #fff;
-            border: 1px solid var(--border);
-            border-left: 4px solid var(--accent);
-            border-radius: 8px;
-            padding: 1rem 1.25rem;
-            margin-bottom: 3rem;
-            font-size: 0.9rem;
-            color: var(--text-light);
-        }
-
-        .meta-note strong {
-            color: var(--text);
-        }
-
-        section {
-            margin-bottom: 3rem;
-        }
-
-        h2 {
-            font-family: 'Playfair Display', serif;
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--primary);
-            margin-bottom: 1rem;
-            padding-bottom: 0.5rem;
-            border-bottom: 2px solid var(--border);
-        }
-
-        p {
-            margin-bottom: 1rem;
-            color: var(--text);
-        }
-
-        ul, ol {
-            padding-left: 1.5rem;
-            margin-bottom: 1rem;
-        }
-
-        li {
-            margin-bottom: 0.5rem;
-            color: var(--text);
-        }
-
-        a {
-            color: var(--accent);
-            text-decoration: none;
-        }
-
-        a:hover {
-            text-decoration: underline;
-        }
-
-        .highlight-box {
-            background: #fff;
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 1.5rem 1.75rem;
-            margin: 1.5rem 0;
-        }
-
-        .highlight-box h3 {
-            font-family: 'Playfair Display', serif;
-            font-size: 1.1rem;
-            font-weight: 700;
-            color: var(--primary);
-            margin-bottom: 0.75rem;
-        }
-
-        .highlight-box p:last-child,
-        .highlight-box ul:last-child {
-            margin-bottom: 0;
-        }
-
-        /* Footer */
-        footer {
-            background: var(--primary);
-            color: rgba(255, 255, 255, 0.7);
-            padding: 3rem 2rem;
-            text-align: center;
-        }
-
-        .footer-logo {
-            font-family: 'Playfair Display', serif;
-            font-size: 1.6rem;
-            font-weight: 900;
-            color: #fff;
-            text-decoration: none;
-            display: inline-block;
-            margin-bottom: 1.25rem;
-        }
-
-        .footer-logo span {
-            color: var(--accent);
-        }
-
-        .footer-links {
-            display: flex;
-            justify-content: center;
-            gap: 2rem;
-            flex-wrap: wrap;
-            margin-bottom: 1.5rem;
-        }
-
-        .footer-links a {
-            color: rgba(255, 255, 255, 0.65);
-            text-decoration: none;
-            font-size: 0.9rem;
-            font-weight: 500;
-            transition: color 0.2s;
-        }
-
-        .footer-links a:hover {
-            color: var(--accent);
-        }
-
-        .footer-bottom {
-            font-size: 0.82rem;
-            opacity: 0.5;
-            margin-bottom: 0;
-        }
-
-        @media (max-width: 768px) {
-            .nav-container {
-                padding: 1rem 1.5rem;
-            }
-
-            .nav-links {
-                gap: 1.25rem;
-            }
-
-            .nav-links a:not(.nav-cta) {
-                display: none;
-            }
-
-            .content-wrapper {
-                padding: 2.5rem 1.25rem 4rem;
-            }
-        }
+        :root { --primary: #0A2540; --accent: #FF6B35; --border: #E5E1DB; --soft-bg: #F8F6F3; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Work Sans', sans-serif; color: var(--primary); background: var(--soft-bg); line-height: 1.7; }
+        nav { position: sticky; top: 0; background: rgba(255,255,255,0.97); backdrop-filter: blur(10px); border-bottom: 1px solid var(--border); padding: 0 5%; display: flex; align-items: center; justify-content: space-between; height: 68px; z-index: 100; }
+        .nav-logo { font-family: 'Playfair Display', serif; font-size: 1.5rem; font-weight: 900; color: var(--primary); text-decoration: none; }
+        .nav-logo span { color: var(--accent); }
+        .nav-cta { background: var(--accent); color: #fff; padding: 10px 22px; border-radius: 8px; font-weight: 600; text-decoration: none; font-size: 0.95rem; }
+        .hero { background: linear-gradient(135deg, var(--primary) 0%, #0d3a5c 100%); color: #fff; padding: 80px 5% 60px; text-align: center; }
+        .hero h1 { font-family: 'Playfair Display', serif; font-size: clamp(2rem, 4vw, 3rem); font-weight: 900; margin-bottom: 12px; }
+        .hero p { font-size: 1rem; opacity: 0.75; }
+        .content { max-width: 860px; margin: 0 auto; padding: 60px 5%; }
+        h2 { font-family: 'Playfair Display', serif; font-size: 1.4rem; font-weight: 900; color: var(--primary); margin: 2.5rem 0 0.75rem; }
+        h2:first-child { margin-top: 0; }
+        p, li { font-size: 0.97rem; color: #374151; margin-bottom: 0.75rem; }
+        ul, ol { padding-left: 1.5rem; margin-bottom: 1rem; }
+        li { margin-bottom: 0.4rem; }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .last-updated { font-size: 0.85rem; color: #6b7280; margin-bottom: 2rem; padding-bottom: 1.5rem; border-bottom: 1px solid var(--border); }
+        .info-box { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem 1.75rem; margin: 1.5rem 0; }
+        footer { background: var(--primary); color: rgba(255,255,255,0.6); padding: 32px 5%; text-align: center; font-size: 0.84rem; margin-top: 60px; }
+        footer a { color: rgba(255,255,255,0.6); margin: 0 8px; text-decoration: none; }
+        footer a:hover { color: var(--accent); }
     </style>
 </head>
 <body>
+<nav>
+    <a href="/" class="nav-logo">Realtor<span>Finder</span></a>
+    <a href="/login" class="nav-cta">Get Started Free</a>
+</nav>
 
-    <!-- Navigation -->
-    <nav>
-        <div class="nav-container">
-            <a href="/" class="logo">Realtor<span>Finder</span>.net</a>
-            <div class="nav-links">
-                <a href="/">For Sellers</a>
-                <a href="/realtors">For Realtors</a>
-                <a href="/" class="nav-cta">Get Started</a>
-            </div>
-        </div>
-    </nav>
+<div class="hero">
+    <h1>Privacy Policy</h1>
+    <p>Your privacy matters to us. Here is how we handle your data.</p>
+</div>
 
-    <!-- Page Header -->
-    <div class="page-header">
-        <h1>Privacy Policy</h1>
-        <p>How we collect, use, and protect your information</p>
+<div class="content">
+    <p class="last-updated">Last updated: May 2026 &nbsp;&middot;&nbsp; Effective date: May 1, 2026</p>
+
+    <p>RealtorFinder, LLC ("RealtorFinder," "we," "our," or "us") operates the RealtorFinder.net platform. This Privacy Policy explains how we collect, use, disclose, and safeguard your personal information when you use our website and services.</p>
+
+    <h2>1. Information We Collect</h2>
+
+    <p><strong>Account Information:</strong> When you register, we collect your name, email address, ZIP code, user type (seller, realtor, or buyer), and optionally your company name and phone number. Realtors may also provide their license number, brokerage affiliation, years of experience, service areas, and a professional bio.</p>
+
+    <p><strong>Listing and Property Data:</strong> Sellers provide property address, price, description, bedrooms/bathrooms, square footage, and photos. This information is used to create your listing and may be displayed publicly on the Platform.</p>
+
+    <p><strong>Payment Information:</strong> We use Stripe to process subscription payments. We do not store your full credit card number on our servers. Stripe's privacy policy governs the handling of your payment information.</p>
+
+    <p><strong>Communications:</strong> We store messages you send through the Platform, proposals submitted, and reviews you post.</p>
+
+    <p><strong>Usage and Analytics Data:</strong> We automatically collect information about how you use the Platform, including pages visited, features used, time spent, device information, browser type, and IP address. This is collected through our analytics tools (Google Analytics and Microsoft Clarity).</p>
+
+    <p><strong>Cookies and Tracking Technologies:</strong> We use cookies and similar technologies. See our <a href="/cookies">Cookie Policy</a> for full details.</p>
+
+    <h2>2. How We Use Your Information</h2>
+    <p>We use collected information to:</p>
+    <ul>
+        <li>Create and manage your account</li>
+        <li>Operate the marketplace and connect sellers with realtors</li>
+        <li>Send transactional emails (listing confirmations, proposal notifications, account updates)</li>
+        <li>Send platform-related communications and, with consent, marketing emails</li>
+        <li>Process subscription payments through Stripe</li>
+        <li>Improve the Platform through analytics and A/B testing</li>
+        <li>Verify realtor license credentials</li>
+        <li>Prevent fraud, abuse, and unauthorized access</li>
+        <li>Comply with legal obligations</li>
+        <li>Respond to customer support requests</li>
+    </ul>
+
+    <h2>3. How We Share Your Information</h2>
+    <p>We do not sell your personal information. We share information in the following limited circumstances:</p>
+    <ul>
+        <li><strong>Between Platform users:</strong> Seller contact information is shared with realtors whose proposals are accepted. Realtor profile information (name, photo, credentials) is publicly visible on the Platform.</li>
+        <li><strong>Service providers:</strong> We share data with trusted service providers who help us operate the Platform (SendGrid for email, Stripe for payments, Cloudinary for image storage).</li>
+        <li><strong>Analytics providers:</strong> We share anonymized usage data with Google Analytics and Microsoft Clarity to understand Platform usage.</li>
+        <li><strong>Legal requirements:</strong> We may disclose information when required by law or to protect our rights, users, or the public.</li>
+        <li><strong>Business transfers:</strong> In the event of a merger, acquisition, or sale of assets, user information may be transferred as part of that transaction.</li>
+    </ul>
+
+    <h2>4. Third-Party Services</h2>
+    <div class="info-box">
+        <p style="margin-bottom:0.5rem;"><strong>SendGrid (Twilio)</strong> — Email delivery. <a href="https://sendgrid.com/policies/privacy/" target="_blank" rel="noopener">Privacy Policy</a></p>
+        <p style="margin-bottom:0.5rem;"><strong>Stripe</strong> — Payment processing. <a href="https://stripe.com/privacy" target="_blank" rel="noopener">Privacy Policy</a></p>
+        <p style="margin-bottom:0.5rem;"><strong>Cloudinary</strong> — Image hosting and delivery. <a href="https://cloudinary.com/privacy" target="_blank" rel="noopener">Privacy Policy</a></p>
+        <p style="margin-bottom:0.5rem;"><strong>Google Analytics</strong> — Usage analytics. <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Privacy Policy</a></p>
+        <p style="margin-bottom:0;"><strong>Microsoft Clarity</strong> — Session analytics and heatmaps. <a href="https://privacy.microsoft.com/en-us/privacystatement" target="_blank" rel="noopener">Privacy Policy</a></p>
     </div>
 
-    <!-- Content -->
-    <div class="content-wrapper">
+    <h2>5. Cookies</h2>
+    <p>We use cookies to maintain your session, remember preferences (such as A/B test variant), and collect analytics data. See our <a href="/cookies">Cookie Policy</a> for a complete description of the cookies we use and your options for managing them.</p>
 
-        <div class="meta-note">
-            <strong>Effective Date:</strong> May 2026 &nbsp;&bull;&nbsp; <strong>Last Updated:</strong> May 2026
-        </div>
+    <h2>6. Data Retention</h2>
+    <p>We retain your account data for as long as your account is active or as needed to provide services. After account deletion:</p>
+    <ul>
+        <li>Most personal data is deleted within 30 days</li>
+        <li>Aggregated, anonymized analytics data may be retained indefinitely</li>
+        <li>Transaction records may be retained for up to 7 years for legal and tax compliance</li>
+        <li>Backup copies may persist for up to 90 days</li>
+    </ul>
+    <p>To request deletion of your account, contact us at <a href="mailto:privacy@realtorfinder.net">privacy@realtorfinder.net</a>.</p>
 
-        <section>
-            <h2>Introduction</h2>
-            <p>RealtorFinder.net ("RealtorFinder," "we," "our," or "us") operates a reverse real estate marketplace that connects home sellers with licensed real estate professionals. We are committed to protecting your privacy and being transparent about the data we collect and how we use it.</p>
-            <p>This Privacy Policy applies to all users of RealtorFinder.net, including home sellers, real estate agents, and visitors who simply browse the site. By using our platform, you agree to the practices described in this policy. If you do not agree, please do not use our services.</p>
-            <p>If you have questions or concerns, you can reach our privacy team at any time at <a href="mailto:privacy@realtorfinder.net">privacy@realtorfinder.net</a>.</p>
-        </section>
+    <h2>7. Security</h2>
+    <p>We implement industry-standard security measures including password hashing (bcrypt), HTTPS encryption for all data in transit, and access controls. However, no method of transmission over the Internet or electronic storage is 100% secure, and we cannot guarantee absolute security.</p>
 
-        <section>
-            <h2>Information We Collect</h2>
-            <p>We collect information you provide directly, information generated by your use of the platform, and information from third-party services integrated into our site.</p>
+    <h2>8. Your Rights (GDPR / CCPA)</h2>
+    <p>Depending on your location, you may have the following rights regarding your personal data:</p>
+    <ul>
+        <li><strong>Access:</strong> Request a copy of the personal data we hold about you</li>
+        <li><strong>Correction:</strong> Request correction of inaccurate data</li>
+        <li><strong>Deletion:</strong> Request deletion of your personal data ("right to be forgotten")</li>
+        <li><strong>Portability:</strong> Request your data in a machine-readable format</li>
+        <li><strong>Objection:</strong> Object to processing of your data for certain purposes</li>
+        <li><strong>Opt-out of sale:</strong> We do not sell personal data. California residents may still submit opt-out requests per CCPA.</li>
+    </ul>
+    <p>To exercise any of these rights, email <a href="mailto:privacy@realtorfinder.net">privacy@realtorfinder.net</a>. We will respond within 30 days.</p>
 
-            <div class="highlight-box">
-                <h3>Information You Provide</h3>
-                <ul>
-                    <li><strong>Account registration:</strong> Your full name, email address, and a password when you create an account.</li>
-                    <li><strong>Location data:</strong> Your zip code and property address (for sellers) or service area (for realtors), used to match listings with relevant agents.</li>
-                    <li><strong>Property details:</strong> For sellers — property type, approximate value, timeline to sell, number of bedrooms, and any additional details you choose to share in your listing description.</li>
-                    <li><strong>Realtor credentials:</strong> For licensed agents — your state license number, brokerage affiliation, years of experience, and professional biography.</li>
-                    <li><strong>Communications:</strong> Messages you send through the platform, responses to surveys, and any correspondence with our support team.</li>
-                    <li><strong>Profile photos and listing images:</strong> Images you upload to personalize your profile or illustrate your property listing.</li>
-                </ul>
-            </div>
+    <h2>9. Children's Privacy</h2>
+    <p>The Platform is not directed at children under 18. We do not knowingly collect personal information from anyone under 18. If you believe we have inadvertently collected such information, please contact us immediately.</p>
 
-            <div class="highlight-box">
-                <h3>Information Collected Automatically</h3>
-                <ul>
-                    <li><strong>Usage data:</strong> Pages visited, features used, time spent on each section, clicks, and navigation paths through the site.</li>
-                    <li><strong>Device and browser data:</strong> IP address, browser type, operating system, screen resolution, and referring URL.</li>
-                    <li><strong>Cookies and tracking technologies:</strong> Session cookies, persistent cookies, and pixel tags as described in the Cookies section below.</li>
-                    <li><strong>Log data:</strong> Server logs that record requests made to our servers, including timestamps and error codes.</li>
-                </ul>
-            </div>
-        </section>
+    <h2>10. Changes to This Policy</h2>
+    <p>We may update this Privacy Policy from time to time. We will notify you of material changes by updating the "Last Updated" date and, where appropriate, by sending an email notification. Your continued use of the Platform after changes take effect constitutes acceptance of the revised policy.</p>
 
-        <section>
-            <h2>How We Use Your Information</h2>
-            <p>We use the data we collect for legitimate business purposes tied directly to operating and improving the RealtorFinder platform. Specifically:</p>
-            <ul>
-                <li><strong>Platform operation:</strong> To create and manage your account, display your listing or profile to relevant parties, and facilitate connections between sellers and realtors.</li>
-                <li><strong>Matching and recommendations:</strong> To match home sellers with licensed agents in their area based on property type, location, timeline, and agent specialization.</li>
-                <li><strong>Email notifications:</strong> To send you transactional emails such as account confirmation, new proposal alerts (for sellers), new listing opportunities (for agents), and important account updates. We use SendGrid to deliver these messages reliably.</li>
-                <li><strong>Marketing communications:</strong> With your consent, to send newsletters, platform updates, and promotional content. You can opt out at any time via the unsubscribe link in any email.</li>
-                <li><strong>Analytics and improvement:</strong> To understand how users interact with the platform, identify friction points, and prioritize product improvements.</li>
-                <li><strong>Safety and fraud prevention:</strong> To verify realtor license information, detect and prevent fake listings, and protect the integrity of the marketplace.</li>
-                <li><strong>Legal compliance:</strong> To comply with applicable laws, respond to lawful requests from authorities, and enforce our Terms of Service.</li>
-            </ul>
-        </section>
+    <h2>11. Contact Us</h2>
+    <p>For privacy-related questions or requests, contact us at:</p>
+    <ul>
+        <li>Email: <a href="mailto:privacy@realtorfinder.net">privacy@realtorfinder.net</a></li>
+        <li>Website: <a href="/contact">realtorfinder.net/contact</a></li>
+    </ul>
+</div>
 
-        <section>
-            <h2>Cookies and Tracking Technologies</h2>
-            <p>We use cookies and similar tracking technologies to improve your experience on our site and to understand how visitors engage with our platform. Cookies are small data files placed on your browser or device.</p>
-
-            <div class="highlight-box">
-                <h3>Google Analytics (Measurement ID: G-BRGVVNKT65)</h3>
-                <p>We use Google Analytics to collect aggregated, anonymized data about how visitors use our site — including which pages are most visited, how long sessions last, and what actions lead to conversions. This data helps us make informed product decisions. Google Analytics may set cookies on your device. You can opt out of Google Analytics tracking at any time by installing the <a href="https://tools.google.com/dlpage/gaoptout" target="_blank" rel="noopener">Google Analytics Opt-Out Browser Add-on</a>.</p>
-            </div>
-
-            <div class="highlight-box">
-                <h3>Meta Pixel (Pixel ID: 1189752893170212)</h3>
-                <p>We use the Meta Pixel (formerly Facebook Pixel) to measure the effectiveness of our advertising campaigns on Facebook and Instagram, and to enable retargeting features — such as showing RealtorFinder ads to people who have previously visited our site. The Meta Pixel may collect information about your activity on our platform and associate it with your Facebook profile if you are logged into Facebook. You can manage your ad preferences through <a href="https://www.facebook.com/adpreferences" target="_blank" rel="noopener">Facebook's Ad Preferences</a> or opt out of interest-based advertising through the <a href="https://optout.aboutads.info/" target="_blank" rel="noopener">Digital Advertising Alliance</a>.</p>
-            </div>
-
-            <p>We also use essential session cookies that are strictly necessary for the platform to function — for example, to keep you logged in during a session. These cannot be disabled without affecting platform functionality.</p>
-            <p>Most browsers allow you to control cookies through their settings. Disabling non-essential cookies may limit certain features but will not prevent you from using the core platform.</p>
-        </section>
-
-        <section>
-            <h2>How We Share Your Information</h2>
-            <p><strong>We do not sell your personal data.</strong> We never sell, rent, or trade your personal information to third parties for their own marketing purposes.</p>
-            <p>We share your information only in the following circumstances:</p>
-            <ul>
-                <li><strong>Between platform users:</strong> When a seller creates a listing, certain listing details (property type, location, timeline) are visible to licensed realtors browsing available opportunities. Personal contact information is only shared once both parties agree to connect. A realtor's public profile — including name, credentials, bio, and reviews — is visible to sellers who receive their proposals.</li>
-                <li><strong>SendGrid (email delivery):</strong> We use SendGrid, a Twilio service, to send transactional and marketing emails on our behalf. SendGrid receives your email address and the content of the message being delivered. They operate under strict data processing agreements and are not permitted to use your data for their own purposes.</li>
-                <li><strong>Cloudinary (image storage and optimization):</strong> Property listing photos and realtor profile images are stored and served through Cloudinary, a cloud-based media management platform. Images you upload are transmitted to and hosted on Cloudinary's servers solely to store and deliver them as part of our service.</li>
-                <li><strong>Legal requirements:</strong> We may disclose your information if required by law, court order, or governmental authority, or if we believe disclosure is necessary to protect our rights, your safety, or the safety of others.</li>
-                <li><strong>Business transfers:</strong> If RealtorFinder.net is acquired, merged, or undergoes a change of control, your information may be transferred as part of that transaction. We will notify affected users and ensure any successor entity honors this Privacy Policy.</li>
-            </ul>
-        </section>
-
-        <section>
-            <h2>Your Rights and Choices</h2>
-            <p>Regardless of your location, you have the following rights regarding your personal information:</p>
-            <ul>
-                <li><strong>Access:</strong> You may request a copy of the personal information we hold about you. We will provide this within 30 days of a verifiable request.</li>
-                <li><strong>Correction:</strong> If any information we hold is inaccurate or incomplete, you may ask us to correct it. You can update most profile information directly through your account settings.</li>
-                <li><strong>Deletion:</strong> You may request that we delete your account and associated personal data. We will comply promptly, subject to any legal obligations that require us to retain certain records.</li>
-                <li><strong>Opt-out of marketing emails:</strong> You can unsubscribe from marketing communications at any time by clicking the "Unsubscribe" link in any email, or by contacting <a href="mailto:privacy@realtorfinder.net">privacy@realtorfinder.net</a>. Note that you may still receive essential transactional emails related to your account.</li>
-                <li><strong>Opt-out of analytics tracking:</strong> You can opt out of Google Analytics via the browser add-on linked above, and adjust Meta Pixel tracking through your Facebook ad preferences.</li>
-                <li><strong>Data portability:</strong> Upon request, we can provide your data in a structured, commonly used format so you can transfer it to another service.</li>
-            </ul>
-            <p>To exercise any of these rights, contact us at <a href="mailto:privacy@realtorfinder.net">privacy@realtorfinder.net</a> with the subject line "Privacy Request." We may need to verify your identity before processing your request.</p>
-        </section>
-
-        <section>
-            <h2>Data Retention</h2>
-            <p>We retain your personal information for as long as your account is active or as needed to provide our services. Specifically:</p>
-            <ul>
-                <li><strong>Active accounts:</strong> We retain all account data, listing history, and communications while your account remains open.</li>
-                <li><strong>Closed accounts:</strong> When you delete your account, we remove your personal profile information within 30 days. Certain records — such as transaction logs and communications relevant to disputes — may be retained for up to 7 years to comply with legal and financial record-keeping obligations.</li>
-                <li><strong>Analytics data:</strong> Aggregated, anonymized analytics data that cannot identify you may be retained indefinitely for product research.</li>
-                <li><strong>Inactive accounts:</strong> If your account has been inactive for more than 24 consecutive months, we may notify you and, absent a response, archive or delete your account data.</li>
-            </ul>
-        </section>
-
-        <section>
-            <h2>Data Security</h2>
-            <p>We implement industry-standard technical and organizational measures to protect your personal information against unauthorized access, loss, or misuse. These include HTTPS encryption for all data in transit, hashed password storage, and access controls that limit which team members can view user data.</p>
-            <p>No method of transmission over the internet is completely secure, and we cannot guarantee absolute security. If you believe your account has been compromised, please contact us immediately at <a href="mailto:privacy@realtorfinder.net">privacy@realtorfinder.net</a>.</p>
-        </section>
-
-        <section>
-            <h2>Children's Privacy</h2>
-            <p>RealtorFinder.net is not directed at anyone under the age of 18. We do not knowingly collect personal information from minors. If you believe a minor has submitted information through our platform, please contact us at <a href="mailto:privacy@realtorfinder.net">privacy@realtorfinder.net</a> and we will promptly delete that information.</p>
-        </section>
-
-        <section>
-            <h2>Third-Party Links</h2>
-            <p>Our platform may contain links to third-party websites such as real estate resources or professional organizations. This Privacy Policy applies only to RealtorFinder.net. We encourage you to review the privacy policies of any third-party site before sharing personal information with them.</p>
-        </section>
-
-        <section>
-            <h2>Changes to This Policy</h2>
-            <p>We may update this Privacy Policy from time to time to reflect changes to our practices, technologies, or legal requirements. When we make material changes, we will update the "Last Updated" date at the top of this page and, where appropriate, notify you by email. Your continued use of RealtorFinder.net after any changes constitutes your acceptance of the revised policy.</p>
-        </section>
-
-        <section>
-            <h2>Contact Us</h2>
-            <p>If you have questions, concerns, or requests related to this Privacy Policy or how we handle your personal information, please contact our privacy team:</p>
-            <div class="highlight-box">
-                <p><strong>RealtorFinder.net &mdash; Privacy Team</strong><br>
-                Email: <a href="mailto:privacy@realtorfinder.net">privacy@realtorfinder.net</a><br>
-                We aim to respond to all privacy-related inquiries within 5 business days.</p>
-            </div>
-        </section>
-
-    </div>
-
-    <!-- Footer -->
-    <footer>
-        <a href="/" class="footer-logo">Realtor<span>Finder</span>.net</a>
-        <div class="footer-links">
-            <a href="/">For Sellers</a>
-            <a href="/realtors">For Realtors</a>
-            <a href="/privacy">Privacy Policy</a>
-            <a href="/terms">Terms of Service</a>
-        </div>
-        <p class="footer-bottom">&copy; 2026 RealtorFinder.net. All rights reserved.</p>
-    </footer>
-
+<footer>
+    <p>&copy; 2026 RealtorFinder.net &nbsp;&middot;&nbsp;
+        <a href="/">Home</a>
+        <a href="/privacy">Privacy Policy</a>
+        <a href="/terms">Terms of Service</a>
+        <a href="/cookies">Cookie Policy</a>
+        <a href="/contact">Contact</a>
+    </p>
+</footer>
 </body>
 </html>

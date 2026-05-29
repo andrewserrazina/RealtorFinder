@@ -46,6 +46,11 @@
         .btn { display: inline-block; padding: 0.9rem 2rem; background: var(--accent); color: white; border-radius: 10px; font-weight: 600; text-decoration: none; font-family: 'DM Sans', sans-serif; transition: background 0.2s; }
         .btn:hover { background: #e55a2b; }
     </style>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#0A2540">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="RealtorFinder">
 </head>
 <body>
     <a href="/" class="logo">Realtor<span>Finder</span></a>
@@ -58,6 +63,11 @@
     <script>
         // Fire purchase conversion event
         gtag('event', 'purchase', { currency: 'USD' });
+    </script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
+      }
     </script>
 </body>
 </html>
