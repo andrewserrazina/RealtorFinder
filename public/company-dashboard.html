@@ -1,0 +1,1390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Company Dashboard - RealtorFinder</title>
+    <!-- Google Analytics 4 -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-BRGVVNKT65"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-BRGVVNKT65');
+    </script>
+    <!-- Microsoft Clarity -->
+    <script type="text/javascript">
+        (function(c,l,a,r,i,t,y){
+            c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+            t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+            y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+        })(window, document, "clarity", "script", "wxvaz0g7tq");
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --ink: #0a2540;
+            --paper: #f8f9fa;
+            --accent: #ff6b35;
+            --accent-dark: #e55a2b;
+            --border: #e1e8ed;
+            --success: #10b981;
+            --card-bg: white;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--paper);
+            color: var(--ink);
+            line-height: 1.6;
+        }
+
+        /* Header */
+        header {
+            background: var(--ink);
+            color: white;
+            padding: 1.25rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.18);
+        }
+
+        .header-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+        }
+
+        .logo {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.6rem;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            color: white;
+            text-decoration: none;
+        }
+
+        .logo span {
+            color: var(--accent);
+        }
+
+        .header-label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: rgba(255,255,255,0.55);
+            border-left: 1px solid rgba(255,255,255,0.2);
+            padding-left: 1.25rem;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            color: rgba(255,255,255,0.85);
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .user-avatar {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.85rem;
+            color: white;
+            flex-shrink: 0;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+            padding: 0.55rem 1.2rem;
+            border-radius: 8px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+
+        .btn-accent {
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn-accent:hover {
+            background: var(--accent-dark);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 14px rgba(255,107,53,0.35);
+        }
+
+        .btn-outline {
+            background: transparent;
+            color: white;
+            border: 1.5px solid rgba(255,255,255,0.35);
+        }
+
+        .btn-outline:hover {
+            background: rgba(255,255,255,0.1);
+            border-color: rgba(255,255,255,0.6);
+        }
+
+        .btn-ghost {
+            background: transparent;
+            color: var(--ink);
+            border: 1.5px solid var(--border);
+        }
+
+        .btn-ghost:hover {
+            background: var(--paper);
+            border-color: #bbb;
+        }
+
+        .btn-danger {
+            background: #fee2e2;
+            color: #dc2626;
+            border: 1px solid #fca5a5;
+        }
+
+        .btn-danger:hover {
+            background: #fecaca;
+        }
+
+        .btn-sm {
+            padding: 0.35rem 0.85rem;
+            font-size: 0.82rem;
+        }
+
+        /* Tabs */
+        .tabs-container {
+            background: white;
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 73px;
+            z-index: 99;
+        }
+
+        .tabs {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            display: flex;
+            gap: 0;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+        }
+        .tabs::-webkit-scrollbar { display: none; }
+
+        .tab {
+            white-space: nowrap;
+            padding: 1.1rem 1.25rem;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.92rem;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .tab:hover { color: var(--ink); }
+
+        .tab.active {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+        }
+
+        /* Main layout */
+        .dashboard-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2.5rem 2rem;
+        }
+
+        .view-section {
+            display: none;
+        }
+
+        .view-section.active {
+            display: block;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Section headers */
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .section-title {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: var(--ink);
+        }
+
+        /* Stats row */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--card-bg);
+            padding: 1.6rem 1.75rem;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+        }
+
+        .stat-icon {
+            font-size: 1.6rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: #777;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            font-weight: 600;
+            margin-bottom: 0.4rem;
+        }
+
+        .stat-value {
+            font-family: 'Crimson Pro', serif;
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: var(--ink);
+            line-height: 1;
+        }
+
+        /* Cards */
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            padding: 1.5rem;
+        }
+
+        .card + .card {
+            margin-top: 1.5rem;
+        }
+
+        .card-title {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--ink);
+            margin-bottom: 1.25rem;
+        }
+
+        /* Company info card */
+        .company-info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.25rem;
+        }
+
+        .info-item label {
+            display: block;
+            font-size: 0.78rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #888;
+            margin-bottom: 0.3rem;
+        }
+
+        .info-item .info-value {
+            font-size: 1rem;
+            font-weight: 500;
+            color: var(--ink);
+        }
+
+        .plan-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .plan-badge.basic       { background: #f1f5f9; color: #475569; }
+        .plan-badge.professional{ background: #ede9fe; color: #6d28d9; }
+        .plan-badge.firm        { background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; }
+
+        /* Table */
+        .table-wrapper {
+            overflow-x: auto;
+            border-radius: 8px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        thead th {
+            background: var(--paper);
+            padding: 0.85rem 1rem;
+            text-align: left;
+            font-size: 0.78rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #666;
+            border-bottom: 1px solid var(--border);
+        }
+
+        tbody td {
+            padding: 0.9rem 1rem;
+            border-bottom: 1px solid var(--border);
+            color: var(--ink);
+        }
+
+        tbody tr:last-child td { border-bottom: none; }
+        tbody tr:hover { background: #fafafa; }
+
+        .rating-stars {
+            color: #f59e0b;
+            font-size: 0.85rem;
+        }
+
+        /* Agent cards grid */
+        .agents-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.25rem;
+            margin-bottom: 2rem;
+        }
+
+        .agent-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            padding: 1.25rem 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            transition: box-shadow 0.2s;
+        }
+
+        .agent-card:hover {
+            box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+        }
+
+        .agent-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1rem;
+            color: white;
+            flex-shrink: 0;
+        }
+
+        .agent-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .agent-name {
+            font-weight: 700;
+            font-size: 0.95rem;
+            color: var(--ink);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .agent-email {
+            font-size: 0.82rem;
+            color: #777;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .agent-meta {
+            font-size: 0.78rem;
+            color: #999;
+            margin-top: 0.2rem;
+        }
+
+        /* Forms */
+        .form-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            padding: 1.5rem;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 1rem;
+            align-items: flex-end;
+            flex-wrap: wrap;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+            flex: 1;
+            min-width: 180px;
+        }
+
+        .form-group label {
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: #555;
+        }
+
+        .form-group input {
+            padding: 0.6rem 0.9rem;
+            border-radius: 8px;
+            border: 1.5px solid var(--border);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.9rem;
+            color: var(--ink);
+            background: white;
+            transition: border-color 0.2s;
+            outline: none;
+        }
+
+        .form-group input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(255,107,53,0.1);
+        }
+
+        /* Locations list */
+        .locations-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .location-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.9rem 1.25rem;
+            background: var(--card-bg);
+            border-radius: 10px;
+            border: 1px solid var(--border);
+        }
+
+        .location-label {
+            font-weight: 600;
+            color: var(--ink);
+        }
+
+        .location-zip {
+            font-size: 0.85rem;
+            color: #777;
+            margin-top: 0.1rem;
+        }
+
+        /* Billing */
+        .plans-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1.25rem;
+            margin-top: 1.5rem;
+        }
+
+        .plan-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            border: 2px solid var(--border);
+            padding: 1.75rem;
+            text-align: center;
+            position: relative;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .plan-card.current-plan {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(255,107,53,0.1);
+        }
+
+        .plan-card.popular {
+            border-color: #6d28d9;
+        }
+
+        .plan-badge-top {
+            position: absolute;
+            top: -13px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--accent);
+            color: white;
+            padding: 0.2rem 0.85rem;
+            border-radius: 20px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+        }
+
+        .plan-badge-top.popular-badge {
+            background: #6d28d9;
+        }
+
+        .plan-name {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--ink);
+            margin-bottom: 0.25rem;
+        }
+
+        .plan-price {
+            font-family: 'Crimson Pro', serif;
+            font-size: 2.4rem;
+            font-weight: 700;
+            color: var(--accent);
+            line-height: 1;
+            margin: 0.75rem 0 0.25rem;
+        }
+
+        .plan-price-sub {
+            font-size: 0.82rem;
+            color: #888;
+            margin-bottom: 1.25rem;
+        }
+
+        .plan-features {
+            list-style: none;
+            text-align: left;
+            margin-bottom: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.55rem;
+        }
+
+        .plan-features li {
+            font-size: 0.88rem;
+            color: #555;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .plan-features li::before {
+            content: '✓';
+            color: var(--success);
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            padding: 0.85rem 1.5rem;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            z-index: 9999;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: all 0.3s;
+            pointer-events: none;
+            max-width: 340px;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .toast.success {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+        }
+
+        .toast.error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fca5a5;
+        }
+
+        /* Loading spinner */
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+            margin: 2rem auto;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-overlay {
+            display: none;
+            text-align: center;
+            padding: 4rem 2rem;
+            color: #888;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem 2rem;
+            color: #aaa;
+        }
+
+        .empty-state .empty-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .empty-state p {
+            font-size: 0.95rem;
+        }
+
+        /* Divider */
+        .divider {
+            border: none;
+            border-top: 1px solid var(--border);
+            margin: 1.5rem 0;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header-label { display: none; }
+            .user-info span { display: none; }
+            .dashboard-container { padding: 1.5rem 1rem; }
+            .stats-row { grid-template-columns: repeat(2, 1fr); }
+            .form-row { flex-direction: column; }
+            .form-group { min-width: unset; width: 100%; }
+            .plans-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Header -->
+<header>
+    <div class="header-container">
+        <div class="header-left">
+            <a href="/" class="logo">Realtor<span>Finder</span></a>
+            <span class="header-label">Company Dashboard</span>
+        </div>
+        <div class="header-actions">
+            <div class="user-info">
+                <div class="user-avatar" id="userAvatar">—</div>
+                <span id="userName">Loading…</span>
+            </div>
+            <button class="btn btn-outline" onclick="logout()">Sign Out</button>
+        </div>
+    </div>
+</header>
+
+<!-- Tabs -->
+<div class="tabs-container">
+    <div class="tabs">
+        <div class="tab active" data-tab="overview">Overview</div>
+        <div class="tab" data-tab="team">Team</div>
+        <div class="tab" data-tab="locations">Locations</div>
+        <div class="tab" data-tab="billing">Billing</div>
+    </div>
+</div>
+
+<!-- Main content -->
+<div class="dashboard-container">
+
+    <!-- Overview Tab -->
+    <div id="tab-overview" class="view-section active">
+        <!-- Stats row -->
+        <div class="stats-row">
+            <div class="stat-card">
+                <div class="stat-icon">👥</div>
+                <div class="stat-label">Total Agents</div>
+                <div class="stat-value" id="stat-totalAgents">—</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">🏠</div>
+                <div class="stat-label">Active Listings</div>
+                <div class="stat-value" id="stat-activeListings">—</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">📨</div>
+                <div class="stat-label">Total Proposals Sent</div>
+                <div class="stat-value" id="stat-totalProposals">—</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">⭐</div>
+                <div class="stat-label">Avg Rating</div>
+                <div class="stat-value" id="stat-avgRating">—</div>
+            </div>
+        </div>
+
+        <!-- Company info -->
+        <div class="card" style="margin-bottom:1.5rem;">
+            <div class="card-title">Company Info</div>
+            <div class="company-info-grid">
+                <div class="info-item">
+                    <label>Company Name</label>
+                    <div class="info-value" id="company-name">—</div>
+                </div>
+                <div class="info-item">
+                    <label>Plan</label>
+                    <div class="info-value" id="company-plan">—</div>
+                </div>
+                <div class="info-item">
+                    <label>Member Since</label>
+                    <div class="info-value" id="company-created">—</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Team performance table -->
+        <div class="card">
+            <div class="card-title">Team Performance</div>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Agent</th>
+                            <th>Listings</th>
+                            <th>Proposals</th>
+                            <th>Avg Response</th>
+                            <th>Rating</th>
+                        </tr>
+                    </thead>
+                    <tbody id="performance-tbody">
+                        <tr><td colspan="5"><div class="spinner"></div></td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Team Tab -->
+    <div id="tab-team" class="view-section">
+        <div class="section-header">
+            <div class="section-title">Team Members</div>
+        </div>
+
+        <!-- Agent cards -->
+        <div class="agents-grid" id="agents-grid">
+            <div style="grid-column:1/-1"><div class="spinner"></div></div>
+        </div>
+
+        <!-- Add agent form -->
+        <div class="form-card">
+            <div class="card-title" style="margin-bottom:1rem;">Add Agent</div>
+            <form id="add-agent-form" onsubmit="addAgent(event)">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="agent-email">Agent Email</label>
+                        <input type="email" id="agent-email" placeholder="agent@example.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="agent-zip">ZIP Code</label>
+                        <input type="text" id="agent-zip" placeholder="e.g. 90210" required maxlength="10">
+                    </div>
+                    <button type="submit" class="btn btn-accent" id="add-agent-btn">Add Agent</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Locations Tab -->
+    <div id="tab-locations" class="view-section">
+        <div class="section-header">
+            <div class="section-title">Service Locations</div>
+        </div>
+
+        <div class="locations-list" id="locations-list">
+            <div class="spinner"></div>
+        </div>
+
+        <!-- Add location form -->
+        <div class="form-card">
+            <div class="card-title" style="margin-bottom:1rem;">Add Location</div>
+            <form id="add-location-form" onsubmit="addLocation(event)">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="location-label">Label</label>
+                        <input type="text" id="location-label" placeholder="e.g. Downtown Office" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="location-zip">ZIP Code</label>
+                        <input type="text" id="location-zip" placeholder="e.g. 90210" required maxlength="10">
+                    </div>
+                    <button type="submit" class="btn btn-accent" id="add-location-btn">Add Location</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Billing Tab -->
+    <div id="tab-billing" class="view-section">
+        <div class="section-header">
+            <div class="section-title">Billing &amp; Plan</div>
+        </div>
+
+        <div class="card" style="margin-bottom:1.5rem;">
+            <div class="card-title">Current Subscription</div>
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;">
+                <div>
+                    <div style="font-size:0.85rem;color:#777;margin-bottom:0.3rem;">Active Plan</div>
+                    <div id="billing-plan-name" style="font-size:1.2rem;font-weight:700;color:var(--ink);">—</div>
+                </div>
+                <button class="btn btn-accent" onclick="manageSubscription()">Manage Subscription</button>
+            </div>
+        </div>
+
+        <div class="section-title" style="margin-bottom:0.5rem;font-family:'Crimson Pro',serif;font-size:1.4rem;">Choose a Plan</div>
+        <p style="color:#777;font-size:0.9rem;margin-bottom:0.25rem;">Upgrade or downgrade at any time.</p>
+
+        <div class="plans-grid">
+            <!-- Basic -->
+            <div class="plan-card" id="plan-basic">
+                <div class="plan-name">Basic</div>
+                <div class="plan-price">$0</div>
+                <div class="plan-price-sub">Free forever</div>
+                <ul class="plan-features">
+                    <li>1 agent seat</li>
+                    <li>Up to 5 listings</li>
+                    <li>Basic analytics</li>
+                    <li>Email support</li>
+                </ul>
+                <button class="btn btn-ghost" style="width:100%;" onclick="upgradePlan('basic')">Select Basic</button>
+            </div>
+
+            <!-- Professional -->
+            <div class="plan-card popular" id="plan-professional">
+                <div class="plan-badge-top popular-badge">Popular</div>
+                <div class="plan-name">Professional</div>
+                <div class="plan-price">$49</div>
+                <div class="plan-price-sub">per month</div>
+                <ul class="plan-features">
+                    <li>Up to 10 agent seats</li>
+                    <li>Unlimited listings</li>
+                    <li>Advanced analytics</li>
+                    <li>Priority support</li>
+                    <li>Team performance reports</li>
+                </ul>
+                <button class="btn btn-accent" style="width:100%;background:#6d28d9;" onclick="upgradePlan('professional')">Upgrade to Pro</button>
+            </div>
+
+            <!-- Firm -->
+            <div class="plan-card" id="plan-firm">
+                <div class="plan-badge-top">Current</div>
+                <div class="plan-name">Firm</div>
+                <div class="plan-price">$149</div>
+                <div class="plan-price-sub">per month</div>
+                <ul class="plan-features">
+                    <li>Unlimited agent seats</li>
+                    <li>Unlimited listings</li>
+                    <li>Full analytics suite</li>
+                    <li>Dedicated account manager</li>
+                    <li>Custom branding</li>
+                    <li>API access</li>
+                </ul>
+                <button class="btn btn-accent" style="width:100%;" onclick="upgradePlan('firm')">Select Firm</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+    const API_BASE_URL = window.API_BASE_URL || '/api';
+
+    let currentUser = null;
+    let companyData = null;
+    let analyticsData = null;
+
+    // ── Auth ──────────────────────────────────────────────
+    async function checkAuth() {
+        try {
+            const res = await fetch(`${API_BASE_URL}/auth/me`, { credentials: 'include' });
+            if (res.status === 401) {
+                window.location.href = '/login';
+                return;
+            }
+            const data = await res.json();
+            if (data.user_type !== 'realtor') {
+                window.location.href = '/dashboard/realtor';
+                return;
+            }
+            currentUser = data;
+            renderUserHeader(data);
+        } catch (e) {
+            window.location.href = '/login';
+        }
+    }
+
+    function renderUserHeader(user) {
+        const name = user.full_name || user.name || user.email || 'User';
+        document.getElementById('userName').textContent = name;
+        const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+        document.getElementById('userAvatar').textContent = initials;
+    }
+
+    async function logout() {
+        try {
+            await fetch(`${API_BASE_URL}/auth/logout`, { method: 'POST', credentials: 'include' });
+        } finally {
+            window.location.href = '/';
+        }
+    }
+
+    // ── Tabs ──────────────────────────────────────────────
+    document.querySelectorAll('.tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            const target = tab.dataset.tab;
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
+            tab.classList.add('active');
+            document.getElementById(`tab-${target}`).classList.add('active');
+
+            if (target === 'team' && !agentsLoaded) loadTeam();
+            if (target === 'locations' && !locationsLoaded) loadLocations();
+            if (target === 'billing') renderBilling();
+        });
+    });
+
+    // ── Data loading ──────────────────────────────────────
+    let agentsLoaded = false;
+    let locationsLoaded = false;
+
+    async function loadOverview() {
+        try {
+            const [compRes, analRes] = await Promise.all([
+                fetch(`${API_BASE_URL}/company`, { credentials: 'include' }),
+                fetch(`${API_BASE_URL}/company/analytics`, { credentials: 'include' })
+            ]);
+            if (compRes.ok) {
+                const cd = await compRes.json();
+                companyData = cd;
+                renderCompanyInfo(cd.company || {});
+                // Pre-fill agents/locations cache so team/locations tabs render faster
+            }
+            if (analRes.ok) {
+                analyticsData = await analRes.json();
+                renderStats(analyticsData);
+                renderPerformanceTable(analyticsData.agents || []);
+            }
+        } catch (e) {
+            showToast('Failed to load company data.', 'error');
+        }
+    }
+
+    function renderCompanyInfo(company) {
+        document.getElementById('company-name').textContent = company.name || '—';
+        const plan = (company.plan || 'basic').toLowerCase();
+        const planLabel = plan.charAt(0).toUpperCase() + plan.slice(1);
+        document.getElementById('company-plan').innerHTML =
+            `<span class="plan-badge ${plan}">${planLabel}</span>`;
+        if (company.created_at) {
+            document.getElementById('company-created').textContent =
+                new Date(company.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+        }
+    }
+
+    function renderStats(data) {
+        document.getElementById('stat-totalAgents').textContent    = data.totalAgents    ?? '0';
+        document.getElementById('stat-activeListings').textContent = data.activeListings ?? '0';
+        document.getElementById('stat-totalProposals').textContent = data.totalProposals ?? '0';
+        const rating = data.avgRating != null ? parseFloat(data.avgRating).toFixed(1) : '—';
+        document.getElementById('stat-avgRating').textContent = rating;
+    }
+
+    function renderPerformanceTable(agents) {
+        const tbody = document.getElementById('performance-tbody');
+        if (!agents.length) {
+            tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><div class="empty-icon">📊</div><p>No agent data yet.</p></div></td></tr>`;
+            return;
+        }
+        tbody.innerHTML = agents.map(a => `
+            <tr>
+                <td><strong>${escHtml(a.name || 'Unknown')}</strong></td>
+                <td>${a.listingCount ?? 0}</td>
+                <td>${a.proposalCount ?? 0}</td>
+                <td>${a.avgResponseTime || '—'}</td>
+                <td>
+                    <span class="rating-stars">${starsHtml(a.avgRating)}</span>
+                    <span style="font-size:0.85rem;color:#777;margin-left:0.25rem;">${a.avgRating ? parseFloat(a.avgRating).toFixed(1) : '—'}</span>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    // ── Team ──────────────────────────────────────────────
+    async function loadTeam() {
+        agentsLoaded = true;
+        const grid = document.getElementById('agents-grid');
+        if (companyData && companyData.members) {
+            renderAgentCards(companyData.members);
+            return;
+        }
+        grid.innerHTML = '<div style="grid-column:1/-1"><div class="spinner"></div></div>';
+        try {
+            const res = await fetch(`${API_BASE_URL}/company`, { credentials: 'include' });
+            if (res.ok) {
+                companyData = await res.json();
+                renderAgentCards(companyData.members || []);
+            } else {
+                grid.innerHTML = '<div style="grid-column:1/-1" class="empty-state"><p>Failed to load agents.</p></div>';
+            }
+        } catch (e) {
+            grid.innerHTML = '<div style="grid-column:1/-1" class="empty-state"><p>Failed to load agents.</p></div>';
+        }
+    }
+
+    function renderAgentCards(members) {
+        const grid = document.getElementById('agents-grid');
+        if (!members.length) {
+            grid.innerHTML = `<div style="grid-column:1/-1"><div class="empty-state"><div class="empty-icon">👥</div><p>No agents yet. Add your first agent below.</p></div></div>`;
+            return;
+        }
+        grid.innerHTML = members.map(m => {
+            const name = m.full_name || m.name || m.email || 'Agent';
+            const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+            const joined = m.created_at ? new Date(m.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short' }) : '';
+            const sub = m.subscription_plan || m.plan || '';
+            return `
+                <div class="agent-card" id="agent-card-${m.id}">
+                    <div class="agent-avatar">${escHtml(initials)}</div>
+                    <div class="agent-info">
+                        <div class="agent-name">${escHtml(name)}</div>
+                        <div class="agent-email">${escHtml(m.email || '')}</div>
+                        <div class="agent-meta">${joined ? 'Joined ' + joined : ''}${sub ? (joined ? ' · ' : '') + sub : ''}</div>
+                    </div>
+                    <button class="btn btn-danger btn-sm" onclick="removeAgent('${m.id}', this)">Remove</button>
+                </div>
+            `;
+        }).join('');
+    }
+
+    async function addAgent(e) {
+        e.preventDefault();
+        const email   = document.getElementById('agent-email').value.trim();
+        const zipCode = document.getElementById('agent-zip').value.trim();
+        if (!email || !zipCode) return;
+
+        const btn = document.getElementById('add-agent-btn');
+        btn.disabled = true;
+        btn.textContent = 'Adding…';
+
+        try {
+            const res = await fetch(`${API_BASE_URL}/company/agents`, {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, zipCode })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                showToast('Agent added successfully!', 'success');
+                document.getElementById('add-agent-form').reset();
+                agentsLoaded = false;
+                companyData = null;
+                loadTeam();
+                loadOverview(); // refresh stats
+            } else {
+                showToast(data.message || data.error || 'Failed to add agent.', 'error');
+            }
+        } catch (e) {
+            showToast('Network error. Please try again.', 'error');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Add Agent';
+        }
+    }
+
+    async function removeAgent(userId, btn) {
+        if (!confirm('Remove this agent from your company?')) return;
+        btn.disabled = true;
+        btn.textContent = '…';
+        try {
+            const res = await fetch(`${API_BASE_URL}/company/agents/${userId}`, {
+                method: 'DELETE',
+                credentials: 'include'
+            });
+            if (res.ok) {
+                showToast('Agent removed.', 'success');
+                document.getElementById(`agent-card-${userId}`)?.remove();
+                agentsLoaded = false;
+                companyData = null;
+                loadOverview();
+            } else {
+                const data = await res.json().catch(() => ({}));
+                showToast(data.message || 'Failed to remove agent.', 'error');
+                btn.disabled = false;
+                btn.textContent = 'Remove';
+            }
+        } catch (e) {
+            showToast('Network error.', 'error');
+            btn.disabled = false;
+            btn.textContent = 'Remove';
+        }
+    }
+
+    // ── Locations ─────────────────────────────────────────
+    async function loadLocations() {
+        locationsLoaded = true;
+        const list = document.getElementById('locations-list');
+        if (companyData && companyData.locations) {
+            renderLocations(companyData.locations);
+            return;
+        }
+        list.innerHTML = '<div class="spinner"></div>';
+        try {
+            const res = await fetch(`${API_BASE_URL}/company`, { credentials: 'include' });
+            if (res.ok) {
+                companyData = await res.json();
+                renderLocations(companyData.locations || []);
+            } else {
+                list.innerHTML = '<div class="empty-state"><p>Failed to load locations.</p></div>';
+            }
+        } catch (e) {
+            list.innerHTML = '<div class="empty-state"><p>Failed to load locations.</p></div>';
+        }
+    }
+
+    function renderLocations(locations) {
+        const list = document.getElementById('locations-list');
+        if (!locations.length) {
+            list.innerHTML = `<div class="empty-state"><div class="empty-icon">📍</div><p>No service locations added yet.</p></div>`;
+            return;
+        }
+        list.innerHTML = locations.map(loc => `
+            <div class="location-item" id="loc-item-${loc.id}">
+                <div>
+                    <div class="location-label">${escHtml(loc.label || loc.name || 'Unnamed')}</div>
+                    <div class="location-zip">ZIP: ${escHtml(loc.zip_code || loc.zipCode || loc.zip || '—')}</div>
+                </div>
+                <button class="btn btn-danger btn-sm" onclick="removeLocation('${loc.id}', this)">Remove</button>
+            </div>
+        `).join('');
+    }
+
+    async function addLocation(e) {
+        e.preventDefault();
+        const label = document.getElementById('location-label').value.trim();
+        const zip   = document.getElementById('location-zip').value.trim();
+        if (!label || !zip) return;
+
+        const btn = document.getElementById('add-location-btn');
+        btn.disabled = true;
+        btn.textContent = 'Adding…';
+
+        try {
+            const res = await fetch(`${API_BASE_URL}/company/locations`, {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ label, zipCode: zip })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                showToast('Location added!', 'success');
+                document.getElementById('add-location-form').reset();
+                locationsLoaded = false;
+                if (companyData) companyData.locations = null;
+                loadLocations();
+            } else {
+                showToast(data.message || data.error || 'Failed to add location.', 'error');
+            }
+        } catch (e) {
+            showToast('Network error.', 'error');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Add Location';
+        }
+    }
+
+    async function removeLocation(locationId, btn) {
+        if (!confirm('Remove this service location?')) return;
+        btn.disabled = true;
+        btn.textContent = '…';
+        try {
+            const res = await fetch(`${API_BASE_URL}/company/locations/${locationId}`, {
+                method: 'DELETE',
+                credentials: 'include'
+            });
+            if (res.ok) {
+                showToast('Location removed.', 'success');
+                document.getElementById(`loc-item-${locationId}`)?.remove();
+                if (companyData) companyData.locations = null;
+            } else {
+                const data = await res.json().catch(() => ({}));
+                showToast(data.message || 'Failed to remove location.', 'error');
+                btn.disabled = false;
+                btn.textContent = 'Remove';
+            }
+        } catch (e) {
+            showToast('Network error.', 'error');
+            btn.disabled = false;
+            btn.textContent = 'Remove';
+        }
+    }
+
+    // ── Billing ───────────────────────────────────────────
+    function renderBilling() {
+        const plan = (companyData?.company?.plan || currentUser?.subscription_plan || 'basic').toLowerCase();
+        const planLabel = plan.charAt(0).toUpperCase() + plan.slice(1);
+        document.getElementById('billing-plan-name').innerHTML =
+            `<span class="plan-badge ${plan}">${planLabel}</span>`;
+
+        // Highlight current plan card
+        ['basic', 'professional', 'firm'].forEach(p => {
+            const card = document.getElementById(`plan-${p}`);
+            if (!card) return;
+            card.classList.toggle('current-plan', p === plan);
+            const existingBadge = card.querySelector('.plan-badge-top');
+            if (existingBadge) existingBadge.remove();
+            if (p === plan) {
+                const badge = document.createElement('div');
+                badge.className = 'plan-badge-top';
+                badge.textContent = 'Current Plan';
+                card.prepend(badge);
+            } else if (p === 'professional') {
+                const badge = document.createElement('div');
+                badge.className = 'plan-badge-top popular-badge';
+                badge.textContent = 'Popular';
+                card.prepend(badge);
+            }
+        });
+    }
+
+    async function manageSubscription() {
+        const btn = event.target;
+        btn.disabled = true;
+        btn.textContent = 'Loading…';
+        try {
+            const res = await fetch(`${API_BASE_URL}/billing/portal`, {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            const data = await res.json();
+            if (res.ok && data.url) {
+                window.location.href = data.url;
+            } else {
+                showToast(data.message || 'Could not open billing portal.', 'error');
+                btn.disabled = false;
+                btn.textContent = 'Manage Subscription';
+            }
+        } catch (e) {
+            showToast('Network error.', 'error');
+            btn.disabled = false;
+            btn.textContent = 'Manage Subscription';
+        }
+    }
+
+    async function upgradePlan(plan) {
+        try {
+            const res = await fetch(`${API_BASE_URL}/stripe/checkout`, {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ plan })
+            });
+            const data = await res.json();
+            if (res.ok && data.url) {
+                window.location.href = data.url;
+            } else {
+                showToast(data.message || 'Failed to start checkout.', 'error');
+            }
+        } catch (e) {
+            showToast('Network error.', 'error');
+        }
+    }
+
+    // ── Utilities ─────────────────────────────────────────
+    function escHtml(str) {
+        if (str == null) return '';
+        return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function starsHtml(rating) {
+        if (rating == null) return '—';
+        const r = Math.round(parseFloat(rating));
+        return '★'.repeat(Math.max(0, Math.min(5, r))) + '☆'.repeat(Math.max(0, 5 - r));
+    }
+
+    let toastTimer = null;
+    function showToast(msg, type = 'success') {
+        const el = document.getElementById('toast');
+        el.textContent = msg;
+        el.className = `toast ${type} show`;
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => { el.classList.remove('show'); }, 3500);
+    }
+
+    // ── Init ──────────────────────────────────────────────
+    (async () => {
+        await checkAuth();
+        loadOverview();
+    })();
+</script>
+</body>
+</html>
