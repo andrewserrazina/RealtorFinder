@@ -1260,7 +1260,8 @@
     async function loadUsers() {
         try {
             const res = await fetch('/api/admin/users', { credentials: 'include' });
-            usersData = await res.json();
+            const data = await res.json();
+            usersData = Array.isArray(data) ? data : (data.users || []);
             renderUsers();
         } catch (err) {
             document.getElementById('users-tbody').innerHTML =
@@ -1397,7 +1398,8 @@
     async function loadListings() {
         try {
             const res = await fetch('/api/admin/listings', { credentials: 'include' });
-            listingsData = await res.json();
+            const data = await res.json();
+            listingsData = Array.isArray(data) ? data : (data.listings || []);
             renderListings();
         } catch (err) {
             document.getElementById('listings-tbody').innerHTML =
