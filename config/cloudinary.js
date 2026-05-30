@@ -48,8 +48,31 @@ async function uploadToCloudinary(buffer) {
     });
 }
 
-module.exports = { 
+const uploadDoc = multer({
+    storage,
+    limits: { fileSize: 10 * 1024 * 1024 },
+    fileFilter: (req, file, cb) => {
+        const allowed = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+        if (allowed.includes(file.mimetype)) cb(null, true);
+        else cb(new Error('Only JPG, PNG, WebP, or PDF files are allowed'), false);
+    }
+});
+
+async function uploadToCloudinaryDoc(buffer, mimetype) {
+    const isPdf = mimetype === 'application/pdf';
+    return new Promise((resolve, reject) => {
+        const opts = { folder: 'realtorfinder/docs', resource_type: isPdf ? 'raw' : 'image' };
+        cloudinary.uploader.upload_stream(opts, (error, result) => {
+            if (error) reject(error);
+            else resolve(result);
+        }).end(buffer);
+    });
+}
+
+module.exports = {
     cloudinary,
-    upload, 
-    uploadToCloudinary 
+    upload,
+    uploadDoc,
+    uploadToCloudinary,
+    uploadToCloudinaryDoc
 };

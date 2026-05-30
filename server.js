@@ -9,7 +9,7 @@ require('dotenv').config();
 const https = require('https');
 const crypto = require('crypto');
 const bcrypt = require('bcrypt');
-const { upload, uploadToCloudinary } = require('./config/cloudinary');
+const { upload, uploadDoc, uploadToCloudinary, uploadToCloudinaryDoc } = require('./config/cloudinary');
 const stripe = process.env.STRIPE_SECRET_KEY ? require('stripe')(process.env.STRIPE_SECRET_KEY) : null;
 
 const { db, pool } = require('./db');
@@ -225,6 +225,15 @@ app.post('/api/auth/signup', authLimiter, async (req, res) => {
 
         if (password.length < 8) {
             return res.status(400).json({ error: 'Password must be at least 8 characters' });
+        }
+
+        if (!/^\d{5}(-\d{4})?$/.test(zipCode)) {
+            return res.status(400).json({ error: 'ZIP code must be a 5-digit US ZIP (e.g. 90210)' });
+        }
+
+        const strongPassword = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+        if (!strongPassword.test(password)) {
+            return res.status(400).json({ error: 'Password must be at least 8 characters and include uppercase, lowercase, and a number' });
         }
 
         if (firstName.length > 100 || lastName.length > 100) {
@@ -465,6 +474,19 @@ app.post('/api/buyer-requests', auth.requireAuth, async (req, res) => {
     try {
         if (req.user.user_type !== 'buyer') return res.status(403).json({ error: 'Buyers only' });
         if (!req.session.emailVerified && !req.user.email_verified) return res.status(403).json({ error: 'Please verify your email address first. Check your inbox for a verification link.' });
+        const { property_type, target_areas, budget_min, budget_max, bedrooms } = req.body;
+        if (!property_type || !target_areas) {
+            return res.status(400).json({ error: 'property_type and target_areas are required' });
+        }
+        if (budget_min !== undefined && budget_min !== null && budget_min !== '') {
+            const bmin = parseFloat(budget_min);
+            if (isNaN(bmin) || bmin < 0) return res.status(400).json({ error: 'budget_min must be a non-negative number' });
+        }
+        if (budget_max !== undefined && budget_max !== null && budget_max !== '') {
+            const bmax = parseFloat(budget_max);
+            if (isNaN(bmax) || bmax < 0) return res.status(400).json({ error: 'budget_max must be a non-negative number' });
+            if (budget_min && parseFloat(budget_min) > bmax) return res.status(400).json({ error: 'budget_min cannot exceed budget_max' });
+        }
         const user = req.user;
         const data = {
             ...req.body,
@@ -1234,6 +1256,10 @@ app.get('/api/profile', auth.requireAuth, async (req, res) => {
 // Update user profile
 app.put('/api/profile', auth.requireAuth, async (req, res) => {
     try {
+        const { phone } = req.body;
+        if (phone && !/^[\d\s\-\+\(\)\.]{7,20}$/.test(phone)) {
+            return res.status(400).json({ error: 'Invalid phone number format' });
+        }
         const updated = await db.updateProfile(req.session.userId, req.body);
         res.json(updated);
     } catch (error) {
@@ -1316,7 +1342,7 @@ app.get('/api/profile/completeness', auth.requireAuth, async (req, res) => {
     try {
         if (req.user.user_type !== 'realtor') return res.status(403).json({ error: 'Realtors only' });
         const { rows } = await pool.query(
-            `SELECT profile_photo, bio, service_areas, license_number, brokerage FROM users WHERE id = $1`,
+            `SELECT profile_photo, bio, service_areas, license_number, brokerage, phone FROM users WHERE id = $1`,
             [req.session.userId]
         );
         if (!rows.length) return res.status(404).json({ error: 'User not found' });
@@ -1326,9 +1352,10 @@ app.get('/api/profile/completeness', auth.requireAuth, async (req, res) => {
             { label: 'has_bio', done: !!(p.bio && p.bio.trim().length > 20) },
             { label: 'has_service_areas', done: !!(p.service_areas && p.service_areas.trim()) },
             { label: 'has_license', done: !!p.license_number },
-            { label: 'has_brokerage', done: !!p.brokerage }
+            { label: 'has_brokerage', done: !!p.brokerage },
+            { label: 'has_phone', done: !!p.phone }
         ];
-        const score = (items.filter(i => i.done).length / 5) * 100;
+        const score = (items.filter(i => i.done).length / 6) * 100;
         res.json({ score, items });
     } catch (err) {
         console.error('Profile completeness error:', err);
@@ -1339,10 +1366,10 @@ app.get('/api/profile/completeness', auth.requireAuth, async (req, res) => {
 // ===== LICENSE VERIFICATION ROUTES =====
 
 // Upload license document
-app.post('/api/profile/license-doc', auth.requireAuth, uploadLimiter, upload.single('license_doc'), async (req, res) => {
+app.post('/api/profile/license-doc', auth.requireAuth, uploadLimiter, uploadDoc.single('license_doc'), async (req, res) => {
     try {
         if (!req.file) return res.status(400).json({ error: 'No file provided' });
-        const result = await uploadToCloudinary(req.file.buffer);
+        const result = await uploadToCloudinaryDoc(req.file.buffer, req.file.mimetype);
         await pool.query(
             `UPDATE users SET license_doc_url = $1, license_verified = FALSE, license_rejection_note = NULL WHERE id = $2`,
             [result.secure_url, req.session.userId]
@@ -1514,7 +1541,16 @@ app.get('/api/admin/reviews', requireAdmin, async (req, res) => {
 
 app.post('/api/admin/seed-cities', requireAdmin, async (req, res) => {
     const allCities = require('./cities');
-    const stateNames = { MA:'Massachusetts', CT:'Connecticut', RI:'Rhode Island', VT:'Vermont', NH:'New Hampshire', ME:'Maine' };
+    const stateNames = {
+        MA:'Massachusetts', CT:'Connecticut', RI:'Rhode Island', VT:'Vermont', NH:'New Hampshire', ME:'Maine',
+        NY:'New York', NJ:'New Jersey', PA:'Pennsylvania', MD:'Maryland', VA:'Virginia', DC:'District of Columbia',
+        FL:'Florida', GA:'Georgia', NC:'North Carolina', SC:'South Carolina', TN:'Tennessee', AL:'Alabama',
+        AR:'Arkansas', LA:'Louisiana', MS:'Mississippi', WV:'West Virginia', KY:'Kentucky', DE:'Delaware',
+        IL:'Illinois', OH:'Ohio', MI:'Michigan', WI:'Wisconsin', IN:'Indiana', MN:'Minnesota', MO:'Missouri',
+        IA:'Iowa', KS:'Kansas', NE:'Nebraska', ND:'North Dakota', SD:'South Dakota', OK:'Oklahoma',
+        TX:'Texas', CO:'Colorado', AZ:'Arizona', NV:'Nevada', WA:'Washington', OR:'Oregon', CA:'California',
+        UT:'Utah', ID:'Idaho', MT:'Montana', WY:'Wyoming', NM:'New Mexico', AK:'Alaska', HI:'Hawaii',
+    };
     let seeded = 0;
     for (const c of allCities) {
         try {
@@ -2115,6 +2151,26 @@ app.get('/locations/:stateCode', async (req, res, next) => {
         MO: { tagline: 'Where America meets — Kansas City energy and St. Louis heritage', desc: 'Missouri\'s real estate market offers buyers the benefits of two distinct major metros — Kansas City\'s emerging tech and startup scene, nationally recognized restaurant culture, and affordably priced suburbs on both sides of the state line, and St. Louis\'s historic architecture, world-class institutions like Washington University, and some of the most affordable luxury housing in the country in suburbs like Ladue, Town and Country, and Chesterfield.', highlights: ['Kansas City ranked among the top US metros for startups and tech job growth', 'St. Louis delivers world-class arts, healthcare, and education institutions at Midwest prices', 'Ladue and Town and Country offer elite St. Louis suburbs at prices unthinkable in comparable coastal markets', 'Lee\'s Summit and O\'Fallon provide accessible entry points into the KC and St. Louis markets respectively'], color: '#3a1a1a' },
         IN: { tagline: 'Carmel tops the rankings, Indianapolis anchors the Crossroads of America', desc: 'Indiana\'s real estate market is anchored by Indianapolis\'s consistent recognition as one of America\'s most livable major metros — a city of world-class sports, a growing tech and life sciences economy, and home prices that make it the most affordable major metro east of the Mississippi. Carmel and Fishers consistently rank among the best places to live in the country, while Fort Wayne and South Bend offer mid-sized city amenities at entry-level prices.', highlights: ['Carmel is regularly ranked the #1 city to live in Indiana and among the top 10 in the nation', 'Fishers is one of America\'s fastest-growing mid-sized cities by population and job growth', 'Indianapolis offers Big Ten city amenities — Colts, Pacers, IndyCar — at deeply affordable price points', 'Fort Wayne and South Bend provide manufacturing-anchored employment stability with accessible home prices'], color: '#1a2a3a' },
         WI: { tagline: 'Milwaukee\'s lakefront revival and Madison\'s perennial livability rankings', desc: 'Wisconsin\'s real estate market is powered by two distinct engines: Milwaukee\'s genuine urban revival, where neighborhoods like Bay View, Third Ward, and the East Side are attracting buyers from Chicago and Minneapolis with lakefront living at a fraction of comparable costs, and Madison\'s university-driven market that consistently ranks among the most livable mid-sized cities in the country. The Fox Valley and Green Bay offer buyers stability anchored by manufacturing and healthcare employment.', highlights: ['Milwaukee\'s lakefront neighborhoods deliver Chicago-comparable amenities at 40-50% of Chicago prices', 'Madison consistently ranks among the top 10 US cities for quality of life and livability', 'Mequon and Elm Grove deliver Milwaukee\'s most prestigious suburban addresses with shoreline access', 'Green Bay\'s Packers-anchored identity creates a uniquely stable and community-driven real estate market'], color: '#1a3a1a' },
+        CO: { tagline: 'Denver\'s mile-high lifestyle and the Rocky Mountain real estate boom', desc: 'Colorado has emerged as one of America\'s most desirable real estate destinations — a state where Denver\'s thriving technology and aerospace economy, Boulder\'s world-class university and outdoor culture, and Colorado Springs\'s military-anchored stability combine with a Rocky Mountain lifestyle that attracts buyers from across the country. No-income-tax reform discussions and a booming outdoor recreation economy keep Colorado at the top of domestic migration lists.', highlights: ['Denver ranked among the top 10 US metros for job growth and in-migration', 'Boulder delivers a world-class university market with consistent long-term appreciation', 'Colorado Springs is anchored by five major military installations for employment stability', 'Summit County ski towns (Breckenridge, Vail, Keystone) command the strongest mountain lifestyle premiums in the country'], color: '#1a3a5a' },
+        AL: { tagline: 'Huntsville\'s tech boom and Birmingham\'s healthcare economy anchor the Heart of Dixie', desc: 'Alabama\'s real estate market has been transformed by Huntsville\'s emergence as one of America\'s top aerospace and defense technology centers — a city that now rivals much larger metros for high-income job growth. Birmingham\'s UAB healthcare complex and financial sector, along with Gulf Coast communities like Gulf Shores and Orange Beach, give Alabama buyers remarkable range from tech-driven appreciation to affordable coastal lifestyle.', highlights: ['Huntsville is one of America\'s fastest-growing tech and aerospace metros', 'Birmingham\'s UAB is among the top 10 US research medical centers by funding', 'Gulf Shores and Orange Beach offer Gulf Coast lifestyle at prices far below comparable Florida communities', 'Auburn and Tuscaloosa provide university-driven markets with consistent long-term demand'], color: '#8b1a1a' },
+        AK: { tagline: 'America\'s last frontier — unique market, unmatched lifestyle', desc: 'Alaska\'s real estate market is defined by its extraordinary geography and resource-driven economy. Anchorage serves as the state\'s commercial hub, with a diverse economy anchored by oil and gas, federal government, military, and healthcare. Low property taxes, no state income or sales tax, and the annual Permanent Fund Dividend make Alaska uniquely attractive for buyers seeking a truly differentiated lifestyle.', highlights: ['No state income tax or sales tax — plus an annual Permanent Fund Dividend for residents', 'Anchorage delivers urban amenities with immediate access to world-class wilderness', 'Military installations provide stable federal employment across Anchorage and Fairbanks', 'Eagle River and the Mat-Su Valley offer Anchorage access at meaningful price discounts'], color: '#1a2a3a' },
+        AR: { tagline: 'Bentonville\'s Walmart economy and the Natural State\'s rising profile', desc: 'Arkansas\'s real estate market has gained national attention thanks to Bentonville\'s transformation into a world-class arts and cycling destination anchored by Walmart\'s global headquarters. Fayetteville consistently ranks among the South\'s most livable mid-sized cities, and the broader Northwest Arkansas corridor has become one of the fastest-growing regions in the country. Little Rock\'s government and healthcare economy provides stability across central Arkansas.', highlights: ['Northwest Arkansas (Bentonville/Fayetteville) is among the fastest-growing regions in the South', 'Walmart HQ drives world-class amenities and high-income employment in Benton County', 'Fayetteville and the University of Arkansas create consistent buyer demand year-round', 'Little Rock offers major-city government and healthcare employment at deeply affordable home prices'], color: '#2a3a1a' },
+        DE: { tagline: 'Small state, outsized advantages — no sales tax and a prime Mid-Atlantic location', desc: 'Delaware punches above its weight as a real estate market — no sales tax, low property taxes, and a prime location between Philadelphia, Baltimore, and Washington DC give Delaware buyers remarkable value. Wilmington\'s corporate legal headquarters cluster makes it the registered home of more Fortune 500 companies than any other state, and Delaware\'s beaches in Rehoboth and Dewey draw Mid-Atlantic buyers seeking accessible coastal lifestyle.', highlights: ['No sales tax — a meaningful daily savings advantage over neighboring PA, MD, and NJ', 'Wilmington is the corporate legal capital of America — home to thousands of registered Fortune 500 entities', 'Rehoboth Beach and Lewes are among the most popular Mid-Atlantic vacation and second-home markets', 'Newark and the University of Delaware create consistent young professional and family buyer demand'], color: '#1a3a4a' },
+        HI: { tagline: 'Paradise has a price — and long-term owners have always been rewarded', desc: 'Hawaii\'s real estate market is driven by one of the world\'s most powerful lifestyle propositions — year-round tropical climate, world-class beaches, and a unique Polynesian culture that creates irreplaceable demand. Oahu\'s Honolulu metro dominates the state\'s market, but Maui\'s resort communities, the Big Island\'s diverse landscapes, and Kauai\'s lush seclusion each attract distinct buyer profiles from luxury resort investors to military families.', highlights: ['Oahu delivers urban amenities, military employment, and world-class beaches in a single market', 'Maui\'s resort communities command luxury premiums among the highest in the Pacific', 'Military presence on Oahu and the Big Island creates stable year-round demand', 'Hawaii\'s strict land use laws limit new construction — keeping existing home values exceptionally well-supported'], color: '#0a3a5a' },
+        ID: { tagline: 'Boise\'s breakout and the Gem State\'s remarkable rise', desc: 'Idaho has experienced one of the most dramatic real estate transformations in the nation — Boise emerged as one of America\'s fastest-appreciating markets as California and Pacific Northwest buyers discovered its combination of urban amenity, outdoor access, and home prices that still undercut comparable West Coast markets. Coeur d\'Alene\'s lake resort lifestyle and Idaho Falls\'s energy sector stability round out a state that has permanently joined the national conversation.', highlights: ['Boise ranked among the top 5 fastest-appreciating US markets from 2019 through 2023', 'Meridian and Eagle are among the fastest-growing cities in the Intermountain West', 'Coeur d\'Alene delivers Pacific Northwest lake resort lifestyle at prices below comparable Washington and Oregon markets', 'Sun Valley remains one of the West\'s premier ski and outdoor recreation real estate destinations'], color: '#1a3a2a' },
+        IA: { tagline: 'Des Moines tops the livability rankings and the Hawkeye State delivers on value', desc: 'Iowa\'s real estate market consistently earns recognition for value, livability, and quality of life — Des Moines has been ranked among America\'s best mid-sized cities for young professionals, retirees, and families alike, with a diverse economy that spans insurance, financial services, agriculture technology, and healthcare. Iowa City\'s University of Iowa and Cedar Rapids\'s technology corridor add employment anchors that sustain demand across eastern Iowa.', highlights: ['Des Moines ranks among America\'s top 10 mid-sized cities for quality of life and affordability', 'Iowa offers some of the most accessible home prices of any state in the Midwest', 'Iowa City and the University of Iowa create consistent graduate and professional buyer demand', 'Cedar Rapids and the Corridor attract technology and advanced manufacturing employers'], color: '#2a3a1a' },
+        KS: { tagline: 'Kansas City\'s Kansas side — and the Sunflower State\'s steady appreciation', desc: 'Kansas offers buyers one of the most underrated value propositions in the Midwest — Overland Park and Leawood deliver premier suburban living on the Kansas side of the Kansas City metro at prices that make comparable Johnson County communities a genuine national bargain, while Wichita\'s aviation and defense economy anchors south-central Kansas with stable employment.', highlights: ['Johnson County (Overland Park, Leawood) consistently ranks among the best places to live in the Midwest', 'Wichita is the air capital of the world — home to Boeing, Cessna, and Textron Aviation', 'No state income tax on Social Security — a draw for retiring Midwest buyers', 'Lawrence and the University of Kansas provide consistent university-driven market stability'], color: '#3a2a1a' },
+        KY: { tagline: 'Louisville\'s bourbon country sophistication and Lexington\'s horse farm prestige', desc: 'Kentucky\'s real estate market is anchored by two distinct metros: Louisville\'s remarkable urban revival, where NuLu, the Highlands, and Butchertown have emerged as nationally recognized neighborhoods with strong appreciation driven by bourbon tourism and a growing healthcare economy, and Lexington\'s horse country estate market that delivers genuine luxury living at prices that would be unthinkable in comparable East or West Coast markets.', highlights: ['Louisville\'s bourbon distillery corridor has become a national tourism and economic development model', 'Lexington horse farm estates offer genuine luxury acreage at prices far below comparable coastal markets', 'No inheritance tax and modest income taxes make Kentucky attractive for retirees from higher-tax states', 'Bowling Green and Northern Kentucky provide strong manufacturing employment and Cincinnati metro access'], color: '#2a1a3a' },
+        LA: { tagline: 'New Orleans culture, Baton Rouge government, and the Pelican State\'s unique market', desc: 'Louisiana\'s real estate market is shaped by its extraordinary cultural geography — New Orleans delivers a lifestyle found nowhere else in the world, with historic neighborhoods like the Garden District and Uptown offering architectural grandeur at prices far below comparable historic districts in the Northeast, while Baton Rouge\'s government and petrochemical economy and Shreveport\'s emerging tech scene round out the state.', highlights: ['New Orleans Garden District and Uptown offer historic architecture at prices well below comparable Northeast markets', 'Baton Rouge is anchored by state government, LSU, and major petrochemical employers', 'No state income tax on Social Security — an advantage for retiring Southerners', 'Louisiana\'s unique architecture and culture create irreplaceable real estate character'], color: '#3a1a2a' },
+        MS: { tagline: 'The Magnolia State — Gulf Coast beauty and Deep South affordability', desc: 'Mississippi offers some of the most accessible home prices in the nation combined with the Gulf Coast lifestyle of Biloxi and Gulfport, the college-town energy of Oxford and Starkville, and Jackson\'s government and healthcare employment base. For buyers seeking maximum space and value in the South, Mississippi delivers entry-level prices that remain exceptional even by regional standards.', highlights: ['Mississippi offers the most affordable home prices of any state in the Southeast', 'Biloxi and the Gulf Coast provide casino resort employment and coastal lifestyle at accessible prices', 'Oxford and Ole Miss create a nationally recognized college town with strong lifestyle buyer demand', 'Ridgeland and Madison deliver Jackson metro access with top-rated schools'], color: '#1a3a2a' },
+        NE: { tagline: 'Omaha\'s quiet powerhouse and the Cornhusker State\'s steady market', desc: 'Nebraska\'s real estate market is anchored by Omaha — a city that Warren Buffett has called home for decades and that consistently delivers world-class insurance, financial services, and logistics employment with home prices that rank among the most accessible of any major Midwest metro. Lincoln\'s University of Nebraska adds academic stability, while western Nebraska\'s agricultural communities offer buyers genuine rural space at entry-level prices.', highlights: ['Omaha is home to Berkshire Hathaway and some of the nation\'s most respected insurance and financial employers', 'Omaha and Lincoln offer Big Ten city amenities at prices well below comparable Midwest markets', 'No estate tax — an advantage for wealth-building buyers and retirees', 'Papillion and Bellevue offer Omaha access with top-ranked Sarpy County schools'], color: '#2a3a1a' },
+        OK: { tagline: 'Oklahoma City\'s oil patch revival and Tulsa\'s art deco renaissance', desc: 'Oklahoma\'s real estate market offers buyers a remarkable combination of energy sector employment stability, nationally recognized arts communities, and home prices that remain among the most accessible of any state outside the Deep South. Oklahoma City\'s MAPS urban renewal projects have transformed downtown and adjacent neighborhoods, while Tulsa\'s Gathering Place and Guthrie Green have earned national recognition as models for mid-sized city revitalization.', highlights: ['Oklahoma City MAPS investments have transformed downtown and adjacent neighborhoods into national models', 'Tulsa\'s Gathering Place is among the most awarded urban parks in the nation', 'Energy sector employment provides stability but also cyclicality — diversification is underway', 'Edmond and Norman deliver Oklahoma City metro access with top-ranked suburban schools'], color: '#3a2a1a' },
+        UT: { tagline: 'The Greatest Snow on Earth — and one of America\'s fastest-growing economies', desc: 'Utah has emerged as one of America\'s most dynamic real estate markets, driven by Salt Lake City\'s tech corridor (nicknamed Silicon Slopes), an extraordinary outdoor recreation lifestyle anchored by world-class ski resorts, and a young, highly educated population that keeps housing demand consistently robust. No other state combines the employment growth of Utah\'s tech economy with the lifestyle appeal of Park City, Moab, and the Wasatch Front.', highlights: ['Silicon Slopes (Utah County and Salt Lake County) is among the fastest-growing tech corridors in the US', 'Park City delivers world-class ski resort lifestyle with convenient Salt Lake City airport access', 'Utah\'s young median age and high birth rate create sustained long-term housing demand', 'Provo-Orem ranked among the top metros in the country for tech job growth and startup activity'], color: '#8b3a1a' },
+        MT: { tagline: 'Big Sky country — Montana\'s remote work boom and recreational lifestyle', desc: 'Montana has experienced one of the most dramatic real estate transformations since 2020 — remote work has unlocked the state\'s extraordinary lifestyle proposition, and Bozeman has gone from college town to one of the most rapidly appreciating markets in the entire country. Missoula\'s university culture, Billings\'s energy sector stability, and the Flathead Valley\'s lake resort lifestyle each attract distinct buyer profiles to a state that has permanently emerged onto the national radar.', highlights: ['Bozeman is among the top 10 fastest-appreciating markets in the Western US since 2020', 'No sales tax — a meaningful advantage in a state where outdoor gear and vehicles cost significant sums', 'Remote work has permanently expanded Montana\'s buyer pool beyond retirees and outdoor enthusiasts', 'Flathead Valley (Whitefish, Kalispell) offers Glacier National Park access with growing luxury market demand'], color: '#1a2a3a' },
+        WY: { tagline: 'Jackson Hole prestige and Wyoming\'s unmatched tax environment', desc: 'Wyoming offers one of the most favorable tax environments in the nation — no income tax, no corporate tax, and no estate tax — making it a destination for wealth preservation alongside its extraordinary outdoor lifestyle. Jackson Hole\'s ski resort luxury market ranks among the most premium in North America, while Cheyenne\'s government stability and Casper\'s energy sector provide more accessible entry points into Wyoming real estate.', highlights: ['No income, corporate, or estate tax — Wyoming is among the top states for wealth preservation', 'Jackson Hole delivers one of North America\'s most premium ski resort real estate markets', 'Cheyenne is within 90 minutes of Denver with Wyoming\'s favorable tax environment', 'Wyoming\'s low population density ensures exceptional space and privacy at every price point'], color: '#2a3a4a' },
+        NM: { tagline: 'Santa Fe sophistication, Albuquerque affordability, and the Land of Enchantment\'s rise', desc: 'New Mexico\'s real estate market offers buyers a unique combination of cultural richness and relative affordability — Santa Fe\'s art market, adobe architecture, and world-class dining create a lifestyle destination that attracts buyers from both coasts, while Albuquerque\'s Kirtland Air Force Base, University of New Mexico, and growing film production industry (Breaking Bad country) provide diverse employment anchors at price points well below comparable lifestyle markets.', highlights: ['Santa Fe is among America\'s premier art market destinations, attracting buyers from both coasts', 'Albuquerque\'s film production industry has grown dramatically, generating creative economy employment', 'Kirtland Air Force Base provides stable federal defense employment in Albuquerque', 'Rio Rancho offers Albuquerque metro access at some of the most affordable prices in the Southwest'], color: '#8b2a1a' },
+        ND: { tagline: 'Fargo\'s growth and the Peace Garden State\'s energy boom', desc: 'North Dakota\'s real estate market is anchored by Fargo\'s consistent recognition as one of America\'s most livable small metros — a city of top-ranked schools, strong healthcare employment (Sanford Health, Essentia), and home prices that remain well below any comparable quality-of-life market in the country. The Bakken oil patch has transformed western North Dakota, and Bismarck\'s state capital stability rounds out a market that offers buyers exceptional value.', highlights: ['Fargo consistently ranks among America\'s most livable small cities for quality of life and affordability', 'No state income tax on oil royalties — a significant advantage in Bakken country', 'Strong healthcare employment anchored by Sanford Health and Essentia Health systems', 'Bismarck and Mandan offer state capital stability with accessible home prices'], color: '#1a2a3a' },
+        SD: { tagline: 'No income tax, Mount Rushmore, and a market built on stability', desc: 'South Dakota offers buyers one of the most straightforward value propositions in the nation — no state income tax, no state estate or inheritance tax, consistently low property taxes, and a stable economy anchored by agriculture, tourism, and Sioux Falls\'s growing financial and healthcare sectors. Rapid City provides a gateway to the Black Hills and Mount Rushmore with a lifestyle that combines Western heritage with modern amenities.', highlights: ['No state income, estate, or inheritance tax — among the most favorable tax environments in the nation', 'Sioux Falls is one of America\'s fastest-growing smaller cities driven by financial services and healthcare', 'Rapid City delivers Black Hills outdoor recreation lifestyle with accessible home prices', 'Strong agricultural land market provides investment stability across the state'], color: '#2a3a2a' },
     };
     const sd = stateData[stateCode] || { tagline: `Real estate markets across ${stateName}`, desc: `Find sellers and realtors across ${stateName} on RealtorFinder.`, highlights: [], color: '#0A2540' };
 
@@ -2378,7 +2434,7 @@ app.get('/api/listings/:id/public', async (req, res) => {
         const { rows } = await pool.query(
             `SELECT id, address, city, state, zip, price, zestimate, property_type,
                     bedrooms, bathrooms, sqft, description, image_urls, status, created_at
-             FROM listings WHERE id = $1 AND status != 'inactive'`,
+             FROM listings WHERE id = $1 AND status != 'inactive' AND deleted_at IS NULL`,
             [parseInt(req.params.id)]
         );
         if (!rows.length) return res.status(404).json({ error: 'Listing not found' });
@@ -2609,7 +2665,7 @@ app.get('/api/proposals/my', auth.requireAuth, async (req, res) => {
             `SELECT p.*, l.address, l.city, l.state, l.price
              FROM proposals p
              JOIN listings l ON l.id = p.listing_id
-             WHERE p.realtor_id = $1
+             WHERE p.realtor_id = $1 AND l.deleted_at IS NULL
              ORDER BY p.created_at DESC`,
             [req.session.userId]
         );
@@ -2741,9 +2797,10 @@ app.get('/api/reviews/:realtorId', async (req, res) => {
         const { rows } = await pool.query(
             `SELECT r.id, r.rating, r.comment, r.verified_sale, r.created_at,
                     u.first_name, u.last_name,
+                    u.first_name || ' ' || u.last_name AS reviewer_name,
                     l.address AS listing_address
              FROM reviews r
-             JOIN users u ON u.id = r.reviewer_id
+             LEFT JOIN users u ON u.id = r.reviewer_id
              LEFT JOIN listings l ON l.id = r.listing_id
              WHERE r.realtor_id = $1
              ORDER BY r.created_at DESC`,
@@ -3044,8 +3101,9 @@ app.get('/api/showings/my', auth.requireAuth, async (req, res) => {
              FROM showings s
              JOIN listings l ON l.id = s.listing_id
              JOIN users b ON b.id = s.buyer_id
-             WHERE l.user_id = $1
-                OR EXISTS (SELECT 1 FROM proposals p WHERE p.listing_id = l.id AND p.realtor_id = $1 AND p.status = 'accepted')
+             WHERE l.deleted_at IS NULL
+               AND (l.user_id = $1
+                OR EXISTS (SELECT 1 FROM proposals p WHERE p.listing_id = l.id AND p.realtor_id = $1 AND p.status = 'accepted'))
              ORDER BY s.created_at DESC`,
             [uid]
         );
@@ -3833,7 +3891,7 @@ app.get('/api/listings/share/:token', async (req, res) => {
                     u.id AS seller_id, u.first_name AS owner_first, u.last_name AS owner_last
              FROM listings l
              JOIN users u ON u.id = l.user_id
-             WHERE l.share_token = $1 AND l.status != 'inactive'`,
+             WHERE l.share_token = $1 AND l.status != 'inactive' AND l.deleted_at IS NULL`,
             [req.params.token]
         );
         if (!rows.length) return res.status(404).json({ error: 'Listing not found' });
