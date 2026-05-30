@@ -2779,11 +2779,11 @@ app.post('/api/reviews', auth.requireAuth, async (req, res) => {
             verifiedSale = vRows.length > 0;
         }
         const { rows } = await pool.query(
-            `INSERT INTO reviews (realtor_id, reviewer_id, listing_id, rating, comment, verified_sale)
-             VALUES ($1, $2, $3, $4, $5, $6)
-             ON CONFLICT (realtor_id, reviewer_id, listing_id) DO UPDATE SET rating=$4, comment=$5
+            `INSERT INTO realtor_reviews (realtor_id, seller_id, listing_id, rating, body)
+             VALUES ($1, $2, $3, $4, $5)
+             ON CONFLICT (seller_id, listing_id) DO UPDATE SET rating=$4, body=$5, created_at=NOW()
              RETURNING *`,
-            [realtor_id, req.session.userId, listing_id || null, rating, comment || null, verifiedSale]
+            [realtor_id, req.session.userId, listing_id || null, rating, comment || null]
         );
         res.status(201).json(rows[0]);
     } catch (error) {
@@ -2795,12 +2795,11 @@ app.post('/api/reviews', auth.requireAuth, async (req, res) => {
 app.get('/api/reviews/:realtorId', async (req, res) => {
     try {
         const { rows } = await pool.query(
-            `SELECT r.id, r.rating, r.comment, r.verified_sale, r.created_at,
-                    u.first_name, u.last_name,
+            `SELECT r.id, r.rating, r.body AS comment, r.created_at,
                     u.first_name || ' ' || u.last_name AS reviewer_name,
                     l.address AS listing_address
-             FROM reviews r
-             LEFT JOIN users u ON u.id = r.reviewer_id
+             FROM realtor_reviews r
+             LEFT JOIN users u ON u.id = r.seller_id
              LEFT JOIN listings l ON l.id = r.listing_id
              WHERE r.realtor_id = $1
              ORDER BY r.created_at DESC`,
@@ -3975,7 +3974,7 @@ app.get('/api/company/analytics', auth.requireAuth, async (req, res) => {
             const [listings, proposals, reviews] = await Promise.all([
                 pool.query(`SELECT COUNT(*) AS c FROM listings WHERE user_id=$1 AND status='active'`, [m.id]),
                 pool.query(`SELECT COUNT(*) AS c FROM proposals WHERE realtor_id=$1`, [m.id]),
-                pool.query(`SELECT AVG(rating)::numeric(3,1) AS avg FROM reviews WHERE realtor_id=$1`, [m.id]),
+                pool.query(`SELECT AVG(rating)::numeric(3,1) AS avg FROM realtor_reviews WHERE realtor_id=$1`, [m.id]),
             ]);
             return {
                 id: m.id,
