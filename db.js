@@ -826,11 +826,14 @@ const db = {
     },
 
     async getPublishedStates() {
+        // Deduplicate by state_code — prefer the longest state_name (full name over abbreviation)
         const result = await pool.query(
-            `SELECT state_code, state_name, COUNT(*) AS city_count
+            `SELECT state_code,
+                    (array_agg(state_name ORDER BY length(state_name) DESC))[1] AS state_name,
+                    COUNT(*) AS city_count
              FROM city_pages WHERE is_published = TRUE
-             GROUP BY state_code, state_name
-             ORDER BY state_name ASC`
+             GROUP BY state_code
+             ORDER BY (array_agg(state_name ORDER BY length(state_name) DESC))[1] ASC`
         );
         return result.rows;
     },
@@ -872,7 +875,7 @@ const db = {
                  description, neighborhoods, nearby, seller_hook, realtor_hook, is_published, updated_at)
              VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,NOW())
              ON CONFLICT (state_code, slug) DO UPDATE SET
-                name=EXCLUDED.name, county=EXCLUDED.county, zip=EXCLUDED.zip,
+                name=EXCLUDED.name, state_name=EXCLUDED.state_name, county=EXCLUDED.county, zip=EXCLUDED.zip,
                 population=EXCLUDED.population, median_price=EXCLUDED.median_price,
                 price_trend=EXCLUDED.price_trend, avg_dom=EXCLUDED.avg_dom,
                 description=EXCLUDED.description, neighborhoods=EXCLUDED.neighborhoods,
