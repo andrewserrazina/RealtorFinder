@@ -26,6 +26,8 @@ module.exports = [
   ...require('./cities/mi'),
   ...require('./cities/wi'),
   ...require('./cities/in'),
+  ...require('./cities/mn'),
+  ...require('./cities/mo'),
   // South Central
   ...require('./cities/tx'),
   // Mountain / West
@@ -33,6 +35,7 @@ module.exports = [
   ...require('./cities/az'),
   ...require('./cities/nv'),
   ...require('./cities/wa'),
+  ...require('./cities/or'),
   // Pacific
   ...require('./cities/ca'),
 ];

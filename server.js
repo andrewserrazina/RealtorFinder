@@ -260,7 +260,21 @@ app.post('/api/auth/signup', authLimiter, async (req, res) => {
                     [refCode]
                 );
                 if (refRows.length) {
-                    await pool.query(`UPDATE users SET referred_by = $1 WHERE id = $2`, [refRows[0].id, user.id]);
+                    const referrerId = refRows[0].id;
+                    await pool.query(`UPDATE users SET referred_by = $1 WHERE id = $2`, [referrerId, user.id]);
+                    // Notify referrer (non-blocking)
+                    pool.query(`SELECT email, first_name, last_name FROM users WHERE id = $1`, [referrerId])
+                        .then(async ({ rows: rr }) => {
+                            if (!rr.length) return;
+                            const { rows: countRows } = await pool.query(
+                                `SELECT COUNT(*) AS cnt FROM users WHERE referred_by = $1`, [referrerId]
+                            );
+                            const newCount = parseInt(countRows[0].cnt, 10);
+                            const newMemberName = `${user.first_name} ${user.last_name}`.trim();
+                            emailService.sendReferralSignup(rr[0].email, rr[0].first_name, newMemberName, newCount)
+                                .catch(e => console.error('Referral signup email failed:', e.message));
+                        })
+                        .catch(e => console.error('Referral notify query error:', e.message));
                 }
             } catch(e) { console.error('Referral attribution error:', e.message); }
         }
@@ -2739,13 +2753,41 @@ app.get('/api/referrals/my', auth.requireAuth, async (req, res) => {
             code = crypto.randomBytes(6).toString('hex');
             await pool.query(`UPDATE users SET referral_code = $1 WHERE id = $2`, [code, req.session.userId]);
         }
-        const countRes = await pool.query(`SELECT COUNT(*) AS cnt FROM users WHERE referred_by = $1`, [req.session.userId]);
+        const [countRes, referredRes] = await Promise.all([
+            pool.query(`SELECT COUNT(*) AS cnt FROM users WHERE referred_by = $1`, [req.session.userId]),
+            pool.query(
+                `SELECT first_name, last_name, user_type, subscription_plan, created_at
+                 FROM users WHERE referred_by = $1 ORDER BY created_at DESC LIMIT 50`,
+                [req.session.userId]
+            ),
+        ]);
         const referral_count = parseInt(countRes.rows[0].cnt);
+        const tier = referral_count >= 10 ? 'ambassador' : referral_count >= 5 ? 'top-referrer' : referral_count >= 3 ? 'connector' : referral_count >= 1 ? 'rising-star' : null;
         const referral_url = `${req.protocol}://${req.get('host')}/join?ref=${code}`;
-        res.json({ referral_code: code, referral_url, referral_count });
+        res.json({ referral_code: code, referral_url, referral_count, tier, referred_users: referredRes.rows });
     } catch (error) {
         console.error('GET /api/referrals/my error:', error);
         res.status(500).json({ error: 'Failed to fetch referral info' });
+    }
+});
+
+// Referral leaderboard (top 10 realtors by referral count)
+app.get('/api/referrals/leaderboard', async (req, res) => {
+    try {
+        const { rows } = await pool.query(`
+            SELECT u.first_name, u.last_name, u.profile_photo,
+                   COUNT(r.id) AS referral_count
+            FROM users u
+            JOIN users r ON r.referred_by = u.id
+            WHERE u.user_type = 'realtor'
+            GROUP BY u.id, u.first_name, u.last_name, u.profile_photo
+            ORDER BY referral_count DESC
+            LIMIT 10
+        `);
+        res.json(rows);
+    } catch (err) {
+        console.error('Leaderboard error:', err);
+        res.status(500).json({ error: 'Failed to load leaderboard' });
     }
 });
 
