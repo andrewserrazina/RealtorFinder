@@ -464,6 +464,7 @@ app.get('/api/buyer-requests/responses', auth.requireAuth, async (req, res) => {
 app.post('/api/buyer-requests', auth.requireAuth, async (req, res) => {
     try {
         if (req.user.user_type !== 'buyer') return res.status(403).json({ error: 'Buyers only' });
+        if (!req.session.emailVerified && !req.user.email_verified) return res.status(403).json({ error: 'Please verify your email address first. Check your inbox for a verification link.' });
         const user = req.user;
         const data = {
             ...req.body,
@@ -815,6 +816,7 @@ app.get('/api/listings/:id', async (req, res) => {
 // Create new listing (requires authentication)
 app.post('/api/listings', auth.requireAuth, async (req, res) => {
     try {
+        if (!req.session.emailVerified && !req.user.email_verified) return res.status(403).json({ error: 'Please verify your email address before creating a listing. Check your inbox for a verification link.' });
         const { address, price, type, bedrooms, bathrooms, sqft, description, ownerName, ownerEmail, ownerPhone, zestimate } = req.body;
         
         // Parse address into components (basic parsing - could be enhanced with address validation API)
@@ -2111,6 +2113,7 @@ app.get('/locations/:stateCode', async (req, res, next) => {
         MO: { tagline: 'Where America meets — Kansas City energy and St. Louis heritage', desc: 'Missouri\'s real estate market offers buyers the benefits of two distinct major metros — Kansas City\'s emerging tech and startup scene, nationally recognized restaurant culture, and affordably priced suburbs on both sides of the state line, and St. Louis\'s historic architecture, world-class institutions like Washington University, and some of the most affordable luxury housing in the country in suburbs like Ladue, Town and Country, and Chesterfield.', highlights: ['Kansas City ranked among the top US metros for startups and tech job growth', 'St. Louis delivers world-class arts, healthcare, and education institutions at Midwest prices', 'Ladue and Town and Country offer elite St. Louis suburbs at prices unthinkable in comparable coastal markets', 'Lee\'s Summit and O\'Fallon provide accessible entry points into the KC and St. Louis markets respectively'], color: '#3a1a1a' },
         IN: { tagline: 'Carmel tops the rankings, Indianapolis anchors the Crossroads of America', desc: 'Indiana\'s real estate market is anchored by Indianapolis\'s consistent recognition as one of America\'s most livable major metros — a city of world-class sports, a growing tech and life sciences economy, and home prices that make it the most affordable major metro east of the Mississippi. Carmel and Fishers consistently rank among the best places to live in the country, while Fort Wayne and South Bend offer mid-sized city amenities at entry-level prices.', highlights: ['Carmel is regularly ranked the #1 city to live in Indiana and among the top 10 in the nation', 'Fishers is one of America\'s fastest-growing mid-sized cities by population and job growth', 'Indianapolis offers Big Ten city amenities — Colts, Pacers, IndyCar — at deeply affordable price points', 'Fort Wayne and South Bend provide manufacturing-anchored employment stability with accessible home prices'], color: '#1a2a3a' },
         WI: { tagline: 'Milwaukee\'s lakefront revival and Madison\'s perennial livability rankings', desc: 'Wisconsin\'s real estate market is powered by two distinct engines: Milwaukee\'s genuine urban revival, where neighborhoods like Bay View, Third Ward, and the East Side are attracting buyers from Chicago and Minneapolis with lakefront living at a fraction of comparable costs, and Madison\'s university-driven market that consistently ranks among the most livable mid-sized cities in the country. The Fox Valley and Green Bay offer buyers stability anchored by manufacturing and healthcare employment.', highlights: ['Milwaukee\'s lakefront neighborhoods deliver Chicago-comparable amenities at 40-50% of Chicago prices', 'Madison consistently ranks among the top 10 US cities for quality of life and livability', 'Mequon and Elm Grove deliver Milwaukee\'s most prestigious suburban addresses with shoreline access', 'Green Bay\'s Packers-anchored identity creates a uniquely stable and community-driven real estate market'], color: '#1a3a1a' },
+    };
     const sd = stateData[stateCode] || { tagline: `Real estate markets across ${stateName}`, desc: `Find sellers and realtors across ${stateName} on RealtorFinder.`, highlights: [], color: '#0A2540' };
 
     const stateLd = JSON.stringify({
@@ -2560,6 +2563,7 @@ app.get('/api/saved-listings/ids', auth.requireAuth, async (req, res) => {
 app.post('/api/proposals', auth.requireAuth, async (req, res) => {
     try {
         if (req.user.user_type !== 'realtor') return res.status(403).json({ error: 'Realtors only' });
+        if (!req.session.emailVerified && !req.user.email_verified) return res.status(403).json({ error: 'Please verify your email address before submitting proposals. Check your inbox for a verification link.' });
         const { listing_id, commission_pct, cover_note, timeline } = req.body;
         if (!listing_id || commission_pct === undefined) return res.status(400).json({ error: 'listing_id and commission_pct are required' });
         const pct = parseFloat(commission_pct);
@@ -3240,9 +3244,25 @@ pool.query(`
 
 // ===== MESSAGING =====
 
-// Ensure messages table exists
-pool.query(`
-    CREATE TABLE IF NOT EXISTS messages (
+// ALTER TABLE migrations run at startup — collected here so they await before listen
+const _schemaMigrations = [
+    // Core column additions
+    `ALTER TABLE listings ADD COLUMN IF NOT EXISTS expiry_warning_sent BOOLEAN DEFAULT FALSE`,
+    `ALTER TABLE listings ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ`,
+    `ALTER TABLE listings ADD COLUMN IF NOT EXISTS share_token TEXT`,
+    `ALTER TABLE listings ADD COLUMN IF NOT EXISTS share_views INTEGER DEFAULT 0`,
+    // Fix price column: convert from text to NUMERIC so filtering doesn't need REGEXP_REPLACE
+    `DO $$ BEGIN
+        IF (SELECT data_type FROM information_schema.columns
+            WHERE table_name='listings' AND column_name='price') NOT IN ('numeric','integer','bigint','double precision')
+        THEN
+            ALTER TABLE listings ALTER COLUMN price
+                TYPE NUMERIC(12,2)
+                USING NULLIF(REGEXP_REPLACE(COALESCE(price::text,'0'), '[^0-9.]', '', 'g'), '')::NUMERIC(12,2);
+        END IF;
+    END $$`,
+    // Core tables
+    `CREATE TABLE IF NOT EXISTS messages (
         id SERIAL PRIMARY KEY,
         from_user_id INTEGER NOT NULL REFERENCES users(id),
         to_user_id INTEGER NOT NULL REFERENCES users(id),
@@ -3250,29 +3270,14 @@ pool.query(`
         body TEXT NOT NULL,
         read_at TIMESTAMPTZ,
         created_at TIMESTAMPTZ DEFAULT NOW()
-    )
-`).catch(err => console.error('messages table init error:', err.message));
-
-pool.query(`
-    CREATE TABLE IF NOT EXISTS realtor_response_times (
+    )`,
+    `CREATE TABLE IF NOT EXISTS realtor_response_times (
         id SERIAL PRIMARY KEY,
         realtor_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
         response_hours NUMERIC(6,2) NOT NULL,
         created_at TIMESTAMPTZ DEFAULT NOW()
-    )
-`).catch(err => console.error('realtor_response_times table init error:', err.message));
-
-// ALTER TABLE migrations run at startup — collected here so they await before listen
-const _schemaMigrations = [
-    `ALTER TABLE listings ADD COLUMN IF NOT EXISTS expiry_warning_sent BOOLEAN DEFAULT FALSE`,
-    `ALTER TABLE listings ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ`,
-    `ALTER TABLE listings ADD COLUMN IF NOT EXISTS share_token TEXT`,
-    `ALTER TABLE listings ADD COLUMN IF NOT EXISTS share_views INTEGER DEFAULT 0`,
-];
-
-// ===== PROPOSALS TABLE (Feature 1) =====
-pool.query(`
-    CREATE TABLE IF NOT EXISTS proposals (
+    )`,
+    `CREATE TABLE IF NOT EXISTS proposals (
         id SERIAL PRIMARY KEY,
         listing_id INTEGER NOT NULL REFERENCES listings(id),
         realtor_id INTEGER NOT NULL REFERENCES users(id),
@@ -3282,12 +3287,8 @@ pool.query(`
         status TEXT NOT NULL DEFAULT 'pending',
         created_at TIMESTAMPTZ DEFAULT NOW(),
         UNIQUE(listing_id, realtor_id)
-    )
-`).catch(err => console.error('proposals table init error:', err.message));
-
-// ===== REVIEWS TABLE (Feature 2) =====
-pool.query(`
-    CREATE TABLE IF NOT EXISTS reviews (
+    )`,
+    `CREATE TABLE IF NOT EXISTS reviews (
         id SERIAL PRIMARY KEY,
         realtor_id INTEGER NOT NULL REFERENCES users(id),
         reviewer_id INTEGER NOT NULL REFERENCES users(id),
@@ -3297,8 +3298,77 @@ pool.query(`
         verified_sale BOOLEAN DEFAULT FALSE,
         created_at TIMESTAMPTZ DEFAULT NOW(),
         UNIQUE(realtor_id, reviewer_id, listing_id)
-    )
-`).catch(err => console.error('reviews table init error:', err.message));
+    )`,
+    `CREATE TABLE IF NOT EXISTS notifications (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id),
+        type VARCHAR(50) NOT NULL,
+        title VARCHAR(255) NOT NULL,
+        body TEXT,
+        link VARCHAR(500),
+        read_at TIMESTAMPTZ,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+    )`,
+    `CREATE TABLE IF NOT EXISTS drip_emails (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        sequence_step INTEGER NOT NULL DEFAULT 1,
+        sent_at TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE(user_id, sequence_step)
+    )`,
+    `CREATE TABLE IF NOT EXISTS buyer_request_responses (
+        id SERIAL PRIMARY KEY,
+        buyer_request_id INTEGER NOT NULL REFERENCES buyer_requests(id) ON DELETE CASCADE,
+        realtor_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        message TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE(buyer_request_id, realtor_user_id)
+    )`,
+    `CREATE TABLE IF NOT EXISTS lead_purchases (
+        id SERIAL PRIMARY KEY,
+        realtor_id INTEGER NOT NULL REFERENCES users(id),
+        buyer_request_id INTEGER NOT NULL REFERENCES buyer_requests(id),
+        stripe_payment_intent_id TEXT,
+        amount_cents INTEGER NOT NULL DEFAULT 999,
+        purchased_at TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE(realtor_id, buyer_request_id)
+    )`,
+    `CREATE TABLE IF NOT EXISTS showings (
+        id SERIAL PRIMARY KEY,
+        listing_id INTEGER NOT NULL REFERENCES listings(id),
+        buyer_id INTEGER NOT NULL REFERENCES users(id),
+        requested_date DATE NOT NULL,
+        requested_time TEXT NOT NULL,
+        message TEXT,
+        status TEXT NOT NULL DEFAULT 'pending',
+        confirmed_by INTEGER REFERENCES users(id),
+        confirmed_at TIMESTAMPTZ,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+    )`,
+    `CREATE TABLE IF NOT EXISTS profile_views (
+        id SERIAL PRIMARY KEY,
+        realtor_id INTEGER NOT NULL REFERENCES users(id),
+        viewer_ip TEXT,
+        viewed_at TIMESTAMPTZ DEFAULT NOW()
+    )`,
+    `CREATE TABLE IF NOT EXISTS saved_realtors (
+        id SERIAL PRIMARY KEY,
+        buyer_id INTEGER NOT NULL REFERENCES users(id),
+        realtor_id INTEGER NOT NULL REFERENCES users(id),
+        saved_at TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE(buyer_id, realtor_id)
+    )`,
+    // Indexes for performance
+    `CREATE INDEX IF NOT EXISTS idx_proposals_realtor ON proposals(realtor_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_proposals_listing ON proposals(listing_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_messages_to_unread ON messages(to_user_id) WHERE read_at IS NULL`,
+    `CREATE INDEX IF NOT EXISTS idx_messages_convo ON messages(from_user_id, to_user_id, created_at DESC)`,
+    `CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, created_at DESC)`,
+    `CREATE INDEX IF NOT EXISTS idx_notifications_unread ON notifications(user_id) WHERE read_at IS NULL`,
+    `CREATE INDEX IF NOT EXISTS idx_profile_views_realtor ON profile_views(realtor_id, viewed_at DESC)`,
+    `CREATE INDEX IF NOT EXISTS idx_showings_listing ON showings(listing_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_drip_emails_user ON drip_emails(user_id, sequence_step)`,
+];
 
 // ===== REFERRAL COLUMNS (Feature 4) =====
 _schemaMigrations.push(
@@ -3474,20 +3544,6 @@ app.get('/api/messages/unread-count', auth.requireAuth, async (req, res) => {
 });
 
 // ===== NOTIFICATIONS =====
-
-// Ensure notifications table exists
-pool.query(`
-    CREATE TABLE IF NOT EXISTS notifications (
-        id SERIAL PRIMARY KEY,
-        user_id INTEGER NOT NULL REFERENCES users(id),
-        type VARCHAR(50) NOT NULL,
-        title VARCHAR(255) NOT NULL,
-        body TEXT,
-        link VARCHAR(500),
-        read_at TIMESTAMPTZ,
-        created_at TIMESTAMPTZ DEFAULT NOW()
-    )
-`).catch(err => console.error('notifications table init error:', err.message));
 
 // Get notifications for current user
 app.get('/api/notifications', auth.requireAuth, async (req, res) => {
@@ -3922,7 +3978,7 @@ app.get('/listing/:id', async (req, res) => {
             },
             ...(l.bedrooms ? { numberOfRooms: l.bedrooms } : {}),
             ...(l.sqft ? { floorSize: { '@type': 'QuantitativeValue', value: l.sqft, unitCode: 'FTK' } } : {}),
-            ...(l.price ? { offers: { '@type': 'Offer', price: String(l.price).replace(/[^0-9]/g, ''), priceCurrency: 'USD' } } : {}),
+            ...(l.price ? { offers: { '@type': 'Offer', price: parseFloat(l.price), priceCurrency: 'USD' } } : {}),
             ...(l.latitude && l.longitude ? { geo: { '@type': 'GeoCoordinates', latitude: l.latitude, longitude: l.longitude } } : {})
         };
 
@@ -4163,17 +4219,6 @@ _schemaMigrations.push(
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS unsubscribe_token TEXT UNIQUE`
 );
 
-// Create drip_emails table if not exists
-pool.query(`
-    CREATE TABLE IF NOT EXISTS drip_emails (
-      id SERIAL PRIMARY KEY,
-      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      sequence_step INTEGER NOT NULL DEFAULT 1,
-      sent_at TIMESTAMPTZ DEFAULT NOW(),
-      UNIQUE(user_id, sequence_step)
-    )
-`).catch(err => console.error('drip_emails table creation error:', err.message));
-
 // Drip email onboarding job — sends 3-step sequences to sellers, realtors, and buyers
 async function ensureUnsubscribeToken(userId) {
     const token = require('crypto').randomBytes(16).toString('hex');
@@ -4256,67 +4301,6 @@ async function runDripEmailJob() {
 // Run every 6 hours
 runDripEmailJob();
 setInterval(runDripEmailJob, 6 * 60 * 60 * 1000).unref();
-
-// ===== DB TABLES: NEW FEATURES =====
-
-pool.query(`
-    CREATE TABLE IF NOT EXISTS buyer_request_responses (
-      id SERIAL PRIMARY KEY,
-      buyer_request_id INTEGER NOT NULL REFERENCES buyer_requests(id) ON DELETE CASCADE,
-      realtor_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      message TEXT,
-      created_at TIMESTAMPTZ DEFAULT NOW(),
-      UNIQUE(buyer_request_id, realtor_user_id)
-    )
-`).catch(() => {});
-
-pool.query(`
-    CREATE TABLE IF NOT EXISTS lead_purchases (
-      id SERIAL PRIMARY KEY,
-      realtor_id INTEGER NOT NULL REFERENCES users(id),
-      buyer_request_id INTEGER NOT NULL REFERENCES buyer_requests(id),
-      stripe_payment_intent_id TEXT,
-      amount_cents INTEGER NOT NULL DEFAULT 999,
-      purchased_at TIMESTAMPTZ DEFAULT NOW(),
-      UNIQUE(realtor_id, buyer_request_id)
-    )
-`).catch(err => console.error('lead_purchases table init error:', err.message));
-
-pool.query(`
-    CREATE TABLE IF NOT EXISTS showings (
-      id SERIAL PRIMARY KEY,
-      listing_id INTEGER NOT NULL REFERENCES listings(id),
-      buyer_id INTEGER NOT NULL REFERENCES users(id),
-      requested_date DATE NOT NULL,
-      requested_time TEXT NOT NULL,
-      message TEXT,
-      status TEXT NOT NULL DEFAULT 'pending',
-      confirmed_by INTEGER REFERENCES users(id),
-      confirmed_at TIMESTAMPTZ,
-      created_at TIMESTAMPTZ DEFAULT NOW()
-    )
-`).catch(err => console.error('showings table init error:', err.message));
-
-pool.query(`
-    CREATE TABLE IF NOT EXISTS profile_views (
-      id SERIAL PRIMARY KEY,
-      realtor_id INTEGER NOT NULL REFERENCES users(id),
-      viewer_ip TEXT,
-      viewed_at TIMESTAMPTZ DEFAULT NOW()
-    )
-`).catch(err => console.error('profile_views table init error:', err.message));
-
-pool.query(`CREATE INDEX IF NOT EXISTS idx_profile_views_realtor ON profile_views(realtor_id)`).catch(() => {});
-
-pool.query(`
-    CREATE TABLE IF NOT EXISTS saved_realtors (
-      id SERIAL PRIMARY KEY,
-      buyer_id INTEGER NOT NULL REFERENCES users(id),
-      realtor_id INTEGER NOT NULL REFERENCES users(id),
-      saved_at TIMESTAMPTZ DEFAULT NOW(),
-      UNIQUE(buyer_id, realtor_id)
-    )
-`).catch(err => console.error('saved_realtors table init error:', err.message));
 
 // Run all schema migrations then start listening
 async function startServer() {
