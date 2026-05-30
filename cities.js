@@ -24,6 +24,8 @@ module.exports = [
   ...require('./cities/il'),
   ...require('./cities/oh'),
   ...require('./cities/mi'),
+  ...require('./cities/wi'),
+  ...require('./cities/in'),
   // South Central
   ...require('./cities/tx'),
   // Mountain / West
