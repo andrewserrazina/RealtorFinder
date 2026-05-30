@@ -418,6 +418,38 @@
         } catch { errEl.textContent = 'Network error. Please try again.'; errEl.style.display = 'block'; }
     }
 
+    async function sendContactMessage() {
+        const msg = document.getElementById('contactMsg').value.trim();
+        const statusEl = document.getElementById('contactStatus');
+        if (!msg) { statusEl.textContent = 'Please enter a message.'; statusEl.style.color = '#ef4444'; return; }
+        try {
+            const authRes = await fetch('/api/auth/me', { credentials: 'include' });
+            if (!authRes.ok) {
+                statusEl.innerHTML = '<a href="/login" style="color:#FF6B35;">Log in</a> to send a message.';
+                statusEl.style.color = '#666';
+                return;
+            }
+            const res = await fetch('/api/messages', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ to_user_id: realtorId, body: msg }),
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                statusEl.textContent = data.error || 'Failed to send message.';
+                statusEl.style.color = '#ef4444';
+                return;
+            }
+            document.getElementById('contactMsg').value = '';
+            statusEl.textContent = 'Message sent!';
+            statusEl.style.color = '#10B981';
+        } catch {
+            statusEl.textContent = 'Failed to send message. Try again.';
+            statusEl.style.color = '#ef4444';
+        }
+    }
+
     // Auto-scroll to review form if ?review=1
     function checkAutoReview() {
         const params = new URLSearchParams(window.location.search);
