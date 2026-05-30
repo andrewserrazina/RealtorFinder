@@ -208,20 +208,27 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="RealtorFinder">
+    <!-- Meta Pixel -->
+    <script>
+        !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
+        fbq('init', '1189752893170212');
+        fbq('track', 'PageView');
+    </script>
+    <noscript><img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=1189752893170212&ev=PageView&noscript=1"/></noscript>
 </head>
 <body>
     <a href="/" class="logo">Realtor<span>Finder</span></a>
 
     <div class="card">
         <div class="checkmark">✓</div>
-        <h1>You're on the List!</h1>
-        <p class="subtitle">Your account has been created. We're putting the finishing touches on RealtorFinder and will notify you the moment access opens.</p>
+        <h1 id="waitlistHeading">You're on the List!</h1>
+        <p class="subtitle" id="waitlistSubtitle">Your account has been created. We're reviewing applications and will notify you the moment your access is activated.</p>
 
-        <div class="highlight">
+        <div class="highlight" id="waitlistHighlight">
             <p><strong>What happens next:</strong> We'll email you at the address you registered with as soon as your account is activated. You'll be among the first to access the platform.</p>
         </div>
 
-        <div class="steps">
+        <div class="steps" id="waitlistSteps">
             <div class="step">
                 <div class="step-num">1</div>
                 <div class="step-text"><strong>Check your email</strong> — we sent a verification link to confirm your address.</div>
@@ -232,17 +239,38 @@
             </div>
             <div class="step">
                 <div class="step-num">3</div>
-                <div class="step-text"><strong>Start using RealtorFinder</strong> — connect with sellers or realtors across 659 markets.</div>
+                <div class="step-text"><strong>Start using RealtorFinder</strong> — connect with motivated sellers across 832 markets.</div>
             </div>
         </div>
 
-        <div class="btn-group">
-            <a href="/" class="btn btn-primary">Back to Home</a>
+        <div class="btn-group" id="waitlistBtns">
+            <a href="/realtors" class="btn btn-primary" id="waitlistHomeBtn">Back to Realtors Page</a>
             <button class="btn btn-secondary" onclick="logout()">Log Out</button>
         </div>
     </div>
 
     <script>
+        // Customize for realtor signups
+        const urlType = new URLSearchParams(window.location.search).get('type');
+        if (urlType === 'realtor') {
+            document.getElementById('waitlistHeading').textContent = "You're In — Founding Spot Reserved!";
+            document.getElementById('waitlistSubtitle').textContent = "Your Founding Realtor account is under review. We approve agents personally to maintain quality — expect your access within 24 hours.";
+            document.getElementById('waitlistHighlight').innerHTML = `<p><strong>Your founding spot is held.</strong> Once approved, you'll have permanent Founding Realtor status — rate locked, badge displayed, and priority listing alerts. We'll email you the moment you're in.</p>`;
+            document.getElementById('waitlistSteps').innerHTML = `
+                <div class="step"><div class="step-num">1</div><div class="step-text"><strong>Verify your email</strong> — click the link we just sent you.</div></div>
+                <div class="step"><div class="step-num">2</div><div class="step-text"><strong>We review your application</strong> — typically within 24 hours, often same day.</div></div>
+                <div class="step"><div class="step-num">3</div><div class="step-text"><strong>Start browsing listings</strong> — submit your first proposal and win your next client.</div></div>`;
+            document.getElementById('waitlistHomeBtn').href = '/realtors';
+            document.getElementById('waitlistHomeBtn').textContent = 'Back to Realtors Page';
+
+            // Fire pixel CompleteRegistration for realtor
+            if (typeof fbq !== 'undefined') fbq('track', 'CompleteRegistration', { content_name: 'realtor', status: 'pending_approval' });
+        } else {
+            document.getElementById('waitlistHomeBtn').href = '/';
+            document.getElementById('waitlistHomeBtn').textContent = 'Back to Home';
+            if (typeof fbq !== 'undefined') fbq('track', 'CompleteRegistration', { content_name: 'seller', status: 'pending_approval' });
+        }
+
         async function logout() {
             try {
                 await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });

@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>For Realtors — RealtorFinder</title>
-    <meta name="description" content="Skip the cold calls. Sellers list their homes on RealtorFinder and you submit proposals. Win more listings by competing on merit.">
+    <title>For Realtors — Win More Listings | RealtorFinder</title>
+    <meta name="description" content="Stop cold calling. Home sellers post their listings on RealtorFinder and you submit proposals. Win quality listings by competing on merit across 832 markets.">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://realtorfinder.net/realtors">
     <meta property="og:title" content="For Realtors — RealtorFinder">
@@ -1406,14 +1406,6 @@
             .realtor-grid { grid-template-columns: 1fr; }
         }
     </style>
-<!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-BRGVVNKT65"></script>
-    <script>
-        window.dataLayer = window.dataLayer || [];
-        function gtag(){dataLayer.push(arguments);}
-        gtag('js', new Date());
-        gtag('config', 'G-BRGVVNKT65');
-    </script>
 <!-- Meta Pixel Code -->
     <script>
         !function(f,b,e,v,n,t,s)
@@ -1446,7 +1438,7 @@
                 <a href="#founding" style="color:#F59E0B;font-weight:600;">🏅 Founding Members</a>
                 <a href="#pricing">Pricing</a>
                 <a href="/about">About</a>
-                <a href="/login.html?tab=signup&type=realtor" class="nav-cta">Create Account</a>
+                <a href="/login?tab=signup&type=realtor" class="nav-cta">Create Account</a>
             </div>
         </div>
     </nav>
@@ -1459,16 +1451,18 @@
                     <span id="heroFoundingBanner">Founding Realtor Program — 100 spots available</span>
                 </div>
                 <h1>Win More Listings by <span class="highlight">Bidding</span> on Them</h1>
-                <p>Stop cold calling sellers. Access listing opportunities from motivated home sellers actively seeking representation — right now, across 659 markets nationwide.</p>
+                <p>Stop cold calling sellers. Access listing opportunities from motivated home sellers actively seeking representation — right now, across 832 markets nationwide.</p>
 
-                <div class="cta-buttons">
-                    <a href="/login.html?tab=signup&type=realtor" class="btn-primary">Create Your Free Account</a>
-                    <a href="#pricing" class="btn-secondary">See Pricing →</a>
-                </div>
+                <form class="email-form" id="heroEmailForm" onsubmit="goToSignup(event)">
+                    <input type="email" id="heroEmail" placeholder="Enter your work email" required autocomplete="email">
+                    <button type="submit" id="heroSubmitBtn">Claim My Spot →</button>
+                </form>
+                <div id="heroSuccess" class="success-message" style="display:none;">Taking you to complete signup...</div>
+                <p style="font-size:0.82rem;opacity:0.55;margin-top:0.75rem;">Free to join · No credit card required · 100 Founding spots available</p>
 
                 <div class="hero-stats">
                     <div class="stat-box">
-                        <div class="stat-number">659</div>
+                        <div class="stat-number">832</div>
                         <div class="stat-label">Markets Covered</div>
                     </div>
                     <div class="stat-box">
@@ -1476,7 +1470,7 @@
                         <div class="stat-label">Starting at /month</div>
                     </div>
                     <div class="stat-box">
-                        <div class="stat-number">No</div>
+                        <div class="stat-number">0%</div>
                         <div class="stat-label">Commission Splits</div>
                     </div>
                 </div>
@@ -1515,30 +1509,39 @@
         </div>
     </section>
 
-    <!-- ===== BROWSE REALTORS SEARCH SECTION ===== -->
-    <section class="realtor-search" id="browse-realtors">
-        <div class="realtor-search-container">
-            <div class="realtor-search-header">
-                <div class="section-tag">Directory</div>
-                <h2>Browse Our Realtors</h2>
-                <p>Search by name or ZIP code to find a licensed agent ready to represent you.</p>
+    <!-- ===== HOW IT WORKS ===== -->
+    <section style="padding:6rem 3rem;background:white;" id="how-it-works">
+        <div style="max-width:1100px;margin:0 auto;">
+            <div class="section-header">
+                <div class="section-tag">Simple Process</div>
+                <h2>From Signup to Closed Deal</h2>
+                <p>RealtorFinder flips the model. Sellers come to you — you compete on merit, not cold outreach.</p>
             </div>
-
-            <div class="realtor-search-bar">
-                <input type="text" id="searchName" placeholder="Search by name or area&hellip;" autocomplete="off">
-                <div class="search-divider"></div>
-                <input type="text" id="searchZip" class="zip-input" placeholder="ZIP code" maxlength="10" autocomplete="off">
-                <button id="searchBtn" onclick="runSearch()">Search</button>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:2rem;margin-top:3rem;position:relative;">
+                <div style="position:absolute;top:40px;left:12%;right:12%;height:2px;background:linear-gradient(90deg,var(--accent),var(--primary));opacity:0.2;z-index:0;"></div>
+                <div style="text-align:center;position:relative;z-index:1;">
+                    <div style="width:80px;height:80px;background:linear-gradient(135deg,var(--accent),#e55a2b);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1.25rem;font-size:1.8rem;box-shadow:0 8px 24px rgba(255,107,53,0.3);">📋</div>
+                    <div style="font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:700;color:var(--primary);margin-bottom:0.5rem;">1. Seller Lists</div>
+                    <p style="font-size:0.9rem;color:var(--text-light);line-height:1.5;">A motivated seller posts their home with price, timeline, and what they're looking for in an agent.</p>
+                </div>
+                <div style="text-align:center;position:relative;z-index:1;">
+                    <div style="width:80px;height:80px;background:linear-gradient(135deg,#0D3152,var(--primary));border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1.25rem;font-size:1.8rem;box-shadow:0 8px 24px rgba(10,37,64,0.2);">🔔</div>
+                    <div style="font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:700;color:var(--primary);margin-bottom:0.5rem;">2. You're Notified</div>
+                    <p style="font-size:0.9rem;color:var(--text-light);line-height:1.5;">Get an instant alert when a listing matches your market and specialty. Founding members see it first.</p>
+                </div>
+                <div style="text-align:center;position:relative;z-index:1;">
+                    <div style="width:80px;height:80px;background:linear-gradient(135deg,#F59E0B,#d97706);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1.25rem;font-size:1.8rem;box-shadow:0 8px 24px rgba(245,158,11,0.3);">✍️</div>
+                    <div style="font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:700;color:var(--primary);margin-bottom:0.5rem;">3. Submit a Bid</div>
+                    <p style="font-size:0.9rem;color:var(--text-light);line-height:1.5;">Propose your commission, marketing plan, and timeline. Your verified track record does the selling for you.</p>
+                </div>
+                <div style="text-align:center;position:relative;z-index:1;">
+                    <div style="width:80px;height:80px;background:linear-gradient(135deg,#10B981,#059669);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1.25rem;font-size:1.8rem;box-shadow:0 8px 24px rgba(16,185,129,0.3);">🤝</div>
+                    <div style="font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:700;color:var(--primary);margin-bottom:0.5rem;">4. Win & Close</div>
+                    <p style="font-size:0.9rem;color:var(--text-light);line-height:1.5;">The seller chooses you. List, sell, keep 100% of your commission — no splits, no referral fees.</p>
+                </div>
             </div>
-
-            <div class="realtor-grid" id="realtorGrid">
-                <!-- populated by JS -->
-            </div>
-
-            <div class="realtor-pagination" id="realtorPagination" style="display:none;">
-                <button class="pagination-btn" id="prevBtn" onclick="changePage(-1)" disabled>&#8592; Previous</button>
-                <span class="pagination-info" id="pageInfo"></span>
-                <button class="pagination-btn" id="nextBtn" onclick="changePage(1)">Next &#8594;</button>
+            <div style="text-align:center;margin-top:3rem;">
+                <a href="#" onclick="document.getElementById('heroEmail').focus();window.scrollTo({top:0,behavior:'smooth'});return false;" style="display:inline-block;background:var(--accent);color:white;padding:1rem 2.5rem;border-radius:50px;font-weight:700;font-size:1.05rem;text-decoration:none;transition:all 0.3s;box-shadow:0 8px 24px rgba(255,107,53,0.25);">Start Winning Listings →</a>
             </div>
         </div>
     </section>
@@ -1603,6 +1606,52 @@
         </div>
     </section>
 
+    <!-- TESTIMONIALS -->
+    <section class="testimonials" id="testimonials">
+        <div class="testimonials-container">
+            <div class="section-header">
+                <div class="section-tag">Early Agents</div>
+                <h2>What Realtors Are Saying</h2>
+                <p>Early members share why they made the switch to inbound listing opportunities.</p>
+            </div>
+            <div class="testimonials-grid">
+                <div class="testimonial-card">
+                    <div class="quote-icon">"</div>
+                    <p class="testimonial-text">I spent years buying leads that went nowhere. With RealtorFinder, every seller who sees my bid has already decided they want to sell. I closed my first deal within three weeks of joining.</p>
+                    <div class="testimonial-author">
+                        <div class="author-avatar">MR</div>
+                        <div class="author-info">
+                            <h4>Marcus R.</h4>
+                            <p>Residential Agent · Phoenix, AZ</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="testimonial-card">
+                    <div class="quote-icon">"</div>
+                    <p class="testimonial-text">The transparency is what got me. Sellers can see my actual days-on-market average and my close-to-list ratio right on my profile. I win on merit now, not who has the biggest ad budget.</p>
+                    <div class="testimonial-author">
+                        <div class="author-avatar">SL</div>
+                        <div class="author-info">
+                            <h4>Sarah L.</h4>
+                            <p>Luxury Specialist · Boston, MA</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="testimonial-card">
+                    <div class="quote-icon">"</div>
+                    <p class="testimonial-text">As a newer agent, I could never compete on cold prospecting with veterans who've been in the market for 20 years. On RealtorFinder, my proposals stand next to theirs on equal footing. Game changer.</p>
+                    <div class="testimonial-author">
+                        <div class="author-avatar">DJ</div>
+                        <div class="author-info">
+                            <h4>Daniel J.</h4>
+                            <p>Buyer's Agent · Denver, CO</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <!-- FOUNDING MEMBERS SECTION -->
     <section class="founding" id="founding">
         <div class="founding-container">
@@ -1660,7 +1709,7 @@
             </div>
 
             <div class="founding-cta">
-                <a href="/login.html?tab=signup&type=realtor" class="founding-btn">Claim Your Founding Spot</a>
+                <a href="#" onclick="document.getElementById('heroEmail').focus();window.scrollTo({top:0,behavior:'smooth'});return false;" class="founding-btn">Claim Your Founding Spot</a>
                 <div class="founding-note">Free to create an account · No credit card required · Spots are first-come, first-served</div>
             </div>
 
@@ -1688,7 +1737,7 @@
                         <li>Performance dashboard</li>
                         <li>1 agent per location</li>
                     </ul>
-                    <a href="/login.html?tab=signup&type=realtor" class="plan-button secondary" style="text-align:center;display:block;text-decoration:none;">Get Started</a>
+                    <a href="/login?tab=signup&type=realtor" class="plan-button secondary" style="text-align:center;display:block;text-decoration:none;">Get Started</a>
                 </div>
 
                 <div class="pricing-card featured">
@@ -1705,7 +1754,7 @@
                         <li>Early access to new listings</li>
                         <li>1 agent per location</li>
                     </ul>
-                    <a href="/login.html?tab=signup&type=realtor" class="plan-button primary" style="text-align:center;display:block;text-decoration:none;">Get Started</a>
+                    <a href="/login?tab=signup&type=realtor" class="plan-button primary" style="text-align:center;display:block;text-decoration:none;">Get Started</a>
                 </div>
 
                 <div class="pricing-card">
@@ -1722,7 +1771,7 @@
                         <li>Custom branding options</li>
                         <li>Dedicated account manager</li>
                     </ul>
-                    <a href="/login.html?tab=signup&type=realtor" class="plan-button secondary" style="text-align:center;display:block;text-decoration:none;">Get Started</a>
+                    <a href="/login?tab=signup&type=realtor" class="plan-button secondary" style="text-align:center;display:block;text-decoration:none;">Get Started</a>
                 </div>
             </div>
         </div>
@@ -1731,8 +1780,11 @@
     <section class="cta">
         <div class="cta-container">
             <h2>Start Winning Listings Today</h2>
-            <p>Join thousands of agents already using RealtorFinder to connect with motivated sellers across 659 markets nationwide.</p>
-            <a href="/login.html?tab=signup&type=realtor" class="plan-button primary" style="display:inline-block;text-decoration:none;padding:1rem 2.5rem;font-size:1.1rem;border-radius:10px;">Create Free Account</a>
+            <p>Join agents using RealtorFinder to connect with motivated sellers across 832 markets. Free to join — no credit card required.</p>
+            <form class="cta-inline-form" onsubmit="goToSignup(event)">
+                <input type="email" placeholder="Your work email address" required autocomplete="email">
+                <button type="submit">Get Started Free</button>
+            </form>
         </div>
     </section>
 
@@ -1740,15 +1792,14 @@
         <div class="footer-container">
             <div>
                 <div class="footer-brand">Realtor<span>Finder</span></div>
-                <p class="footer-about">The first reverse marketplace where home sellers list their property and qualified realtors compete for your business.</p>
+                <p class="footer-about">The first reverse marketplace where home sellers list their property and qualified realtors compete for their business.</p>
             </div>
             <div>
                 <div class="footer-title">For Sellers</div>
                 <ul class="footer-links">
-                    <li><a href="/">Join Waitlist</a></li>
+                    <li><a href="/">List Your Home</a></li>
                     <li><a href="/#how-it-works">How It Works</a></li>
-                    <li><a href="/#features">Why Choose Us</a></li>
-                    <li><a href="#">FAQs</a></li>
+                    <li><a href="/faq">FAQs</a></li>
                 </ul>
             </div>
             <div>
@@ -1756,16 +1807,17 @@
                 <ul class="footer-links">
                     <li><a href="#benefits">Platform Benefits</a></li>
                     <li><a href="#pricing">Pricing</a></li>
-                    <li><a href="#">Register Interest</a></li>
+                    <li><a href="#founding">Founding Members</a></li>
+                    <li><a href="/login?tab=signup&type=realtor">Create Account</a></li>
                 </ul>
             </div>
             <div>
                 <div class="footer-title">Company</div>
                 <ul class="footer-links">
-                    <li><a href="#">About Us</a></li>
-                    <li><a href="#">Contact</a></li>
-                    <li><a href="#">Privacy Policy</a></li>
-                    <li><a href="#">Terms of Service</a></li>
+                    <li><a href="/about">About Us</a></li>
+                    <li><a href="/contact">Contact</a></li>
+                    <li><a href="/privacy">Privacy Policy</a></li>
+                    <li><a href="/terms">Terms of Service</a></li>
                 </ul>
             </div>
         </div>
@@ -1775,145 +1827,21 @@
     </footer>
 
     <script>
-        /* ── Realtor Search Logic ── */
-        let currentPage = 1;
-        const LIMIT = 12;
-
-        function getInitials(first, last) {
-            return ((first || '').charAt(0) + (last || '').charAt(0)).toUpperCase() || '?';
+        function goToSignup(e) {
+            e.preventDefault();
+            const emailInput = e.target.querySelector('input[type="email"]') || document.getElementById('heroEmail');
+            const email = emailInput ? emailInput.value.trim() : '';
+            // Fire Lead pixel before navigating
+            if (typeof fbq !== 'undefined') fbq('track', 'Lead', { content_name: 'realtor_signup', content_category: 'realtor' });
+            if (typeof gtag !== 'undefined') gtag('event', 'generate_lead', { event_category: 'realtor', event_label: 'email_capture' });
+            const btn = e.target.querySelector('button[type="submit"]');
+            if (btn) { btn.disabled = true; btn.textContent = 'Taking you there…'; }
+            const successEl = document.getElementById('heroSuccess');
+            if (successEl) { successEl.style.display = 'block'; }
+            setTimeout(() => {
+                window.location.href = `/login?tab=signup&type=realtor${email ? '&email=' + encodeURIComponent(email) : ''}`;
+            }, 400);
         }
-
-        function skeletonCard() {
-            return `<div class="skeleton-card">
-                <div style="display:flex;gap:1rem;align-items:flex-start;margin-bottom:1rem">
-                    <div class="skeleton skeleton-avatar"></div>
-                    <div style="flex:1">
-                        <div class="skeleton skeleton-line medium" style="margin-bottom:8px"></div>
-                        <div class="skeleton skeleton-line short"></div>
-                    </div>
-                </div>
-                <div class="skeleton skeleton-line full"></div>
-                <div class="skeleton skeleton-line full"></div>
-                <div class="skeleton skeleton-line medium" style="margin-top:4px"></div>
-                <div class="skeleton skeleton-line full" style="margin-top:12px;height:36px;border-radius:10px"></div>
-            </div>`;
-        }
-
-        function renderSkeletons(n) {
-            const grid = document.getElementById('realtorGrid');
-            grid.innerHTML = Array.from({length: n}, skeletonCard).join('');
-            document.getElementById('realtorPagination').style.display = 'none';
-        }
-
-        function renderEmpty() {
-            document.getElementById('realtorGrid').innerHTML = `
-                <div class="realtor-empty">
-                    <div class="realtor-empty-icon">🔍</div>
-                    <h3>No realtors found</h3>
-                    <p>Try a different name or ZIP code.</p>
-                </div>`;
-            document.getElementById('realtorPagination').style.display = 'none';
-        }
-
-        function renderRealtors(data) {
-            const { realtors, total, page, pages } = data;
-            const grid = document.getElementById('realtorGrid');
-
-            if (!realtors || realtors.length === 0) { renderEmpty(); return; }
-
-            const isFeatured = p => p === 'professional' || p === 'firm';
-
-            grid.innerHTML = realtors.map(r => {
-                const initials = getInitials(r.first_name, r.last_name);
-                const name = [r.first_name, r.last_name].filter(Boolean).join(' ') || 'Realtor';
-                const company = r.company_name || '';
-                const featured = isFeatured(r.subscription_plan);
-                const hasBio = r.bio && r.bio.trim().length > 0;
-
-                const badges = [
-                    featured ? `<span class="badge badge-featured">&#9733; Featured</span>` : '',
-                    r.license_number ? `<span class="badge badge-license">Licensed</span>` : ''
-                ].filter(Boolean).join('');
-
-                const meta = [
-                    r.zip_code ? `<span>📍 ${r.zip_code}</span>` : '',
-                    r.years_experience ? `<span>🏆 ${r.years_experience} yrs exp</span>` : ''
-                ].filter(Boolean).join('');
-
-                return `<div class="realtor-card">
-                    <div class="realtor-card-top">
-                        <div class="realtor-avatar">${initials}</div>
-                        <div class="realtor-card-info">
-                            <div class="realtor-name">${name}</div>
-                            ${company ? `<div class="realtor-company">${company}</div>` : ''}
-                            ${badges ? `<div class="realtor-badges">${badges}</div>` : ''}
-                        </div>
-                    </div>
-                    ${meta ? `<div class="realtor-meta">${meta}</div>` : ''}
-                    ${hasBio ? `<p class="realtor-bio">${r.bio}</p>` : ''}
-                    <div class="realtor-card-footer">
-                        <a href="/realtor/${r.id}" class="realtor-view-btn">View Profile &rarr;</a>
-                    </div>
-                </div>`;
-            }).join('');
-
-            // Pagination
-            const pag = document.getElementById('realtorPagination');
-            if (pages > 1) {
-                pag.style.display = 'flex';
-                document.getElementById('prevBtn').disabled = page <= 1;
-                document.getElementById('nextBtn').disabled = page >= pages;
-                const start = (page - 1) * LIMIT + 1;
-                const end   = Math.min(page * LIMIT, total);
-                document.getElementById('pageInfo').textContent = `${start}–${end} of ${total}`;
-            } else {
-                pag.style.display = 'none';
-            }
-        }
-
-        async function fetchRealtors(page) {
-            const name = document.getElementById('searchName').value.trim();
-            const zip  = document.getElementById('searchZip').value.trim();
-            const params = new URLSearchParams({ page, limit: LIMIT });
-            if (name) params.set('name', name);
-            if (zip)  params.set('zip', zip);
-
-            renderSkeletons(LIMIT);
-            try {
-                const res  = await fetch(`/api/realtors/search?${params}`);
-                const data = await res.json();
-                renderRealtors(data);
-            } catch {
-                document.getElementById('realtorGrid').innerHTML = `
-                    <div class="realtor-empty">
-                        <div class="realtor-empty-icon">⚠️</div>
-                        <h3>Something went wrong</h3>
-                        <p>Please try again in a moment.</p>
-                    </div>`;
-                document.getElementById('realtorPagination').style.display = 'none';
-            }
-        }
-
-        function runSearch() {
-            currentPage = 1;
-            fetchRealtors(1);
-        }
-
-        function changePage(delta) {
-            currentPage += delta;
-            fetchRealtors(currentPage);
-            document.getElementById('browse-realtors').scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-
-        // Allow Enter key to trigger search
-        ['searchName','searchZip'].forEach(id => {
-            document.getElementById(id).addEventListener('keydown', e => {
-                if (e.key === 'Enter') runSearch();
-            });
-        });
-
-        // Load on page start
-        fetchRealtors(1);
     </script>
 
     <script>
