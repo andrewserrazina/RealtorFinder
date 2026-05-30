@@ -1079,7 +1079,7 @@
                 <div class="form-row">
                     <div class="form-group">
                         <label>Price *</label>
-                        <input type="text" name="price" required>
+                        <input type="text" id="editListingPrice" name="price" placeholder="$500,000" inputmode="numeric" required>
                     </div>
                     <div class="form-group">
                         <label>Property Type *</label>
@@ -1317,6 +1317,7 @@
 
         document.getElementById('newListingPrice').addEventListener('input', function() { formatCurrencyInput(this); });
         document.getElementById('newListingZestimate').addEventListener('input', function() { formatCurrencyInput(this); });
+        document.getElementById('editListingPrice').addEventListener('input', function() { formatCurrencyInput(this); });
 
         // ── Mapbox Address Autocomplete ───────────────────────────────────────────
         async function initMapboxAutocomplete() {
@@ -1395,9 +1396,8 @@
             btn.textContent = 'Creating…';
             const formData = new FormData(e.target);
             const data = Object.fromEntries(formData);
-            // Strip currency formatting before sending
-            if (data.price) data.price = '$' + parseInt(stripCurrency(data.price), 10).toLocaleString('en-US');
-            if (data.zestimate) data.zestimate = data.zestimate.trim() ? '$' + parseInt(stripCurrency(data.zestimate), 10).toLocaleString('en-US') : undefined;
+            if (data.price) data.price = parseInt(stripCurrency(data.price), 10);
+            if (data.zestimate) data.zestimate = data.zestimate.trim() ? parseInt(stripCurrency(data.zestimate), 10) : undefined;
             try {
                 const response = await fetch(`${API_BASE_URL}/listings`, {
                     method: 'POST',
@@ -1772,7 +1772,7 @@
             if (!listing) return;
             const form = document.getElementById('editListingForm');
             form.id_value = listingId;
-            form.elements.price.value = listing.price;
+            form.elements.price.value = listing.price ? '$' + Number(listing.price).toLocaleString('en-US') : '';
             form.elements.type.value = listing.type;
             form.elements.bedrooms.value = listing.bedrooms;
             form.elements.bathrooms.value = listing.bathrooms;
@@ -1841,7 +1841,7 @@
             const form = e.target;
             const id = form.id_value;
             const data = {
-                price:       form.elements.price.value,
+                price:       parseInt(stripCurrency(form.elements.price.value), 10),
                 type:        form.elements.type.value,
                 bedrooms:    form.elements.bedrooms.value,
                 bathrooms:   form.elements.bathrooms.value,
