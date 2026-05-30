@@ -2017,11 +2017,27 @@ app.post('/api/webhook/stripe', express.raw({ type: 'application/json' }), async
 
     if (event.type === 'checkout.session.completed') {
         const sess = event.data.object;
+
+        // Lead purchase checkout
+        if (sess.metadata?.type === 'listing_lead') {
+            try {
+                const realtorId = parseInt(sess.metadata.realtor_id);
+                const listingId = parseInt(sess.metadata.listing_id);
+                await pool.query(
+                    `UPDATE lead_purchases SET paid = TRUE WHERE realtor_id = $1 AND listing_id = $2`,
+                    [realtorId, listingId]
+                );
+                console.log(`✅ Stripe: lead purchase confirmed — realtor ${realtorId}, listing ${listingId}`);
+            } catch (err) {
+                console.error('Stripe lead purchase webhook DB error:', err);
+            }
+        }
+
+        // Subscription checkout
         const userId = parseInt(sess.metadata?.userId);
         const plan   = sess.metadata?.plan;
         if (userId && plan) {
             try {
-                // Store customer id on user directly
                 await pool.query(
                     `UPDATE users SET subscription_plan=$1, stripe_customer_id=$2 WHERE id=$3`,
                     [plan, sess.customer, userId]
@@ -2083,23 +2099,6 @@ app.post('/api/webhook/stripe', express.raw({ type: 'application/json' }), async
             console.log(`⚠️ Stripe: payment failed for ${invoice.customer}`);
         } catch (err) {
             console.error('Stripe payment_failed DB error:', err);
-        }
-    }
-
-    if (event.type === 'payment_intent.succeeded') {
-        const pi = event.data.object;
-        if (pi.metadata?.type === 'listing_lead') {
-            try {
-                const realtorId = parseInt(pi.metadata.realtor_id);
-                const listingId = parseInt(pi.metadata.listing_id);
-                await pool.query(
-                    `UPDATE lead_purchases SET paid = TRUE WHERE realtor_id = $1 AND listing_id = $2`,
-                    [realtorId, listingId]
-                );
-                console.log(`✅ Stripe: lead purchase confirmed — realtor ${realtorId}, listing ${listingId}`);
-            } catch (err) {
-                console.error('Stripe payment_intent.succeeded DB error:', err);
-            }
         }
     }
 
@@ -3227,21 +3226,34 @@ app.post('/api/leads/purchase', auth.requireAuth, async (req, res) => {
         if (!listingRow.rows.length) return res.status(404).json({ error: 'Listing not found' });
         const l = listingRow.rows[0];
 
-        const paymentIntent = await stripe.paymentIntents.create({
-            amount: LEAD_PRICE_CENTS,
-            currency: 'usd',
-            description: `RealtorFinder lead: ${l.address}, ${l.city}, ${l.state}`,
-            metadata: { realtor_id: String(req.session.userId), listing_id: String(listing_id), type: 'listing_lead' },
+        const base = (process.env.FRONTEND_URL || 'https://realtorfinder.net').replace(/\/$/, '');
+        const session = await stripe.checkout.sessions.create({
+            mode: 'payment',
+            line_items: [{
+                price_data: {
+                    currency: 'usd',
+                    unit_amount: LEAD_PRICE_CENTS,
+                    product_data: {
+                        name: 'RealtorFinder Lead',
+                        description: `${l.address}, ${l.city}, ${l.state}`,
+                    },
+                },
+                quantity: 1,
+            }],
+            metadata: { type: 'listing_lead', realtor_id: String(req.session.userId), listing_id: String(listing_id) },
+            success_url: `${base}/dashboard/realtor?lead_purchased=1`,
+            cancel_url: `${base}/dashboard/realtor`,
         });
 
+        // Record pending purchase (paid=FALSE until webhook confirms)
         await pool.query(
             `INSERT INTO lead_purchases (realtor_id, listing_id, stripe_payment_intent_id, amount_cents, paid)
              VALUES ($1, $2, $3, $4, FALSE)
              ON CONFLICT (realtor_id, listing_id) DO UPDATE SET stripe_payment_intent_id = EXCLUDED.stripe_payment_intent_id`,
-            [req.session.userId, listing_id, paymentIntent.id, LEAD_PRICE_CENTS]
+            [req.session.userId, listing_id, session.payment_intent, LEAD_PRICE_CENTS]
         );
 
-        res.json({ clientSecret: paymentIntent.client_secret, amount: LEAD_PRICE_CENTS });
+        res.json({ url: session.url });
     } catch (err) {
         console.error('POST /api/leads/purchase error:', err);
         res.status(500).json({ error: 'Failed to create payment' });
