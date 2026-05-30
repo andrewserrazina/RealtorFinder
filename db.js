@@ -193,12 +193,12 @@ const db = {
             conditions.push(`l.bathrooms >= $${params.length}`);
         }
         if (minPrice) {
-            params.push(parseInt(minPrice));
-            conditions.push(`CAST(REGEXP_REPLACE(l.price, '[^0-9]', '', 'g') AS BIGINT) >= $${params.length}`);
+            params.push(parseFloat(minPrice));
+            conditions.push(`l.price >= $${params.length}`);
         }
         if (maxPrice) {
-            params.push(parseInt(maxPrice));
-            conditions.push(`CAST(REGEXP_REPLACE(l.price, '[^0-9]', '', 'g') AS BIGINT) <= $${params.length}`);
+            params.push(parseFloat(maxPrice));
+            conditions.push(`l.price <= $${params.length}`);
         }
         if (swLat && swLng && neLat && neLng) {
             params.push(parseFloat(swLat), parseFloat(neLat));
