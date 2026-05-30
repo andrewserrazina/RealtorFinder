@@ -28,6 +28,8 @@ module.exports = [
   ...require('./cities/tx'),
   // Mountain / West
   ...require('./cities/co'),
+  ...require('./cities/az'),
+  ...require('./cities/nv'),
   ...require('./cities/wa'),
   // Pacific
   ...require('./cities/ca'),
