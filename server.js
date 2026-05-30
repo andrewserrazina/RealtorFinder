@@ -814,7 +814,8 @@ app.post('/api/listings', auth.requireAuth, async (req, res) => {
             return res.status(400).json({ error: 'All fields are required' });
         }
 
-        if (isNaN(Number(price)) || Number(price) <= 0) {
+        const numericPrice = parseFloat(String(price).replace(/[^0-9.]/g, ''));
+        if (isNaN(numericPrice) || numericPrice <= 0) {
             return res.status(400).json({ error: 'Price must be a positive number' });
         }
 
@@ -834,7 +835,7 @@ app.post('/api/listings', auth.requireAuth, async (req, res) => {
             city,
             state: state || '',
             zip: zip || '',
-            price,
+            price: numericPrice,
             zestimate: zestimate || null,
             type,
             bedrooms: parseInt(bedrooms),
@@ -2420,7 +2421,8 @@ app.get('/api/realtors/search', async (req, res) => {
         const { rows } = await pool.query(
             `SELECT u.id, u.first_name, u.last_name, u.bio, u.years_experience,
                     u.license_number, u.service_areas, u.subscription_plan, u.zip_code,
-                    u.profile_photo, u.brokerage, u.license_verified,
+                    u.profile_photo, u.brokerage,
+                    COALESCE(u.license_verified, false) AS license_verified,
                     c.name AS company_name, c.plan AS company_plan
              FROM users u
              LEFT JOIN companies c ON u.company_id = c.id
@@ -3205,10 +3207,13 @@ pool.query(`
     )
 `).catch(err => console.error('realtor_response_times table init error:', err.message));
 
-pool.query(`ALTER TABLE listings ADD COLUMN IF NOT EXISTS expiry_warning_sent BOOLEAN DEFAULT FALSE`).catch(() => {});
-pool.query(`ALTER TABLE listings ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ`).catch(() => {});
-pool.query(`ALTER TABLE listings ADD COLUMN IF NOT EXISTS share_token TEXT`).catch(() => {});
-pool.query(`ALTER TABLE listings ADD COLUMN IF NOT EXISTS share_views INTEGER DEFAULT 0`).catch(() => {});
+// ALTER TABLE migrations run at startup — collected here so they await before listen
+const _schemaMigrations = [
+    `ALTER TABLE listings ADD COLUMN IF NOT EXISTS expiry_warning_sent BOOLEAN DEFAULT FALSE`,
+    `ALTER TABLE listings ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ`,
+    `ALTER TABLE listings ADD COLUMN IF NOT EXISTS share_token TEXT`,
+    `ALTER TABLE listings ADD COLUMN IF NOT EXISTS share_views INTEGER DEFAULT 0`,
+];
 
 // ===== PROPOSALS TABLE (Feature 1) =====
 pool.query(`
@@ -3241,14 +3246,18 @@ pool.query(`
 `).catch(err => console.error('reviews table init error:', err.message));
 
 // ===== REFERRAL COLUMNS (Feature 4) =====
-pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_code TEXT UNIQUE`).catch(() => {});
-pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS referred_by INTEGER REFERENCES users(id)`).catch(() => {});
+_schemaMigrations.push(
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_code TEXT UNIQUE`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS referred_by INTEGER REFERENCES users(id)`
+);
 
 // ===== LICENSE VERIFICATION COLUMNS =====
-pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS license_doc_url TEXT`).catch(() => {});
-pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS license_verified BOOLEAN DEFAULT FALSE`).catch(() => {});
-pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS license_verified_at TIMESTAMPTZ`).catch(() => {});
-pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS license_rejection_note TEXT`).catch(() => {});
+_schemaMigrations.push(
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS license_doc_url TEXT`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS license_verified BOOLEAN DEFAULT FALSE`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS license_verified_at TIMESTAMPTZ`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS license_rejection_note TEXT`
+);
 
 // List conversations for current user
 app.get('/api/messages/conversations', auth.requireAuth, async (req, res) => {
@@ -3880,8 +3889,10 @@ async function runListingExpiryJob() {
 runListingExpiryJob();
 setInterval(runListingExpiryJob, 24 * 60 * 60 * 1000).unref();
 
-pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS email_unsubscribed BOOLEAN DEFAULT FALSE`).catch(() => {});
-pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS unsubscribe_token TEXT UNIQUE`).catch(() => {});
+_schemaMigrations.push(
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS email_unsubscribed BOOLEAN DEFAULT FALSE`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS unsubscribe_token TEXT UNIQUE`
+);
 
 // Create drip_emails table if not exists
 pool.query(`
@@ -4038,15 +4049,31 @@ pool.query(`
     )
 `).catch(err => console.error('saved_realtors table init error:', err.message));
 
-// Start server
-app.listen(PORT, () => {
-    console.log(`🏠 RealtorFinder server running on port ${PORT}`);
-    console.log(`📍 http://localhost:${PORT}`);
-    console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`\n📄 Routes:`);
-    console.log(`   / → Seller landing page`);
-    console.log(`   /realtors → Realtor landing page`);
-    console.log(`   /dashboard/seller → Seller dashboard`);
-    console.log(`   /dashboard/realtor → Realtor dashboard`);
-    console.log(`   /app → Main application (legacy)`);
+// Run all schema migrations then start listening
+async function startServer() {
+    for (const sql of _schemaMigrations) {
+        try {
+            await pool.query(sql);
+        } catch (err) {
+            // "column already exists" is expected on restarts — log anything else
+            if (!err.message.includes('already exists')) {
+                console.error('Migration warning:', err.message);
+            }
+        }
+    }
+    app.listen(PORT, () => {
+        console.log(`🏠 RealtorFinder server running on port ${PORT}`);
+        console.log(`📍 http://localhost:${PORT}`);
+        console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+        console.log(`\n📄 Routes:`);
+        console.log(`   / → Seller landing page`);
+        console.log(`   /realtors → Realtor landing page`);
+        console.log(`   /dashboard/seller → Seller dashboard`);
+        console.log(`   /dashboard/realtor → Realtor dashboard`);
+        console.log(`   /app → Main application (legacy)`);
+    });
+}
+startServer().catch(err => {
+    console.error('Server startup failed:', err);
+    process.exit(1);
 });
