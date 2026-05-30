@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inbox - RealtorFinder</title>
+    <!-- Google Analytics 4 -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-BRGVVNKT65"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-BRGVVNKT65');
+    </script>
+    <!-- Microsoft Clarity -->
+    <script type="text/javascript">
+        (function(c,l,a,r,i,t,y){
+            c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+            t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+            y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+        })(window, document, "clarity", "script", "wxvaz0g7tq");
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --ink: #1a1a1a;
+            --paper: #faf9f7;
+            --accent: #d4523e;
+            --soft-accent: #e8ded8;
+            --border: #e1ddd7;
+            --success: #2d6e4f;
+            --warning: #c77029;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--paper);
+            color: var(--ink);
+            line-height: 1.6;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Header */
+        header {
+            background: rgba(255, 255, 255, 0.95);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+            flex-shrink: 0;
+        }
+
+        .header-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: var(--ink);
+            letter-spacing: -0.5px;
+            text-decoration: none;
+        }
+
+        .logo span {
+            color: var(--accent);
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .user-name {
+            font-weight: 500;
+            color: var(--ink);
+            font-size: 0.95rem;
+        }
+
+        .btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 0.75rem 1.5rem;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            transition: background 0.2s, transform 0.1s;
+        }
+
+        .btn:hover {
+            background: #c0432f;
+            transform: translateY(-1px);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        /* Main inbox layout */
+        .inbox-wrapper {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+            max-width: 1400px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 1.5rem 2rem;
+            gap: 1.5rem;
+        }
+
+        /* Left panel - conversation list */
+        .conv-panel {
+            width: 320px;
+            flex-shrink: 0;
+            background: white;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .conv-panel-header {
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+
+        .conv-panel-header h2 {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--ink);
+        }
+
+        .conv-list {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .conv-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.875rem;
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--border);
+            cursor: pointer;
+            transition: background 0.15s;
+            position: relative;
+        }
+
+        .conv-item:last-child {
+            border-bottom: none;
+        }
+
+        .conv-item:hover {
+            background: var(--paper);
+        }
+
+        .conv-item.active {
+            background: var(--soft-accent);
+        }
+
+        .conv-item.unread .conv-preview,
+        .conv-item.unread .conv-name {
+            font-weight: 600;
+        }
+
+        .conv-avatar {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent), #b83a28);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            font-size: 0.875rem;
+            flex-shrink: 0;
+        }
+
+        .conv-body {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .conv-top-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            gap: 0.5rem;
+            margin-bottom: 0.2rem;
+        }
+
+        .conv-name {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--ink);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .conv-time {
+            font-size: 0.75rem;
+            color: #999;
+            flex-shrink: 0;
+        }
+
+        .conv-listing {
+            font-size: 0.78rem;
+            color: var(--accent);
+            margin-bottom: 0.2rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .conv-preview {
+            font-size: 0.8rem;
+            color: #777;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .unread-badge {
+            background: var(--accent);
+            color: white;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 0.15rem 0.5rem;
+            flex-shrink: 0;
+            align-self: center;
+        }
+
+        /* Empty state for conv list */
+        .conv-empty {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            text-align: center;
+            color: #999;
+        }
+
+        .conv-empty .empty-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            opacity: 0.4;
+        }
+
+        .conv-empty p {
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        /* Right panel - thread */
+        .thread-panel {
+            flex: 1;
+            background: white;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .thread-placeholder {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #bbb;
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .thread-placeholder .ph-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.3;
+        }
+
+        .thread-placeholder p {
+            font-size: 1rem;
+            color: #aaa;
+        }
+
+        /* Thread header */
+        .thread-header {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .thread-header-info {
+            flex: 1;
+        }
+
+        .thread-header-name {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--ink);
+        }
+
+        .thread-header-listing {
+            font-size: 0.82rem;
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        .thread-header-listing:hover {
+            text-decoration: underline;
+        }
+
+        /* Messages */
+        .thread-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .message-row {
+            display: flex;
+            flex-direction: column;
+            max-width: 68%;
+        }
+
+        .message-row.mine {
+            align-self: flex-end;
+            align-items: flex-end;
+        }
+
+        .message-row.theirs {
+            align-self: flex-start;
+            align-items: flex-start;
+        }
+
+        .message-meta {
+            font-size: 0.75rem;
+            color: #aaa;
+            margin-bottom: 0.3rem;
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .message-sender {
+            font-weight: 600;
+            color: #888;
+        }
+
+        .message-bubble {
+            padding: 0.75rem 1rem;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            word-break: break-word;
+        }
+
+        .message-row.mine .message-bubble {
+            background: var(--accent);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message-row.theirs .message-bubble {
+            background: white;
+            color: var(--ink);
+            border: 1px solid var(--border);
+            border-bottom-left-radius: 4px;
+        }
+
+        /* Send box */
+        .send-box {
+            padding: 1rem 1.5rem;
+            border-top: 1px solid var(--border);
+            flex-shrink: 0;
+            display: flex;
+            gap: 0.75rem;
+            align-items: flex-end;
+        }
+
+        .send-textarea {
+            flex: 1;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.9rem;
+            color: var(--ink);
+            resize: none;
+            min-height: 44px;
+            max-height: 140px;
+            line-height: 1.5;
+            outline: none;
+            transition: border-color 0.2s;
+            background: var(--paper);
+        }
+
+        .send-textarea:focus {
+            border-color: var(--accent);
+        }
+
+        .send-textarea::placeholder {
+            color: #bbb;
+        }
+
+        .send-btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 0.75rem 1.25rem;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .send-btn:hover {
+            background: #c0432f;
+        }
+
+        .send-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        /* Loading spinner */
+        .spinner {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            border: 2px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-row {
+            display: flex;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        /* Scrollbar styling */
+        .conv-list::-webkit-scrollbar,
+        .thread-messages::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        .conv-list::-webkit-scrollbar-thumb,
+        .thread-messages::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 3px;
+        }
+
+        .conv-list::-webkit-scrollbar-track,
+        .thread-messages::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .inbox-wrapper {
+                padding: 1rem;
+                gap: 0;
+            }
+
+            .conv-panel {
+                width: 100%;
+                border-radius: 12px 12px 0 0;
+            }
+
+            .thread-panel {
+                display: none;
+            }
+
+            .thread-panel.mobile-open {
+                display: flex;
+                position: fixed;
+                inset: 0;
+                border-radius: 0;
+                z-index: 200;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-container">
+        <a href="/" class="logo">Realtor<span>Finder</span></a>
+        <div class="header-right">
+            <span class="user-name" id="headerUserName"></span>
+            <a href="#" class="btn" id="dashboardBtn">&#8592; Dashboard</a>
+        </div>
+    </div>
+</header>
+
+<div class="inbox-wrapper">
+    <!-- Left: Conversation list -->
+    <div class="conv-panel">
+        <div class="conv-panel-header">
+            <h2>Messages</h2>
+        </div>
+        <div class="conv-list" id="convList">
+            <div class="loading-row"><div class="spinner"></div></div>
+        </div>
+    </div>
+
+    <!-- Right: Thread -->
+    <div class="thread-panel" id="threadPanel">
+        <div class="thread-placeholder" id="threadPlaceholder">
+            <div class="ph-icon">&#9993;</div>
+            <p>Select a conversation to read messages</p>
+        </div>
+        <!-- Thread content injected here -->
+    </div>
+</div>
+
+<script>
+    const API_BASE_URL = window.API_BASE_URL || '/api';
+
+    let currentUser = null;
+    let conversations = [];
+    let activeConv = null;
+    let pollInterval = null;
+
+    // ---- Utilities ----
+
+    function initials(first, last) {
+        return ((first || '').charAt(0) + (last || '').charAt(0)).toUpperCase();
+    }
+
+    function timeAgo(dateStr) {
+        const now = Date.now();
+        const then = new Date(dateStr).getTime();
+        const diff = Math.floor((now - then) / 1000);
+        if (diff < 60) return 'just now';
+        if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+        if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+        if (diff < 604800) return Math.floor(diff / 86400) + 'd ago';
+        return new Date(dateStr).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    }
+
+    function shortTime(dateStr) {
+        return new Date(dateStr).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+    }
+
+    // ---- Auth ----
+
+    async function checkAuth() {
+        try {
+            const res = await fetch(`${API_BASE_URL}/auth/me`, { credentials: 'include' });
+            if (res.status === 401) {
+                window.location.href = '/login';
+                return;
+            }
+            currentUser = await res.json();
+            document.getElementById('headerUserName').textContent =
+                (currentUser.first_name || '') + ' ' + (currentUser.last_name || '');
+
+            const dashBtn = document.getElementById('dashboardBtn');
+            if (currentUser.user_type === 'realtor') {
+                dashBtn.href = '/dashboard/realtor';
+            } else {
+                dashBtn.href = '/dashboard/seller';
+            }
+
+            await loadConversations();
+            startPolling();
+        } catch (e) {
+            window.location.href = '/login';
+        }
+    }
+
+    // ---- Conversations ----
+
+    async function loadConversations() {
+        try {
+            const res = await fetch(`${API_BASE_URL}/messages/conversations`, { credentials: 'include' });
+            if (!res.ok) throw new Error('Failed');
+            conversations = await res.json();
+            renderConvList();
+            updateDocTitle();
+        } catch (e) {
+            document.getElementById('convList').innerHTML =
+                '<div class="conv-empty"><p>Could not load conversations.</p></div>';
+        }
+    }
+
+    function renderConvList() {
+        const list = document.getElementById('convList');
+        if (!conversations || conversations.length === 0) {
+            list.innerHTML = `
+                <div class="conv-empty">
+                    <div class="empty-icon">&#128172;</div>
+                    <p>No messages yet. Messages from buyers and realtors will appear here.</p>
+                </div>`;
+            return;
+        }
+
+        list.innerHTML = conversations.map(c => {
+            const isActive = activeConv &&
+                activeConv.other_user_id === c.other_user_id &&
+                activeConv.listing_id === c.listing_id;
+            const hasUnread = c.unread_count > 0;
+            return `<div class="conv-item${isActive ? ' active' : ''}${hasUnread ? ' unread' : ''}"
+                         data-user-id="${c.other_user_id}"
+                         data-listing-id="${c.listing_id || ''}"
+                         onclick="openConversation(${c.other_user_id}, ${c.listing_id || 'null'}, this)">
+                <div class="conv-avatar">${initials(c.first_name, c.last_name)}</div>
+                <div class="conv-body">
+                    <div class="conv-top-row">
+                        <span class="conv-name">${escHtml(c.first_name || '')} ${escHtml(c.last_name || '')}</span>
+                        <span class="conv-time">${c.last_at ? timeAgo(c.last_at) : ''}</span>
+                    </div>
+                    ${c.listing_address ? `<div class="conv-listing">${escHtml(c.listing_address)}</div>` : ''}
+                    <div class="conv-preview">${escHtml(c.last_body || '')}</div>
+                </div>
+                ${hasUnread ? `<span class="unread-badge">${c.unread_count}</span>` : ''}
+            </div>`;
+        }).join('');
+    }
+
+    function updateDocTitle() {
+        const total = conversations.reduce((sum, c) => sum + (c.unread_count || 0), 0);
+        document.title = total > 0 ? `(${total}) Inbox - RealtorFinder` : 'Inbox - RealtorFinder';
+    }
+
+    // ---- Thread ----
+
+    async function openConversation(otherUserId, listingId, el) {
+        // Update active state
+        document.querySelectorAll('.conv-item').forEach(i => i.classList.remove('active'));
+        if (el) el.classList.add('active');
+
+        activeConv = conversations.find(c =>
+            c.other_user_id === otherUserId &&
+            (c.listing_id === listingId || (!c.listing_id && !listingId))
+        ) || { other_user_id: otherUserId, listing_id: listingId };
+
+        renderThreadSkeleton();
+        await loadThread(otherUserId, listingId);
+    }
+
+    function renderThreadSkeleton() {
+        const panel = document.getElementById('threadPanel');
+        const conv = activeConv;
+        const otherName = conv ? `${escHtml(conv.first_name || '')} ${escHtml(conv.last_name || '')}`.trim() : '';
+        const listingAddr = conv && conv.listing_address ? escHtml(conv.listing_address) : '';
+        const listingId = conv && conv.listing_id ? conv.listing_id : null;
+
+        panel.innerHTML = `
+            <div class="thread-header">
+                <div class="thread-header-info">
+                    <div class="thread-header-name">${otherName || 'Conversation'}</div>
+                    ${listingAddr
+                        ? `<a class="thread-header-listing" href="/listing-detail.html?id=${listingId}" target="_blank">&#127968; ${listingAddr}</a>`
+                        : ''}
+                </div>
+            </div>
+            <div class="thread-messages" id="threadMessages">
+                <div class="loading-row"><div class="spinner"></div></div>
+            </div>
+            <div class="send-box" id="sendBox">
+                <textarea class="send-textarea" id="msgTextarea"
+                    placeholder="Type a message… (Enter to send, Shift+Enter for new line)"
+                    rows="1"></textarea>
+                <button class="send-btn" id="sendBtn" onclick="sendMessage()">Send</button>
+            </div>`;
+
+        document.getElementById('msgTextarea').addEventListener('keydown', handleTextareaKey);
+        document.getElementById('msgTextarea').addEventListener('input', autoResize);
+    }
+
+    function handleTextareaKey(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
+    }
+
+    function autoResize() {
+        this.style.height = 'auto';
+        this.style.height = Math.min(this.scrollHeight, 140) + 'px';
+    }
+
+    async function loadThread(otherUserId, listingId) {
+        try {
+            let url = `${API_BASE_URL}/messages/thread?with=${otherUserId}`;
+            if (listingId) url += `&listing=${listingId}`;
+            const res = await fetch(url, { credentials: 'include' });
+            if (!res.ok) throw new Error('Failed');
+            const messages = await res.json();
+            renderMessages(messages);
+
+            // Mark as read locally
+            const conv = conversations.find(c =>
+                c.other_user_id === otherUserId &&
+                (c.listing_id === listingId || (!c.listing_id && !listingId))
+            );
+            if (conv) {
+                conv.unread_count = 0;
+                updateDocTitle();
+                renderConvList();
+            }
+        } catch (e) {
+            const msgs = document.getElementById('threadMessages');
+            if (msgs) msgs.innerHTML = '<div class="conv-empty"><p>Could not load messages.</p></div>';
+        }
+    }
+
+    function renderMessages(messages) {
+        const container = document.getElementById('threadMessages');
+        if (!container) return;
+
+        if (!messages || messages.length === 0) {
+            container.innerHTML = `
+                <div class="conv-empty">
+                    <p>No messages in this conversation yet.<br>Send the first message below!</p>
+                </div>`;
+            return;
+        }
+
+        container.innerHTML = messages.map(msg => {
+            const isMine = msg.from_user_id === currentUser.id;
+            const senderName = isMine ? 'You' : `${escHtml(msg.first_name || '')} ${escHtml(msg.last_name || '')}`.trim();
+            return `<div class="message-row ${isMine ? 'mine' : 'theirs'}">
+                <div class="message-meta">
+                    <span class="message-sender">${senderName}</span>
+                    <span>${shortTime(msg.created_at)}</span>
+                </div>
+                <div class="message-bubble">${escHtml(msg.body)}</div>
+            </div>`;
+        }).join('');
+
+        scrollToBottom(container);
+    }
+
+    function appendMessage(msg) {
+        const container = document.getElementById('threadMessages');
+        if (!container) return;
+
+        // Remove empty state if present
+        const empty = container.querySelector('.conv-empty');
+        if (empty) empty.remove();
+
+        const isMine = msg.from_user_id === currentUser.id;
+        const senderName = isMine ? 'You' : `${escHtml(msg.first_name || '')} ${escHtml(msg.last_name || '')}`.trim();
+
+        const row = document.createElement('div');
+        row.className = `message-row ${isMine ? 'mine' : 'theirs'}`;
+        row.innerHTML = `
+            <div class="message-meta">
+                <span class="message-sender">${senderName}</span>
+                <span>${shortTime(msg.created_at)}</span>
+            </div>
+            <div class="message-bubble">${escHtml(msg.body)}</div>`;
+        container.appendChild(row);
+        scrollToBottom(container);
+    }
+
+    function scrollToBottom(el) {
+        el.scrollTop = el.scrollHeight;
+    }
+
+    // ---- Send ----
+
+    async function sendMessage() {
+        const textarea = document.getElementById('msgTextarea');
+        const sendBtn = document.getElementById('sendBtn');
+        if (!textarea || !activeConv) return;
+
+        const body = textarea.value.trim();
+        if (!body) return;
+
+        sendBtn.disabled = true;
+        textarea.disabled = true;
+
+        // Optimistic append
+        const optimisticMsg = {
+            from_user_id: currentUser.id,
+            to_user_id: activeConv.other_user_id,
+            body: body,
+            created_at: new Date().toISOString(),
+            first_name: currentUser.first_name,
+            last_name: currentUser.last_name
+        };
+        appendMessage(optimisticMsg);
+        textarea.value = '';
+        textarea.style.height = 'auto';
+
+        try {
+            const res = await fetch(`${API_BASE_URL}/messages`, {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    toUserId: activeConv.other_user_id,
+                    listingId: activeConv.listing_id || null,
+                    body: body
+                })
+            });
+
+            if (!res.ok) throw new Error('Send failed');
+
+            // Update conversation preview
+            const convIdx = conversations.findIndex(c =>
+                c.other_user_id === activeConv.other_user_id &&
+                (c.listing_id === activeConv.listing_id || (!c.listing_id && !activeConv.listing_id))
+            );
+            if (convIdx !== -1) {
+                conversations[convIdx].last_body = body;
+                conversations[convIdx].last_at = new Date().toISOString();
+                renderConvList();
+            }
+        } catch (e) {
+            // Remove optimistic message on error
+            const container = document.getElementById('threadMessages');
+            if (container) {
+                const rows = container.querySelectorAll('.message-row.mine');
+                if (rows.length > 0) rows[rows.length - 1].remove();
+            }
+            textarea.value = body;
+            alert('Failed to send message. Please try again.');
+        } finally {
+            sendBtn.disabled = false;
+            textarea.disabled = false;
+            textarea.focus();
+        }
+    }
+
+    // ---- Polling ----
+
+    function startPolling() {
+        pollInterval = setInterval(async () => {
+            try {
+                const res = await fetch(`${API_BASE_URL}/messages/conversations`, { credentials: 'include' });
+                if (!res.ok) return;
+                conversations = await res.json();
+                updateDocTitle();
+                renderConvList();
+
+                // If a thread is open, reload it silently to get new messages
+                if (activeConv) {
+                    let url = `${API_BASE_URL}/messages/thread?with=${activeConv.other_user_id}`;
+                    if (activeConv.listing_id) url += `&listing=${activeConv.listing_id}`;
+                    const tRes = await fetch(url, { credentials: 'include' });
+                    if (tRes.ok) {
+                        const messages = await tRes.json();
+                        const container = document.getElementById('threadMessages');
+                        if (container) {
+                            // Only re-render if count changed (avoid scroll jump)
+                            const currentCount = container.querySelectorAll('.message-row').length;
+                            if (messages.length !== currentCount) {
+                                renderMessages(messages);
+                            }
+                        }
+                    }
+                }
+            } catch (e) {
+                // Silently fail polling
+            }
+        }, 10000);
+    }
+
+    // ---- Escape HTML ----
+
+    function escHtml(str) {
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    // ---- Init ----
+    checkAuth();
+</script>
+</body>
+</html>

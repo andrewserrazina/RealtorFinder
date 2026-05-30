@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Browse Homes For Sale - RealtorFinder</title>
+    <meta name="description" content="Search active home listings from verified sellers nationwide. Filter by city, price, bedrooms and more.">
+    <!-- Google Analytics 4 -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-BRGVVNKT65"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-BRGVVNKT65');
+    </script>
+    <!-- Microsoft Clarity -->
+    <script type="text/javascript">
+        (function(c,l,a,r,i,t,y){
+            c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+            t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+            y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+        })(window, document, "clarity", "script", "wxvaz0g7tq");
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --ink: #1a1a1a;
+            --paper: #faf9f7;
+            --accent: #d4523e;
+            --soft-accent: #e8ded8;
+            --border: #e1ddd7;
+            --success: #2d6e4f;
+            --warning: #c77029;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'DM Sans', sans-serif; background: var(--paper); color: var(--ink); }
+
+        header {
+            background: white;
+            border-bottom: 1px solid var(--border);
+            padding: 1.25rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 200;
+        }
+        .header-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .logo { font-family: 'Crimson Pro', serif; font-size: 1.6rem; font-weight: 700; color: var(--ink); text-decoration: none; }
+        .logo span { color: var(--accent); }
+        .header-nav { display: flex; gap: 1.5rem; align-items: center; }
+        .header-nav a { color: var(--ink); text-decoration: none; font-weight: 500; font-size: 0.95rem; opacity: 0.7; transition: opacity 0.2s; }
+        .header-nav a:hover, .header-nav a.active { opacity: 1; }
+        .header-nav a.active { color: var(--accent); font-weight: 600; }
+        .btn { background: var(--accent); color: white; padding: 0.6rem 1.25rem; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 0.9rem; border: none; cursor: pointer; transition: background 0.2s; }
+        .btn:hover { background: #c0402c; }
+        .btn-outline { background: transparent; color: var(--ink); border: 1.5px solid var(--border); padding: 0.6rem 1.25rem; border-radius: 8px; text-decoration: none; font-weight: 500; font-size: 0.9rem; transition: all 0.2s; }
+        .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+
+        .hero {
+            background: linear-gradient(135deg, var(--ink) 0%, #2d1f1a 100%);
+            color: white;
+            padding: 4rem 2rem;
+            text-align: center;
+        }
+        .hero h1 { font-family: 'Crimson Pro', serif; font-size: 2.5rem; font-weight: 700; margin-bottom: 0.75rem; }
+        .hero p { font-size: 1.1rem; opacity: 0.8; }
+
+        .filter-bar {
+            background: white;
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 0;
+            position: sticky;
+            top: 73px;
+            z-index: 100;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+        .filter-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .filter-container input, .filter-container select {
+            padding: 0.6rem 0.9rem;
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.9rem;
+            background: var(--paper);
+            color: var(--ink);
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .filter-container input:focus, .filter-container select:focus { border-color: var(--accent); }
+        .filter-container input[type="text"] { min-width: 180px; }
+        .filter-container select { min-width: 130px; }
+        .filter-container .btn { padding: 0.6rem 1.5rem; }
+
+        .main {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+        .results-count { font-size: 0.95rem; color: #666; }
+
+        .listings-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+        }
+        @media (max-width: 1024px) { .listings-grid { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 640px) { .listings-grid { grid-template-columns: 1fr; } }
+
+        .listing-card {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            transition: box-shadow 0.2s, transform 0.2s;
+        }
+        .listing-card:hover { box-shadow: 0 8px 24px rgba(0,0,0,0.1); transform: translateY(-2px); }
+        .listing-img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            display: block;
+        }
+        .listing-img-placeholder {
+            width: 100%;
+            height: 200px;
+            background: linear-gradient(135deg, var(--soft-accent), #d4c5bc);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            color: var(--accent);
+        }
+        .listing-body { padding: 1.25rem; }
+        .listing-price {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: var(--ink);
+            margin-bottom: 0.25rem;
+        }
+        .listing-address { color: #555; font-size: 0.9rem; margin-bottom: 0.75rem; }
+        .listing-meta {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.85rem;
+            color: #777;
+            margin-bottom: 0.75rem;
+        }
+        .listing-meta span { display: flex; align-items: center; gap: 0.3rem; }
+        .listing-type {
+            display: inline-block;
+            background: var(--soft-accent);
+            color: var(--accent);
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 0.2rem 0.6rem;
+            border-radius: 20px;
+            margin-bottom: 1rem;
+        }
+        .listing-actions { display: flex; gap: 0.75rem; }
+        .listing-actions a, .listing-actions button {
+            flex: 1;
+            text-align: center;
+            padding: 0.6rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            font-family: 'DM Sans', sans-serif;
+        }
+        .btn-view { background: var(--accent); color: white; }
+        .btn-view:hover { background: #c0402c; }
+        .btn-msg { background: var(--soft-accent); color: var(--accent); border: 1.5px solid var(--soft-accent); }
+        .btn-msg:hover { border-color: var(--accent); }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: #888;
+            grid-column: 1 / -1;
+        }
+        .empty-state p { font-size: 1.1rem; margin-bottom: 0.5rem; }
+        .empty-state small { font-size: 0.9rem; }
+
+        .load-more-wrap { text-align: center; margin-top: 2.5rem; }
+        .load-more-wrap .btn { padding: 0.85rem 2.5rem; }
+
+        .skeleton { background: linear-gradient(90deg, #f0ece8 25%, #e8e4e0 50%, #f0ece8 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 8px; }
+        @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+        @media (max-width: 768px) {
+            .filter-container { flex-direction: column; align-items: stretch; }
+            .filter-container input, .filter-container select { width: 100%; }
+            .header-nav { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-container">
+            <a class="logo" href="/">Realtor<span>Finder</span></a>
+            <nav class="header-nav">
+                <a href="/realtors/directory">Find a Realtor</a>
+                <a href="/search" class="active">Browse Listings</a>
+                <a href="/dashboard/seller">Post a Listing</a>
+            </nav>
+            <div style="display:flex;gap:0.75rem;align-items:center;">
+                <a href="/login" class="btn-outline">Sign In</a>
+                <a href="/register" class="btn">Get Started</a>
+            </div>
+        </div>
+    </header>
+
+    <div class="hero">
+        <h1>Browse Homes For Sale</h1>
+        <p>Search active listings from verified sellers nationwide</p>
+    </div>
+
+    <div class="filter-bar">
+        <div class="filter-container">
+            <input type="text" id="filterCity" placeholder="City or ZIP code">
+            <select id="filterState">
+                <option value="">Any State</option>
+                <option>AL</option><option>AK</option><option>AZ</option><option>AR</option>
+                <option>CA</option><option>CO</option><option>CT</option><option>DE</option>
+                <option>FL</option><option>GA</option><option>HI</option><option>ID</option>
+                <option>IL</option><option>IN</option><option>IA</option><option>KS</option>
+                <option>KY</option><option>LA</option><option>ME</option><option>MD</option>
+                <option>MA</option><option>MI</option><option>MN</option><option>MS</option>
+                <option>MO</option><option>MT</option><option>NE</option><option>NV</option>
+                <option>NH</option><option>NJ</option><option>NM</option><option>NY</option>
+                <option>NC</option><option>ND</option><option>OH</option><option>OK</option>
+                <option>OR</option><option>PA</option><option>RI</option><option>SC</option>
+                <option>SD</option><option>TN</option><option>TX</option><option>UT</option>
+                <option>VT</option><option>VA</option><option>WA</option><option>WV</option>
+                <option>WI</option><option>WY</option>
+            </select>
+            <select id="filterType">
+                <option value="">Any Type</option>
+                <option value="Single Family">Single Family</option>
+                <option value="Condo">Condo</option>
+                <option value="Townhouse">Townhouse</option>
+                <option value="Multi-Family">Multi-Family</option>
+            </select>
+            <select id="filterMinPrice">
+                <option value="">Min Price</option>
+                <option value="100000">$100k</option>
+                <option value="200000">$200k</option>
+                <option value="300000">$300k</option>
+                <option value="400000">$400k</option>
+                <option value="500000">$500k</option>
+                <option value="600000">$600k</option>
+                <option value="750000">$750k</option>
+                <option value="1000000">$1M</option>
+            </select>
+            <select id="filterMaxPrice">
+                <option value="">Max Price</option>
+                <option value="200000">$200k</option>
+                <option value="300000">$300k</option>
+                <option value="400000">$400k</option>
+                <option value="500000">$500k</option>
+                <option value="600000">$600k</option>
+                <option value="750000">$750k</option>
+                <option value="1000000">$1M</option>
+                <option value="2000000">$2M+</option>
+            </select>
+            <select id="filterBeds">
+                <option value="">Any Beds</option>
+                <option value="1">1+ Beds</option>
+                <option value="2">2+ Beds</option>
+                <option value="3">3+ Beds</option>
+                <option value="4">4+ Beds</option>
+                <option value="5">5+ Beds</option>
+            </select>
+            <button class="btn" onclick="doSearch(true)">Search</button>
+        </div>
+    </div>
+
+    <div class="main">
+        <div class="results-header">
+            <div class="results-count" id="resultsCount"></div>
+        </div>
+        <div class="listings-grid" id="listingsGrid"></div>
+        <div class="load-more-wrap" id="loadMoreWrap" style="display:none;">
+            <button class="btn" onclick="loadMore()">Load More Listings</button>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = window.API_BASE_URL || '/api';
+        let currentPage = 1;
+        let totalPages = 1;
+        let totalCount = 0;
+        let isLoading = false;
+
+        function getFilters() {
+            return {
+                city:        document.getElementById('filterCity').value.trim(),
+                state:       document.getElementById('filterState').value,
+                type:        document.getElementById('filterType').value,
+                minPrice:    document.getElementById('filterMinPrice').value,
+                maxPrice:    document.getElementById('filterMaxPrice').value,
+                minBedrooms: document.getElementById('filterBeds').value,
+            };
+        }
+
+        function buildQuery(filters, page) {
+            const p = new URLSearchParams({ page, limit: 12 });
+            if (filters.city)        p.set('city', filters.city);
+            if (filters.state)       p.set('state', filters.state);
+            if (filters.type)        p.set('type', filters.type);
+            if (filters.minPrice)    p.set('minPrice', filters.minPrice);
+            if (filters.maxPrice)    p.set('maxPrice', filters.maxPrice);
+            if (filters.minBedrooms) p.set('minBedrooms', filters.minBedrooms);
+            return p.toString();
+        }
+
+        function formatPrice(n) {
+            if (!n && n !== 0) return 'Price N/A';
+            return '$' + Number(n).toLocaleString('en-US');
+        }
+
+        function listingCard(l) {
+            const img = l.image_urls && l.image_urls.length
+                ? `<img class="listing-img" src="${l.image_urls[0]}" alt="${l.address}" loading="lazy">`
+                : `<div class="listing-img-placeholder">🏠</div>`;
+            const href = l.share_token ? `/listing/${l.id}` : `/listing/${l.id}`;
+            return `
+                <div class="listing-card">
+                    <a href="${href}">${img}</a>
+                    <div class="listing-body">
+                        <div class="listing-price">${formatPrice(l.price)}</div>
+                        <div class="listing-address">${l.address}${l.city ? ', ' + l.city : ''}${l.state ? ', ' + l.state : ''}</div>
+                        <div class="listing-meta">
+                            ${l.bedrooms ? `<span>🛏 ${l.bedrooms} bed</span>` : ''}
+                            ${l.bathrooms ? `<span>🚿 ${l.bathrooms} bath</span>` : ''}
+                            ${l.sqft ? `<span>📐 ${Number(l.sqft).toLocaleString()} sqft</span>` : ''}
+                        </div>
+                        ${l.type ? `<span class="listing-type">${l.type}</span>` : ''}
+                        <div class="listing-actions">
+                            <a href="${href}" class="btn-view">View Details</a>
+                            <button class="btn-msg" onclick="messageAboutListing(${l.seller_id}, ${l.id})">Message Seller</button>
+                        </div>
+                    </div>
+                </div>`;
+        }
+
+        async function doSearch(reset) {
+            if (isLoading) return;
+            if (reset) { currentPage = 1; document.getElementById('listingsGrid').innerHTML = ''; }
+            isLoading = true;
+            const filters = getFilters();
+            const qs = buildQuery(filters, currentPage);
+            try {
+                const res = await fetch(`${API_BASE_URL}/listings/search?${qs}`);
+                const data = await res.json();
+                const grid = document.getElementById('listingsGrid');
+                if (reset && (!data.listings || !data.listings.length)) {
+                    grid.innerHTML = `<div class="empty-state"><p>No listings found matching your criteria.</p><small>Try adjusting your filters or broadening your search.</small></div>`;
+                    document.getElementById('resultsCount').textContent = '';
+                    document.getElementById('loadMoreWrap').style.display = 'none';
+                    return;
+                }
+                totalCount = data.total || 0;
+                totalPages = data.pages || 1;
+                document.getElementById('resultsCount').textContent = `Showing ${Math.min(currentPage * 12, totalCount)} of ${totalCount} listing${totalCount !== 1 ? 's' : ''}`;
+                (data.listings || []).forEach(l => { grid.insertAdjacentHTML('beforeend', listingCard(l)); });
+                document.getElementById('loadMoreWrap').style.display = currentPage < totalPages ? 'block' : 'none';
+            } catch (e) {
+                console.error('Search error:', e);
+                if (reset) document.getElementById('listingsGrid').innerHTML = '<div class="empty-state"><p>Unable to load listings. Please try again.</p></div>';
+            } finally {
+                isLoading = false;
+            }
+        }
+
+        function loadMore() {
+            currentPage++;
+            doSearch(false);
+        }
+
+        function messageAboutListing(sellerId, listingId) {
+            window.location.href = '/inbox';
+        }
+
+        // Read URL params on load
+        (function initFromUrl() {
+            const p = new URLSearchParams(window.location.search);
+            if (p.get('city'))  document.getElementById('filterCity').value  = p.get('city');
+            if (p.get('state')) document.getElementById('filterState').value = p.get('state');
+            if (p.get('type'))  document.getElementById('filterType').value  = p.get('type');
+        })();
+
+        // Enter key triggers search
+        document.getElementById('filterCity').addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(true); });
+
+        doSearch(true);
+    </script>
+</body>
+</html>

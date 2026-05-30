@@ -3593,6 +3593,203 @@ app.post('/api/admin/announce', requireAdmin, async (req, res) => {
     }
 });
 
+// ===== PUBLIC LISTING SEARCH =====
+
+app.get('/api/listings/search', async (req, res) => {
+    try {
+        const page  = Math.max(1, parseInt(req.query.page)  || 1);
+        const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 12));
+        const offset = (page - 1) * limit;
+        const { city, state, type, minPrice, maxPrice, minBedrooms } = req.query;
+
+        const conditions = [`l.status = 'active'`, `l.deleted_at IS NULL`];
+        const params = [];
+
+        if (city) {
+            params.push(`%${city}%`);
+            conditions.push(`(l.city ILIKE $${params.length} OR l.zip ILIKE $${params.length} OR l.address ILIKE $${params.length})`);
+        }
+        if (state) {
+            params.push(state);
+            conditions.push(`l.state ILIKE $${params.length}`);
+        }
+        if (type && type !== 'Any') {
+            params.push(type);
+            conditions.push(`l.property_type = $${params.length}`);
+        }
+        if (minPrice) {
+            params.push(parseInt(minPrice));
+            conditions.push(`l.price >= $${params.length}`);
+        }
+        if (maxPrice) {
+            params.push(parseInt(maxPrice));
+            conditions.push(`l.price <= $${params.length}`);
+        }
+        if (minBedrooms) {
+            params.push(parseInt(minBedrooms));
+            conditions.push(`l.bedrooms >= $${params.length}`);
+        }
+
+        const where = conditions.join(' AND ');
+
+        const countResult = await pool.query(
+            `SELECT COUNT(*) AS total FROM listings l WHERE ${where}`, params
+        );
+        const total = parseInt(countResult.rows[0].total) || 0;
+
+        params.push(limit);
+        params.push(offset);
+        const { rows } = await pool.query(
+            `SELECT l.id, l.address, l.city, l.state, l.zip, l.price,
+                    l.property_type AS type, l.bedrooms, l.bathrooms, l.sqft,
+                    l.image_urls, l.share_token, l.created_at,
+                    u.first_name AS owner_first, u.last_name AS owner_last
+             FROM listings l
+             JOIN users u ON u.id = l.user_id
+             WHERE ${where}
+             ORDER BY l.created_at DESC
+             LIMIT $${params.length - 1} OFFSET $${params.length}`,
+            params
+        );
+
+        res.json({ listings: rows, total, page, pages: Math.ceil(total / limit) });
+    } catch (err) {
+        console.error('Listing search error:', err);
+        res.status(500).json({ error: 'Failed to search listings' });
+    }
+});
+
+// Public listing by share token
+app.get('/api/listings/share/:token', async (req, res) => {
+    try {
+        const { rows } = await pool.query(
+            `SELECT l.id, l.address, l.city, l.state, l.zip, l.price, l.zestimate,
+                    l.property_type AS type, l.bedrooms, l.bathrooms, l.sqft,
+                    l.description, l.image_urls, l.status, l.share_token,
+                    l.created_at, l.latitude, l.longitude,
+                    u.id AS seller_id, u.first_name AS owner_first, u.last_name AS owner_last
+             FROM listings l
+             JOIN users u ON u.id = l.user_id
+             WHERE l.share_token = $1 AND l.status != 'inactive'`,
+            [req.params.token]
+        );
+        if (!rows.length) return res.status(404).json({ error: 'Listing not found' });
+        pool.query(`UPDATE listings SET share_views = COALESCE(share_views,0)+1 WHERE share_token=$1`, [req.params.token]).catch(() => {});
+        res.json(rows[0]);
+    } catch (err) {
+        console.error('Share listing error:', err);
+        res.status(500).json({ error: 'Failed to load listing' });
+    }
+});
+
+// ===== LISTING RENEWAL =====
+
+app.post('/api/listings/:id/renew', auth.requireAuth, async (req, res) => {
+    try {
+        const listingId = parseInt(req.params.id);
+        const { rows } = await pool.query(
+            `SELECT id, user_id, address FROM listings WHERE id = $1`,
+            [listingId]
+        );
+        if (!rows.length) return res.status(404).json({ error: 'Listing not found' });
+        if (rows[0].user_id !== req.session.userId) return res.status(403).json({ error: 'Not your listing' });
+
+        await pool.query(
+            `UPDATE listings
+             SET status = 'active',
+                 expiry_warning_sent = FALSE,
+                 expires_at = NOW() + INTERVAL '90 days',
+                 updated_at = NOW()
+             WHERE id = $1`,
+            [listingId]
+        );
+        res.json({ ok: true, message: 'Listing renewed for 90 days' });
+    } catch (err) {
+        console.error('Listing renew error:', err);
+        res.status(500).json({ error: 'Failed to renew listing' });
+    }
+});
+
+// ===== STRIPE BILLING PORTAL =====
+
+app.post('/api/billing/portal', auth.requireAuth, async (req, res) => {
+    if (!stripe) return res.status(503).json({ error: 'stripe_not_configured' });
+    try {
+        const user = await auth.getUserById(req.session.userId);
+        // Look up stripe_customer_id from the user's company
+        const { rows } = await pool.query(
+            `SELECT stripe_customer_id FROM companies WHERE owner_user_id = $1 AND stripe_customer_id IS NOT NULL`,
+            [req.session.userId]
+        );
+        if (!rows.length || !rows[0].stripe_customer_id) {
+            return res.status(400).json({ error: 'No active subscription found. Please subscribe first.' });
+        }
+        const base = process.env.FRONTEND_URL || 'https://www.realtorfinder.net';
+        const session = await stripe.billingPortal.sessions.create({
+            customer: rows[0].stripe_customer_id,
+            return_url: `${base}/dashboard/company`,
+        });
+        res.json({ url: session.url });
+    } catch (err) {
+        console.error('Billing portal error:', err);
+        res.status(500).json({ error: 'Failed to open billing portal' });
+    }
+});
+
+// ===== COMPANY ANALYTICS =====
+
+app.get('/api/company/analytics', auth.requireAuth, async (req, res) => {
+    try {
+        const user = await auth.getUserById(req.session.userId);
+        if (!user.company_id) return res.status(400).json({ error: 'No company found' });
+
+        const { rows: members } = await pool.query(
+            `SELECT u.id, u.first_name, u.last_name, u.email, u.subscription_plan
+             FROM users u WHERE u.company_id = $1 AND u.is_active IS NOT FALSE`,
+            [user.company_id]
+        );
+
+        // Per-agent stats
+        const agentStats = await Promise.all(members.map(async m => {
+            const [listings, proposals, reviews] = await Promise.all([
+                pool.query(`SELECT COUNT(*) AS c FROM listings WHERE user_id=$1 AND status='active'`, [m.id]),
+                pool.query(`SELECT COUNT(*) AS c FROM proposals WHERE realtor_id=$1`, [m.id]),
+                pool.query(`SELECT AVG(rating)::numeric(3,1) AS avg FROM reviews WHERE realtor_id=$1`, [m.id]),
+            ]);
+            return {
+                id: m.id,
+                name: `${m.first_name} ${m.last_name}`,
+                email: m.email,
+                plan: m.subscription_plan,
+                listingCount: parseInt(listings.rows[0].c) || 0,
+                proposalCount: parseInt(proposals.rows[0].c) || 0,
+                avgRating: parseFloat(reviews.rows[0].avg) || null,
+            };
+        }));
+
+        const totals = agentStats.reduce((acc, a) => ({
+            activeListings:  acc.activeListings  + a.listingCount,
+            totalProposals:  acc.totalProposals  + a.proposalCount,
+        }), { activeListings: 0, totalProposals: 0 });
+
+        const ratedAgents = agentStats.filter(a => a.avgRating);
+        const avgRating = ratedAgents.length
+            ? (ratedAgents.reduce((s, a) => s + a.avgRating, 0) / ratedAgents.length).toFixed(1)
+            : null;
+
+        res.json({
+            totalAgents: members.length,
+            activeListings: totals.activeListings,
+            totalProposals: totals.totalProposals,
+            avgRating,
+            agents: agentStats,
+        });
+    } catch (err) {
+        console.error('Company analytics error:', err);
+        res.status(500).json({ error: 'Failed to load analytics' });
+    }
+});
+
 // ===== LISTING SHARE REDIRECT =====
 
 app.get('/s/:token', async (req, res) => {
@@ -3692,6 +3889,23 @@ app.get('/listing/:id', async (req, res) => {
         console.error('Listing OG SSR error:', err);
         res.sendFile(path.join(__dirname, 'public', 'listing-detail.html'));
     }
+});
+
+// Browse listings (public)
+app.get('/search', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'search.html'));
+});
+
+// Inbox (requires login)
+app.get('/inbox', (req, res) => {
+    if (!req.session || !req.session.userId) return res.redirect('/login?next=/inbox');
+    res.sendFile(path.join(__dirname, 'public', 'inbox.html'));
+});
+
+// Company / brokerage dashboard
+app.get('/dashboard/company', (req, res) => {
+    if (!req.session || !req.session.userId) return res.redirect('/login');
+    res.sendFile(path.join(__dirname, 'public', 'company-dashboard.html'));
 });
 
 // Login page

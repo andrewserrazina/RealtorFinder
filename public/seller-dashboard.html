@@ -854,7 +854,7 @@
                         <span class="nav-icon">🏠</span>
                         <span>Showings</span>
                     </div>
-                    <div class="nav-item" data-view="messages">
+                    <div class="nav-item" onclick="window.location.href='/inbox'">
                         <span class="nav-icon">💬</span>
                         <span>Messages</span>
                         <span class="badge" id="msgBadge" style="display:none;">0</span>
@@ -1486,12 +1486,18 @@
             container.innerHTML = listings.map(listing => {
                 const img = listing.image_urls && listing.image_urls.length > 0 ? listing.image_urls[0] : null;
                 const status = listing.status || 'active';
-                const statusLabel = { active: 'Active', under_contract: 'Under Contract', sold: 'Sold' }[status] || status;
+                const statusLabel = { active: 'Active', under_contract: 'Under Contract', sold: 'Sold', expired: 'Expired' }[status] || status;
                 const statusClass = 'status-' + status.replace('_', '-');
+                const isExpired = status === 'expired';
+                const daysLeft = listing.expires_at ? Math.max(0, Math.ceil((new Date(listing.expires_at) - Date.now()) / 86400000)) : null;
+                const expiryWarning = daysLeft !== null && daysLeft <= 7 && !isExpired
+                    ? `<div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:8px;padding:0.6rem 1rem;font-size:0.85rem;color:#92400e;margin-bottom:0.75rem;">⚠️ Expires in ${daysLeft} day${daysLeft !== 1 ? 's' : ''}</div>`
+                    : '';
                 return `
-                <div class="listing-card">
+                <div class="listing-card" style="${isExpired ? 'opacity:0.8;border-color:#f59e0b;' : ''}">
                     <div class="listing-image" style="${img ? `background-image:url('${img}')` : ''}">${img ? '' : '🏡'}</div>
                     <div class="listing-details">
+                        ${expiryWarning}
                         <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.5rem;">
                             <div class="listing-address" style="margin-bottom:0;">${listing.address}</div>
                             <span class="status-badge ${statusClass}">${statusLabel}</span>
@@ -1506,11 +1512,14 @@
                         <p style="margin-top:0.5rem;font-size:0.9rem;color:#999;">${listing.date} &nbsp;·&nbsp; 👁 ${listing.view_count || 0} views &nbsp;·&nbsp; 🔗 ${listing.shareViews || 0} share views &nbsp;·&nbsp; 📬 ${listing.offerCount || 0} proposals &nbsp;·&nbsp; 📅 ${Math.floor((Date.now() - new Date(listing.created_at).getTime()) / 86400000)} days on market</p>
                     </div>
                     <div class="listing-actions">
-                        <button class="btn btn-primary" onclick="viewOffers(${listing.id})">${listing.offerCount || 0} Offers</button>
+                        ${isExpired
+                            ? `<button class="btn btn-primary" onclick="renewListing(${listing.id})" style="background:#d97706;">Renew Listing</button>`
+                            : `<button class="btn btn-primary" onclick="viewOffers(${listing.id})">${listing.offerCount || 0} Offers</button>`
+                        }
                         <a href="/listing/${listing.id}" target="_blank" class="btn btn-secondary" style="font-size:0.85rem;text-align:center;">View Listing</a>
                         ${listing.shareToken ? `<button class="btn btn-outline" onclick="copyShareLink('${listing.shareToken}')" style="font-size:0.85rem;">🔗 Share</button>` : ''}
-                        <button class="btn btn-outline" onclick="openEditModal(${listing.id})">Edit</button>
-                        ${status !== 'sold' ? `<button class="btn btn-outline" onclick="markListingSold(${listing.id})" style="font-size:0.85rem;">Mark Sold</button>` : ''}
+                        ${!isExpired ? `<button class="btn btn-outline" onclick="openEditModal(${listing.id})">Edit</button>` : ''}
+                        ${status !== 'sold' && !isExpired ? `<button class="btn btn-outline" onclick="markListingSold(${listing.id})" style="font-size:0.85rem;">Mark Sold</button>` : ''}
                         <button class="btn btn-outline" onclick="deleteListing(${listing.id})" style="font-size:0.85rem;border-color:#ef4444;color:#ef4444;">Delete</button>
                     </div>
                 </div>
@@ -1539,6 +1548,21 @@
                 document.body.removeChild(el);
                 showToast('Share link copied!');
             });
+        }
+
+        async function renewListing(listingId) {
+            if (!confirm('Renew this listing for another 90 days?')) return;
+            try {
+                const res = await fetch(`${API_BASE_URL}/listings/${listingId}/renew`, {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+                if (!res.ok) throw new Error('Failed to renew');
+                showToast('Listing renewed for 90 days!');
+                loadDashboard();
+            } catch (e) {
+                alert('Could not renew listing. Please try again.');
+            }
         }
 
         function renderRecentActivity(listings) {

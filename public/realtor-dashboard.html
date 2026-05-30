@@ -1205,6 +1205,16 @@
                     <div id="completenessItems" style="display:flex;flex-direction:column;gap:0.5rem;"></div>
                 </div>
 
+                <!-- Subscription & Billing -->
+                <div style="background:white;border-radius:12px;border:1px solid var(--border);padding:1.5rem;margin-top:1.5rem;">
+                    <h3 style="font-family:'Crimson Pro',serif;font-size:1.3rem;font-weight:700;margin-bottom:0.5rem;color:var(--ink);">Subscription</h3>
+                    <p style="font-size:0.9rem;color:#666;margin-bottom:1rem;">Manage your RealtorFinder plan and billing.</p>
+                    <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
+                        <button onclick="openBillingPortal()" style="background:var(--accent);color:white;border:none;padding:0.7rem 1.5rem;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.95rem;font-family:inherit;">Manage Subscription</button>
+                        <a href="/pricing" style="background:white;color:var(--ink);border:1.5px solid var(--border);padding:0.7rem 1.5rem;border-radius:8px;font-weight:600;font-size:0.95rem;text-decoration:none;display:inline-block;">View Plans</a>
+                    </div>
+                </div>
+
                 <!-- Change Password -->
                 <div style="background:white;border-radius:12px;border:1px solid var(--border);padding:1.5rem;margin-top:1.5rem;">
                     <h3 style="font-family:'Crimson Pro',serif;font-size:1.3rem;font-weight:700;margin-bottom:1rem;color:var(--ink);">Change Password</h3>
@@ -1236,6 +1246,72 @@
                 </div>
             </div>
         </section>
+    </div>
+
+    <!-- Onboarding Wizard Modal -->
+    <div id="onboardingWizard" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:1000;display:none;align-items:center;justify-content:center;">
+        <div style="background:white;border-radius:16px;width:540px;max-width:95vw;padding:2.5rem;position:relative;max-height:90vh;overflow-y:auto;">
+            <button onclick="closeWizard()" style="position:absolute;top:1rem;right:1rem;background:none;border:none;font-size:1.25rem;cursor:pointer;color:#999;line-height:1;">✕</button>
+
+            <!-- Progress -->
+            <div style="display:flex;gap:0.4rem;margin-bottom:2rem;" id="wizardDots"></div>
+
+            <!-- Steps -->
+            <div id="wizardStep1">
+                <div style="font-size:2.5rem;margin-bottom:1rem;">👋</div>
+                <h2 style="font-family:'Crimson Pro',serif;font-size:1.8rem;font-weight:700;margin-bottom:0.75rem;color:var(--ink);">Welcome to RealtorFinder</h2>
+                <p style="color:#555;margin-bottom:1.5rem;line-height:1.7;">Let's set up your profile in 3 quick steps. A complete profile gets <strong>3× more listing views</strong> and helps sellers trust you.</p>
+                <button onclick="wizardNext()" style="background:var(--accent);color:white;border:none;padding:0.9rem 2rem;border-radius:8px;font-weight:700;font-size:1rem;cursor:pointer;width:100%;font-family:inherit;">Get Started →</button>
+                <div style="text-align:center;margin-top:1rem;"><button onclick="closeWizard()" style="background:none;border:none;color:#999;font-size:0.85rem;cursor:pointer;font-family:inherit;">Skip setup for now</button></div>
+            </div>
+
+            <div id="wizardStep2" style="display:none;">
+                <div style="font-size:2rem;margin-bottom:0.75rem;">📸</div>
+                <h2 style="font-family:'Crimson Pro',serif;font-size:1.6rem;font-weight:700;margin-bottom:0.5rem;">Profile Photo</h2>
+                <p style="color:#555;margin-bottom:1.25rem;font-size:0.95rem;">Listings with photos get 2× more inquiries.</p>
+                <div id="wizardPhotoPreview" style="width:90px;height:90px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent-dark));display:flex;align-items:center;justify-content:center;font-size:2rem;color:white;margin-bottom:1rem;overflow:hidden;"></div>
+                <label style="display:inline-block;background:white;border:1.5px solid var(--border);padding:0.6rem 1.25rem;border-radius:8px;cursor:pointer;font-weight:600;font-size:0.9rem;margin-bottom:1.5rem;">
+                    Choose Photo <input type="file" accept="image/*" id="wizardPhotoInput" style="display:none;" onchange="wizardPreviewPhoto(this)">
+                </label>
+                <div style="display:flex;gap:0.75rem;">
+                    <button onclick="wizardNext()" style="background:var(--accent);color:white;border:none;padding:0.75rem 1.5rem;border-radius:8px;font-weight:700;cursor:pointer;flex:1;font-family:inherit;" id="wizardPhotoBtn">Next →</button>
+                    <button onclick="wizardSkipStep()" style="background:white;color:#999;border:1.5px solid var(--border);padding:0.75rem 1.5rem;border-radius:8px;cursor:pointer;font-family:inherit;">Skip</button>
+                </div>
+            </div>
+
+            <div id="wizardStep3" style="display:none;">
+                <div style="font-size:2rem;margin-bottom:0.75rem;">📝</div>
+                <h2 style="font-family:'Crimson Pro',serif;font-size:1.6rem;font-weight:700;margin-bottom:0.5rem;">Your Professional Info</h2>
+                <p style="color:#555;margin-bottom:1.25rem;font-size:0.95rem;">Tell sellers why you're the right agent for them.</p>
+                <div style="display:flex;flex-direction:column;gap:0.75rem;margin-bottom:1.5rem;">
+                    <input id="wizardLicense" type="text" placeholder="License number" style="padding:0.75rem 1rem;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.95rem;">
+                    <input id="wizardYears" type="number" placeholder="Years of experience" min="0" max="60" style="padding:0.75rem 1rem;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.95rem;">
+                    <textarea id="wizardBio" rows="4" placeholder="Write a short bio (min 20 characters)…" style="padding:0.75rem 1rem;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.95rem;resize:vertical;"></textarea>
+                </div>
+                <div style="display:flex;gap:0.75rem;">
+                    <button onclick="wizardSaveStep3()" style="background:var(--accent);color:white;border:none;padding:0.75rem 1.5rem;border-radius:8px;font-weight:700;cursor:pointer;flex:1;font-family:inherit;">Save & Continue →</button>
+                    <button onclick="wizardSkipStep()" style="background:white;color:#999;border:1.5px solid var(--border);padding:0.75rem 1.5rem;border-radius:8px;cursor:pointer;font-family:inherit;">Skip</button>
+                </div>
+            </div>
+
+            <div id="wizardStep4" style="display:none;">
+                <div style="font-size:2rem;margin-bottom:0.75rem;">📍</div>
+                <h2 style="font-family:'Crimson Pro',serif;font-size:1.6rem;font-weight:700;margin-bottom:0.5rem;">Service Areas</h2>
+                <p style="color:#555;margin-bottom:1.25rem;font-size:0.95rem;">Enter the cities or ZIP codes you serve, separated by commas.</p>
+                <textarea id="wizardAreas" rows="3" placeholder="e.g. Springfield MA, 01101, Boston MA" style="width:100%;padding:0.75rem 1rem;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.95rem;resize:vertical;margin-bottom:1.5rem;"></textarea>
+                <div style="display:flex;gap:0.75rem;">
+                    <button onclick="wizardSaveStep4()" style="background:var(--accent);color:white;border:none;padding:0.75rem 1.5rem;border-radius:8px;font-weight:700;cursor:pointer;flex:1;font-family:inherit;">Save & Finish →</button>
+                    <button onclick="wizardSkipStep()" style="background:white;color:#999;border:1.5px solid var(--border);padding:0.75rem 1.5rem;border-radius:8px;cursor:pointer;font-family:inherit;">Skip</button>
+                </div>
+            </div>
+
+            <div id="wizardStep5" style="display:none;text-align:center;">
+                <div style="font-size:3rem;margin-bottom:1rem;">🎉</div>
+                <h2 style="font-family:'Crimson Pro',serif;font-size:1.8rem;font-weight:700;margin-bottom:0.75rem;color:var(--success);">You're all set!</h2>
+                <p style="color:#555;margin-bottom:1.5rem;line-height:1.7;">Your profile is live. Start browsing listings and send proposals to win your first deal.</p>
+                <button onclick="wizardFinish()" style="background:var(--accent);color:white;border:none;padding:0.9rem 2rem;border-radius:8px;font-weight:700;font-size:1rem;cursor:pointer;width:100%;font-family:inherit;">Browse Listings →</button>
+            </div>
+        </div>
     </div>
 
     <!-- Connect Modal -->
@@ -1416,11 +1492,11 @@
 
                 if (view === 'buyer-requests') loadBuyerRequests();
                 if (view === 'showings') loadShowings();
-                if (view === 'company') loadCompany();
+                if (view === 'company') { window.location.href = '/dashboard/company'; return; }
                 if (view === 'saved') loadSavedListings();
                 if (view === 'analytics') loadAnalytics();
                 if (view === 'profile') { loadEmailAlerts(); loadProfileCompleteness(); }
-                if (view === 'messages') loadConversations();
+                if (view === 'messages') { window.location.href = '/inbox'; return; }
             });
         });
 
@@ -1903,6 +1979,149 @@
             document.querySelector('.dashboard-container').prepend(panel);
         }
 
+        // ===== ONBOARDING WIZARD =====
+        let wizardStep = 1;
+        const WIZARD_KEY = 'rf_wizard_done';
+
+        function initWizardDots() {
+            const container = document.getElementById('wizardDots');
+            container.innerHTML = '';
+            for (let i = 1; i <= 5; i++) {
+                const dot = document.createElement('div');
+                dot.style.cssText = `height:4px;flex:1;border-radius:4px;background:${i <= wizardStep ? 'var(--accent)' : '#e5e7eb'};transition:background 0.3s;`;
+                container.appendChild(dot);
+            }
+        }
+
+        function showWizardStep(n) {
+            wizardStep = n;
+            for (let i = 1; i <= 5; i++) {
+                document.getElementById(`wizardStep${i}`).style.display = i === n ? 'block' : 'none';
+            }
+            initWizardDots();
+        }
+
+        async function openWizard() {
+            const el = document.getElementById('onboardingWizard');
+            el.style.display = 'flex';
+            showWizardStep(1);
+            // Pre-fill fields from existing profile
+            try {
+                const p = await fetch(`${API_BASE_URL}/profile`, { credentials: 'include' }).then(r => r.json());
+                if (p.license_number) document.getElementById('wizardLicense').value = p.license_number;
+                if (p.years_experience) document.getElementById('wizardYears').value = p.years_experience;
+                if (p.bio) document.getElementById('wizardBio').value = p.bio;
+                if (p.service_areas) document.getElementById('wizardAreas').value = p.service_areas;
+                if (p.profile_photo) {
+                    document.getElementById('wizardPhotoPreview').innerHTML =
+                        `<img src="${p.profile_photo}" style="width:100%;height:100%;object-fit:cover;">`;
+                }
+            } catch {}
+        }
+
+        function closeWizard() {
+            document.getElementById('onboardingWizard').style.display = 'none';
+            localStorage.setItem(WIZARD_KEY, '1');
+        }
+
+        function wizardNext() { showWizardStep(wizardStep + 1); }
+        function wizardSkipStep() { showWizardStep(wizardStep + 1); }
+
+        function wizardPreviewPhoto(input) {
+            const file = input.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = e => {
+                const preview = document.getElementById('wizardPhotoPreview');
+                preview.innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;">`;
+            };
+            reader.readAsDataURL(file);
+            document.getElementById('wizardPhotoBtn').textContent = 'Upload & Continue →';
+            document.getElementById('wizardPhotoBtn').onclick = async () => {
+                const fd = new FormData();
+                fd.append('photo', file);
+                try {
+                    await fetch(`${API_BASE_URL}/profile/photo`, { method: 'POST', body: fd, credentials: 'include' });
+                } catch {}
+                wizardNext();
+            };
+        }
+
+        async function wizardSaveStep3() {
+            const license = document.getElementById('wizardLicense').value.trim();
+            const years = document.getElementById('wizardYears').value;
+            const bio = document.getElementById('wizardBio').value.trim();
+            if (bio && bio.length < 20) { alert('Please write at least 20 characters for your bio.'); return; }
+            try {
+                const current = await fetch(`${API_BASE_URL}/profile`, { credentials: 'include' }).then(r => r.json());
+                await fetch(`${API_BASE_URL}/profile`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        phone: current.phone || '',
+                        licenseNumber: license || current.license_number || '',
+                        yearsExperience: years || current.years_experience || '',
+                        serviceAreas: current.service_areas || '',
+                        bio: bio || current.bio || '',
+                    })
+                });
+            } catch {}
+            wizardNext();
+        }
+
+        async function wizardSaveStep4() {
+            const areas = document.getElementById('wizardAreas').value.trim();
+            if (!areas) { wizardNext(); return; }
+            try {
+                const current = await fetch(`${API_BASE_URL}/profile`, { credentials: 'include' }).then(r => r.json());
+                await fetch(`${API_BASE_URL}/profile`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        phone: current.phone || '',
+                        licenseNumber: current.license_number || '',
+                        yearsExperience: current.years_experience || '',
+                        serviceAreas: areas,
+                        bio: current.bio || '',
+                    })
+                });
+            } catch {}
+            wizardNext();
+        }
+
+        function wizardFinish() {
+            closeWizard();
+            document.querySelector('[data-view="browse"]').click();
+            loadProfile();
+        }
+
+        function maybeShowWizard(profile) {
+            if (localStorage.getItem(WIZARD_KEY)) return;
+            const hasPhoto = !!profile.profile_photo;
+            const hasBio = !!(profile.bio && profile.bio.trim().length > 20);
+            const hasAreas = !!(profile.service_areas && profile.service_areas.trim());
+            const hasLicense = !!profile.license_number;
+            const score = [hasPhoto, hasBio, hasAreas, hasLicense].filter(Boolean).length;
+            if (score < 2) openWizard();
+        }
+
+        // ===== BILLING PORTAL =====
+        async function openBillingPortal() {
+            try {
+                const res = await fetch(`${API_BASE_URL}/billing/portal`, {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+                const data = await res.json();
+                if (data.url) { window.location.href = data.url; }
+                else { alert(data.error || 'No active subscription found. Please subscribe first.'); }
+            } catch (e) {
+                alert('Could not open billing portal. Please try again.');
+            }
+        }
+
         function dismissOnboarding() {
             sessionStorage.setItem('onboarding_dismissed', '1');
             const panel = document.getElementById('onboardingChecklist');
@@ -1928,6 +2147,7 @@
                 form.elements.serviceAreas.value = p.service_areas || '';
                 form.elements.bio.value = p.bio || '';
                 renderOnboardingChecklist(p);
+                maybeShowWizard(p);
                 // Profile photo
                 const initials = ((p.first_name||'')[0]||'') + ((p.last_name||'')[0]||'');
                 document.getElementById('profilePhotoInitials').textContent = initials.toUpperCase();
