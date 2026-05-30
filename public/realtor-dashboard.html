@@ -1367,6 +1367,24 @@
         </div>
     </div>
 
+    <!-- Listing Lead Pay Modal -->
+    <div id="listingLeadPayModal" class="modal">
+        <div class="modal-content" style="max-width:460px;">
+            <span class="modal-close" onclick="closeListingLeadModal()">&times;</span>
+            <div class="modal-header">
+                <h2>Unlock Lead — $15</h2>
+                <p class="modal-subtitle" id="listingLeadAddr" style="font-size:0.9rem;color:#666;"></p>
+            </div>
+            <p style="font-size:0.9rem;color:#555;margin-bottom:1rem;">Pay once to submit a proposal on this listing. Upgrade to a subscription plan for unlimited proposals.</p>
+            <div id="listingLeadPayError" style="display:none;background:rgba(239,68,68,0.1);color:#991b1b;padding:0.75rem;border-radius:8px;margin-bottom:1rem;font-size:0.9rem;"></div>
+            <div id="listingCardElementWrap" style="border:1px solid var(--border);border-radius:8px;padding:0.875rem;margin-bottom:1rem;background:#fff;">
+                <div id="listingCardElement"></div>
+            </div>
+            <button id="listingLeadPayBtn" class="btn btn-primary" style="width:100%;padding:1rem;" onclick="submitListingLeadPayment()">Pay $15</button>
+            <p style="text-align:center;margin-top:0.75rem;font-size:0.8rem;color:#9ca3af;">Or <a href="/pricing" style="color:var(--accent);font-weight:600;">upgrade your plan</a> for unlimited proposals</p>
+        </div>
+    </div>
+
     <!-- Bid Modal -->
     <div id="bidModal" class="modal">
         <div class="modal-content">
@@ -1619,6 +1637,7 @@
         // Load & render listings with current filters + page
         async function loadListings() {
             try {
+                await loadPurchasedListingLeads();
                 const params = new URLSearchParams({ page: currentPage, limit: 20, ...currentFilters });
                 const listingsRes = await fetch(`${API_BASE_URL}/listings?${params}`, { credentials: 'include' });
                 const data = await listingsRes.json();
@@ -1675,12 +1694,26 @@
                 `;
                 return;
             }
-            
+
+            const userPlan = currentUser ? (currentUser.subscription_plan || 'free') : 'free';
+            const isFreePlan = userPlan === 'free';
+
             container.innerHTML = listings.map(listing => {
                 const img = listing.image_urls && listing.image_urls.length > 0 ? listing.image_urls[0] : null;
                 const isSaved = savedListingIds.has(listing.id);
                 const alreadyProposed = mySubmittedProposals.some(p => p.listing_id === listing.id);
+                const hasPaidLead = purchasedListingLeadIds.has(listing.id);
                 const safeAddr = (listing.address || '').replace(/'/g, "\\'");
+
+                let actionBtn;
+                if (alreadyProposed) {
+                    actionBtn = `<button class="btn btn-secondary listing-action" onclick="event.stopPropagation();showProposalModal(${listing.id}, '${safeAddr}')">✓ Proposed</button>`;
+                } else if (isFreePlan && !hasPaidLead) {
+                    actionBtn = `<button class="btn btn-primary listing-action" onclick="event.stopPropagation();openListingLeadModal(${listing.id}, '${safeAddr}')" style="background:#16a34a;border-color:#16a34a;">🔓 Unlock Lead — $15</button>`;
+                } else {
+                    actionBtn = `<button class="btn btn-primary listing-action" onclick="event.stopPropagation();showProposalModal(${listing.id}, '${safeAddr}')">Submit Proposal</button>`;
+                }
+
                 return `
                 <div class="listing-card" onclick="openBidModal(${listing.id}, '${safeAddr}')">
                     <div class="listing-image" style="${img ? `background-image:url('${img}');background-size:cover;background-position:center;` : ''}">
@@ -1697,7 +1730,8 @@
                             <span>📏 ${listing.sqft.toLocaleString()} sqft</span>
                         </div>
                         <div class="listing-description">${listing.description}</div>
-                        <button class="btn ${alreadyProposed ? 'btn-secondary' : 'btn-primary'} listing-action" onclick="event.stopPropagation();showProposalModal(${listing.id}, '${safeAddr}')">${alreadyProposed ? '✓ Proposed' : 'Submit Proposal'}</button>
+                        ${isFreePlan && !hasPaidLead && !alreadyProposed ? `<div style="font-size:0.78rem;color:#6b7280;margin-bottom:0.5rem;">Free plan: $15 per lead · <a href="/pricing" style="color:var(--accent);">Upgrade →</a></div>` : ''}
+                        ${actionBtn}
                     </div>
                 </div>
             `}).join('');
@@ -2531,6 +2565,11 @@
         let currentLeadRequestId = null;
         let purchasedLeadIds = new Set();
 
+        // Listing-specific lead purchases (free plan)
+        let listingStripeCardElement = null;
+        let currentListingLeadId = null;
+        let purchasedListingLeadIds = new Set();
+
         async function loadPurchasedLeads() {
             try {
                 const res = await fetch(`${API_BASE_URL}/leads/purchased`, { credentials: 'include' });
@@ -2538,6 +2577,77 @@
                 const ids = await res.json();
                 purchasedLeadIds = new Set(ids);
             } catch {}
+        }
+
+        async function loadPurchasedListingLeads() {
+            try {
+                const res = await fetch(`${API_BASE_URL}/leads/purchased-listings`, { credentials: 'include' });
+                if (!res.ok) return;
+                const ids = await res.json();
+                purchasedListingLeadIds = new Set(ids);
+            } catch {}
+        }
+
+        function openListingLeadModal(listingId, address) {
+            currentListingLeadId = listingId;
+            document.getElementById('listingLeadAddr').textContent = address;
+            document.getElementById('listingLeadPayError').style.display = 'none';
+            document.getElementById('listingLeadPayBtn').disabled = false;
+            document.getElementById('listingLeadPayBtn').textContent = 'Pay $15';
+            document.getElementById('listingLeadPayModal').classList.add('active');
+            if (!stripeInstance && window.Stripe && window.STRIPE_PUBLISHABLE_KEY) {
+                stripeInstance = Stripe(window.STRIPE_PUBLISHABLE_KEY);
+            }
+            if (stripeInstance) {
+                const elements = stripeInstance.elements();
+                if (listingStripeCardElement) { try { listingStripeCardElement.destroy(); } catch {} }
+                listingStripeCardElement = elements.create('card', { style: { base: { fontSize: '16px', color: '#0a2540' } } });
+                listingStripeCardElement.mount('#listingCardElement');
+            } else {
+                document.getElementById('listingCardElementWrap').innerHTML = '<p style="color:#999;font-size:0.9rem;">Stripe payment not configured in this environment.</p>';
+            }
+        }
+
+        function closeListingLeadModal() {
+            document.getElementById('listingLeadPayModal').classList.remove('active');
+            currentListingLeadId = null;
+        }
+
+        async function submitListingLeadPayment() {
+            if (!currentListingLeadId) return;
+            const btn = document.getElementById('listingLeadPayBtn');
+            const errEl = document.getElementById('listingLeadPayError');
+            btn.disabled = true;
+            btn.textContent = 'Processing…';
+            errEl.style.display = 'none';
+            try {
+                const res = await fetch(`${API_BASE_URL}/leads/purchase`, {
+                    method: 'POST', credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ listing_id: currentListingLeadId })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Failed to initiate payment');
+                if (!stripeInstance || !listingStripeCardElement) throw new Error('Stripe not initialized');
+                const { paymentIntent, error } = await stripeInstance.confirmCardPayment(data.clientSecret, {
+                    payment_method: { card: listingStripeCardElement }
+                });
+                if (error) throw new Error(error.message);
+                // Mark as purchased locally and open proposal modal
+                purchasedListingLeadIds.add(currentListingLeadId);
+                const lid = currentListingLeadId;
+                const addr = document.getElementById('listingLeadAddr').textContent;
+                closeListingLeadModal();
+                showToast('Lead purchased! Submit your proposal now.');
+                showProposalModal(lid, addr);
+                // Refresh listing view to update button state
+                loadListings();
+            } catch (err) {
+                errEl.textContent = err.message || 'Payment failed. Please try again.';
+                errEl.style.display = 'block';
+                btn.disabled = false;
+                btn.textContent = 'Pay $15';
+            }
         }
 
         function openLeadPayModal(requestId) {
@@ -3325,7 +3435,16 @@
                     body: JSON.stringify({ listing_id: listingId, commission_pct, cover_note, timeline })
                 });
                 const d = await res.json();
-                if (!res.ok) { errEl.textContent = d.error || 'Failed to submit'; errEl.style.display = 'block'; return; }
+                if (!res.ok) {
+                    if (res.status === 402 && d.error === 'free_plan_lead_required') {
+                        closeProposalModal();
+                        openListingLeadModal(listingId, document.getElementById('proposalListingAddr').textContent);
+                    } else {
+                        errEl.textContent = d.error || d.message || 'Failed to submit';
+                        errEl.style.display = 'block';
+                    }
+                    return;
+                }
                 closeProposalModal();
                 showToast('Proposal submitted successfully!');
                 loadMyProposals();

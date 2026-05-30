@@ -2068,6 +2068,23 @@ app.post('/api/webhook/stripe', express.raw({ type: 'application/json' }), async
         }
     }
 
+    if (event.type === 'payment_intent.succeeded') {
+        const pi = event.data.object;
+        if (pi.metadata?.type === 'listing_lead') {
+            try {
+                const realtorId = parseInt(pi.metadata.realtor_id);
+                const listingId = parseInt(pi.metadata.listing_id);
+                await pool.query(
+                    `UPDATE lead_purchases SET paid = TRUE WHERE realtor_id = $1 AND listing_id = $2`,
+                    [realtorId, listingId]
+                );
+                console.log(`✅ Stripe: lead purchase confirmed — realtor ${realtorId}, listing ${listingId}`);
+            } catch (err) {
+                console.error('Stripe payment_intent.succeeded DB error:', err);
+            }
+        }
+    }
+
     res.json({ received: true });
 });
 
@@ -2711,6 +2728,21 @@ app.post('/api/proposals', auth.requireAuth, async (req, res) => {
         if (!listing_id || commission_pct === undefined) return res.status(400).json({ error: 'listing_id and commission_pct are required' });
         const pct = parseFloat(commission_pct);
         if (isNaN(pct) || pct < 0.1 || pct > 10) return res.status(400).json({ error: 'commission_pct must be between 0.1 and 10' });
+        // Free-plan realtors must purchase a lead before submitting a proposal
+        const planRow = await pool.query(
+            `SELECT COALESCE(c.plan, u.subscription_plan, 'free') AS plan
+             FROM users u LEFT JOIN companies c ON u.company_id = c.id WHERE u.id = $1`,
+            [req.session.userId]
+        );
+        if ((planRow.rows[0]?.plan || 'free') === 'free') {
+            const leadRow = await pool.query(
+                `SELECT id FROM lead_purchases WHERE realtor_id = $1 AND listing_id = $2 AND paid = TRUE`,
+                [req.session.userId, listing_id]
+            );
+            if (!leadRow.rows.length) {
+                return res.status(402).json({ error: 'free_plan_lead_required', message: 'Purchase this lead ($15) to submit a proposal.' });
+            }
+        }
         const { rows } = await pool.query(
             `INSERT INTO proposals (listing_id, realtor_id, commission_pct, cover_note, timeline)
              VALUES ($1, $2, $3, $4, $5)
@@ -3141,76 +3173,90 @@ app.get('/api/realtors/:id/response-time', async (req, res) => {
 
 // ===== FEATURE 1: PAY-PER-LEAD =====
 
-// Purchase a lead (free plan realtors only)
+const LEAD_PRICE_CENTS = 1500; // $15 per lead
+
+// Purchase a listing lead (free plan realtors — pay $15 to unlock one listing)
 app.post('/api/leads/purchase', auth.requireAuth, async (req, res) => {
     if (!stripe) return res.status(503).json({ error: 'stripe_not_configured' });
     try {
         if (req.user.user_type !== 'realtor') return res.status(403).json({ error: 'Realtors only' });
-        const { buyer_request_id } = req.body;
-        if (!buyer_request_id) return res.status(400).json({ error: 'buyer_request_id required' });
+        const { listing_id } = req.body;
+        if (!listing_id) return res.status(400).json({ error: 'listing_id required' });
 
-        const userRow = await pool.query(`SELECT subscription_plan FROM users WHERE id = $1`, [req.session.userId]);
-        const plan = userRow.rows[0]?.subscription_plan || 'free';
+        const planRow = await pool.query(
+            `SELECT COALESCE(c.plan, u.subscription_plan, 'free') AS plan
+             FROM users u LEFT JOIN companies c ON u.company_id = c.id WHERE u.id = $1`,
+            [req.session.userId]
+        );
+        const plan = planRow.rows[0]?.plan || 'free';
         if (plan !== 'free') {
-            return res.status(400).json({ error: 'Pro subscribers see all leads for free — upgrade your plan to access this feature.' });
+            return res.status(400).json({ error: 'Your subscription already includes unlimited leads.' });
         }
 
-        // Check no existing purchase
+        // Check for existing paid purchase
         const existing = await pool.query(
-            `SELECT id FROM lead_purchases WHERE realtor_id = $1 AND buyer_request_id = $2`,
-            [req.session.userId, buyer_request_id]
+            `SELECT id, paid FROM lead_purchases WHERE realtor_id = $1 AND listing_id = $2`,
+            [req.session.userId, listing_id]
         );
-        if (existing.rows.length) return res.status(400).json({ error: 'You have already purchased this lead' });
+        if (existing.rows.length && existing.rows[0].paid) {
+            return res.status(400).json({ error: 'You have already purchased this lead.' });
+        }
+
+        // Verify listing exists
+        const listingRow = await pool.query(
+            `SELECT address, city, state FROM listings WHERE id = $1 AND deleted_at IS NULL`, [listing_id]
+        );
+        if (!listingRow.rows.length) return res.status(404).json({ error: 'Listing not found' });
+        const l = listingRow.rows[0];
 
         const paymentIntent = await stripe.paymentIntents.create({
-            amount: 999,
+            amount: LEAD_PRICE_CENTS,
             currency: 'usd',
-            metadata: { realtor_id: String(req.session.userId), buyer_request_id: String(buyer_request_id) }
+            description: `RealtorFinder lead: ${l.address}, ${l.city}, ${l.state}`,
+            metadata: { realtor_id: String(req.session.userId), listing_id: String(listing_id), type: 'listing_lead' },
         });
 
         await pool.query(
-            `INSERT INTO lead_purchases (realtor_id, buyer_request_id, stripe_payment_intent_id, amount_cents)
-             VALUES ($1, $2, $3, 999) ON CONFLICT DO NOTHING`,
-            [req.session.userId, buyer_request_id, paymentIntent.id]
+            `INSERT INTO lead_purchases (realtor_id, listing_id, stripe_payment_intent_id, amount_cents, paid)
+             VALUES ($1, $2, $3, $4, FALSE)
+             ON CONFLICT (realtor_id, listing_id) DO UPDATE SET stripe_payment_intent_id = EXCLUDED.stripe_payment_intent_id`,
+            [req.session.userId, listing_id, paymentIntent.id, LEAD_PRICE_CENTS]
         );
 
-        res.json({ clientSecret: paymentIntent.client_secret, amount: 999 });
+        res.json({ clientSecret: paymentIntent.client_secret, amount: LEAD_PRICE_CENTS });
     } catch (err) {
         console.error('POST /api/leads/purchase error:', err);
         res.status(500).json({ error: 'Failed to create payment' });
     }
 });
 
-// Confirm a lead payment
-app.post('/api/leads/confirm', auth.requireAuth, async (req, res) => {
-    if (!stripe) return res.status(503).json({ error: 'stripe_not_configured' });
-    try {
-        if (req.user.user_type !== 'realtor') return res.status(403).json({ error: 'Realtors only' });
-        const { payment_intent_id } = req.body;
-        if (!payment_intent_id) return res.status(400).json({ error: 'payment_intent_id required' });
-
-        const pi = await stripe.paymentIntents.retrieve(payment_intent_id);
-        if (pi.status !== 'succeeded') return res.status(400).json({ error: 'Payment not completed' });
-
-        res.json({ ok: true });
-    } catch (err) {
-        console.error('POST /api/leads/confirm error:', err);
-        res.status(500).json({ error: 'Failed to confirm payment' });
-    }
-});
-
-// Get purchased lead IDs for current realtor
+// Get purchased buyer-request lead IDs for current realtor
 app.get('/api/leads/purchased', auth.requireAuth, async (req, res) => {
     try {
         if (req.user.user_type !== 'realtor') return res.status(403).json({ error: 'Realtors only' });
         const { rows } = await pool.query(
-            `SELECT buyer_request_id FROM lead_purchases WHERE realtor_id = $1`,
+            `SELECT buyer_request_id FROM lead_purchases WHERE realtor_id = $1 AND buyer_request_id IS NOT NULL`,
             [req.session.userId]
         );
         res.json(rows.map(r => r.buyer_request_id));
     } catch (err) {
         console.error('GET /api/leads/purchased error:', err);
         res.status(500).json({ error: 'Failed to fetch purchased leads' });
+    }
+});
+
+// Get purchased listing lead IDs (paid) for current realtor
+app.get('/api/leads/purchased-listings', auth.requireAuth, async (req, res) => {
+    try {
+        if (req.user.user_type !== 'realtor') return res.status(403).json({ error: 'Realtors only' });
+        const { rows } = await pool.query(
+            `SELECT listing_id FROM lead_purchases WHERE realtor_id = $1 AND listing_id IS NOT NULL AND paid = TRUE`,
+            [req.session.userId]
+        );
+        res.json(rows.map(r => r.listing_id));
+    } catch (err) {
+        console.error('GET /api/leads/purchased-listings error:', err);
+        res.status(500).json({ error: 'Failed to fetch purchased listing leads' });
     }
 });
 
@@ -3604,11 +3650,14 @@ const _schemaMigrations = [
     `CREATE TABLE IF NOT EXISTS lead_purchases (
         id SERIAL PRIMARY KEY,
         realtor_id INTEGER NOT NULL REFERENCES users(id),
-        buyer_request_id INTEGER NOT NULL REFERENCES buyer_requests(id),
+        buyer_request_id INTEGER REFERENCES buyer_requests(id),
+        listing_id INTEGER REFERENCES listings(id),
         stripe_payment_intent_id TEXT,
-        amount_cents INTEGER NOT NULL DEFAULT 999,
+        amount_cents INTEGER NOT NULL DEFAULT 1500,
+        paid BOOLEAN NOT NULL DEFAULT FALSE,
         purchased_at TIMESTAMPTZ DEFAULT NOW(),
-        UNIQUE(realtor_id, buyer_request_id)
+        UNIQUE(realtor_id, buyer_request_id),
+        UNIQUE(realtor_id, listing_id)
     )`,
     `CREATE TABLE IF NOT EXISTS showings (
         id SERIAL PRIMARY KEY,
@@ -4554,7 +4603,11 @@ setInterval(runListingExpiryJob, 24 * 60 * 60 * 1000).unref();
 _schemaMigrations.push(
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS email_unsubscribed BOOLEAN DEFAULT FALSE`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS unsubscribe_token TEXT UNIQUE`,
-    `ALTER TABLE users ADD COLUMN IF NOT EXISTS stripe_customer_id TEXT UNIQUE`
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS stripe_customer_id TEXT UNIQUE`,
+    `ALTER TABLE lead_purchases ADD COLUMN IF NOT EXISTS listing_id INTEGER REFERENCES listings(id)`,
+    `ALTER TABLE lead_purchases ADD COLUMN IF NOT EXISTS paid BOOLEAN NOT NULL DEFAULT FALSE`,
+    `ALTER TABLE lead_purchases ALTER COLUMN buyer_request_id DROP NOT NULL`,
+    `DO $$ BEGIN ALTER TABLE lead_purchases ADD CONSTRAINT lead_purchases_realtor_listing UNIQUE(realtor_id, listing_id); EXCEPTION WHEN others THEN NULL; END $$`
 );
 
 // Drip email onboarding job — sends 3-step sequences to sellers, realtors, and buyers

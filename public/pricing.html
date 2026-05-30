@@ -112,13 +112,13 @@
 
         /* Pricing grid */
         .pricing-section {
-            max-width: 1100px;
+            max-width: 1300px;
             margin: 0 auto;
             padding: 2rem 2rem 5rem;
         }
         .pricing-grid {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(4, 1fr);
             gap: 1.5rem;
             align-items: start;
         }
@@ -334,10 +334,15 @@
         }
         .mobile-menu .nav-cta:hover { background: #e55a2b; }
 
-        @media (max-width: 900px) {
-            .pricing-grid { grid-template-columns: 1fr; }
+        @media (max-width: 1100px) {
+            .pricing-grid { grid-template-columns: repeat(2, 1fr); }
             .plan-card.featured { transform: none; }
+        }
+        @media (max-width: 680px) {
+            .pricing-grid { grid-template-columns: 1fr; }
             .hero h1 { font-size: 2.4rem; }
+        }
+        @media (max-width: 900px) {
             .nav-links { display: none; }
             .nav-hamburger { display: flex; }
         }
@@ -379,6 +384,21 @@
 
 <div class="pricing-section">
     <div class="pricing-grid">
+
+        <!-- Free -->
+        <div class="plan-card">
+            <div class="plan-name">Free</div>
+            <div class="plan-price">$0<span>/month</span></div>
+            <div class="plan-desc">Try the platform at no cost — pay only for the leads you want</div>
+            <ul class="plan-features">
+                <li>Browse all active listings</li>
+                <li>Pay $15 per lead to submit a proposal</li>
+                <li>Basic agent profile</li>
+                <li>Standard listing notifications</li>
+                <li>No monthly commitment</li>
+            </ul>
+            <a href="/login?tab=signup&type=realtor" class="plan-btn plan-btn-outline">Sign Up Free</a>
+        </div>
 
         <!-- Basic -->
         <div class="plan-card">
@@ -444,8 +464,12 @@
         <div class="faq-a">Yes — cancel your subscription at any time from your dashboard. You'll retain access through the end of your billing period with no further charges.</div>
     </div>
     <div class="faq-item">
-        <div class="faq-q">Is there a free trial?</div>
-        <div class="faq-a">We don't offer a time-limited free trial, but you can create a free account, explore the platform, and subscribe whenever you're ready to start bidding.</div>
+        <div class="faq-q">How does the Free plan work?</div>
+        <div class="faq-a">The Free plan lets you browse all active listings at no cost. When you find a listing you want to bid on, pay $15 to unlock that lead and submit your proposal. There's no monthly fee — you only pay for the listings you choose to pursue.</div>
+    </div>
+    <div class="faq-item">
+        <div class="faq-q">Is there a free trial for paid plans?</div>
+        <div class="faq-a">We don't offer a time-limited trial for paid plans, but you can start on the Free plan, explore the platform, and subscribe whenever you're ready for unlimited proposals.</div>
     </div>
     <div class="faq-item">
         <div class="faq-q">What's the difference between Basic and Professional?</div>
