@@ -103,6 +103,22 @@ app.use(cookieParser());
 
 // Attach user to all requests
 app.use(auth.attachUser);
+
+// Block unapproved / deactivated accounts from all API routes except auth, admin, and webhooks
+app.use('/api', (req, res, next) => {
+    if (!req.user || !req.user.id) return next(); // unauthenticated — let route handle it
+    // These paths work regardless of approval status
+    const exempt = ['/auth/', '/webhook/', '/admin/'];
+    if (exempt.some(p => req.path.startsWith(p))) return next();
+    if (req.user.is_active === false) {
+        return res.status(403).json({ error: 'account_deactivated', message: 'Your account has been deactivated. Please contact support.' });
+    }
+    if (!req.user.is_admin && req.user.is_approved === false) {
+        return res.status(403).json({ error: 'account_pending', message: 'Your account is pending approval. You will be notified by email once it is activated.' });
+    }
+    next();
+});
+
 // Static files will be added AFTER page routes
 
 // Helper function to format date
@@ -683,7 +699,9 @@ app.get('/api/auth/me', (req, res) => {
         lastName: req.user.last_name,
         zipCode: req.user.zip_code,
         emailVerified: req.user.email_verified || false,
-        isAdmin: req.user.is_admin || false
+        isAdmin: req.user.is_admin || false,
+        isApproved: req.user.is_admin ? true : (req.user.is_approved === true),
+        subscription_plan: req.user.subscription_plan || 'free'
     });
 });
 
