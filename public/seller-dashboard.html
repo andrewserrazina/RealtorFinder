@@ -888,12 +888,16 @@
                         <div class="stat-value" id="statActiveListings">0</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-label">Total Offers</div>
-                        <div class="stat-value" id="statTotalOffers">0</div>
+                        <div class="stat-label">Proposals Pending</div>
+                        <div class="stat-value" id="statPendingProposals">0</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-label">Pending Review</div>
-                        <div class="stat-value" id="statPendingOffers">0</div>
+                        <div class="stat-label">Proposals Accepted</div>
+                        <div class="stat-value" id="statAcceptedProposals">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Unread Messages</div>
+                        <div class="stat-value" id="statUnreadMessages">0</div>
                     </div>
                 </div>
 
@@ -1060,6 +1064,14 @@
                         <label>Phone *</label>
                         <input type="tel" name="ownerPhone" placeholder="(555) 123-4567" required>
                     </div>
+                </div>
+                <div style="margin-bottom:1rem;">
+                    <label style="display:flex;align-items:flex-start;gap:0.75rem;cursor:pointer;">
+                        <input type="checkbox" id="newListingAttestation" style="margin-top:3px;flex-shrink:0;">
+                        <span style="font-size:0.88rem;color:#555;line-height:1.5;">
+                            I confirm I am the owner or authorized representative of this property and have the right to list it on RealtorFinder.
+                        </span>
+                    </label>
                 </div>
                 <button type="submit" class="btn btn-primary" style="width: 100%; padding: 1rem; margin-top: 1rem;">Next: Add Photos →</button>
             </form>
@@ -1391,6 +1403,10 @@
         // Create Listing
         document.getElementById('newListingForm').addEventListener('submit', async (e) => {
             e.preventDefault();
+            if (!document.getElementById('newListingAttestation').checked) {
+                showToast('Please confirm you are the property owner or authorized representative.');
+                return;
+            }
             const btn = e.target.querySelector('button[type="submit"]');
             btn.disabled = true;
             btn.textContent = 'Creating…';
@@ -1398,6 +1414,7 @@
             const data = Object.fromEntries(formData);
             if (data.price) data.price = parseInt(stripCurrency(data.price), 10);
             if (data.zestimate) data.zestimate = data.zestimate.trim() ? parseInt(stripCurrency(data.zestimate), 10) : undefined;
+            data.owner_attested = true;
             try {
                 const response = await fetch(`${API_BASE_URL}/listings`, {
                     method: 'POST',
@@ -1438,10 +1455,35 @@
 
                 let totalOffers = 0;
                 listings.forEach(l => totalOffers += (l.offerCount || 0));
-                document.getElementById('statTotalOffers').textContent = totalOffers;
-                document.getElementById('statPendingOffers').textContent = totalOffers;
                 document.getElementById('offerCount').textContent = totalOffers;
-                
+
+                // Fetch proposal stats
+                (async () => {
+                    try {
+                        let pending = 0, accepted = 0;
+                        for (const listing of listings) {
+                            const pRes = await fetch(`/api/proposals/listing/${listing.id}`, { credentials: 'include' });
+                            if (!pRes.ok) continue;
+                            const proposals = await pRes.json();
+                            pending  += proposals.filter(p => p.status === 'pending').length;
+                            accepted += proposals.filter(p => p.status === 'accepted').length;
+                        }
+                        document.getElementById('statPendingProposals').textContent  = pending;
+                        document.getElementById('statAcceptedProposals').textContent = accepted;
+                    } catch(e) {}
+                })();
+
+                // Fetch unread message count
+                (async () => {
+                    try {
+                        const mRes = await fetch(`/api/messages/unread-count`, { credentials: 'include' });
+                        if (mRes.ok) {
+                            const { count } = await mRes.json();
+                            document.getElementById('statUnreadMessages').textContent = count || 0;
+                        }
+                    } catch(e) {}
+                })();
+
                 // Render listings
                 renderMyListings(listings);
                 renderRecentActivity(listings);
@@ -1895,6 +1937,19 @@
             loadUnreadMsgCount();
             setInterval(loadNotifications, 60000);
             setInterval(loadUnreadMsgCount, 60000);
+
+            // Real-time notification updates via SSE
+            (function startNotifStream() {
+                if (!window.EventSource) return;
+                const es = new EventSource('/api/notifications/stream', { withCredentials: true });
+                es.onmessage = (e) => {
+                    try {
+                        const d = JSON.parse(e.data);
+                        if (d.type === 'notification') loadNotifications && loadNotifications();
+                    } catch(_) {}
+                };
+                es.onerror = () => { setTimeout(startNotifStream, 5000); es.close(); };
+            })();
         });
 
         // ─── Notifications ───────────────────────────────────────────────────────
@@ -2152,13 +2207,22 @@
                             const status = p.status === 'accepted' ? '<span style="background:#d1fae5;color:#065f46;font-size:0.75rem;padding:2px 8px;border-radius:20px;font-weight:600;">Accepted</span>'
                                          : p.status === 'declined' ? '<span style="background:#fee2e2;color:#991b1b;font-size:0.75rem;padding:2px 8px;border-radius:20px;font-weight:600;">Declined</span>'
                                          : '';
+                            let counterBadge = '';
+                            if (p.counter_status === 'pending') {
+                                counterBadge = '<span style="background:#FEF3C7;color:#92400E;padding:2px 8px;border-radius:10px;font-size:0.78rem;font-weight:600;">Counter Sent</span>';
+                            } else if (p.counter_status === 'accepted') {
+                                counterBadge = '<span style="background:#D1FAE5;color:#065F46;padding:2px 8px;border-radius:10px;font-size:0.78rem;font-weight:600;">Counter Accepted</span>';
+                            } else if (p.counter_status === 'declined') {
+                                counterBadge = '<span style="background:#F3F4F6;color:#6B7280;padding:2px 8px;border-radius:10px;font-size:0.78rem;font-weight:600;">Counter Declined</span>';
+                            }
+                            const counterBtn = p.status === 'pending' ? `<button onclick="openCounterModal(${p.id}, ${p.commission_pct})" style="background:white;border:1px solid var(--accent);color:var(--accent);padding:0.5rem 1rem;border-radius:6px;font-weight:600;cursor:pointer;font-size:0.85rem;">Counter</button>` : '';
                             const acceptBtn = p.status === 'pending' ? `<button onclick="acceptProposal(${p.id}, ${listing.id})" style="background:var(--accent);color:white;border:none;border-radius:6px;padding:6px 14px;cursor:pointer;font-size:0.85rem;">Accept</button>` : status;
                             return `<tr style="${isLowest ? 'background:#f0fdf4;' : ''}">
                                 <td style="padding:10px 12px;font-weight:600;">${name}${badge}</td>
                                 <td style="padding:10px 12px;font-weight:700;color:${isLowest ? '#065f46' : 'var(--accent)'};">${p.commission_pct}%</td>
                                 <td style="padding:10px 12px;color:#666;font-size:0.85rem;">${esc(p.timeline || '—')}</td>
                                 <td style="padding:10px 12px;color:#444;font-size:0.85rem;max-width:200px;">${esc(p.cover_note || '—').slice(0, 80)}${(p.cover_note || '').length > 80 ? '…' : ''}</td>
-                                <td style="padding:10px 12px;">${acceptBtn}</td>
+                                <td style="padding:10px 12px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;">${acceptBtn}${counterBtn}${counterBadge}</td>
                             </tr>`;
                         }).join('');
                         card.innerHTML = `
@@ -2259,7 +2323,58 @@
                 loadSellerShowings();
             } catch (err) { alert(err.message || 'Failed to cancel showing'); }
         }
+
+        // ===== COUNTER-OFFER MODAL =====
+        function openCounterModal(proposalId, currentRate) {
+            document.getElementById('counterProposalId').value = proposalId;
+            document.getElementById('counterCurrentRate').textContent = currentRate;
+            document.getElementById('counterCommissionInput').value = '';
+            document.getElementById('counterMessageInput').value = '';
+            document.getElementById('counterModal').style.display = 'flex';
+        }
+        function closeCounterModal() {
+            document.getElementById('counterModal').style.display = 'none';
+        }
+        async function submitCounter() {
+            const id = document.getElementById('counterProposalId').value;
+            const pct = document.getElementById('counterCommissionInput').value;
+            const msg = document.getElementById('counterMessageInput').value;
+            if (!pct) { showToast('Enter a counter commission rate'); return; }
+            try {
+                const res = await fetch(`/api/proposals/${id}/counter`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ counter_commission: parseFloat(pct), counter_message: msg }),
+                });
+                const data = await res.json();
+                if (!res.ok) { showToast(data.error || 'Failed to send counter'); return; }
+                showToast('Counter-offer sent!');
+                closeCounterModal();
+                loadProposals && loadProposals(); // reload proposals if function exists
+            } catch { showToast('Failed to send counter-offer'); }
+        }
     </script>
+    <!-- Counter-offer modal -->
+    <div id="counterModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;">
+        <div style="background:white;border-radius:16px;padding:2rem;width:100%;max-width:420px;margin:1rem;">
+            <h3 style="font-family:'Crimson Pro',serif;font-size:1.5rem;margin-bottom:0.5rem;">Counter Proposal</h3>
+            <p style="color:#666;font-size:0.9rem;margin-bottom:1.5rem;">Propose a different commission rate to this realtor.</p>
+            <input type="hidden" id="counterProposalId">
+            <label style="display:block;margin-bottom:0.5rem;font-weight:600;font-size:0.9rem;">Current rate: <span id="counterCurrentRate">—</span>%</label>
+            <label style="display:block;margin-bottom:0.5rem;font-weight:600;font-size:0.9rem;">Your counter rate (%)</label>
+            <input type="number" id="counterCommissionInput" min="0.5" max="10" step="0.1" placeholder="e.g. 2.5"
+                   style="width:100%;padding:0.75rem;border:1px solid #e5e7eb;border-radius:8px;font-size:1rem;margin-bottom:1rem;">
+            <label style="display:block;margin-bottom:0.5rem;font-weight:600;font-size:0.9rem;">Note to realtor (optional)</label>
+            <textarea id="counterMessageInput" rows="3" placeholder="Explain your counter..."
+                      style="width:100%;padding:0.75rem;border:1px solid #e5e7eb;border-radius:8px;font-size:0.9rem;resize:vertical;margin-bottom:1.5rem;"></textarea>
+            <div style="display:flex;gap:0.75rem;">
+                <button onclick="submitCounter()" style="flex:1;background:var(--accent);color:white;border:none;padding:0.875rem;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.95rem;">Send Counter</button>
+                <button onclick="closeCounterModal()" style="flex:1;background:#f3f4f6;color:#374151;border:none;padding:0.875rem;border-radius:8px;font-weight:600;cursor:pointer;">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));

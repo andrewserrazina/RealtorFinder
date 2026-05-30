@@ -303,6 +303,7 @@
                             ${r.license_verified ? '<span class="badge badge-verified" style="background:#ECFDF5;color:#059669;">✓ Verified License</span>' : (hasLicense ? '<span class="badge badge-verified">✓ Licensed</span>' : '')}
                             ${serviceAreas.map(a => `<span class="badge badge-area">${esc(a)}</span>`).join('')}
                         </div>
+                        <div id="profileRatingBadge" style="margin-top:0.5rem;display:flex;align-items:center;gap:0.5rem;"></div>
                         <button id="saveRealtorBtn" onclick="toggleSaveProfile()" style="margin-top:0.75rem;background:none;border:1px solid #e5e7eb;border-radius:20px;padding:6px 16px;cursor:pointer;font-size:0.9rem;font-weight:600;color:${isRealtorSaved ? '#ef4444' : '#666'};border-color:${isRealtorSaved ? '#ef4444' : '#e5e7eb'};">${isRealtorSaved ? '♥ Saved' : '♡ Save Realtor'}</button>
                     </div>
                 </div>
@@ -325,6 +326,17 @@
             <div class="profile-card" id="reviewsCard">
                 <div class="section-title">Reviews</div>
                 <div id="reviewsList"><p style="color:var(--muted);font-size:0.9rem;">Loading reviews…</p></div>
+            </div>
+            <div class="profile-card" id="contactCard">
+                <div class="section-title">Send a Message</div>
+                <p style="color:var(--muted);font-size:0.9rem;margin-bottom:1rem;">Interested in working with this agent? Send them a message directly.</p>
+                <textarea id="contactMsg" rows="4" placeholder="Hi, I'm interested in selling my home at..."
+                          style="width:100%;padding:0.75rem;border:1px solid #e5e7eb;border-radius:8px;font-size:0.9rem;resize:vertical;margin-bottom:0.75rem;font-family:inherit;"></textarea>
+                <button onclick="sendContactMessage()"
+                        style="background:#FF6B35;color:white;border:none;padding:0.75rem 1.5rem;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.95rem;width:100%;">
+                    Send Message
+                </button>
+                <p id="contactStatus" style="margin-top:0.5rem;font-size:0.85rem;text-align:center;"></p>
             </div>
         `;
         loadReviews();

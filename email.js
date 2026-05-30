@@ -1026,6 +1026,42 @@ const emailService = {
         } catch (error) { logSendgridError('Showing cancelled email', error); }
     },
 
+    async sendCounterOffer(toEmail, realtorName, listingAddress, counterPct, message) {
+        const body = emailWrap('#FF6B35',
+            h1('Counter-Offer Received') +
+            p(`Hi ${realtorName}, the seller has countered your proposal on <strong>${listingAddress}</strong>.`) +
+            infoBox([
+                ['Requested commission', `${counterPct}%`],
+                ...(message ? [['Seller note', message]] : []),
+            ]) +
+            p('Log in to accept or decline this counter-offer.') +
+            btn('https://www.realtorfinder.net/dashboard/realtor', 'Respond to Counter-Offer')
+        );
+        return await send({ to: toEmail, subject: `Counter-offer on ${listingAddress}`, html: body });
+    },
+
+    async sendWeeklyDigest(toEmail, firstName, data, unsubToken) {
+        // data: { newListings, proposalsWon, profileViews7d, serviceAreas }
+        const unsubUrl = `https://www.realtorfinder.net/unsubscribe?token=${unsubToken}`;
+        const listingItems = (data.newListings || []).slice(0, 5).map(l =>
+            `<li style="margin-bottom:8px;"><a href="https://www.realtorfinder.net/listings/${l.id}" style="color:#FF6B35;font-weight:600;">${l.address}, ${l.city}, ${l.state}</a> — ${l.bedrooms}bd/${l.bathrooms}ba · $${Number(l.price).toLocaleString()}</li>`
+        ).join('');
+        const body = emailWrap('#FF6B35',
+            h1(`Your Weekly Market Digest`) +
+            p(`Hi ${firstName}, here's what happened in your markets this week.`) +
+            infoBox([
+                ['New listings in your area', String(data.newListingCount || 0)],
+                ['Profile views (7 days)', String(data.profileViews7d || 0)],
+                ['Proposals won this week', String(data.proposalsWon || 0)],
+                ['Service areas', (data.serviceAreas || '—')],
+            ]) +
+            (listingItems ? `<div style="margin:24px 0;"><div style="font-weight:700;font-size:1rem;margin-bottom:12px;color:#0A2540;">New listings this week:</div><ul style="padding-left:20px;color:#444;">${listingItems}</ul></div>` : '') +
+            btn('https://www.realtorfinder.net/dashboard/realtor', 'Browse New Listings'),
+            unsubUrl
+        );
+        return await send({ to: toEmail, subject: `Your weekly RealtorFinder digest — ${new Date().toLocaleDateString('en-US',{month:'short',day:'numeric'})}`, html: body });
+    },
+
     async sendReferralSignup(referrerEmail, referrerName, newMemberName, referralCount) {
         const tierLabel = referralCount >= 10 ? 'Ambassador' : referralCount >= 5 ? 'Top Referrer' : referralCount >= 3 ? 'Connector' : 'Rising Star';
         const nextTier = referralCount < 1 ? { name: 'Rising Star', at: 1 } : referralCount < 3 ? { name: 'Connector', at: 3 } : referralCount < 5 ? { name: 'Top Referrer', at: 5 } : referralCount < 10 ? { name: 'Ambassador', at: 10 } : null;

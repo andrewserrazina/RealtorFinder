@@ -1413,6 +1413,16 @@
             if (str == null) return '';
             return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
         }
+
+        function showToast(msg, type) {
+            const toast = document.createElement('div');
+            const bg = type === 'error' ? '#fee2e2' : '#d1fae5';
+            const color = type === 'error' ? '#991b1b' : '#065f46';
+            toast.style.cssText = `position:fixed;top:20px;right:20px;background:${bg};color:${color};padding:1rem 1.5rem;border-radius:10px;font-weight:600;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,0.15);max-width:340px;`;
+            toast.textContent = msg;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 4000);
+        }
         let currentListingId = null;
         let currentUser = null;
         let allListings = [];   // cached for map access
@@ -3026,6 +3036,19 @@
             loadUnreadMsgCount();
             setInterval(loadNotifications, 60000);
             setInterval(loadUnreadMsgCount, 60000);
+
+            // Real-time notifications via SSE
+            (function startNotifStream() {
+                if (!window.EventSource) return;
+                const es = new EventSource('/api/notifications/stream', { withCredentials: true });
+                es.onmessage = (e) => {
+                    try {
+                        const d = JSON.parse(e.data);
+                        if (d.type === 'notification') typeof loadNotifications === 'function' && loadNotifications();
+                    } catch(_) {}
+                };
+                es.onerror = () => { setTimeout(startNotifStream, 5000); es.close(); };
+            })();
         });
 
         // ─── Notifications ───────────────────────────────────────────────────────
@@ -3207,13 +3230,32 @@
                 container.innerHTML = mySubmittedProposals.map(p => {
                     const addr = [p.address, p.city, p.state].filter(Boolean).join(', ');
                     const color = statusColors[p.status] || '#6b7280';
+
+                    // Counter-offer response UI
+                    let counterHtml = '';
+                    if (p.counter_status === 'pending') {
+                        counterHtml = `<div style="background:#FEF9C3;border:1px solid #FDE047;border-radius:8px;padding:0.875rem;margin-top:0.75rem;">
+                            <div style="font-weight:600;color:#713F12;font-size:0.9rem;margin-bottom:0.5rem;">⚡ Counter-offer from seller: ${esc(String(p.counter_commission))}% commission</div>
+                            ${p.counter_message ? `<div style="font-size:0.85rem;color:#78350F;margin-bottom:0.75rem;">"${esc(p.counter_message)}"</div>` : ''}
+                            <div style="display:flex;gap:0.5rem;">
+                                <button onclick="respondToCounter(${p.id}, true)" style="background:#10B981;color:white;border:none;padding:0.5rem 1rem;border-radius:6px;font-weight:600;cursor:pointer;font-size:0.85rem;">Accept Counter</button>
+                                <button onclick="respondToCounter(${p.id}, false)" style="background:#F3F4F6;color:#374151;border:none;padding:0.5rem 1rem;border-radius:6px;font-weight:600;cursor:pointer;font-size:0.85rem;">Decline</button>
+                            </div>
+                        </div>`;
+                    } else if (p.counter_status === 'accepted') {
+                        counterHtml = `<div style="margin-top:0.75rem;"><span style="background:#D1FAE5;color:#065F46;font-size:0.8rem;font-weight:700;padding:4px 10px;border-radius:20px;">✓ Counter Accepted</span></div>`;
+                    } else if (p.counter_status === 'declined') {
+                        counterHtml = `<div style="margin-top:0.75rem;"><span style="background:#F3F4F6;color:#6B7280;font-size:0.8rem;font-weight:700;padding:4px 10px;border-radius:20px;">Counter Declined</span></div>`;
+                    }
+
                     return `<div style="background:white;border-radius:12px;padding:1.5rem;margin-bottom:1rem;border:1px solid var(--border);display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;">
-                        <div>
+                        <div style="flex:1;min-width:0;">
                             <div style="font-weight:700;font-size:1rem;margin-bottom:0.25rem;">${esc(addr)}</div>
                             <div style="color:#666;font-size:0.85rem;">Commission: <strong>${p.commission_pct}%</strong> · Timeline: ${esc(p.timeline || '—')}</div>
                             ${p.cover_note ? `<div style="color:#444;font-size:0.85rem;margin-top:0.25rem;font-style:italic;">"${esc(p.cover_note.slice(0, 100))}${p.cover_note.length > 100 ? '…' : ''}"</div>` : ''}
+                            ${counterHtml}
                         </div>
-                        <div style="display:flex;align-items:center;gap:0.75rem;">
+                        <div style="display:flex;align-items:center;gap:0.75rem;flex-shrink:0;">
                             <span style="background:${color}20;color:${color};padding:4px 12px;border-radius:20px;font-size:0.8rem;font-weight:700;text-transform:capitalize;">${p.status}</span>
                             ${p.status === 'pending' ? `<button onclick="deleteProposal(${p.id})" style="background:none;border:1px solid #e5e7eb;color:#666;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:0.8rem;">Withdraw</button>` : ''}
                         </div>
@@ -3228,6 +3270,21 @@
                 const res = await fetch(`/api/proposals/${proposalId}`, { method: 'DELETE', credentials: 'include' });
                 if (res.ok) { showToast('Proposal withdrawn'); loadMyProposals(); }
             } catch(e) {}
+        }
+
+        async function respondToCounter(proposalId, accept) {
+            try {
+                const res = await fetch(`/api/proposals/${proposalId}/counter/respond`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ accept }),
+                });
+                const data = await res.json();
+                if (!res.ok) { showToast(data.error || 'Failed to respond', 'error'); return; }
+                showToast(accept ? 'Counter-offer accepted!' : 'Counter-offer declined');
+                typeof loadMyProposals === 'function' && loadMyProposals();
+            } catch { showToast('Failed to respond to counter-offer', 'error'); }
         }
 
         function showProposalModal(listingId, listingAddress) {
