@@ -3255,31 +3255,99 @@
 
         async function loadReferrals() {
             try {
-                const res = await fetch('/api/referrals/my', { credentials: 'include' });
-                if (!res.ok) return;
-                const data = await res.json();
+                const [myRes, lbRes] = await Promise.all([
+                    fetch('/api/referrals/my', { credentials: 'include' }),
+                    fetch('/api/referrals/leaderboard', { credentials: 'include' }),
+                ]);
+                if (!myRes.ok) return;
+                const data = await myRes.json();
+                const leaderboard = lbRes.ok ? await lbRes.json() : [];
                 const container = document.getElementById('referralsWidget');
-                const isTopReferrer = data.referral_count >= 5;
-                container.innerHTML = `
-                    <div style="background:white;border-radius:16px;padding:2rem;border:1px solid var(--border);max-width:600px;">
-                        ${isTopReferrer ? `<div style="background:linear-gradient(135deg,#f59e0b,#d97706);color:white;border-radius:8px;padding:10px 16px;margin-bottom:1.5rem;font-weight:700;font-size:0.95rem;">⭐ Top Referrer — You've referred ${data.referral_count} realtors!</div>` : ''}
-                        <h3 style="margin-bottom:0.5rem;">Your Referral Link</h3>
-                        <p style="color:#666;font-size:0.9rem;margin-bottom:1.25rem;">Share this link with other realtors. When they sign up, you get credit. Reach 5 referrals to earn the Top Referrer badge.</p>
-                        <div style="display:flex;gap:0.75rem;margin-bottom:1.5rem;">
-                            <input type="text" id="referralLinkInput" value="${esc(data.referral_url)}" readonly style="flex:1;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-size:0.85rem;color:#444;">
-                            <button onclick="copyReferralLink()" style="background:var(--accent);color:white;border:none;border-radius:8px;padding:10px 18px;cursor:pointer;font-weight:600;white-space:nowrap;">Copy Link</button>
-                        </div>
-                        <div style="display:flex;align-items:center;gap:1rem;">
-                            <div style="text-align:center;background:#f8f9fa;border-radius:12px;padding:1rem 1.5rem;">
-                                <div style="font-size:2rem;font-weight:900;color:var(--accent);">${data.referral_count}</div>
-                                <div style="font-size:0.8rem;color:#666;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Referrals</div>
+
+                // Tier config
+                const TIERS = [
+                    { label: 'Rising Star', min: 1,  color: '#6366f1', next: 3, nextLabel: 'Connector' },
+                    { label: 'Connector',   min: 3,  color: '#0ea5e9', next: 5, nextLabel: 'Top Referrer' },
+                    { label: 'Top Referrer',min: 5,  color: '#f59e0b', next: 10, nextLabel: 'Ambassador' },
+                    { label: 'Ambassador',  min: 10, color: '#10b981', next: null, nextLabel: null },
+                ];
+                const tier = data.tier || null;
+                const tierCfg = TIERS.find(t => t.label === tier) || null;
+                const nextTierCfg = tierCfg && tierCfg.next
+                    ? TIERS.find(t => t.min === tierCfg.next)
+                    : (data.referral_count === 0 ? TIERS[0] : null);
+                const progressMax = tierCfg ? (tierCfg.next || tierCfg.min + 1) : 1;
+                const progressVal = Math.min(data.referral_count, progressMax);
+                const progressPct = tierCfg ? Math.min(100, ((data.referral_count - tierCfg.min) / (tierCfg.next - tierCfg.min)) * 100) :
+                    Math.min(100, (data.referral_count / 1) * 100);
+
+                // Referred users rows
+                const usersHtml = (data.referred_users || []).length
+                    ? (data.referred_users || []).map(u => `
+                        <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f3f4f6;">
+                            <div style="width:36px;height:36px;border-radius:50%;background:var(--accent);color:white;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.85rem;flex-shrink:0;">
+                                ${esc((u.first_name||'?')[0]).toUpperCase()}
                             </div>
                             <div style="flex:1;">
-                                <div style="background:#e5e7eb;border-radius:4px;height:8px;overflow:hidden;margin-bottom:6px;">
-                                    <div style="background:var(--accent);width:${Math.min(100, (data.referral_count/5)*100)}%;height:100%;border-radius:4px;transition:width 0.5s;"></div>
-                                </div>
-                                <div style="font-size:0.8rem;color:#666;">${Math.max(0, 5 - data.referral_count)} more to earn the Top Referrer badge</div>
+                                <div style="font-weight:600;font-size:0.9rem;">${esc(u.first_name)} ${esc(u.last_name)}</div>
+                                <div style="font-size:0.78rem;color:#9ca3af;">${esc(u.user_type)} · Joined ${new Date(u.created_at).toLocaleDateString('en-US',{month:'short',year:'numeric'})}</div>
                             </div>
+                            ${u.plan ? `<span style="font-size:0.75rem;background:#f3f4f6;padding:3px 8px;border-radius:20px;color:#374151;">${esc(u.plan)}</span>` : ''}
+                        </div>`).join('')
+                    : `<p style="color:#9ca3af;font-size:0.875rem;padding:12px 0;">No referrals yet. Share your link to get started.</p>`;
+
+                // Leaderboard rows
+                const lbHtml = leaderboard.map((row, i) => `
+                    <div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid #f3f4f6;">
+                        <div style="width:24px;text-align:center;font-weight:700;color:${i===0?'#f59e0b':i===1?'#9ca3af':i===2?'#b45309':'#d1d5db'};font-size:${i<3?'1rem':'0.875rem'};">
+                            ${i===0?'🥇':i===1?'🥈':i===2?'🥉':i+1}
+                        </div>
+                        <div style="flex:1;font-size:0.875rem;font-weight:${i<3?'600':'400'};">${esc(row.first_name)} ${esc(row.last_name)}</div>
+                        <div style="font-weight:700;color:var(--accent);">${row.referral_count}</div>
+                    </div>`).join('') || `<p style="color:#9ca3af;font-size:0.875rem;padding:8px 0;">No data yet.</p>`;
+
+                container.innerHTML = `
+                    <div style="display:grid;gap:1.5rem;max-width:720px;">
+
+                        <!-- Tier badge + link -->
+                        <div style="background:white;border-radius:16px;padding:2rem;border:1px solid var(--border);">
+                            ${tierCfg ? `
+                            <div style="display:inline-flex;align-items:center;gap:8px;background:${tierCfg.color}18;border:1.5px solid ${tierCfg.color};border-radius:24px;padding:6px 16px;margin-bottom:1.25rem;">
+                                <span style="font-size:1rem;">⭐</span>
+                                <span style="font-weight:700;color:${tierCfg.color};font-size:0.9rem;">${esc(tierCfg.label)}</span>
+                            </div>` : ''}
+                            <h3 style="margin-bottom:0.5rem;">Your Referral Link</h3>
+                            <p style="color:#666;font-size:0.875rem;margin-bottom:1.25rem;">Share with other realtors. Earn tiers as you grow: Rising Star (1) → Connector (3) → Top Referrer (5) → Ambassador (10).</p>
+                            <div style="display:flex;gap:0.75rem;margin-bottom:1.5rem;">
+                                <input type="text" id="referralLinkInput" value="${esc(data.referral_url)}" readonly style="flex:1;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-size:0.85rem;color:#444;">
+                                <button onclick="copyReferralLink()" style="background:var(--accent);color:white;border:none;border-radius:8px;padding:10px 18px;cursor:pointer;font-weight:600;white-space:nowrap;">Copy Link</button>
+                            </div>
+                            <div style="display:flex;align-items:center;gap:1rem;">
+                                <div style="text-align:center;background:#f8f9fa;border-radius:12px;padding:1rem 1.5rem;flex-shrink:0;">
+                                    <div style="font-size:2rem;font-weight:900;color:var(--accent);">${data.referral_count}</div>
+                                    <div style="font-size:0.75rem;color:#666;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Referrals</div>
+                                </div>
+                                <div style="flex:1;">
+                                    <div style="background:#e5e7eb;border-radius:4px;height:8px;overflow:hidden;margin-bottom:6px;">
+                                        <div style="background:${tierCfg ? tierCfg.color : 'var(--accent)'};width:${nextTierCfg ? Math.min(100, (data.referral_count/(nextTierCfg.min))*100) : 100}%;height:100%;border-radius:4px;transition:width 0.5s;"></div>
+                                    </div>
+                                    <div style="font-size:0.8rem;color:#666;">
+                                        ${nextTierCfg ? `${Math.max(0, nextTierCfg.min - data.referral_count)} more to reach <strong>${nextTierCfg.label}</strong>` : '🏆 Max tier reached — you\'re an Ambassador!'}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Referred users -->
+                        <div style="background:white;border-radius:16px;padding:2rem;border:1px solid var(--border);">
+                            <h3 style="margin-bottom:1rem;">People You've Referred</h3>
+                            ${usersHtml}
+                        </div>
+
+                        <!-- Leaderboard -->
+                        <div style="background:white;border-radius:16px;padding:2rem;border:1px solid var(--border);">
+                            <h3 style="margin-bottom:1rem;">Top Referrers Leaderboard</h3>
+                            ${lbHtml}
                         </div>
                     </div>`;
             } catch(e) { console.error('loadReferrals error:', e); }

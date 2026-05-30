@@ -1025,6 +1025,22 @@ const emailService = {
             await send({ to: recipientEmail, subject: `Showing Cancelled — ${listingAddress}`, html: emailWrap('Cancelled', body) });
         } catch (error) { logSendgridError('Showing cancelled email', error); }
     },
+
+    async sendReferralSignup(referrerEmail, referrerName, newMemberName, referralCount) {
+        const tierLabel = referralCount >= 10 ? 'Ambassador' : referralCount >= 5 ? 'Top Referrer' : referralCount >= 3 ? 'Connector' : 'Rising Star';
+        const nextTier = referralCount < 1 ? { name: 'Rising Star', at: 1 } : referralCount < 3 ? { name: 'Connector', at: 3 } : referralCount < 5 ? { name: 'Top Referrer', at: 5 } : referralCount < 10 ? { name: 'Ambassador', at: 10 } : null;
+        const body = `
+            ${h1('You got a referral!')}
+            ${p(`Hi ${referrerName}, <strong>${newMemberName}</strong> just joined RealtorFinder using your referral link. You now have <strong>${referralCount} referral${referralCount !== 1 ? 's' : ''}</strong>.`)}
+            ${nextTier ? infoBox([['Your tier', tierLabel], ['Next tier', nextTier.name], ['Referrals needed', String(nextTier.at - referralCount) + ' more']]) : infoBox([['Your tier', tierLabel], ['Status', 'Maximum tier reached — Ambassador!']])}
+            ${btn(`${BASE_URL}/dashboard/realtor`, 'View Referrals')}
+            ${divider()}
+            <p style="color:#999;font-size:13px;margin:0;">The RealtorFinder Team</p>
+        `;
+        try {
+            await send({ to: referrerEmail, subject: `${newMemberName} joined via your referral link!`, html: emailWrap('Referral', body) });
+        } catch (error) { logSendgridError('Referral signup email', error); }
+    },
 };
 
 module.exports = emailService;
