@@ -198,6 +198,17 @@ function createRateLimiter(windowMs, max, message) {
 const authLimiter     = createRateLimiter(15 * 60 * 1000, 20, 'Too many attempts. Please try again in 15 minutes.');
 const waitlistLimiter = createRateLimiter(60 * 60 * 1000, 5,  'Too many signups from this IP. Please try again later.');
 
+// SSE: in-memory client registry — userId -> Set<res>
+const sseClients = new Map();
+function sseNotify(userId, payload) {
+    const clients = sseClients.get(userId);
+    if (!clients || !clients.size) return;
+    const line = `data: ${JSON.stringify(payload)}\n\n`;
+    for (const r of clients) {
+        try { r.write(line); } catch (_) {}
+    }
+}
+
 // ===== API ROUTES =====
 
 // Apply rate limiters — auth routes get the strict one first, then general API limiter covers all /api/*
@@ -530,7 +541,7 @@ app.post('/api/buyer-requests', auth.requireAuth, async (req, res) => {
                         `INSERT INTO notifications (user_id, type, title, body, link)
                          VALUES ($1, 'buyer_match', 'New Buyer Looking in Your Area', $2, '/dashboard/realtor')`,
                         [realtor.id, `A buyer is looking for a ${req_data.property_type || 'home'} in ${req_data.target_areas} with a budget of ${req_data.budget_min ? '$' + Number(req_data.budget_min).toLocaleString() : 'unspecified'}–${req_data.budget_max ? '$' + Number(req_data.budget_max).toLocaleString() : 'open'}.`]
-                    ).catch(() => {});
+                    ).then(() => sseNotify(realtor.id, { type: 'notification' })).catch(() => {});
 
                     emailService.sendBuyerMatchEmail(realtor.email, realtor.first_name, req_data).catch(() => {});
                 }
@@ -839,7 +850,7 @@ app.get('/api/listings/:id', async (req, res) => {
 app.post('/api/listings', auth.requireAuth, async (req, res) => {
     try {
         if (!req.session.emailVerified && !req.user.email_verified) return res.status(403).json({ error: 'Please verify your email address before creating a listing. Check your inbox for a verification link.' });
-        const { address, price, type, bedrooms, bathrooms, sqft, description, ownerName, ownerEmail, ownerPhone, zestimate } = req.body;
+        const { address, price, type, bedrooms, bathrooms, sqft, description, ownerName, ownerEmail, ownerPhone, zestimate, owner_attested } = req.body;
         
         // Parse address into components (basic parsing - could be enhanced with address validation API)
         const addressParts = address.split(',').map(s => s.trim());
@@ -894,6 +905,11 @@ app.post('/api/listings', auth.requireAuth, async (req, res) => {
         const shareToken = require('crypto').randomBytes(12).toString('hex');
         await pool.query(`UPDATE listings SET share_token = $1 WHERE id = $2`, [shareToken, newListing.id]);
         newListing.share_token = shareToken;
+
+        // Owner attestation
+        if (owner_attested) {
+            pool.query(`UPDATE listings SET owner_attested=TRUE, owner_attested_at=NOW() WHERE id=$1`, [newListing.id]).catch(() => {});
+        }
 
         // Send confirmation email to seller
         await emailService.sendListingConfirmation(newListing);
@@ -988,7 +1004,7 @@ app.post('/api/listings/:id/offers', auth.requireAuth, async (req, res) => {
             `INSERT INTO notifications (user_id, type, title, body, link)
              VALUES ($1, 'offer', 'New Realtor Proposal', $2, '/dashboard/seller')`,
             [listing.user_id, `${realtorName} from ${brokerage} submitted a proposal on ${listing.address}`]
-        ).catch(() => {});
+        ).then(() => sseNotify(listing.user_id, { type: 'notification' })).catch(() => {});
 
         res.status(201).json({
             message: 'Offer submitted successfully',
@@ -1028,7 +1044,7 @@ app.put('/api/offers/:id/status', auth.requireAuth, async (req, res) => {
             );
             if (offerRow.user_id) {
                 pool.query(`INSERT INTO notifications (user_id, type, title, body, link) VALUES ($1,'offer_accepted','Proposal Accepted!',$2,'/dashboard/realtor')`,
-                    [offerRow.user_id, `Your proposal on ${offerRow.address} was accepted!`]).catch(() => {});
+                    [offerRow.user_id, `Your proposal on ${offerRow.address} was accepted!`]).then(() => sseNotify(offerRow.user_id, { type: 'notification' })).catch(() => {});
             }
             // Notify each losing realtor
             declinedOffers.forEach(declined => {
@@ -1037,7 +1053,7 @@ app.put('/api/offers/:id/status', auth.requireAuth, async (req, res) => {
                 );
                 if (declined.user_id) {
                     pool.query(`INSERT INTO notifications (user_id, type, title, body, link) VALUES ($1,'offer_declined','Proposal Declined',$2,'/dashboard/realtor')`,
-                        [declined.user_id, `Your proposal on ${offerRow.address} was not selected.`]).catch(() => {});
+                        [declined.user_id, `Your proposal on ${offerRow.address} was not selected.`]).then(() => sseNotify(declined.user_id, { type: 'notification' })).catch(() => {});
                 }
             });
             return res.json({ success: true, status: 'accepted' });
@@ -1050,7 +1066,7 @@ app.put('/api/offers/:id/status', auth.requireAuth, async (req, res) => {
         );
         if (offerRow.user_id) {
             pool.query(`INSERT INTO notifications (user_id, type, title, body, link) VALUES ($1,'offer_declined','Proposal Declined',$2,'/dashboard/realtor')`,
-                [offerRow.user_id, `Your proposal on ${offerRow.address} was not selected.`]).catch(() => {});
+                [offerRow.user_id, `Your proposal on ${offerRow.address} was not selected.`]).then(() => sseNotify(offerRow.user_id, { type: 'notification' })).catch(() => {});
         }
         res.json({ success: true, status: 'declined' });
     } catch (error) {
@@ -2717,6 +2733,118 @@ app.delete('/api/proposals/:id', auth.requireAuth, async (req, res) => {
     }
 });
 
+// Seller sends counter-offer on a proposal
+app.post('/api/proposals/:id/counter', auth.requireAuth, async (req, res) => {
+    try {
+        if (req.user.user_type !== 'seller') return res.status(403).json({ error: 'Sellers only' });
+        const proposalId = parseInt(req.params.id);
+        const { counter_commission, counter_message } = req.body;
+        if (!counter_commission || isNaN(parseFloat(counter_commission))) {
+            return res.status(400).json({ error: 'counter_commission is required' });
+        }
+        const pct = parseFloat(counter_commission);
+        if (pct < 0.5 || pct > 10) return res.status(400).json({ error: 'Commission must be between 0.5% and 10%' });
+
+        // Verify seller owns the listing this proposal is for
+        const { rows } = await pool.query(
+            `SELECT p.*, l.user_id AS listing_owner, l.address, l.city, l.state,
+                    u.email AS realtor_email, u.first_name AS realtor_first_name
+             FROM proposals p
+             JOIN listings l ON l.id = p.listing_id
+             JOIN users u ON u.id = p.realtor_id
+             WHERE p.id = $1`,
+            [proposalId]
+        );
+        if (!rows.length) return res.status(404).json({ error: 'Proposal not found' });
+        if (rows[0].listing_owner !== req.session.userId) return res.status(403).json({ error: 'Forbidden' });
+        if (rows[0].status !== 'pending') return res.status(400).json({ error: 'Can only counter pending proposals' });
+
+        await pool.query(
+            `UPDATE proposals SET counter_commission=$1, counter_message=$2, counter_status='pending' WHERE id=$3`,
+            [pct, counter_message || null, proposalId]
+        );
+
+        // Notify realtor
+        pool.query(
+            `INSERT INTO notifications (user_id, type, title, body, link) VALUES ($1,'counter_offer','Counter-Offer Received',$2,'/dashboard/realtor')`,
+            [rows[0].realtor_id, `The seller has countered your proposal on ${rows[0].address} — they're requesting ${pct}% commission.`]
+        ).then(() => sseNotify(rows[0].realtor_id, { type: 'notification' })).catch(() => {});
+
+        emailService.sendCounterOffer(
+            rows[0].realtor_email, rows[0].realtor_first_name,
+            `${rows[0].address}, ${rows[0].city}, ${rows[0].state}`,
+            pct, counter_message || null
+        ).catch(e => console.error('Counter-offer email error:', e.message));
+
+        res.json({ success: true });
+    } catch (err) {
+        console.error('POST /api/proposals/:id/counter error:', err);
+        res.status(500).json({ error: 'Failed to send counter-offer' });
+    }
+});
+
+// Realtor responds to a counter-offer
+app.put('/api/proposals/:id/counter/respond', auth.requireAuth, async (req, res) => {
+    try {
+        if (req.user.user_type !== 'realtor') return res.status(403).json({ error: 'Realtors only' });
+        const proposalId = parseInt(req.params.id);
+        const { accept } = req.body; // true or false
+        if (typeof accept !== 'boolean' && accept !== 'true' && accept !== 'false') {
+            return res.status(400).json({ error: 'accept (true/false) is required' });
+        }
+        const accepted = accept === true || accept === 'true';
+
+        const { rows } = await pool.query(
+            `SELECT p.*, l.address, l.city, l.state, l.user_id AS listing_owner,
+                    u.email AS seller_email, u.first_name AS seller_first
+             FROM proposals p
+             JOIN listings l ON l.id = p.listing_id
+             JOIN users u ON u.id = l.user_id
+             WHERE p.id = $1 AND p.realtor_id = $2`,
+            [proposalId, req.session.userId]
+        );
+        if (!rows.length) return res.status(404).json({ error: 'Proposal not found' });
+        if (rows[0].counter_status !== 'pending') return res.status(400).json({ error: 'No pending counter-offer' });
+
+        const newCounterStatus = accepted ? 'accepted' : 'declined';
+
+        if (accepted) {
+            // Accept counter: update commission and status to accepted
+            const client = await pool.connect();
+            try {
+                await client.query('BEGIN');
+                await client.query(
+                    `UPDATE proposals SET commission_pct=$1, counter_status='accepted', status='accepted' WHERE id=$2`,
+                    [rows[0].counter_commission, proposalId]
+                );
+                await client.query(
+                    `UPDATE proposals SET status='declined' WHERE listing_id=$1 AND id!=$2`,
+                    [rows[0].listing_id, proposalId]
+                );
+                await client.query('COMMIT');
+            } catch (e) { await client.query('ROLLBACK'); throw e; }
+            finally { client.release(); }
+        } else {
+            await pool.query(`UPDATE proposals SET counter_status='declined' WHERE id=$1`, [proposalId]);
+        }
+
+        // Notify seller
+        const sellerMsg = accepted
+            ? `Your counter-offer was accepted — the realtor agreed to ${rows[0].counter_commission}% commission on ${rows[0].address}.`
+            : `The realtor declined your counter-offer on ${rows[0].address}.`;
+        pool.query(
+            `INSERT INTO notifications (user_id, type, title, body, link) VALUES ($1,$2,$3,$4,'/dashboard/seller')`,
+            [rows[0].listing_owner, accepted ? 'counter_accepted' : 'counter_declined',
+             accepted ? 'Counter-Offer Accepted!' : 'Counter-Offer Declined', sellerMsg]
+        ).then(() => sseNotify(rows[0].listing_owner, { type: 'notification' })).catch(() => {});
+
+        res.json({ success: true, accepted });
+    } catch (err) {
+        console.error('PUT /api/proposals/:id/counter/respond error:', err);
+        res.status(500).json({ error: 'Failed to respond to counter-offer' });
+    }
+});
+
 app.put('/api/proposals/:id/accept', auth.requireAuth, async (req, res) => {
     try {
         if (req.user.user_type !== 'seller') return res.status(403).json({ error: 'Sellers only' });
@@ -3448,6 +3576,13 @@ const _schemaMigrations = [
     `CREATE INDEX IF NOT EXISTS idx_profile_views_realtor ON profile_views(realtor_id, viewed_at DESC)`,
     `CREATE INDEX IF NOT EXISTS idx_showings_listing ON showings(listing_id)`,
     `CREATE INDEX IF NOT EXISTS idx_drip_emails_user ON drip_emails(user_id, sequence_step)`,
+    // Counter-offer columns on proposals
+    `ALTER TABLE proposals ADD COLUMN IF NOT EXISTS counter_commission NUMERIC(5,2)`,
+    `ALTER TABLE proposals ADD COLUMN IF NOT EXISTS counter_message TEXT`,
+    `ALTER TABLE proposals ADD COLUMN IF NOT EXISTS counter_status TEXT DEFAULT 'none'`,
+    // Seller attestation on listings
+    `ALTER TABLE listings ADD COLUMN IF NOT EXISTS owner_attested BOOLEAN DEFAULT FALSE`,
+    `ALTER TABLE listings ADD COLUMN IF NOT EXISTS owner_attested_at TIMESTAMPTZ`,
 ];
 
 // ===== REFERRAL COLUMNS (Feature 4) =====
@@ -3587,7 +3722,7 @@ app.post('/api/messages', auth.requireAuth, async (req, res) => {
             INSERT INTO notifications (user_id, type, title, body, link)
             VALUES ($1, 'message', 'New Message', $2, '/dashboard/' || (SELECT user_type FROM users WHERE id=$1))
             ON CONFLICT DO NOTHING
-        `, [toUserId, `You have a new message`]).catch(() => {});
+        `, [toUserId, `You have a new message`]).then(() => sseNotify(toUserId, { type: 'notification' })).catch(() => {});
 
         // Fire-and-forget email notification
         (async () => {
@@ -3665,6 +3800,28 @@ app.get('/api/notifications', auth.requireAuth, async (req, res) => {
         const unread = rows.filter(r => !r.read_at).length;
         res.json({ notifications: rows, unread });
     } catch (err) { res.status(500).json({ error: 'Failed to load notifications' }); }
+});
+
+app.get('/api/notifications/stream', auth.requireAuth, (req, res) => {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+    res.flushHeaders();
+
+    const uid = req.session.userId;
+    if (!sseClients.has(uid)) sseClients.set(uid, new Set());
+    sseClients.get(uid).add(res);
+
+    // Send initial heartbeat
+    res.write(': heartbeat\n\n');
+    const hb = setInterval(() => { try { res.write(': heartbeat\n\n'); } catch(_) {} }, 25000);
+
+    req.on('close', () => {
+        clearInterval(hb);
+        const s = sseClients.get(uid);
+        if (s) { s.delete(res); if (!s.size) sseClients.delete(uid); }
+    });
 });
 
 // Mark one notification as read
@@ -4410,6 +4567,93 @@ async function runDripEmailJob() {
 // Run every 6 hours
 runDripEmailJob();
 setInterval(runDripEmailJob, 6 * 60 * 60 * 1000).unref();
+
+async function runListingAlertJob() {
+    try {
+        const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+        const { rows: searches } = await pool.query(
+            `SELECT ss.*, u.email, u.first_name, u.unsubscribe_token
+             FROM saved_searches ss
+             JOIN users u ON u.id = ss.user_id
+             WHERE u.is_active IS NOT FALSE AND u.email_unsubscribed IS NOT TRUE`
+        );
+        let sent = 0;
+        for (const s of searches) {
+            try {
+                const conditions = [`l.status = 'active'`, `l.deleted_at IS NULL`, `l.created_at >= $1`];
+                const params = [since];
+                let pi = 2;
+                if (s.city) { conditions.push(`LOWER(l.city) = LOWER($${pi++})`); params.push(s.city); }
+                if (s.zip)  { conditions.push(`l.zip = $${pi++}`); params.push(s.zip); }
+                if (s.type) { conditions.push(`l.property_type = $${pi++}`); params.push(s.type); }
+                if (s.min_price) { conditions.push(`l.price >= $${pi++}`); params.push(parseFloat(s.min_price)); }
+                if (s.max_price) { conditions.push(`l.price <= $${pi++}`); params.push(parseFloat(s.max_price)); }
+                if (s.min_beds)  { conditions.push(`l.bedrooms >= $${pi++}`); params.push(parseInt(s.min_beds)); }
+                const { rows: matches } = await pool.query(
+                    `SELECT id, address, city, state, price, bedrooms, bathrooms FROM listings l
+                     WHERE ${conditions.join(' AND ')} LIMIT 5`, params
+                );
+                if (matches.length) {
+                    await emailService.sendListingAlert(s.email, s.first_name, s.label || 'Your saved search', matches);
+                    sent++;
+                }
+            } catch(e) { console.error('Listing alert error:', e.message); }
+        }
+        if (sent) console.log(`Listing alert job: sent ${sent} emails`);
+    } catch(e) { console.error('Listing alert job error:', e.message); }
+}
+runListingAlertJob();
+setInterval(runListingAlertJob, 24 * 60 * 60 * 1000).unref();
+
+async function runWeeklyDigestJob() {
+    const now = new Date();
+    if (now.getDay() !== 0) return; // Sunday only
+    try {
+        const { rows: realtors } = await pool.query(
+            `SELECT id, email, first_name, service_areas, unsubscribe_token
+             FROM users
+             WHERE user_type = 'realtor'
+               AND is_active IS NOT FALSE
+               AND is_approved = TRUE
+               AND email_unsubscribed IS NOT TRUE`
+        );
+        for (const r of realtors) {
+            try {
+                const token = r.unsubscribe_token || await ensureUnsubscribeToken(r.id);
+                const serviceTerms = (r.service_areas || '').split(',').map(s => s.trim()).filter(Boolean).slice(0, 5);
+                let newListings = [], newListingCount = 0;
+                if (serviceTerms.length) {
+                    const conds = serviceTerms.map((_,i) => `(LOWER(l.city) LIKE LOWER($${i+1}) OR l.zip = $${i+1})`);
+                    const params = serviceTerms.map(t => `%${t}%`);
+                    const { rows } = await pool.query(
+                        `SELECT l.id, l.address, l.city, l.state, l.price, l.bedrooms, l.bathrooms
+                         FROM listings l
+                         WHERE l.status='active' AND l.deleted_at IS NULL
+                           AND l.created_at >= NOW() - INTERVAL '7 days'
+                           AND (${conds.join(' OR ')})
+                         LIMIT 10`, params
+                    );
+                    newListings = rows;
+                    newListingCount = rows.length;
+                }
+                const [viewsRow, winsRow] = await Promise.all([
+                    pool.query(`SELECT COUNT(*) AS cnt FROM profile_views WHERE realtor_id=$1 AND viewed_at >= NOW()-INTERVAL '7 days'`, [r.id]),
+                    pool.query(`SELECT COUNT(*) AS cnt FROM proposals WHERE realtor_id=$1 AND status='accepted' AND updated_at >= NOW()-INTERVAL '7 days'`, [r.id]),
+                ]);
+                await emailService.sendWeeklyDigest(r.email, r.first_name, {
+                    newListings, newListingCount,
+                    profileViews7d: parseInt(viewsRow.rows[0].cnt),
+                    proposalsWon: parseInt(winsRow.rows[0].cnt),
+                    serviceAreas: (r.service_areas || '').split(',').slice(0,3).join(', ') || '—',
+                }, token);
+            } catch(e) { console.error(`Weekly digest error for ${r.email}:`, e.message); }
+        }
+        console.log(`Weekly digest job: sent to ${realtors.length} realtors`);
+    } catch(e) { console.error('Weekly digest job error:', e.message); }
+}
+// Check every hour; actually sends only on Sundays
+runWeeklyDigestJob();
+setInterval(runWeeklyDigestJob, 60 * 60 * 1000).unref();
 
 // Run all schema migrations then start listening
 async function startServer() {
