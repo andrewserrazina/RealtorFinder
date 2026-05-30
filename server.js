@@ -1937,15 +1937,32 @@ app.post('/api/stripe/checkout', auth.requireAuth, async (req, res) => {
     try {
         const user = await auth.getUserById(req.session.userId);
         const base = process.env.FRONTEND_URL || 'https://www.realtorfinder.net';
-        const session = await stripe.checkout.sessions.create({
+
+        // Reuse existing Stripe customer if we have one
+        const { rows: custRows } = await pool.query(
+            `SELECT stripe_customer_id FROM users WHERE id = $1 AND stripe_customer_id IS NOT NULL
+             UNION
+             SELECT stripe_customer_id FROM companies WHERE owner_user_id = $1 AND stripe_customer_id IS NOT NULL
+             LIMIT 1`,
+            [req.session.userId]
+        );
+        const existingCustomer = custRows[0]?.stripe_customer_id;
+
+        const sessionParams = {
             mode: 'subscription',
             payment_method_types: ['card'],
-            customer_email: user.email,
             line_items: [{ price: priceId, quantity: 1 }],
             success_url: `${base}/subscription/success?session_id={CHECKOUT_SESSION_ID}`,
             cancel_url: `${base}/pricing`,
-            metadata: { userId: String(req.session.userId), plan }
-        });
+            metadata: { userId: String(req.session.userId), plan },
+        };
+        if (existingCustomer) {
+            sessionParams.customer = existingCustomer;
+        } else {
+            sessionParams.customer_email = user.email;
+        }
+
+        const session = await stripe.checkout.sessions.create(sessionParams);
         res.json({ url: session.url });
     } catch (err) {
         console.error('Stripe checkout error:', err);
@@ -1965,19 +1982,35 @@ app.post('/api/webhook/stripe', express.raw({ type: 'application/json' }), async
         return res.status(400).send(`Webhook Error: ${err.message}`);
     }
 
+    // Helper: apply plan to both users and companies rows
+    async function applyPlan(stripeCustomerId, plan, subscriptionId = null) {
+        const setParts = [`plan=$1`, `stripe_customer_id=$2`, `updated_at=NOW()`];
+        const compParams = [plan, stripeCustomerId];
+        if (subscriptionId !== null) { setParts.push(`stripe_subscription_id=$3`); compParams.push(subscriptionId); }
+        await pool.query(
+            `UPDATE companies SET ${setParts.join(',')} WHERE stripe_customer_id=$2 OR owner_user_id=(SELECT id FROM users WHERE stripe_customer_id=$2 LIMIT 1)`,
+            compParams
+        );
+        await pool.query(
+            `UPDATE users SET subscription_plan=$1, stripe_customer_id=$2 WHERE stripe_customer_id=$2 OR id=(SELECT owner_user_id FROM companies WHERE stripe_customer_id=$2 LIMIT 1)`,
+            [plan, stripeCustomerId]
+        );
+    }
+
     if (event.type === 'checkout.session.completed') {
         const sess = event.data.object;
         const userId = parseInt(sess.metadata?.userId);
         const plan   = sess.metadata?.plan;
         if (userId && plan) {
             try {
+                // Store customer id on user directly
+                await pool.query(
+                    `UPDATE users SET subscription_plan=$1, stripe_customer_id=$2 WHERE id=$3`,
+                    [plan, sess.customer, userId]
+                );
                 await pool.query(
                     `UPDATE companies SET plan=$1, stripe_customer_id=$2, stripe_subscription_id=$3, updated_at=NOW() WHERE owner_user_id=$4`,
                     [plan, sess.customer, sess.subscription, userId]
-                );
-                await pool.query(
-                    `UPDATE users SET subscription_plan=$1 WHERE id=$2`,
-                    [plan, userId]
                 );
                 console.log(`✅ Stripe: upgraded user ${userId} to ${plan}`);
             } catch (err) {
@@ -1986,16 +2019,52 @@ app.post('/api/webhook/stripe', express.raw({ type: 'application/json' }), async
         }
     }
 
+    if (event.type === 'customer.subscription.updated') {
+        const sub = event.data.object;
+        // Map Stripe price ID back to our plan name
+        const priceId = sub.items?.data?.[0]?.price?.id;
+        const planName = Object.entries(STRIPE_PRICE_IDS).find(([, v]) => v === priceId)?.[0];
+        if (planName) {
+            try {
+                await applyPlan(sub.customer, planName, sub.id);
+                console.log(`✅ Stripe: subscription updated → ${planName} for ${sub.customer}`);
+            } catch (err) {
+                console.error('Stripe subscription.updated DB error:', err);
+            }
+        }
+    }
+
     if (event.type === 'customer.subscription.deleted') {
         const sub = event.data.object;
         try {
-            await pool.query(
-                `UPDATE companies SET plan='basic', stripe_subscription_id=NULL, updated_at=NOW() WHERE stripe_customer_id=$1`,
-                [sub.customer]
+            await applyPlan(sub.customer, 'basic', null);
+            // Notify user their subscription ended
+            const { rows } = await pool.query(
+                `SELECT email, first_name FROM users WHERE stripe_customer_id=$1`, [sub.customer]
             );
-            console.log(`⚠️ Stripe: subscription cancelled for customer ${sub.customer}`);
+            if (rows.length) {
+                emailService.sendSubscriptionCancelled(rows[0].email, rows[0].first_name)
+                    .catch(e => console.error('Cancellation email error:', e.message));
+            }
+            console.log(`⚠️ Stripe: subscription cancelled for ${sub.customer}`);
         } catch (err) {
             console.error('Stripe cancellation DB error:', err);
+        }
+    }
+
+    if (event.type === 'invoice.payment_failed') {
+        const invoice = event.data.object;
+        try {
+            const { rows } = await pool.query(
+                `SELECT email, first_name FROM users WHERE stripe_customer_id=$1`, [invoice.customer]
+            );
+            if (rows.length) {
+                emailService.sendPaymentFailed(rows[0].email, rows[0].first_name, invoice.hosted_invoice_url)
+                    .catch(e => console.error('Payment failed email error:', e.message));
+            }
+            console.log(`⚠️ Stripe: payment failed for ${invoice.customer}`);
+        } catch (err) {
+            console.error('Stripe payment_failed DB error:', err);
         }
     }
 
@@ -4092,19 +4161,21 @@ app.post('/api/listings/:id/renew', auth.requireAuth, async (req, res) => {
 app.post('/api/billing/portal', auth.requireAuth, async (req, res) => {
     if (!stripe) return res.status(503).json({ error: 'stripe_not_configured' });
     try {
-        const user = await auth.getUserById(req.session.userId);
-        // Look up stripe_customer_id from the user's company
+        // Check users table first, then companies
         const { rows } = await pool.query(
-            `SELECT stripe_customer_id FROM companies WHERE owner_user_id = $1 AND stripe_customer_id IS NOT NULL`,
+            `SELECT stripe_customer_id FROM users WHERE id=$1 AND stripe_customer_id IS NOT NULL
+             UNION
+             SELECT stripe_customer_id FROM companies WHERE owner_user_id=$1 AND stripe_customer_id IS NOT NULL
+             LIMIT 1`,
             [req.session.userId]
         );
-        if (!rows.length || !rows[0].stripe_customer_id) {
+        if (!rows.length) {
             return res.status(400).json({ error: 'No active subscription found. Please subscribe first.' });
         }
         const base = process.env.FRONTEND_URL || 'https://www.realtorfinder.net';
         const session = await stripe.billingPortal.sessions.create({
             customer: rows[0].stripe_customer_id,
-            return_url: `${base}/dashboard/company`,
+            return_url: `${base}/dashboard/realtor`,
         });
         res.json({ url: session.url });
     } catch (err) {
@@ -4482,7 +4553,8 @@ setInterval(runListingExpiryJob, 24 * 60 * 60 * 1000).unref();
 
 _schemaMigrations.push(
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS email_unsubscribed BOOLEAN DEFAULT FALSE`,
-    `ALTER TABLE users ADD COLUMN IF NOT EXISTS unsubscribe_token TEXT UNIQUE`
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS unsubscribe_token TEXT UNIQUE`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS stripe_customer_id TEXT UNIQUE`
 );
 
 // Drip email onboarding job — sends 3-step sequences to sellers, realtors, and buyers

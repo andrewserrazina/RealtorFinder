@@ -357,7 +357,7 @@
         <a href="/">For Sellers</a>
         <a href="/about">About</a>
         <a href="/contact">Contact</a>
-        <a href="/login.html?tab=signup&type=realtor" class="nav-cta">Create Account</a>
+        <a href="/login?tab=signup&type=realtor" class="nav-cta">Create Account</a>
     </div>
     <button class="nav-hamburger" id="navHamburger" aria-label="Open menu" aria-expanded="false">
         <span></span><span></span><span></span>
@@ -368,7 +368,7 @@
     <a href="/" onclick="closeMobileMenu()">For Sellers</a>
     <a href="/about" onclick="closeMobileMenu()">About</a>
     <a href="/contact" onclick="closeMobileMenu()">Contact</a>
-    <a href="/login.html?tab=signup&type=realtor" class="nav-cta" onclick="closeMobileMenu()">Create Account</a>
+    <a href="/login?tab=signup&type=realtor" class="nav-cta" onclick="closeMobileMenu()">Create Account</a>
 </div>
 
 <div class="hero">
@@ -506,7 +506,7 @@
             const authRes = await fetch('/api/auth/me', { credentials: 'include' });
             if (!authRes.ok) {
                 gtag('event', 'pricing_cta_click', { plan, action: 'redirect_signup' });
-                window.location.href = '/login.html?tab=signup&type=realtor';
+                window.location.href = '/login?tab=signup&type=realtor';
                 return;
             }
 
@@ -525,7 +525,7 @@
             } else if (data.error === 'stripe_not_configured') {
                 // Stripe not set up yet — send to signup
                 gtag('event', 'pricing_cta_click', { plan, action: 'redirect_signup' });
-                window.location.href = '/login.html?tab=signup&type=realtor';
+                window.location.href = '/login?tab=signup&type=realtor';
             } else {
                 throw new Error(data.error || 'Checkout failed');
             }

@@ -1077,6 +1077,26 @@ const emailService = {
             await send({ to: referrerEmail, subject: `${newMemberName} joined via your referral link!`, html: emailWrap('Referral', body) });
         } catch (error) { logSendgridError('Referral signup email', error); }
     },
+
+    async sendPaymentFailed(toEmail, firstName, invoiceUrl) {
+        const body = emailWrap('#e53e3e',
+            h1('Payment Failed') +
+            p(`Hi ${firstName}, we couldn't process your RealtorFinder subscription payment.`) +
+            p('Your account will remain active during a short grace period, but please update your payment method to avoid losing access.') +
+            (invoiceUrl ? btn(invoiceUrl, 'Update Payment Method') : btn('https://www.realtorfinder.net/dashboard/realtor', 'Go to Dashboard'))
+        );
+        return await send({ to: toEmail, subject: 'Action required: RealtorFinder payment failed', html: body });
+    },
+
+    async sendSubscriptionCancelled(toEmail, firstName) {
+        const body = emailWrap('#0A2540',
+            h1('Subscription Ended') +
+            p(`Hi ${firstName}, your RealtorFinder subscription has been cancelled and your account has been moved to the Basic plan.`) +
+            p('You can resubscribe at any time to restore full access to all listings and features.') +
+            btn('https://www.realtorfinder.net/pricing', 'Resubscribe')
+        );
+        return await send({ to: toEmail, subject: 'Your RealtorFinder subscription has ended', html: body });
+    },
 };
 
 module.exports = emailService;
