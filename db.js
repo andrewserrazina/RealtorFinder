@@ -537,28 +537,90 @@ const db = {
         return result.rows[0];
     },
 
-    // Admin: all users
-    async getAllUsersAdmin() {
-        const result = await pool.query(
-            `SELECT id, email, user_type, first_name, last_name, zip_code,
-                    email_verified, is_active, is_admin, is_approved, created_at
-             FROM users ORDER BY created_at DESC`
-        );
-        return result.rows;
+    // Admin: all users (paginated)
+    async getAllUsersAdmin({ page = 1, limit = 50, search = '', userType = '' } = {}) {
+        const safeLimit  = Math.min(200, Math.max(1, parseInt(limit)  || 50));
+        const safeOffset = (Math.max(1, parseInt(page) || 1) - 1) * safeLimit;
+        const conditions = [];
+        const params     = [];
+
+        if (search) {
+            params.push(`%${search.toLowerCase()}%`);
+            conditions.push(`(lower(u.email) LIKE $${params.length} OR lower(u.first_name) LIKE $${params.length} OR lower(u.last_name) LIKE $${params.length})`);
+        }
+        if (userType) {
+            params.push(userType);
+            conditions.push(`u.user_type = $${params.length}`);
+        }
+
+        const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+
+        const [dataRes, countRes] = await Promise.all([
+            pool.query(
+                `SELECT id, email, user_type, first_name, last_name, zip_code,
+                        email_verified, is_active, is_admin, is_approved, created_at
+                 FROM users u
+                 ${where}
+                 ORDER BY created_at DESC
+                 LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+                [...params, safeLimit, safeOffset]
+            ),
+            pool.query(`SELECT COUNT(*) AS total FROM users u ${where}`, params),
+        ]);
+
+        const total = parseInt(countRes.rows[0].total, 10);
+        return {
+            users: dataRes.rows,
+            total,
+            page: Math.max(1, parseInt(page) || 1),
+            pages: Math.ceil(total / safeLimit),
+        };
     },
 
-    // Admin: all listings (including soft-deleted)
-    async getAllListingsAdmin() {
-        const result = await pool.query(
-            `SELECT l.id, l.address, l.city, l.state, l.zip, l.price, l.property_type,
-                    l.bedrooms, l.bathrooms, l.status, l.deleted_at, l.created_at,
-                    u.first_name, u.last_name, u.email as owner_email,
-                    (SELECT COUNT(*) FROM offers WHERE listing_id = l.id) as offer_count
-             FROM listings l
-             JOIN users u ON l.user_id = u.id
-             ORDER BY l.created_at DESC`
-        );
-        return result.rows;
+    // Admin: all listings (paginated, including soft-deleted)
+    async getAllListingsAdmin({ page = 1, limit = 50, search = '', status = '' } = {}) {
+        const safeLimit  = Math.min(200, Math.max(1, parseInt(limit)  || 50));
+        const safeOffset = (Math.max(1, parseInt(page) || 1) - 1) * safeLimit;
+        const conditions = [];
+        const params     = [];
+
+        if (search) {
+            params.push(`%${search.toLowerCase()}%`);
+            conditions.push(`(lower(l.address) LIKE $${params.length} OR lower(l.city) LIKE $${params.length} OR lower(u.email) LIKE $${params.length})`);
+        }
+        if (status) {
+            params.push(status);
+            conditions.push(`l.status = $${params.length}`);
+        }
+
+        const where = conditions.length ? `AND ${conditions.join(' AND ')}` : '';
+
+        const [dataRes, countRes] = await Promise.all([
+            pool.query(
+                `SELECT l.id, l.address, l.city, l.state, l.zip, l.price, l.property_type,
+                        l.bedrooms, l.bathrooms, l.status, l.deleted_at, l.created_at,
+                        u.first_name, u.last_name, u.email as owner_email,
+                        (SELECT COUNT(*) FROM offers WHERE listing_id = l.id) as offer_count
+                 FROM listings l
+                 JOIN users u ON l.user_id = u.id
+                 WHERE 1=1 ${where}
+                 ORDER BY l.created_at DESC
+                 LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+                [...params, safeLimit, safeOffset]
+            ),
+            pool.query(
+                `SELECT COUNT(*) AS total FROM listings l JOIN users u ON l.user_id = u.id WHERE 1=1 ${where}`,
+                params
+            ),
+        ]);
+
+        const total = parseInt(countRes.rows[0].total, 10);
+        return {
+            listings: dataRes.rows,
+            total,
+            page: Math.max(1, parseInt(page) || 1),
+            pages: Math.ceil(total / safeLimit),
+        };
     },
 
     // Admin: aggregate stats

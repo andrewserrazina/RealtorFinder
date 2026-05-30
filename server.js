@@ -1374,8 +1374,9 @@ app.get('/api/admin/stats', requireAdmin, async (req, res) => {
 
 app.get('/api/admin/users', requireAdmin, async (req, res) => {
     try {
-        const users = await db.getAllUsersAdmin();
-        res.json(users);
+        const { page, limit, search, userType } = req.query;
+        const result = await db.getAllUsersAdmin({ page, limit, search, userType });
+        res.json(result);
     } catch (error) {
         console.error('Admin users error:', error);
         res.status(500).json({ error: 'Failed to fetch users' });
@@ -1384,8 +1385,9 @@ app.get('/api/admin/users', requireAdmin, async (req, res) => {
 
 app.get('/api/admin/listings', requireAdmin, async (req, res) => {
     try {
-        const listings = await db.getAllListingsAdmin();
-        res.json(listings);
+        const { page, limit, search, status } = req.query;
+        const result = await db.getAllListingsAdmin({ page, limit, search, status });
+        res.json(result);
     } catch (error) {
         console.error('Admin listings error:', error);
         res.status(500).json({ error: 'Failed to fetch listings' });
@@ -2426,8 +2428,8 @@ app.get('/api/realtors/search', async (req, res) => {
             conditions.push(`(u.zip_code = $${params.length} OR u.service_areas ILIKE '%' || $${params.length} || '%')`);
         }
         if (name) {
-            params.push(name);
-            conditions.push(`CONCAT(u.first_name, ' ', u.last_name) ILIKE '%' || $${params.length} || '%'`);
+            params.push(`%${name.toLowerCase()}%`);
+            conditions.push(`(lower(u.first_name) LIKE $${params.length} OR lower(u.last_name) LIKE $${params.length})`);
         }
         if (state) {
             params.push(`%${state}%`);
@@ -2676,9 +2678,19 @@ app.put('/api/proposals/:id/accept', auth.requireAuth, async (req, res) => {
         if (!pRows.length) return res.status(404).json({ error: 'Proposal not found' });
         const proposal = pRows[0];
         if (proposal.listing_owner_id !== req.session.userId) return res.status(403).json({ error: 'Forbidden' });
-        // Accept this proposal, decline all others for same listing
-        await pool.query(`UPDATE proposals SET status = 'accepted' WHERE id = $1`, [proposalId]);
-        await pool.query(`UPDATE proposals SET status = 'declined' WHERE listing_id = $1 AND id != $2`, [proposal.listing_id, proposalId]);
+        // Accept this proposal, decline all others — wrapped in a transaction to prevent race conditions
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
+            await client.query(`UPDATE proposals SET status = 'accepted' WHERE id = $1`, [proposalId]);
+            await client.query(`UPDATE proposals SET status = 'declined' WHERE listing_id = $1 AND id != $2`, [proposal.listing_id, proposalId]);
+            await client.query('COMMIT');
+        } catch (txErr) {
+            await client.query('ROLLBACK');
+            throw txErr;
+        } finally {
+            client.release();
+        }
         // Fire-and-forget: email the winning realtor
         (async () => {
             try {
@@ -3128,24 +3140,43 @@ app.get('/api/realtors/me/analytics', auth.requireAuth, async (req, res) => {
         if (req.user.user_type !== 'realtor') return res.status(403).json({ error: 'Realtors only' });
         const uid = req.session.userId;
 
-        const [views7, views30, viewsAll, proposalStats, listingStats, rtStats] = await Promise.all([
-            pool.query(`SELECT COUNT(*) AS cnt FROM profile_views WHERE realtor_id = $1 AND viewed_at >= NOW() - INTERVAL '7 days'`, [uid]),
-            pool.query(`SELECT COUNT(*) AS cnt FROM profile_views WHERE realtor_id = $1 AND viewed_at >= NOW() - INTERVAL '30 days'`, [uid]),
-            pool.query(`SELECT COUNT(*) AS cnt FROM profile_views WHERE realtor_id = $1`, [uid]),
-            pool.query(`SELECT status, COUNT(*) AS cnt FROM proposals WHERE realtor_id = $1 GROUP BY status`, [uid]),
-            pool.query(`SELECT COUNT(DISTINCT p.listing_id) AS active_bids, SUM(CASE WHEN p.status='accepted' THEN 1 ELSE 0 END) AS won FROM proposals p WHERE p.realtor_id = $1`, [uid]),
-            pool.query(`SELECT AVG(response_hours) AS avg_hours FROM realtor_response_times WHERE realtor_id = $1`, [uid])
+        // Collapse 7 round-trips into 2 parallel queries
+        const [statsRow, viewsByDay] = await Promise.all([
+            pool.query(`
+                SELECT
+                    -- Profile view counts in one pass
+                    COUNT(pv.id) FILTER (WHERE pv.viewed_at >= NOW() - INTERVAL '7 days')  AS views_7,
+                    COUNT(pv.id) FILTER (WHERE pv.viewed_at >= NOW() - INTERVAL '30 days') AS views_30,
+                    COUNT(pv.id)                                                             AS views_all,
+                    -- Proposal counts in one pass
+                    COUNT(p.id) FILTER (WHERE p.status = 'pending')  AS prop_pending,
+                    COUNT(p.id) FILTER (WHERE p.status = 'accepted') AS prop_accepted,
+                    COUNT(p.id) FILTER (WHERE p.status = 'declined') AS prop_declined,
+                    COUNT(DISTINCT p.listing_id)                      AS active_bids,
+                    -- Response time average
+                    AVG(rt.response_hours)                            AS avg_hours
+                FROM users u
+                LEFT JOIN profile_views pv ON pv.realtor_id = u.id
+                LEFT JOIN proposals     p  ON p.realtor_id  = u.id
+                LEFT JOIN realtor_response_times rt ON rt.realtor_id = u.id
+                WHERE u.id = $1
+            `, [uid]),
+            pool.query(
+                `SELECT DATE(viewed_at) AS day, COUNT(*) AS cnt
+                 FROM profile_views WHERE realtor_id = $1 AND viewed_at >= NOW() - INTERVAL '7 days'
+                 GROUP BY day ORDER BY day`,
+                [uid]
+            ),
         ]);
 
-        const proposalMap = {};
-        for (const r of proposalStats.rows) proposalMap[r.status] = parseInt(r.cnt);
-        const totalProposals = Object.values(proposalMap).reduce((s, v) => s + v, 0);
-        const accepted = proposalMap['accepted'] || 0;
-        const pending = proposalMap['pending'] || 0;
-        const declined = proposalMap['declined'] || 0;
+        const s = statsRow.rows[0];
+        const accepted = parseInt(s.prop_accepted) || 0;
+        const pending  = parseInt(s.prop_pending)  || 0;
+        const declined = parseInt(s.prop_declined) || 0;
+        const totalProposals = accepted + pending + declined;
         const winRate = totalProposals > 0 ? Math.round((accepted / totalProposals) * 100) + '%' : '0%';
 
-        const avgHours = parseFloat(rtStats.rows[0]?.avg_hours);
+        const avgHours = parseFloat(s.avg_hours);
         let responseTime = 'N/A';
         if (!isNaN(avgHours)) {
             if (avgHours < 1) responseTime = '< 1 hour';
@@ -3153,25 +3184,17 @@ app.get('/api/realtors/me/analytics', auth.requireAuth, async (req, res) => {
             else responseTime = Math.round(avgHours / 24) + ' days';
         }
 
-        // Profile views per day for last 7 days
-        const viewsByDay = await pool.query(
-            `SELECT DATE(viewed_at) AS day, COUNT(*) AS cnt
-             FROM profile_views WHERE realtor_id = $1 AND viewed_at >= NOW() - INTERVAL '7 days'
-             GROUP BY day ORDER BY day`,
-            [uid]
-        );
-
         res.json({
             profileViews: {
-                last7Days: parseInt(views7.rows[0].cnt),
-                last30Days: parseInt(views30.rows[0].cnt),
-                allTime: parseInt(viewsAll.rows[0].cnt),
+                last7Days:  parseInt(s.views_7)   || 0,
+                last30Days: parseInt(s.views_30)  || 0,
+                allTime:    parseInt(s.views_all) || 0,
                 byDay: viewsByDay.rows
             },
             proposals: { total: totalProposals, accepted, pending, declined, winRate },
             listings: {
-                activeBids: parseInt(listingStats.rows[0]?.active_bids) || 0,
-                wonListings: parseInt(listingStats.rows[0]?.won) || 0
+                activeBids:   parseInt(s.active_bids) || 0,
+                wonListings:  accepted
             },
             responseTime
         });
@@ -3384,39 +3407,68 @@ _schemaMigrations.push(
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS license_rejection_note TEXT`
 );
 
+// ===== BUYER USER TYPE + SEARCH INDEXES =====
+_schemaMigrations.push(
+    // Allow buyer accounts — drop old 2-value constraint and replace with 3-value
+    `DO $$ BEGIN
+        ALTER TABLE users DROP CONSTRAINT IF EXISTS users_user_type_check;
+        ALTER TABLE users ADD CONSTRAINT users_user_type_check
+            CHECK (user_type IN ('seller', 'realtor', 'buyer'));
+    EXCEPTION WHEN others THEN NULL; END $$`,
+    // Indexes to support first/last name search without full table scan
+    `CREATE INDEX IF NOT EXISTS idx_users_first_name ON users(lower(first_name))`,
+    `CREATE INDEX IF NOT EXISTS idx_users_last_name  ON users(lower(last_name))`,
+    `CREATE INDEX IF NOT EXISTS idx_users_type_approved ON users(user_type, is_approved) WHERE is_active IS NOT FALSE`
+);
+
 // List conversations for current user
 app.get('/api/messages/conversations', auth.requireAuth, async (req, res) => {
     try {
         const uid = req.session.userId;
+        // Pre-aggregate unread counts once, then join — avoids a correlated subquery per row
         const { rows } = await pool.query(`
-            SELECT DISTINCT ON (conv_key)
-                conv_key,
-                other_user_id,
-                u.first_name, u.last_name, u.user_type,
-                listing_id,
-                l.address AS listing_address,
-                last_body,
-                last_at,
-                unread_count
-            FROM (
-                SELECT
-                    LEAST(from_user_id, to_user_id)::text || '-' || GREATEST(from_user_id, to_user_id)::text || '-' || COALESCE(listing_id::text,'0') AS conv_key,
+            WITH unread AS (
+                SELECT from_user_id AS sender_id,
+                       COALESCE(listing_id, 0) AS listing_id,
+                       COUNT(*) AS cnt
+                FROM messages
+                WHERE to_user_id = $1 AND read_at IS NULL
+                GROUP BY from_user_id, COALESCE(listing_id, 0)
+            ),
+            latest AS (
+                SELECT DISTINCT ON (
+                    LEAST(from_user_id, to_user_id)::text || '-' ||
+                    GREATEST(from_user_id, to_user_id)::text || '-' ||
+                    COALESCE(listing_id::text, '0')
+                )
+                    LEAST(from_user_id, to_user_id)::text || '-' ||
+                    GREATEST(from_user_id, to_user_id)::text || '-' ||
+                    COALESCE(listing_id::text, '0')                         AS conv_key,
                     CASE WHEN from_user_id = $1 THEN to_user_id ELSE from_user_id END AS other_user_id,
                     listing_id,
-                    body AS last_body,
-                    created_at AS last_at,
-                    (SELECT COUNT(*) FROM messages m2
-                     WHERE m2.to_user_id = $1
-                       AND m2.from_user_id = CASE WHEN messages.from_user_id = $1 THEN messages.to_user_id ELSE messages.from_user_id END
-                       AND COALESCE(m2.listing_id,0) = COALESCE(messages.listing_id,0)
-                       AND m2.read_at IS NULL) AS unread_count
+                    body       AS last_body,
+                    created_at AS last_at
                 FROM messages
                 WHERE from_user_id = $1 OR to_user_id = $1
-                ORDER BY created_at DESC
-            ) sub
-            JOIN users u ON u.id = sub.other_user_id
-            LEFT JOIN listings l ON l.id = sub.listing_id
-            ORDER BY conv_key, last_at DESC
+                ORDER BY
+                    LEAST(from_user_id, to_user_id)::text || '-' ||
+                    GREATEST(from_user_id, to_user_id)::text || '-' ||
+                    COALESCE(listing_id::text, '0'),
+                    created_at DESC
+            )
+            SELECT
+                l.conv_key, l.other_user_id,
+                u.first_name, u.last_name, u.user_type,
+                l.listing_id,
+                lst.address AS listing_address,
+                l.last_body, l.last_at,
+                COALESCE(ur.cnt, 0) AS unread_count
+            FROM latest l
+            JOIN users u ON u.id = l.other_user_id
+            LEFT JOIN listings lst ON lst.id = l.listing_id
+            LEFT JOIN unread ur ON ur.sender_id = l.other_user_id
+                                AND ur.listing_id = COALESCE(l.listing_id, 0)
+            ORDER BY l.last_at DESC
         `, [uid]);
         res.json(rows);
     } catch (err) {
