@@ -168,28 +168,75 @@ function haversineMiles(lat1, lon1, lat2, lon2) {
 }
 
 // Fire-and-forget: email nearby approved realtors about a new listing
+const zipCoordCache = new Map();
+
 async function notifyNearbyRealtors(listing) {
     try {
-        if (!listing.latitude || !listing.longitude) return;
-        const { rows } = await pool.query(
-            `SELECT id, first_name, email, zip_code FROM users
-             WHERE user_type = 'realtor' AND is_approved = true AND is_active IS NOT FALSE
-               AND email IS NOT NULL AND zip_code IS NOT NULL
-               AND (email_alerts IS NULL OR email_alerts = true)`
-        );
         const RADIUS_MILES = 25;
         const MAX_EMAILS = 200;
         let sent = 0;
-        for (const realtor of rows) {
-            if (sent >= MAX_EMAILS) break;
-            const coords = await geocodeAddress(`${realtor.zip_code}, USA`);
-            if (!coords) continue;
-            const dist = haversineMiles(listing.latitude, listing.longitude, coords.latitude, coords.longitude);
-            if (dist <= RADIUS_MILES) {
-                await emailService.sendNewListingAlert(realtor, listing, dist);
+        const notifiedIds = new Set();
+
+        // Path 1: service_areas text match (no geocoding needed)
+        if (listing.city || listing.state) {
+            const cityPart = listing.city ? `%${listing.city}%` : null;
+            const statePart = listing.state ? `%${listing.state}%` : null;
+            let serviceAreaQuery;
+            let serviceAreaParams;
+            if (cityPart && statePart) {
+                serviceAreaQuery = `SELECT id, first_name, email, zip_code FROM users
+                     WHERE user_type = 'realtor' AND is_approved = true AND is_active IS NOT FALSE
+                       AND email IS NOT NULL
+                       AND (email_alerts IS NULL OR email_alerts = true)
+                       AND (service_areas ILIKE $1 OR service_areas ILIKE $2)`;
+                serviceAreaParams = [cityPart, statePart];
+            } else {
+                const pattern = cityPart || statePart;
+                serviceAreaQuery = `SELECT id, first_name, email, zip_code FROM users
+                     WHERE user_type = 'realtor' AND is_approved = true AND is_active IS NOT FALSE
+                       AND email IS NOT NULL
+                       AND (email_alerts IS NULL OR email_alerts = true)
+                       AND service_areas ILIKE $1`;
+                serviceAreaParams = [pattern];
+            }
+            const { rows: saRealtors } = await pool.query(serviceAreaQuery, serviceAreaParams);
+            for (const realtor of saRealtors) {
+                if (sent >= MAX_EMAILS) break;
+                if (notifiedIds.has(realtor.id)) continue;
+                await emailService.sendNewListingAlert(realtor, listing, 0);
+                sseNotify(realtor.id, { type: 'notification' });
+                notifiedIds.add(realtor.id);
                 sent++;
             }
         }
+
+        // Path 2: geocode + radius match for remaining realtors
+        if (sent < MAX_EMAILS && listing.latitude && listing.longitude) {
+            const { rows: allRealtors } = await pool.query(
+                `SELECT id, first_name, email, zip_code FROM users
+                 WHERE user_type = 'realtor' AND is_approved = true AND is_active IS NOT FALSE
+                   AND email IS NOT NULL AND zip_code IS NOT NULL
+                   AND (email_alerts IS NULL OR email_alerts = true)`
+            );
+            for (const realtor of allRealtors) {
+                if (sent >= MAX_EMAILS) break;
+                if (notifiedIds.has(realtor.id)) continue;
+                let coords = zipCoordCache.get(realtor.zip_code);
+                if (!coords) {
+                    coords = await geocodeAddress(`${realtor.zip_code}, USA`);
+                    if (coords) zipCoordCache.set(realtor.zip_code, coords);
+                }
+                if (!coords) continue;
+                const dist = haversineMiles(listing.latitude, listing.longitude, coords.latitude, coords.longitude);
+                if (dist <= RADIUS_MILES) {
+                    await emailService.sendNewListingAlert(realtor, listing, dist);
+                    sseNotify(realtor.id, { type: 'notification' });
+                    notifiedIds.add(realtor.id);
+                    sent++;
+                }
+            }
+        }
+
         if (sent > 0) console.log(`📬 Notified ${sent} realtors about listing ${listing.id}`);
     } catch (err) {
         console.error('notifyNearbyRealtors error:', err.message);
@@ -2460,7 +2507,7 @@ app.post('/api/webhook/stripe', express.raw({ type: 'application/json' }), async
     if (event.type === 'customer.subscription.deleted') {
         const sub = event.data.object;
         try {
-            await applyPlan(sub.customer, 'basic', null);
+            await applyPlan(sub.customer, 'free', null);
             // Notify user their subscription ended
             const { rows } = await pool.query(
                 `SELECT email, first_name FROM users WHERE stripe_customer_id=$1`, [sub.customer]
@@ -2486,8 +2533,25 @@ app.post('/api/webhook/stripe', express.raw({ type: 'application/json' }), async
                     .catch(e => console.error('Payment failed email error:', e.message));
             }
             console.log(`⚠️ Stripe: payment failed for ${invoice.customer}`);
+            // After 3rd failure: mark subscription as past_due and set is_active = false as grace period enforcement
+            const attempt = invoice.attempt_count || 1;
+            if (attempt >= 3) {
+                await pool.query(`UPDATE users SET is_active = false WHERE stripe_customer_id = $1`, [invoice.customer]);
+                console.log(`⚠️ Stripe: deactivated account after ${attempt} failed payments for ${invoice.customer}`);
+            }
         } catch (err) {
             console.error('Stripe payment_failed DB error:', err);
+        }
+    }
+
+    if (event.type === 'invoice.payment_succeeded') {
+        const invoice = event.data.object;
+        try {
+            // Re-activate if previously suspended
+            await pool.query(`UPDATE users SET is_active = true WHERE stripe_customer_id = $1 AND is_active = false`, [invoice.customer]);
+            console.log(`✅ Stripe: payment succeeded, re-activated account for ${invoice.customer}`);
+        } catch (err) {
+            console.error('Stripe payment_succeeded DB error:', err);
         }
     }
 
@@ -2912,7 +2976,7 @@ app.get('/sitemap-index.xml', async (req, res) => {
 app.get('/sitemap-static.xml', (req, res) => {
     const base = (process.env.FRONTEND_URL || 'https://realtorfinder.net').replace(/\/$/, '');
     const today = new Date().toISOString().split('T')[0];
-    const urls = ['/', '/sellers', '/realtors', '/pricing', '/about', '/buyers', '/locations', '/login', '/contact', '/faq'];
+    const urls = ['/', '/sellers', '/realtors', '/pricing', '/about', '/buyers', '/locations', '/login', '/contact', '/faq', '/find-agent'];
     const entries = urls.map(u => `  <url><loc>${base}${u}</loc><lastmod>${today}</lastmod><priority>${u === '/' ? '1.0' : '0.7'}</priority></url>`).join('\n');
     res.type('application/xml');
     res.send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${entries}\n</urlset>`);
@@ -4924,6 +4988,10 @@ app.get('/waitlist', (req, res) => {
 // Pricing page
 app.get('/pricing', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'pricing.html'));
+});
+
+app.get('/find-agent', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'find-agent.html'));
 });
 
 app.get('/sellers', (req, res) => {
