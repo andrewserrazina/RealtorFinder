@@ -310,8 +310,15 @@ footer {
 footer a { color: rgba(255,255,255,0.6); text-decoration: none; margin: 0 0.75rem; }
 footer a:hover { color: white; }
 
+.hamburger { display: none; background: none; border: none; cursor: pointer; padding: 8px; }
+.hamburger span { display: block; width: 22px; height: 2px; background: white; margin: 4px 0; border-radius: 2px; }
+.mobile-menu { display: none; position: fixed; top: 64px; left: 0; right: 0; background: var(--primary); padding: 1.5rem 2rem; z-index: 99; flex-direction: column; gap: 1rem; border-top: 1px solid rgba(255,255,255,0.1); }
+.mobile-menu.open { display: flex; }
+.mobile-menu a { color: rgba(255,255,255,0.85); text-decoration: none; font-size: 1rem; font-weight: 500; }
+
 @media (max-width: 640px) {
     .nav-links { display: none; }
+    .hamburger { display: block; }
     .field-row { grid-template-columns: 1fr; }
     .steps-grid { grid-template-columns: 1fr; }
     .form-body { padding: 1.5rem; }
@@ -326,9 +333,18 @@ footer a:hover { color: white; }
         <a href="/sellers">For Sellers</a>
         <a href="/realtors">For Realtors</a>
         <a href="/pricing">Pricing</a>
-        <a href="/login?tab=signup" class="nav-cta">Get Started</a>
+        <a href="/login?tab=signup" class="nav-cta">Get Started Free</a>
     </div>
+    <button class="hamburger" id="navHamburger" aria-label="Menu" aria-expanded="false">
+        <span></span><span></span><span></span>
+    </button>
 </nav>
+<div class="mobile-menu" id="mobileMenu">
+    <a href="/sellers" onclick="closeMobileMenu()">For Sellers</a>
+    <a href="/realtors" onclick="closeMobileMenu()">For Realtors</a>
+    <a href="/pricing" onclick="closeMobileMenu()">Pricing</a>
+    <a href="/login?tab=signup" onclick="closeMobileMenu()" style="color:var(--accent);font-weight:600;">Get Started Free →</a>
+</div>
 
 <div class="hero">
     <div class="hero-eyebrow">For Buyers</div>
@@ -563,6 +579,18 @@ footer a:hover { color: white; }
     </p>
 </footer>
 
+<script>
+const hamburger = document.getElementById('navHamburger');
+const mobileMenu = document.getElementById('mobileMenu');
+if (hamburger) hamburger.addEventListener('click', function() {
+    const isOpen = mobileMenu.classList.toggle('open');
+    hamburger.setAttribute('aria-expanded', isOpen);
+});
+function closeMobileMenu() {
+    if (mobileMenu) mobileMenu.classList.remove('open');
+    if (hamburger) hamburger.setAttribute('aria-expanded', 'false');
+}
+</script>
 <script>
 // --- State ---
 let selectedPropertyType = 'Single Family';

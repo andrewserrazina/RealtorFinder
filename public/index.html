@@ -3,933 +3,610 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HomeDirect - Connect Sellers & Realtors</title>
+    <title>RealtorFinder — Let Realtors Compete for Your Listing</title>
+    <meta name="description" content="Post your home for free and receive competing proposals from licensed real estate agents. Compare commissions and credentials, then choose the best fit. Free for sellers.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://realtorfinder.net/">
+    <meta property="og:title" content="RealtorFinder — Let Realtors Compete for Your Listing">
+    <meta property="og:description" content="Post your home for free and receive competing proposals from licensed agents. Compare commissions and choose the best fit.">
+    <meta property="og:image" content="https://realtorfinder.net/og-default.png">
+    <meta name="twitter:card" content="summary_large_image">
+    <!-- Google Analytics 4 -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-BRGVVNKT65"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-BRGVVNKT65');
+    </script>
+    <!-- Microsoft Clarity -->
+    <script type="text/javascript">
+        (function(c,l,a,r,i,t,y){
+            c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+            t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+            y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+        })(window, document, "clarity", "script", "wxvaz0g7tq");
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cirka:wght@400;500;600&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700;900&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         :root {
             --primary: #0A2540;
-            --primary-light: #1A3A5A;
             --accent: #FF6B35;
-            --accent-light: #FF8C61;
-            --bg: #FAFAF9;
-            --surface: #FFFFFF;
+            --soft-bg: #F8F6F3;
             --text: #1A1A1A;
-            --text-light: #6B6B6B;
-            --border: #E5E5E0;
-            --success: #059669;
+            --border: #E5E1DB;
+            --muted: #6B7280;
         }
-        
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: 'DM Sans', sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            line-height: 1.6;
-        }
-        
-        h1, h2, h3, h4 {
-            font-family: 'Cirka', serif;
-            font-weight: 500;
-        }
-        
-        /* Header */
-        header {
-            background: var(--surface);
-            border-bottom: 1px solid var(--border);
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'DM Sans', sans-serif; background: var(--soft-bg); color: var(--text); line-height: 1.6; }
+
+        /* ── Nav ── */
+        nav {
+            background: var(--primary);
+            padding: 0 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 64px;
             position: sticky;
             top: 0;
             z-index: 100;
-            backdrop-filter: blur(10px);
-            background: rgba(255, 255, 255, 0.95);
         }
-        
-        nav {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 1.5rem 2rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .logo {
-            font-family: 'Cirka', serif;
-            font-size: 1.75rem;
-            font-weight: 600;
-            color: var(--primary);
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        
-        .logo::before {
-            content: '';
-            width: 8px;
-            height: 8px;
-            background: var(--accent);
-            border-radius: 50%;
-            animation: pulse 2s ease-in-out infinite;
-        }
-        
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(1.2); opacity: 0.7; }
-        }
-        
-        .nav-tabs {
-            display: flex;
-            gap: 0.5rem;
-            background: var(--bg);
-            padding: 0.35rem;
-            border-radius: 12px;
-        }
-        
-        .nav-tab {
-            padding: 0.65rem 1.5rem;
-            border: none;
-            background: transparent;
-            cursor: pointer;
-            font-family: 'DM Sans', sans-serif;
-            font-weight: 500;
-            color: var(--text-light);
-            border-radius: 8px;
-            transition: all 0.2s ease;
-            font-size: 0.95rem;
-        }
-        
-        .nav-tab.active {
-            background: var(--surface);
-            color: var(--primary);
-            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-        }
-        
-        .nav-tab:hover:not(.active) {
-            color: var(--text);
-        }
-        
-        /* Hero Section */
-        .hero {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
-            color: white;
-            padding: 5rem 2rem 4rem;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .hero::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            right: -10%;
-            width: 600px;
-            height: 600px;
-            background: radial-gradient(circle, rgba(255,107,53,0.15) 0%, transparent 70%);
-            border-radius: 50%;
-        }
-        
-        .hero-content {
-            max-width: 1400px;
-            margin: 0 auto;
-            position: relative;
-            z-index: 1;
-        }
-        
-        .hero h1 {
-            font-size: 3.5rem;
-            margin-bottom: 1rem;
-            line-height: 1.1;
-            animation: fadeInUp 0.6s ease-out;
-        }
-        
-        .hero p {
-            font-size: 1.25rem;
-            opacity: 0.9;
-            max-width: 600px;
-            animation: fadeInUp 0.6s ease-out 0.1s backwards;
-        }
-        
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-        
-        /* Main Container */
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 3rem 2rem;
-        }
-        
-        /* View Sections */
-        .view-section {
-            display: none;
-        }
-        
-        .view-section.active {
-            display: block;
-        }
-        
-        /* Action Cards */
-        .action-cards {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-            gap: 2rem;
-            margin-bottom: 3rem;
-        }
-        
-        .action-card {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 2.5rem;
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .action-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: linear-gradient(90deg, var(--accent) 0%, var(--accent-light) 100%);
-            transform: scaleX(0);
-            transition: transform 0.3s ease;
-        }
-        
-        .action-card:hover::before {
-            transform: scaleX(1);
-        }
-        
-        .action-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 12px 32px rgba(0,0,0,0.08);
-        }
-        
-        .action-card h3 {
-            font-size: 1.5rem;
-            margin-bottom: 0.75rem;
-            color: var(--primary);
-        }
-        
-        .action-card p {
-            color: var(--text-light);
-            margin-bottom: 1.5rem;
-        }
-        
-        /* Form Styles */
-        .form-card {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 2.5rem;
-            max-width: 800px;
-            margin: 2rem auto;
-            animation: fadeIn 0.4s ease-out;
-        }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; transform: scale(0.98); }
-            to { opacity: 1; transform: scale(1); }
-        }
-        
-        .form-card h2 {
-            font-size: 2rem;
-            margin-bottom: 0.5rem;
-            color: var(--primary);
-        }
-        
-        .form-card .subtitle {
-            color: var(--text-light);
-            margin-bottom: 2rem;
-        }
-        
-        .form-group {
-            margin-bottom: 1.5rem;
-        }
-        
-        label {
-            display: block;
-            font-weight: 500;
-            margin-bottom: 0.5rem;
-            color: var(--text);
-        }
-        
-        input, textarea, select {
-            width: 100%;
-            padding: 0.875rem 1rem;
-            border: 1.5px solid var(--border);
-            border-radius: 10px;
-            font-family: 'DM Sans', sans-serif;
-            font-size: 1rem;
-            transition: all 0.2s ease;
-            background: var(--surface);
-        }
-        
-        input:focus, textarea:focus, select:focus {
-            outline: none;
-            border-color: var(--accent);
-            box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
-        }
-        
-        textarea {
-            resize: vertical;
-            min-height: 120px;
-        }
-        
-        .form-row {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem;
-        }
+        .nav-logo { font-family: 'Crimson Pro', serif; font-size: 1.6rem; font-weight: 900; color: white; text-decoration: none; }
+        .nav-logo span { color: var(--accent); }
+        .nav-links { display: flex; gap: 1.75rem; align-items: center; }
+        .nav-links a { color: rgba(255,255,255,0.8); text-decoration: none; font-size: 0.95rem; font-weight: 500; transition: color 0.15s; }
+        .nav-links a:hover { color: white; }
+        .nav-cta { background: var(--accent); color: white !important; padding: 0.5rem 1.25rem; border-radius: 8px; font-weight: 600 !important; }
+        .nav-cta:hover { background: #e55a2b !important; }
 
-        .image-preview-item {
-            position: relative;
-            width: 100%;
-            padding-top: 100%;
-            background: var(--bg);
-            border-radius: 8px;
-            overflow: hidden;
-        }
-        
-        .image-preview-item img {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-        
-        .image-preview-remove {
-            position: absolute;
-            top: 0.25rem;
-            right: 0.25rem;
-            background: rgba(0, 0, 0, 0.7);
-            color: white;
-            border: none;
-            border-radius: 50%;
-            width: 24px;
-            height: 24px;
-            cursor: pointer;
-            font-size: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .image-preview-remove:hover {
-            background: var(--accent);
-        }
-        
-        /* Buttons */
-        .btn {
-            padding: 0.875rem 2rem;
-            border: none;
-            border-radius: 10px;
-            font-family: 'DM Sans', sans-serif;
-            font-weight: 600;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        
-        .btn-primary {
-            background: var(--accent);
-            color: white;
-        }
-        
-        .btn-primary:hover {
-            background: var(--accent-light);
-            transform: translateY(-2px);
-            box-shadow: 0 8px 16px rgba(255, 107, 53, 0.25);
-        }
-        
-        .btn-secondary {
-            background: var(--primary);
-            color: white;
-        }
-        
-        .btn-secondary:hover {
-            background: var(--primary-light);
-            transform: translateY(-2px);
-            box-shadow: 0 8px 16px rgba(10, 37, 64, 0.25);
-        }
-        
-        .btn-outline {
-            background: transparent;
-            border: 1.5px solid var(--border);
-            color: var(--text);
-        }
-        
-        .btn-outline:hover {
-            border-color: var(--primary);
-            color: var(--primary);
-        }
-        
-        .btn-block {
-            width: 100%;
-            justify-content: center;
-        }
-        
-        /* Listings Grid */
-        .listings-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-            gap: 2rem;
-            margin-top: 2rem;
-        }
-        
-        .listing-card {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            overflow: hidden;
-            transition: all 0.3s ease;
-            cursor: pointer;
-        }
-        
-        .listing-card:hover {
-            transform: translateY(-6px);
-            box-shadow: 0 16px 40px rgba(0,0,0,0.1);
-        }
-        
-        .listing-image {
-            width: 100%;
-            height: 240px;
-            background: linear-gradient(135deg, #E5E5E0 0%, #D0D0C8 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--text-light);
-            font-size: 3rem;
-        }
-        
-        .listing-content {
-            padding: 1.5rem;
-        }
-        
-        .listing-price {
-            font-size: 1.75rem;
-            font-weight: 600;
-            color: var(--primary);
-            margin-bottom: 0.5rem;
-        }
-        
-        .listing-address {
-            color: var(--text);
-            font-weight: 500;
-            margin-bottom: 0.5rem;
-        }
-        
-        .listing-details {
-            display: flex;
-            gap: 1.5rem;
-            color: var(--text-light);
-            font-size: 0.9rem;
-            margin-bottom: 1rem;
-        }
-        
-        .listing-description {
-            color: var(--text-light);
-            font-size: 0.95rem;
-            line-height: 1.5;
-            margin-bottom: 1rem;
-        }
-        
-        .listing-date {
-            font-size: 0.85rem;
-            color: var(--text-light);
-        }
-        
-        /* Modal */
-        .modal {
+        .hamburger { display: none; background: none; border: none; cursor: pointer; padding: 8px; }
+        .hamburger span { display: block; width: 22px; height: 2px; background: white; margin: 4px 0; border-radius: 2px; }
+
+        .mobile-menu {
             display: none;
             position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0,0,0,0.6);
-            backdrop-filter: blur(4px);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
-            padding: 2rem;
+            top: 64px; left: 0; right: 0;
+            background: var(--primary);
+            padding: 1.5rem 2rem;
+            z-index: 99;
+            flex-direction: column;
+            gap: 1rem;
+            border-top: 1px solid rgba(255,255,255,0.1);
         }
-        
-        .modal.active {
-            display: flex;
-        }
-        
-        .modal-content {
-            background: var(--surface);
-            border-radius: 20px;
-            max-width: 600px;
-            width: 100%;
-            max-height: 90vh;
-            overflow-y: auto;
-            padding: 2.5rem;
-            position: relative;
-            animation: modalSlideIn 0.3s ease-out;
-        }
-        
-        @keyframes modalSlideIn {
-            from {
-                opacity: 0;
-                transform: translateY(20px) scale(0.98);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0) scale(1);
-            }
-        }
-        
-        .modal-close {
-            position: absolute;
-            top: 1.5rem;
-            right: 1.5rem;
-            background: var(--bg);
-            border: none;
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            cursor: pointer;
-            font-size: 1.25rem;
-            color: var(--text);
-            transition: all 0.2s ease;
-        }
-        
-        .modal-close:hover {
-            background: var(--border);
-            transform: rotate(90deg);
-        }
-        
-        .success-message {
-            background: linear-gradient(135deg, var(--success) 0%, #10b981 100%);
+        .mobile-menu.open { display: flex; }
+        .mobile-menu a { color: rgba(255,255,255,0.85); text-decoration: none; font-size: 1rem; font-weight: 500; }
+
+        /* ── Hero ── */
+        .hero {
+            background: var(--primary);
             color: white;
-            padding: 1.5rem;
-            border-radius: 12px;
-            margin-bottom: 1.5rem;
+            padding: 5.5rem 2rem 4.5rem;
             text-align: center;
-            font-weight: 500;
+            position: relative;
+            overflow: hidden;
         }
-        
-        /* Empty State */
-        .empty-state {
+        .hero::after {
+            content: '';
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent), #ff9a70, var(--accent));
+        }
+        .hero-eyebrow {
+            display: inline-block;
+            background: rgba(255,107,53,0.18);
+            color: var(--accent);
+            font-size: 0.78rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            padding: 5px 14px;
+            border-radius: 20px;
+            margin-bottom: 1.25rem;
+        }
+        .hero h1 {
+            font-family: 'Crimson Pro', serif;
+            font-size: clamp(2.6rem, 5.5vw, 4rem);
+            font-weight: 900;
+            line-height: 1.08;
+            max-width: 800px;
+            margin: 0 auto 1.5rem;
+        }
+        .hero h1 em { color: var(--accent); font-style: normal; }
+        .hero-sub {
+            font-size: 1.2rem;
+            color: rgba(255,255,255,0.72);
+            max-width: 580px;
+            margin: 0 auto 2.75rem;
+            line-height: 1.7;
+        }
+        .hero-cta {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 2.5rem;
+        }
+        .btn-hero-primary {
+            background: var(--accent);
+            color: white;
+            padding: 1rem 2.25rem;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 1.05rem;
+            text-decoration: none;
+            transition: background 0.2s, transform 0.2s;
+        }
+        .btn-hero-primary:hover { background: #e55a2b; transform: translateY(-2px); }
+        .btn-hero-secondary {
+            background: rgba(255,255,255,0.1);
+            color: white;
+            padding: 1rem 2.25rem;
+            border-radius: 10px;
+            border: 1.5px solid rgba(255,255,255,0.3);
+            font-weight: 600;
+            font-size: 1.05rem;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+        .btn-hero-secondary:hover { background: rgba(255,255,255,0.18); }
+        .hero-trust {
+            display: flex;
+            gap: 1.75rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            font-size: 0.88rem;
+            color: rgba(255,255,255,0.52);
+        }
+        .hero-trust span { display: flex; align-items: center; gap: 0.4rem; }
+        .hero-trust .dot { color: #4ade80; font-size: 0.9rem; }
+
+        /* ── Explainer strip ── */
+        .explainer {
+            background: white;
+            border-bottom: 1px solid var(--border);
+        }
+        .explainer-inner {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 2.25rem 2rem;
             text-align: center;
-            padding: 4rem 2rem;
-            color: var(--text-light);
         }
-        
-        .empty-state-icon {
-            font-size: 4rem;
+        .explainer p {
+            font-size: 1.1rem;
+            color: #444;
+            line-height: 1.7;
+            max-width: 720px;
+            margin: 0 auto;
+        }
+        .explainer p strong { color: var(--primary); }
+
+        /* ── Sections ── */
+        .section { padding: 5rem 2rem; }
+        .section-inner { max-width: 1040px; margin: 0 auto; }
+        .section-label {
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--accent);
+            margin-bottom: 0.6rem;
+        }
+        .section-title {
+            font-family: 'Crimson Pro', serif;
+            font-size: clamp(1.9rem, 4vw, 2.75rem);
+            font-weight: 900;
+            color: var(--primary);
+            line-height: 1.12;
             margin-bottom: 1rem;
-            opacity: 0.3;
         }
-        
-        /* Responsive */
-        @media (max-width: 768px) {
-            .hero h1 {
-                font-size: 2.5rem;
-            }
-            
-            .hero p {
-                font-size: 1.1rem;
-            }
-            
-            .nav-tabs {
-                flex-direction: column;
-            }
-            
-            .listings-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .modal-content {
-                padding: 2rem;
-            }
+        .section-sub {
+            font-size: 1.05rem;
+            color: var(--muted);
+            max-width: 520px;
+            line-height: 1.7;
+            margin-bottom: 3rem;
+        }
+
+        /* ── Steps ── */
+        .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem; }
+        .step {
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+        .step-num {
+            width: 42px; height: 42px;
+            border-radius: 50%;
+            background: var(--accent);
+            color: white;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 900; font-size: 1.1rem;
+            margin-bottom: 1.25rem;
+        }
+        .step h3 { font-size: 1.05rem; font-weight: 700; color: var(--primary); margin-bottom: 0.5rem; }
+        .step p { font-size: 0.9rem; color: var(--muted); line-height: 1.65; }
+
+        /* ── Split section ── */
+        .split-bg { background: white; }
+        .split {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 3rem;
+            align-items: center;
+        }
+        .split-text h2 {
+            font-family: 'Crimson Pro', serif;
+            font-size: clamp(1.75rem, 3.5vw, 2.4rem);
+            font-weight: 900;
+            color: var(--primary);
+            line-height: 1.15;
+            margin-bottom: 1rem;
+        }
+        .split-text p { font-size: 1rem; color: var(--muted); line-height: 1.7; margin-bottom: 1.5rem; }
+        .split-features { display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.75rem; }
+        .split-feat {
+            display: flex; gap: 0.75rem; align-items: flex-start;
+            font-size: 0.95rem; color: #444;
+        }
+        .split-feat .icon { font-size: 1.1rem; flex-shrink: 0; margin-top: 0.05rem; }
+        .split-card {
+            background: var(--primary);
+            border-radius: 20px;
+            padding: 2.5rem;
+            color: white;
+        }
+        .split-card-label { font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: rgba(255,255,255,0.5); margin-bottom: 0.5rem; }
+        .split-card h3 { font-family: 'Crimson Pro', serif; font-size: 1.6rem; font-weight: 900; margin-bottom: 1rem; }
+        .split-card p { font-size: 0.92rem; color: rgba(255,255,255,0.72); line-height: 1.65; margin-bottom: 1.5rem; }
+        .split-card-stats { display: flex; gap: 1.5rem; margin-bottom: 1.75rem; flex-wrap: wrap; }
+        .split-stat-val { font-family: 'Crimson Pro', serif; font-size: 1.8rem; font-weight: 900; color: white; line-height: 1; }
+        .split-stat-label { font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-top: 0.2rem; }
+        .btn-white { background: white; color: var(--primary); padding: 0.75rem 1.75rem; border-radius: 8px; font-weight: 700; text-decoration: none; font-size: 0.95rem; display: inline-block; transition: transform 0.2s; }
+        .btn-white:hover { transform: translateY(-1px); }
+
+        /* ── Trust bar ── */
+        .trust-bar {
+            background: var(--primary);
+            padding: 3rem 2rem;
+        }
+        .trust-bar-inner {
+            max-width: 900px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 2rem;
+            text-align: center;
+        }
+        .trust-stat-val { font-family: 'Crimson Pro', serif; font-size: 2.2rem; font-weight: 900; color: white; line-height: 1; }
+        .trust-stat-label { font-size: 0.85rem; color: rgba(255,255,255,0.5); margin-top: 0.4rem; }
+
+        /* ── Comparison ── */
+        .compare-bg { background: white; }
+        .compare-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            max-width: 800px;
+        }
+        .compare-col { border-radius: 16px; padding: 2rem; }
+        .compare-col.bad { background: var(--soft-bg); border: 1px solid var(--border); }
+        .compare-col.good { background: var(--accent); }
+        .compare-col h3 { font-size: 0.95rem; font-weight: 700; margin-bottom: 1.25rem; color: var(--primary); }
+        .compare-col.good h3 { color: white; }
+        .compare-item { display: flex; gap: 0.7rem; margin-bottom: 0.85rem; font-size: 0.9rem; color: #555; line-height: 1.45; }
+        .compare-col.good .compare-item { color: rgba(255,255,255,0.92); }
+
+        /* ── FAQ ── */
+        .faq-section { background: var(--soft-bg); }
+        .faq-inner { max-width: 680px; }
+        .faq-item { border-bottom: 1px solid var(--border); }
+        .faq-q { padding: 1.1rem 0; font-weight: 700; font-size: 0.97rem; color: var(--primary); cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+        .faq-q::after { content: '+'; font-size: 1.3rem; color: var(--muted); font-weight: 400; flex-shrink: 0; }
+        .faq-q.open::after { content: '−'; }
+        .faq-a { padding: 0 0 1.1rem; font-size: 0.92rem; color: var(--muted); line-height: 1.7; display: none; }
+        .faq-a.open { display: block; }
+
+        /* ── Bottom CTA ── */
+        .bottom-cta {
+            background: var(--accent);
+            padding: 5rem 2rem;
+            text-align: center;
+            color: white;
+        }
+        .bottom-cta h2 { font-family: 'Crimson Pro', serif; font-size: clamp(2rem, 4vw, 2.75rem); font-weight: 900; margin-bottom: 1rem; }
+        .bottom-cta p { font-size: 1.1rem; opacity: 0.9; margin-bottom: 2rem; max-width: 500px; margin-left: auto; margin-right: auto; }
+        .btn-cta-white { background: white; color: var(--accent); padding: 0.9rem 2.25rem; border-radius: 10px; font-weight: 700; font-size: 1rem; text-decoration: none; display: inline-block; transition: transform 0.2s; }
+        .btn-cta-white:hover { transform: translateY(-2px); }
+
+        /* ── Footer ── */
+        footer { background: var(--primary); color: rgba(255,255,255,0.5); text-align: center; padding: 2.5rem 2rem; font-size: 0.875rem; }
+        footer a { color: rgba(255,255,255,0.6); text-decoration: none; margin: 0 0.75rem; }
+        footer a:hover { color: white; }
+
+        /* ── Responsive ── */
+        @media (max-width: 900px) {
+            .steps { grid-template-columns: 1fr; }
+            .split { grid-template-columns: 1fr; }
+            .trust-bar-inner { grid-template-columns: 1fr 1fr; }
+            .compare-grid { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 640px) {
+            .nav-links { display: none; }
+            .hamburger { display: block; }
+            .hero { padding: 4rem 1.5rem 3.5rem; }
+            .trust-bar-inner { grid-template-columns: 1fr 1fr; gap: 1.5rem; }
         }
     </style>
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#0A2540">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="RealtorFinder">
 </head>
 <body>
-    <header>
-        <nav>
-            <div class="logo">HomeDirect</div>
-            <div class="nav-tabs">
-                <button class="nav-tab active" data-view="browse">Browse Listings</button>
-                <button class="nav-tab" data-view="sell">Sell Your Home</button>
-            </div>
-        </nav>
-    </header>
 
-    <div class="hero">
-        <div class="hero-content">
-            <h1>Connect Directly<br>With Top Realtors</h1>
-            <p>Post your home, receive competitive offer packages from local realtors, and choose the best fit for your needs.</p>
+<nav>
+    <a href="/" class="nav-logo">Realtor<span>Finder</span></a>
+    <div class="nav-links">
+        <a href="/sellers">For Sellers</a>
+        <a href="/realtors">For Realtors</a>
+        <a href="/pricing">Pricing</a>
+        <a href="/find-agent">Find an Agent</a>
+        <a href="/login?tab=signup" class="nav-cta">Get Started Free</a>
+    </div>
+    <button class="hamburger" id="navHamburger" aria-label="Menu" aria-expanded="false">
+        <span></span><span></span><span></span>
+    </button>
+</nav>
+<div class="mobile-menu" id="mobileMenu">
+    <a href="/sellers" onclick="closeMobileMenu()">For Sellers</a>
+    <a href="/realtors" onclick="closeMobileMenu()">For Realtors</a>
+    <a href="/pricing" onclick="closeMobileMenu()">Pricing</a>
+    <a href="/find-agent" onclick="closeMobileMenu()">Find an Agent</a>
+    <a href="/login?tab=signup" onclick="closeMobileMenu()" style="color:var(--accent);font-weight:600;">Get Started Free →</a>
+</div>
+
+<!-- Hero -->
+<div class="hero">
+    <div class="hero-eyebrow">Free for home sellers</div>
+    <h1>Post your home.<br>Let realtors <em>compete</em> for it.</h1>
+    <p class="hero-sub">List your home for free and receive competing proposals from licensed agents. Compare commissions side-by-side, then choose the one you want.</p>
+    <div class="hero-cta">
+        <a href="/login?tab=signup" class="btn-hero-primary">List My Home Free →</a>
+        <a href="/sellers" class="btn-hero-secondary">See how it works</a>
+    </div>
+    <div class="hero-trust">
+        <span><span class="dot">✓</span> Free to list, always</span>
+        <span><span class="dot">✓</span> Licensed, verified agents</span>
+        <span><span class="dot">✓</span> No pressure, no commitment</span>
+        <span><span class="dot">✓</span> Cancel any time</span>
+    </div>
+</div>
+
+<!-- One-sentence explainer -->
+<div class="explainer">
+    <div class="explainer-inner">
+        <p>RealtorFinder is a marketplace where <strong>home sellers post their listing for free</strong> and <strong>real estate agents send competing proposals</strong> — you compare commissions, read reviews, and pick the agent you want. No cold calls, no pressure.</p>
+    </div>
+</div>
+
+<!-- How it works for sellers -->
+<div class="section">
+    <div class="section-inner">
+        <div class="section-label">For Home Sellers</div>
+        <h2 class="section-title">Sell smarter in three steps</h2>
+        <p class="section-sub">You're in control from day one. Agents come to you — not the other way around.</p>
+        <div class="steps">
+            <div class="step">
+                <div class="step-num">1</div>
+                <h3>Post your listing for free</h3>
+                <p>Create an account and add your home in minutes — address, photos, price, and a description. No credit card, no agent needed.</p>
+            </div>
+            <div class="step">
+                <div class="step-num">2</div>
+                <h3>Receive competing proposals</h3>
+                <p>Licensed local agents review your listing and send you their commission rate, marketing strategy, and credentials. You set the terms.</p>
+            </div>
+            <div class="step">
+                <div class="step-num">3</div>
+                <h3>Compare and choose</h3>
+                <p>Review every proposal side-by-side. Read agent reviews from past sellers. Accept the one that fits — decline the rest with one click.</p>
+            </div>
+        </div>
+        <div style="margin-top:2.5rem;">
+            <a href="/login?tab=signup" style="background:var(--accent);color:white;padding:0.85rem 2rem;border-radius:10px;font-weight:700;font-size:1rem;text-decoration:none;display:inline-block;transition:background 0.2s;">List My Home Free →</a>
+            <a href="/sellers" style="color:var(--accent);font-weight:600;margin-left:1.5rem;text-decoration:none;font-size:0.95rem;">Learn more about selling →</a>
         </div>
     </div>
+</div>
 
-    <div class="container">
-        <!-- Browse Listings View -->
-        <div class="view-section active" id="browse-view">
-            <div class="action-cards">
-                <div class="action-card">
-                    <h3>For Realtors</h3>
-                    <p>Review available properties and submit compelling offer packages directly to homeowners.</p>
-                    <button class="btn btn-secondary">Learn More</button>
-                </div>
-                <div class="action-card">
-                    <h3>For Homeowners</h3>
-                    <p>List your property for free and receive multiple offers from qualified real estate professionals.</p>
-                    <button class="btn btn-primary" onclick="switchView('sell')">List Your Home</button>
-                </div>
-            </div>
-
-            <h2 style="font-size: 2rem; margin-bottom: 1rem;">Available Properties</h2>
-            <p style="color: var(--text-light); margin-bottom: 2rem;">Click any listing to submit an offer package</p>
-            
-            <div class="listings-grid" id="listingsGrid">
-                <!-- Listings will be dynamically inserted here -->
-            </div>
+<!-- Stats trust bar -->
+<div class="trust-bar">
+    <div class="trust-bar-inner">
+        <div>
+            <div class="trust-stat-val">Free</div>
+            <div class="trust-stat-label">Always free for sellers</div>
         </div>
+        <div>
+            <div class="trust-stat-val">659+</div>
+            <div class="trust-stat-label">Markets covered</div>
+        </div>
+        <div>
+            <div class="trust-stat-val">100%</div>
+            <div class="trust-stat-label">Licensed & verified agents</div>
+        </div>
+        <div>
+            <div class="trust-stat-val">$0</div>
+            <div class="trust-stat-label">Platform fee for sellers</div>
+        </div>
+    </div>
+</div>
 
-        <!-- Sell Your Home View -->
-        <div class="view-section" id="sell-view">
-            <div class="form-card">
-                <h2>List Your Home</h2>
-                <p class="subtitle">Fill out the details below to get started</p>
-                
-                <form id="listingForm">
-                    <div class="form-group">
-                        <label>Property Address *</label>
-                        <input type="text" name="address" placeholder="123 Main Street, Springfield, MA 01101" required>
-                    </div>
-                    
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>Price *</label>
-                            <input type="text" name="price" placeholder="$450,000" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Property Type *</label>
-                            <select name="type" required>
-                                <option value="">Select type</option>
-                                <option value="Single Family">Single Family</option>
-                                <option value="Condo">Condo</option>
-                                <option value="Townhouse">Townhouse</option>
-                                <option value="Multi-Family">Multi-Family</option>
-                            </select>
-                        </div>
-                    </div>
-                    
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>Bedrooms *</label>
-                            <input type="number" name="bedrooms" placeholder="3" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Bathrooms *</label>
-                            <input type="number" name="bathrooms" step="0.5" placeholder="2.5" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Square Feet *</label>
-                            <input type="number" name="sqft" placeholder="2000" required>
-                        </div>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>Property Description *</label>
-                        <textarea name="description" placeholder="Describe your property's best features, recent updates, neighborhood amenities..." required></textarea>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Property Photos (up to 10 images)</label>
-                        <div class="file-upload-wrapper">
-                            <input 
-                                type="file" 
-                                id="imageInput" 
-                                name="images" 
-                                accept="image/*" 
-                                multiple 
-                                style="display: none;"
-                            >
-                            <button 
-                                type="button" 
-                                class="btn btn-outline" 
-                                onclick="document.getElementById('imageInput').click()"
-                            >
-                                📷 Choose Photos
-                            </button>
-                            <span id="fileCount" style="margin-left: 1rem; color: var(--text-light);"></span>
-                        </div>
-                        <div id="imagePreview" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 0.5rem; margin-top: 1rem;"></div>
-                    </div>
-                    
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>Your Name *</label>
-                            <input type="text" name="ownerName" placeholder="John Doe" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Contact Email *</label>
-                            <input type="email" name="ownerEmail" placeholder="john@example.com" required>
-                        </div>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>Phone Number *</label>
-                        <input type="tel" name="ownerPhone" placeholder="(555) 123-4567" required>
-                    </div>
-                    
-                    <button type="submit" class="btn btn-primary btn-block">Publish Listing</button>
-                </form>
+<!-- Old way vs RF way -->
+<div class="section compare-bg" id="how-it-works">
+    <div class="section-inner">
+        <div class="section-label">Why RealtorFinder</div>
+        <h2 class="section-title">A better way to find your agent</h2>
+        <p class="section-sub" style="margin-bottom:2.5rem;">Traditional agent search is backwards. We fix that.</p>
+        <div class="compare-grid">
+            <div class="compare-col bad">
+                <h3>The old way</h3>
+                <div class="compare-item"><span>😕</span><span>Call multiple agents and sit through pitches</span></div>
+                <div class="compare-item"><span>😕</span><span>No easy way to compare commission rates</span></div>
+                <div class="compare-item"><span>😕</span><span>Agents set the terms — take it or leave it</span></div>
+                <div class="compare-item"><span>😕</span><span>Rely on referrals and hope they're good</span></div>
+                <div class="compare-item"><span>😕</span><span>Pressure to commit before you're ready</span></div>
+            </div>
+            <div class="compare-col good">
+                <h3>With RealtorFinder</h3>
+                <div class="compare-item"><span>🎉</span><span>Agents send you written proposals — you review at your pace</span></div>
+                <div class="compare-item"><span>🎉</span><span>Commission rates shown in a clear comparison table</span></div>
+                <div class="compare-item"><span>🎉</span><span>You control the terms — counter any proposal you want</span></div>
+                <div class="compare-item"><span>🎉</span><span>Verified reviews from real sellers who've worked with each agent</span></div>
+                <div class="compare-item"><span>🎉</span><span>Accept only when you've found the right fit</span></div>
             </div>
         </div>
     </div>
+</div>
 
-    <!-- Offer Package Modal -->
-    <div class="modal" id="offerModal">
-        <div class="modal-content">
-            <button class="modal-close" onclick="closeModal()">×</button>
-            <div id="modalBody">
-                <h2 style="margin-bottom: 0.5rem;">Submit Offer Package</h2>
-                <p class="subtitle" id="modalPropertyAddress"></p>
-                
-                <form id="offerForm">
-                    <div class="form-group">
-                        <label>Your Name *</label>
-                        <input type="text" name="realtorName" placeholder="Jane Smith" required>
+<!-- For Realtors split -->
+<div class="section">
+    <div class="section-inner">
+        <div class="split">
+            <div class="split-text">
+                <div class="section-label">For Real Estate Agents</div>
+                <h2>Win more listings by competing on merit</h2>
+                <p>Stop cold-calling and door-knocking. RealtorFinder connects you directly with motivated sellers who are already ready to list — you just have to submit your best proposal.</p>
+                <div class="split-features">
+                    <div class="split-feat"><span class="icon">📋</span><span>Browse active seller listings in your market</span></div>
+                    <div class="split-feat"><span class="icon">📬</span><span>Submit proposals with your commission rate and pitch</span></div>
+                    <div class="split-feat"><span class="icon">🏆</span><span>Win listings based on quality, not who calls first</span></div>
+                    <div class="split-feat"><span class="icon">👥</span><span>Access buyer requests from people looking for representation</span></div>
+                </div>
+                <a href="/realtors" style="color:var(--accent);font-weight:700;text-decoration:none;font-size:0.95rem;">Learn about realtor plans →</a>
+            </div>
+            <div class="split-card">
+                <div class="split-card-label">Realtor Plans</div>
+                <h3>From $99/month or pay per lead</h3>
+                <p>Start free and pay $15 per proposal, or subscribe for unlimited access. No long-term contracts.</p>
+                <div class="split-card-stats">
+                    <div>
+                        <div class="split-stat-val">$99</div>
+                        <div class="split-stat-label">Starting per month</div>
                     </div>
-                    
-                    <div class="form-group">
-                        <label>Brokerage *</label>
-                        <input type="text" name="brokerage" placeholder="Premier Realty Group" required>
+                    <div>
+                        <div class="split-stat-val">$15</div>
+                        <div class="split-stat-label">Pay-per-lead (Free plan)</div>
                     </div>
-                    
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>Email *</label>
-                            <input type="email" name="realtorEmail" placeholder="jane@premierrealty.com" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Phone *</label>
-                            <input type="tel" name="realtorPhone" placeholder="(555) 987-6543" required>
-                        </div>
+                    <div>
+                        <div class="split-stat-val">∞</div>
+                        <div class="split-stat-label">Proposals on Pro plan</div>
                     </div>
-                    
-                    <div class="form-group">
-                        <label>Commission Rate (%)</label>
-                        <input type="number" name="commission" step="0.1" placeholder="5.0">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>Your Offer Package Details *</label>
-                        <textarea name="offerDetails" placeholder="Describe your marketing plan, experience in the area, services included, timeline, and why you're the best choice for this property..." required></textarea>
-                    </div>
-                    
-                    <button type="submit" class="btn btn-primary btn-block">Submit Offer</button>
-                </form>
+                </div>
+                <a href="/login?tab=signup&type=realtor" class="btn-white">Create Realtor Account →</a>
             </div>
         </div>
     </div>
+</div>
 
-    <script>
-        // Data storage (in production, this would be a backend database)
-        let listings = [
-            {
-                id: 1,
-                address: "456 Oak Avenue, Springfield, MA 01105",
-                price: "$525,000",
-                type: "Single Family",
-                bedrooms: 4,
-                bathrooms: 2.5,
-                sqft: 2400,
-                description: "Beautiful colonial with updated kitchen, hardwood floors throughout, and spacious backyard. Walking distance to top-rated schools.",
-                ownerName: "Sarah Johnson",
-                ownerEmail: "sarah.j@email.com",
-                ownerPhone: "(555) 234-5678",
-                date: "Posted 2 days ago"
-            },
-            {
-                id: 2,
-                address: "789 Maple Street, Springfield, MA 01109",
-                price: "$385,000",
-                type: "Townhouse",
-                bedrooms: 3,
-                bathrooms: 2,
-                sqft: 1850,
-                description: "Modern townhouse with open concept living, granite counters, finished basement, and attached garage. Low HOA fees.",
-                ownerName: "Michael Chen",
-                ownerEmail: "m.chen@email.com",
-                ownerPhone: "(555) 345-6789",
-                date: "Posted 5 days ago"
-            }
-        ];
+<!-- FAQ -->
+<div class="section faq-section">
+    <div class="section-inner">
+        <div class="section-label">Common Questions</div>
+        <h2 class="section-title">Everything you need to know</h2>
+        <div class="faq-inner" style="margin-top:2.5rem;">
+            <div class="faq-item">
+                <div class="faq-q">Is it really free for sellers?</div>
+                <div class="faq-a">Yes — completely free. Listing your home, receiving proposals, messaging agents, and choosing your agent costs nothing. RealtorFinder is paid for by the agents who subscribe to access your listing.</div>
+            </div>
+            <div class="faq-item">
+                <div class="faq-q">What is RealtorFinder and how does it work?</div>
+                <div class="faq-a">RealtorFinder is a reverse marketplace for home sales. Instead of calling agents and hoping for the best, you post your home and agents compete for the listing by sending you proposals. You compare their commission rates, read their reviews, and choose the one you want — all without leaving the platform.</div>
+            </div>
+            <div class="faq-item">
+                <div class="faq-q">How do I know the agents are legitimate?</div>
+                <div class="faq-a">All agents on RealtorFinder have verified accounts with license numbers and real seller reviews tied to actual transactions. Many have their license verified directly by our team. You can read reviews from other sellers before you ever commit.</div>
+            </div>
+            <div class="faq-item">
+                <div class="faq-q">What happens after I accept a proposal?</div>
+                <div class="faq-a">You'll receive the agent's contact details and they'll be notified right away. All other pending proposals on your listing are automatically declined. From there, you work with your chosen agent to finalize the listing agreement.</div>
+            </div>
+            <div class="faq-item">
+                <div class="faq-q">I'm a realtor — how do I sign up?</div>
+                <div class="faq-a">Create a free account and start browsing seller listings immediately. Submit proposals for $15 each on the free plan, or subscribe starting at $99/month for more access. <a href="/realtors" style="color:var(--accent);font-weight:600;">See realtor plans →</a></div>
+            </div>
+            <div class="faq-item">
+                <div class="faq-q">Do I have to commit to anything when I list?</div>
+                <div class="faq-a">No. You can review proposals, message agents, and browse at your own pace. You only move forward when you find an agent you want to work with. There's no obligation at any step.</div>
+            </div>
+        </div>
+        <div style="margin-top:1.5rem;">
+            <a href="/faq" style="color:var(--accent);font-weight:600;text-decoration:none;font-size:0.9rem;">See all FAQs →</a>
+        </div>
+    </div>
+</div>
 
-        let currentListingId = null;
+<!-- Bottom CTA -->
+<div class="bottom-cta">
+    <h2>Ready to find your perfect agent?</h2>
+    <p>Join thousands of sellers who let the agents compete — and win on their own terms.</p>
+    <a href="/login?tab=signup" class="btn-cta-white">List My Home Free →</a>
+    <div style="margin-top:1.25rem;font-size:0.85rem;opacity:0.75;">
+        Already have an account? <a href="/login" style="color:white;font-weight:600;text-decoration:underline;">Sign in →</a>
+    </div>
+</div>
 
-        // Render listings
-        function renderListings() {
-            const grid = document.getElementById('listingsGrid');
-            
-            if (listings.length === 0) {
-                grid.innerHTML = `
-                    <div class="empty-state" style="grid-column: 1/-1;">
-                        <div class="empty-state-icon">🏠</div>
-                        <h3>No listings yet</h3>
-                        <p>Be the first to list your property!</p>
-                    </div>
-                `;
-                return;
-            }
-            
-            grid.innerHTML = listings.map(listing => `
-                <div class="listing-card" onclick="openOfferModal(${listing.id})">
-                    <div class="listing-image">🏡</div>
-                    <div class="listing-content">
-                        <div class="listing-price">${listing.price}</div>
-                        <div class="listing-address">${listing.address}</div>
-                        <div class="listing-details">
-                            <span>🛏️ ${listing.bedrooms} bd</span>
-                            <span>🛁 ${listing.bathrooms} ba</span>
-                            <span>📏 ${listing.sqft.toLocaleString()} sqft</span>
-                        </div>
-                        <div class="listing-description">${listing.description}</div>
-                        <div class="listing-date">${listing.date}</div>
-                    </div>
-                </div>
-            `).join('');
-        }
+<footer>
+    <p style="margin-bottom:0.5rem;">
+        <a href="/">Home</a>
+        <a href="/sellers">For Sellers</a>
+        <a href="/realtors">For Realtors</a>
+        <a href="/find-agent">Find an Agent</a>
+        <a href="/pricing">Pricing</a>
+        <a href="/features">Features</a>
+        <a href="/about">About</a>
+        <a href="/faq">FAQ</a>
+        <a href="/privacy">Privacy</a>
+        <a href="/terms">Terms</a>
+    </p>
+    <p style="margin-top:0.75rem;">&copy; 2026 RealtorFinder.net — The marketplace where sellers post and realtors compete.</p>
+</footer>
 
-        // View switching
-        function switchView(view) {
-            document.querySelectorAll('.view-section').forEach(section => {
-                section.classList.remove('active');
-            });
-            document.querySelectorAll('.nav-tab').forEach(tab => {
-                tab.classList.remove('active');
-            });
-            
-            document.getElementById(`${view}-view`).classList.add('active');
-            document.querySelector(`[data-view="${view}"]`).classList.add('active');
-        }
+<script>
+    const hamburger = document.getElementById('navHamburger');
+    const mobileMenu = document.getElementById('mobileMenu');
+    hamburger.addEventListener('click', function() {
+        const isOpen = mobileMenu.classList.toggle('open');
+        hamburger.setAttribute('aria-expanded', isOpen);
+    });
+    function closeMobileMenu() {
+        mobileMenu.classList.remove('open');
+        hamburger.setAttribute('aria-expanded', 'false');
+    }
 
-        document.querySelectorAll('.nav-tab').forEach(tab => {
-            tab.addEventListener('click', () => {
-                switchView(tab.dataset.view);
-            });
+    document.querySelectorAll('.faq-q').forEach(q => {
+        q.addEventListener('click', () => {
+            q.classList.toggle('open');
+            q.nextElementSibling.classList.toggle('open');
         });
+    });
 
-        // Listing form submission
-        document.getElementById('listingForm').addEventListener('submit', (e) => {
-            e.preventDefault();
-            const formData = new FormData(e.target);
-            const listing = {
-                id: listings.length + 1,
-                address: formData.get('address'),
-                price: formData.get('price'),
-                type: formData.get('type'),
-                bedrooms: parseInt(formData.get('bedrooms')),
-                bathrooms: parseFloat(formData.get('bathrooms')),
-                sqft: parseInt(formData.get('sqft')),
-                description: formData.get('description'),
-                ownerName: formData.get('ownerName'),
-                ownerEmail: formData.get('ownerEmail'),
-                ownerPhone: formData.get('ownerPhone'),
-                date: 'Posted just now'
-            };
-            
-            listings.push(listing);
-            renderListings();
-            e.target.reset();
-            switchView('browse');
-            
-            // Show success message
-            alert('🎉 Your listing has been published successfully! Realtors can now submit their offer packages.');
+    document.querySelectorAll('a[href^="#"]').forEach(a => {
+        a.addEventListener('click', e => {
+            const target = document.querySelector(a.getAttribute('href'));
+            if (target) { e.preventDefault(); target.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
         });
-
-        // Open offer modal
-        function openOfferModal(listingId) {
-            currentListingId = listingId;
-            const listing = listings.find(l => l.id === listingId);
-            document.getElementById('modalPropertyAddress').textContent = listing.address;
-            document.getElementById('offerModal').classList.add('active');
-        }
-
-        function closeModal() {
-            document.getElementById('offerModal').classList.remove('active');
-            document.getElementById('offerForm').reset();
-        }
-
-        // Close modal on outside click
-        document.getElementById('offerModal').addEventListener('click', (e) => {
-            if (e.target.id === 'offerModal') {
-                closeModal();
-            }
-        });
-
-        // Offer form submission
-        document.getElementById('offerForm').addEventListener('submit', (e) => {
-            e.preventDefault();
-            const formData = new FormData(e.target);
-            const listing = listings.find(l => l.id === currentListingId);
-            
-            // In production, this would send to backend/email
-            const offer = {
-                propertyAddress: listing.address,
-                ownerEmail: listing.ownerEmail,
-                realtorName: formData.get('realtorName'),
-                brokerage: formData.get('brokerage'),
-                realtorEmail: formData.get('realtorEmail'),
-                realtorPhone: formData.get('realtorPhone'),
-                commission: formData.get('commission'),
-                offerDetails: formData.get('offerDetails')
-            };
-            
-            console.log('Offer submitted:', offer);
-            
-            // Show success message
-            document.getElementById('modalBody').innerHTML = `
-                <div class="success-message">
-                    <h3 style="margin-bottom: 0.5rem;">✅ Offer Package Submitted!</h3>
-                    <p style="opacity: 0.95;">Your offer has been sent to ${listing.ownerName}. They will review and contact you directly.</p>
-                </div>
-                <button class="btn btn-primary btn-block" onclick="closeModal()">Done</button>
-            `;
-        });
-
-        // Initial render
-        renderListings();
-    </script>
-    <script src="app.js"></script>
-    <script>
-      if ('serviceWorker' in navigator) {
+    });
+</script>
+<script>
+    if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
-      }
-    </script>
+    }
+</script>
 </body>
 </html>
