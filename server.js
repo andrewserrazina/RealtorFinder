@@ -1815,6 +1815,369 @@ app.get('/api/admin/leads/export.csv', requireAdmin, async (req, res) => {
     }
 });
 
+// ===== ADMIN CRM ROUTES =====
+
+// --- Enhanced stats for CRM summary cards ---
+app.get('/api/admin/crm-stats', requireAdmin, async (req, res) => {
+    try {
+        const { rows } = await pool.query(`
+            SELECT
+                COUNT(*) FILTER (WHERE user_type='realtor') AS total_realtors,
+                COUNT(*) FILTER (WHERE user_type='realtor' AND is_approved=true AND is_active IS NOT FALSE) AS active_realtors,
+                COUNT(*) FILTER (WHERE user_type='realtor' AND is_approved=false AND is_active IS NOT FALSE) AS pending_realtors,
+                COUNT(*) FILTER (WHERE user_type='seller') AS total_sellers
+            FROM users
+        `);
+        const uStats = rows[0];
+
+        const { rows: lRows } = await pool.query(`
+            SELECT
+                COUNT(*) FILTER (WHERE deleted_at IS NULL) AS total_leads,
+                COUNT(*) FILTER (WHERE deleted_at IS NULL AND crm_status='new') AS new_leads,
+                COUNT(*) FILTER (WHERE deleted_at IS NULL AND crm_assigned_realtor_id IS NULL AND status='active') AS unassigned_leads
+            FROM listings
+        `);
+        const lStats = lRows[0];
+
+        const { rows: mRows } = await pool.query(`
+            SELECT
+                COUNT(*) AS total_matches,
+                COUNT(*) FILTER (WHERE closed=true) AS closed_deals,
+                COALESCE(SUM(referral_fee_expected) FILTER (WHERE payment_status='pending' AND closed=true), 0) AS fees_due,
+                COALESCE(SUM(referral_fee_paid), 0) AS fees_received
+            FROM lead_matches
+        `);
+        const mStats = mRows[0];
+
+        const { rows: pRows } = await pool.query(`SELECT COUNT(*) AS total FROM realtor_prospects WHERE converted_user_id IS NULL`);
+
+        res.json({
+            total_realtors: uStats.total_realtors,
+            active_realtors: uStats.active_realtors,
+            pending_realtors: uStats.pending_realtors,
+            total_leads: lStats.total_leads,
+            new_leads: lStats.new_leads,
+            unassigned_leads: lStats.unassigned_leads,
+            active_matches: mStats.total_matches,
+            closed_deals: mStats.closed_deals,
+            fees_due: mStats.fees_due,
+            fees_received: mStats.fees_received,
+            open_prospects: pRows[0].total,
+        });
+    } catch (err) {
+        console.error('CRM stats error:', err);
+        res.status(500).json({ error: 'Failed to fetch CRM stats' });
+    }
+});
+
+// --- Admin Notes ---
+app.get('/api/admin/notes/:type/:id', requireAdmin, async (req, res) => {
+    try {
+        const { rows } = await pool.query(
+            `SELECT n.id, n.body, n.created_at,
+                    u.first_name || ' ' || u.last_name AS admin_name
+             FROM admin_notes n
+             LEFT JOIN users u ON u.id = n.admin_user_id
+             WHERE n.resource_type = $1 AND n.resource_id = $2
+             ORDER BY n.created_at DESC`,
+            [req.params.type, parseInt(req.params.id)]
+        );
+        res.json(rows);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch notes' });
+    }
+});
+
+app.post('/api/admin/notes', requireAdmin, async (req, res) => {
+    try {
+        const { resource_type, resource_id, body } = req.body;
+        if (!body?.trim()) return res.status(400).json({ error: 'Note body required' });
+        const { rows } = await pool.query(
+            `INSERT INTO admin_notes (resource_type, resource_id, admin_user_id, body)
+             VALUES ($1, $2, $3, $4) RETURNING *`,
+            [resource_type, parseInt(resource_id), req.user.id, body.trim()]
+        );
+        res.json(rows[0]);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to save note' });
+    }
+});
+
+app.delete('/api/admin/notes/:id', requireAdmin, async (req, res) => {
+    try {
+        await pool.query(`DELETE FROM admin_notes WHERE id = $1`, [parseInt(req.params.id)]);
+        res.json({ ok: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to delete note' });
+    }
+});
+
+// --- Realtor CRM ---
+app.get('/api/admin/crm/realtors', requireAdmin, async (req, res) => {
+    try {
+        const { status, search } = req.query;
+        let where = `WHERE u.user_type = 'realtor'`;
+        const params = [];
+
+        if (search) {
+            params.push(`%${search}%`);
+            where += ` AND (u.first_name ILIKE $${params.length} OR u.last_name ILIKE $${params.length} OR u.email ILIKE $${params.length})`;
+        }
+
+        // Derive CRM status from DB fields
+        if (status === 'applied')    where += ` AND u.is_approved = false AND u.is_active IS NOT FALSE`;
+        else if (status === 'approved') where += ` AND u.is_approved = true AND u.is_active IS NOT FALSE AND (u.subscription_plan IS NULL OR u.subscription_plan = 'free')`;
+        else if (status === 'active')   where += ` AND u.is_approved = true AND u.is_active IS NOT FALSE AND u.subscription_plan NOT IN ('free') AND u.subscription_plan IS NOT NULL`;
+        else if (status === 'inactive') where += ` AND u.is_active = false`;
+
+        const { rows } = await pool.query(`
+            SELECT u.id, u.first_name, u.last_name, u.email, u.phone,
+                   u.is_approved, u.is_active, u.is_admin,
+                   u.subscription_plan, u.license_number, u.license_verified,
+                   u.service_areas, u.years_experience, u.bio, u.zip_code,
+                   u.created_at,
+                   COUNT(DISTINCT p.id) AS proposals_sent,
+                   COUNT(DISTINCT lm.id) AS matches_count
+            FROM users u
+            LEFT JOIN proposals p ON p.realtor_id = u.id
+            LEFT JOIN lead_matches lm ON lm.realtor_id = u.id
+            ${where}
+            GROUP BY u.id
+            ORDER BY u.created_at DESC
+        `, params);
+        res.json(rows);
+    } catch (err) {
+        console.error('CRM realtors error:', err);
+        res.status(500).json({ error: 'Failed to fetch realtors' });
+    }
+});
+
+// --- Homeowner Lead CRM ---
+app.get('/api/admin/crm/leads', requireAdmin, async (req, res) => {
+    try {
+        const { status, search } = req.query;
+        let where = `WHERE l.deleted_at IS NULL`;
+        const params = [];
+
+        if (status) {
+            params.push(status);
+            where += ` AND l.crm_status = $${params.length}`;
+        }
+        if (search) {
+            params.push(`%${search}%`);
+            where += ` AND (l.address ILIKE $${params.length} OR l.city ILIKE $${params.length} OR u.first_name ILIKE $${params.length} OR u.email ILIKE $${params.length})`;
+        }
+
+        const { rows } = await pool.query(`
+            SELECT l.id, l.address, l.city, l.state, l.zip, l.price,
+                   l.status, l.crm_status, l.crm_follow_up_date, l.crm_assigned_realtor_id,
+                   l.created_at,
+                   u.first_name || ' ' || u.last_name AS seller_name,
+                   u.email AS seller_email, u.phone AS seller_phone,
+                   ar.first_name || ' ' || ar.last_name AS assigned_realtor_name,
+                   COUNT(DISTINCT p.id) AS proposal_count
+            FROM listings l
+            JOIN users u ON u.id = l.user_id
+            LEFT JOIN users ar ON ar.id = l.crm_assigned_realtor_id
+            LEFT JOIN proposals p ON p.listing_id = l.id
+            ${where}
+            GROUP BY l.id, u.first_name, u.last_name, u.email, u.phone,
+                     ar.first_name, ar.last_name
+            ORDER BY l.created_at DESC
+            LIMIT 500
+        `, params);
+        res.json(rows);
+    } catch (err) {
+        console.error('CRM leads error:', err);
+        res.status(500).json({ error: 'Failed to fetch leads' });
+    }
+});
+
+app.put('/api/admin/crm/leads/:id', requireAdmin, async (req, res) => {
+    try {
+        const { crm_status, crm_follow_up_date, crm_assigned_realtor_id } = req.body;
+        const { rows } = await pool.query(
+            `UPDATE listings SET
+                crm_status = COALESCE($1, crm_status),
+                crm_follow_up_date = COALESCE($2::date, crm_follow_up_date),
+                crm_assigned_realtor_id = $3
+             WHERE id = $4
+             RETURNING id, crm_status, crm_follow_up_date, crm_assigned_realtor_id`,
+            [crm_status || null, crm_follow_up_date || null, crm_assigned_realtor_id || null, parseInt(req.params.id)]
+        );
+        if (!rows.length) return res.status(404).json({ error: 'Listing not found' });
+        res.json(rows[0]);
+    } catch (err) {
+        console.error('CRM lead update error:', err);
+        res.status(500).json({ error: 'Failed to update lead' });
+    }
+});
+
+// --- Match Tracking ---
+app.get('/api/admin/matches', requireAdmin, async (req, res) => {
+    try {
+        const { rows } = await pool.query(`
+            SELECT m.*,
+                   l.address, l.city, l.state, l.price,
+                   r.first_name || ' ' || r.last_name AS realtor_name, r.email AS realtor_email,
+                   a.first_name || ' ' || a.last_name AS assigned_by_name
+            FROM lead_matches m
+            LEFT JOIN listings l ON l.id = m.listing_id
+            LEFT JOIN users r ON r.id = m.realtor_id
+            LEFT JOIN users a ON a.id = m.assigned_by
+            ORDER BY m.assigned_at DESC
+        `);
+        res.json(rows);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch matches' });
+    }
+});
+
+app.post('/api/admin/matches', requireAdmin, async (req, res) => {
+    try {
+        const { listing_id, realtor_id, notes, estimated_home_value, estimated_commission_pct,
+                referral_fee_expected, payment_status } = req.body;
+        if (!listing_id || !realtor_id) return res.status(400).json({ error: 'listing_id and realtor_id required' });
+        const { rows } = await pool.query(
+            `INSERT INTO lead_matches
+                (listing_id, realtor_id, assigned_by, notes, estimated_home_value,
+                 estimated_commission_pct, referral_fee_expected, payment_status)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+             RETURNING *`,
+            [listing_id, realtor_id, req.user.id, notes || null,
+             estimated_home_value || null, estimated_commission_pct || null,
+             referral_fee_expected || null, payment_status || 'pending']
+        );
+        // Update listing crm_status to assigned
+        await pool.query(`UPDATE listings SET crm_status='assigned', crm_assigned_realtor_id=$1 WHERE id=$2`,
+            [realtor_id, listing_id]);
+        res.json(rows[0]);
+    } catch (err) {
+        console.error('Create match error:', err);
+        res.status(500).json({ error: 'Failed to create match' });
+    }
+});
+
+app.put('/api/admin/matches/:id', requireAdmin, async (req, res) => {
+    try {
+        const fields = req.body;
+        const allowed = ['status','realtor_accepted','contact_made','appointment_scheduled',
+            'listing_agreement_signed','under_contract','closed','notes',
+            'estimated_home_value','estimated_commission_pct','referral_fee_expected',
+            'referral_fee_paid','payment_status','close_date'];
+        const sets = [];
+        const vals = [];
+        allowed.forEach(k => {
+            if (k in fields) {
+                vals.push(fields[k]);
+                sets.push(`${k} = $${vals.length}`);
+            }
+        });
+        if (!sets.length) return res.status(400).json({ error: 'No fields to update' });
+        vals.push(parseInt(req.params.id));
+        sets.push(`updated_at = NOW()`);
+        const { rows } = await pool.query(
+            `UPDATE lead_matches SET ${sets.join(', ')} WHERE id = $${vals.length} RETURNING *`,
+            vals
+        );
+        if (!rows.length) return res.status(404).json({ error: 'Match not found' });
+        res.json(rows[0]);
+    } catch (err) {
+        console.error('Update match error:', err);
+        res.status(500).json({ error: 'Failed to update match' });
+    }
+});
+
+app.delete('/api/admin/matches/:id', requireAdmin, async (req, res) => {
+    try {
+        await pool.query(`DELETE FROM lead_matches WHERE id = $1`, [parseInt(req.params.id)]);
+        res.json({ ok: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to delete match' });
+    }
+});
+
+// --- Realtor Prospects (Recruitment) ---
+app.get('/api/admin/prospects', requireAdmin, async (req, res) => {
+    try {
+        const { status } = req.query;
+        let where = status ? `WHERE outreach_status = $1` : '';
+        const params = status ? [status] : [];
+        const { rows } = await pool.query(
+            `SELECT p.*, u.email AS converted_email
+             FROM realtor_prospects p
+             LEFT JOIN users u ON u.id = p.converted_user_id
+             ${where}
+             ORDER BY p.created_at DESC`, params
+        );
+        res.json(rows);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch prospects' });
+    }
+});
+
+app.post('/api/admin/prospects', requireAdmin, async (req, res) => {
+    try {
+        const { first_name, last_name, brokerage, email, phone, city, state,
+                source, outreach_status, last_contact_date, follow_up_date, notes } = req.body;
+        const { rows } = await pool.query(
+            `INSERT INTO realtor_prospects
+                (first_name, last_name, brokerage, email, phone, city, state,
+                 source, outreach_status, last_contact_date, follow_up_date, notes)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING *`,
+            [first_name||null, last_name||null, brokerage||null, email||null, phone||null,
+             city||null, state||null, source||'manual', outreach_status||'not_contacted',
+             last_contact_date||null, follow_up_date||null, notes||null]
+        );
+        res.json(rows[0]);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to create prospect' });
+    }
+});
+
+app.put('/api/admin/prospects/:id', requireAdmin, async (req, res) => {
+    try {
+        const { first_name, last_name, brokerage, email, phone, city, state,
+                source, outreach_status, last_contact_date, follow_up_date, notes } = req.body;
+        const { rows } = await pool.query(
+            `UPDATE realtor_prospects SET
+                first_name=$1, last_name=$2, brokerage=$3, email=$4, phone=$5,
+                city=$6, state=$7, source=$8, outreach_status=$9,
+                last_contact_date=$10, follow_up_date=$11, notes=$12, updated_at=NOW()
+             WHERE id=$13 RETURNING *`,
+            [first_name||null, last_name||null, brokerage||null, email||null, phone||null,
+             city||null, state||null, source||'manual', outreach_status||'not_contacted',
+             last_contact_date||null, follow_up_date||null, notes||null, parseInt(req.params.id)]
+        );
+        if (!rows.length) return res.status(404).json({ error: 'Prospect not found' });
+        res.json(rows[0]);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to update prospect' });
+    }
+});
+
+app.delete('/api/admin/prospects/:id', requireAdmin, async (req, res) => {
+    try {
+        await pool.query(`DELETE FROM realtor_prospects WHERE id = $1`, [parseInt(req.params.id)]);
+        res.json({ ok: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to delete prospect' });
+    }
+});
+
+app.get('/api/admin/crm/realtors-list', requireAdmin, async (req, res) => {
+    try {
+        const { rows } = await pool.query(
+            `SELECT id, first_name, last_name, email FROM users
+             WHERE user_type='realtor' AND is_approved=true AND is_active IS NOT FALSE
+             ORDER BY first_name`
+        );
+        res.json(rows);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch realtors list' });
+    }
+});
+
 // Waitlist signup endpoint
 app.post('/api/waitlist', waitlistLimiter, async (req, res) => {
     try {
