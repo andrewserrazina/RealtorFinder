@@ -972,9 +972,14 @@
             <section id="showings-view" class="view-section">
                 <div class="page-header">
                     <h1 class="page-title">Showing Requests</h1>
-                    <p class="page-subtitle">Buyers who want to view your listings</p>
+                    <p class="page-subtitle">Buyer requests &amp; realtor showing requests for your listings</p>
+                </div>
+                <div style="display:flex;gap:0.5rem;margin-bottom:1.5rem;">
+                    <button id="sellerShowingsTabBuyer" onclick="switchSellerShowingsTab('buyer')" style="background:#0a2540;color:white;border:none;border-radius:6px;padding:0.4rem 1rem;cursor:pointer;font-weight:600;font-size:0.85rem;font-family:inherit;">Buyer Requests</button>
+                    <button id="sellerShowingsTabRealtor" onclick="switchSellerShowingsTab('realtor')" style="background:#f3f4f6;color:#374151;border:none;border-radius:6px;padding:0.4rem 1rem;cursor:pointer;font-weight:600;font-size:0.85rem;font-family:inherit;">Realtor Requests</button>
                 </div>
                 <div id="sellerShowingsList"></div>
+                <div id="sellerRealtorShowingsList" style="display:none;"></div>
             </section>
 
             <!-- Messages View -->
@@ -1645,6 +1650,7 @@
                         <a href="/listing/${listing.id}" target="_blank" class="btn btn-secondary" style="font-size:0.85rem;text-align:center;">View Listing</a>
                         ${listing.shareToken ? `<button class="btn btn-outline" onclick="copyShareLink('${listing.shareToken}')" style="font-size:0.85rem;">🔗 Share</button>` : ''}
                         ${!isExpired ? `<button class="btn btn-outline" onclick="openEditModal(${listing.id})">Edit</button>` : ''}
+                        <button class="btn btn-outline" onclick="openListingAnalytics(${listing.id})" style="font-size:0.85rem;">📊 Analytics</button>
                         ${status !== 'sold' && !isExpired ? `<button class="btn btn-outline" onclick="markListingSold(${listing.id})" style="font-size:0.85rem;">Mark Sold</button>` : ''}
                         <button class="btn btn-outline" onclick="deleteListing(${listing.id})" style="font-size:0.85rem;border-color:#ef4444;color:#ef4444;">Delete</button>
                     </div>
@@ -2377,7 +2383,9 @@
                                 <td style="padding:10px 12px;font-weight:600;">${name}${badge}</td>
                                 <td style="padding:10px 12px;font-weight:700;color:${isLowest ? '#065f46' : 'var(--accent)'};">${p.commission_pct}%</td>
                                 <td style="padding:10px 12px;color:#666;font-size:0.85rem;">${esc(p.timeline || '—')}</td>
-                                <td style="padding:10px 12px;color:#444;font-size:0.85rem;max-width:200px;">${esc(p.cover_note || '—').slice(0, 80)}${(p.cover_note || '').length > 80 ? '…' : ''}</td>
+                                <td style="padding:10px 12px;color:#444;font-size:0.85rem;max-width:200px;">${esc(p.cover_note || '—').slice(0, 80)}${(p.cover_note || '').length > 80 ? '…' : ''}
+                                    ${(p.attachments || []).length ? '<div style="margin-top:4px;">' + (p.attachments||[]).map(a => { const att = typeof a === 'string' ? (() => { try { return JSON.parse(a); } catch { return {url:a,name:'file'}; } })() : a; return `<a href="${esc(att.url)}" target="_blank" style="font-size:0.75rem;color:#0284c7;display:inline-block;margin-right:4px;">📎 ${esc(att.name||'doc')}</a>`; }).join('') + '</div>' : ''}
+                                </td>
                                 <td style="padding:10px 12px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;">${acceptBtn}${counterBtn}${counterBadge}</td>
                             </tr>`;
                         }).join('');
@@ -2390,7 +2398,7 @@
                                             <th style="padding:8px 12px;text-align:left;color:#666;font-weight:600;">Realtor</th>
                                             <th style="padding:8px 12px;text-align:left;color:#666;font-weight:600;">Commission</th>
                                             <th style="padding:8px 12px;text-align:left;color:#666;font-weight:600;">Timeline</th>
-                                            <th style="padding:8px 12px;text-align:left;color:#666;font-weight:600;">Note</th>
+                                            <th style="padding:8px 12px;text-align:left;color:#666;font-weight:600;">Note &amp; Docs</th>
                                             <th style="padding:8px 12px;text-align:left;color:#666;font-weight:600;">Action</th>
                                         </tr>
                                     </thead>
@@ -2515,6 +2523,159 @@
                 loadProposals && loadProposals(); // reload proposals if function exists
             } catch { showToast('Failed to send counter-offer'); }
         }
+
+        // ===== SELLER SHOWING TABS (Feature 6) =====
+
+        function switchSellerShowingsTab(tab) {
+            const buyerBtn = document.getElementById('sellerShowingsTabBuyer');
+            const realtorBtn = document.getElementById('sellerShowingsTabRealtor');
+            const buyerList = document.getElementById('sellerShowingsList');
+            const realtorList = document.getElementById('sellerRealtorShowingsList');
+            if (!buyerBtn) return;
+            if (tab === 'buyer') {
+                buyerBtn.style.background = '#0a2540'; buyerBtn.style.color = 'white';
+                realtorBtn.style.background = '#f3f4f6'; realtorBtn.style.color = '#374151';
+                buyerList.style.display = ''; realtorList.style.display = 'none';
+            } else {
+                realtorBtn.style.background = '#0a2540'; realtorBtn.style.color = 'white';
+                buyerBtn.style.background = '#f3f4f6'; buyerBtn.style.color = '#374151';
+                realtorList.style.display = ''; buyerList.style.display = 'none';
+                loadSellerRealtorShowings();
+            }
+        }
+
+        async function loadSellerRealtorShowings() {
+            const container = document.getElementById('sellerRealtorShowingsList');
+            if (!container) return;
+            container.innerHTML = '<div style="color:#999;padding:2rem;text-align:center;">Loading…</div>';
+            try {
+                const res = await fetch(API_BASE_URL + '/realtor-showings/my', { credentials: 'include' });
+                if (!res.ok) throw new Error('Failed');
+                const requests = await res.json();
+                if (!requests.length) {
+                    container.innerHTML = `<div style="text-align:center;padding:3rem;color:#999;"><div style="font-size:2.5rem;margin-bottom:1rem;">📅</div><h3 style="color:#374151;margin-bottom:0.5rem;">No realtor showing requests yet</h3><p>When realtors request showings on your listings, they'll appear here.</p></div>`;
+                    return;
+                }
+                const statusColors = { pending: '#f59e0b', confirmed: '#10b981', declined: '#ef4444' };
+                container.innerHTML = requests.map(r => {
+                    const addr = esc(r.address || 'Your listing');
+                    const realtorName = esc(`${r.realtor_first || r.first_name || ''} ${r.realtor_last || r.last_name || ''}`.trim() || 'Realtor');
+                    const statusColor = statusColors[r.status] || '#999';
+                    const slots = (r.proposed_slots || []).map(s => `<span style="background:#f3f4f6;padding:2px 8px;border-radius:4px;font-size:0.8rem;margin-right:4px;">${esc(s)}</span>`).join('');
+                    return `<div style="background:white;border:1px solid #e1e8ed;border-radius:12px;padding:1.25rem 1.5rem;margin-bottom:1rem;">
+                        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;">
+                            <div>
+                                <div style="font-weight:700;color:#0a2540;margin-bottom:0.25rem;">${addr}</div>
+                                <div style="color:#666;font-size:0.9rem;">👤 ${realtorName} · Proposed slots: ${slots || 'none'}</div>
+                                ${r.message ? `<div style="color:#555;font-size:0.85rem;margin-top:0.25rem;font-style:italic;">"${esc(r.message)}"</div>` : ''}
+                                ${r.confirmed_slot ? `<div style="color:#059669;font-size:0.85rem;margin-top:0.25rem;">✓ Confirmed: ${esc(r.confirmed_slot)}</div>` : ''}
+                            </div>
+                            <span style="font-size:0.85rem;font-weight:700;color:${statusColor};">● ${r.status.charAt(0).toUpperCase() + r.status.slice(1)}</span>
+                        </div>
+                        ${r.status === 'pending' && (r.proposed_slots || []).length ? `
+                        <div style="margin-top:0.75rem;border-top:1px solid #f3f4f6;padding-top:0.75rem;">
+                            <div style="font-size:0.85rem;font-weight:600;margin-bottom:0.5rem;color:#374151;">Confirm a time slot:</div>
+                            <div style="display:flex;flex-wrap:wrap;gap:0.5rem;">
+                                ${(r.proposed_slots || []).map(slot => `<button onclick="confirmRealtorShowing(${r.id}, '${esc(slot)}')" style="background:#10b981;color:white;border:none;border-radius:6px;padding:5px 12px;cursor:pointer;font-size:0.82rem;">${esc(slot)}</button>`).join('')}
+                                <button onclick="declineRealtorShowing(${r.id})" style="background:none;border:1px solid #e1e8ed;border-radius:6px;padding:5px 12px;cursor:pointer;font-size:0.82rem;color:#6b7280;">Decline</button>
+                            </div>
+                        </div>` : ''}
+                    </div>`;
+                }).join('');
+            } catch {
+                container.innerHTML = `<div style="text-align:center;padding:3rem;color:#999;">Could not load realtor showing requests.</div>`;
+            }
+        }
+
+        async function confirmRealtorShowing(id, slot) {
+            try {
+                const res = await fetch(API_BASE_URL + `/realtor-showings/${id}/respond`, {
+                    method: 'PUT', credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'confirm', confirmed_slot: slot })
+                });
+                if (!res.ok) throw new Error((await res.json()).error || 'Failed');
+                showToast('Showing confirmed!');
+                loadSellerRealtorShowings();
+            } catch(e) { alert(e.message || 'Failed to confirm showing'); }
+        }
+
+        async function declineRealtorShowing(id) {
+            if (!confirm('Decline this showing request?')) return;
+            try {
+                const res = await fetch(API_BASE_URL + `/realtor-showings/${id}/respond`, {
+                    method: 'PUT', credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'decline' })
+                });
+                if (!res.ok) throw new Error((await res.json()).error || 'Failed');
+                showToast('Showing request declined.');
+                loadSellerRealtorShowings();
+            } catch(e) { alert(e.message || 'Failed to decline'); }
+        }
+
+        // ===== LISTING ANALYTICS (Feature 3) =====
+
+        async function openListingAnalytics(listingId) {
+            const modal = document.getElementById('listingAnalyticsModal');
+            const body = document.getElementById('listingAnalyticsBody');
+            if (!modal) return;
+            body.innerHTML = '<div style="text-align:center;padding:2rem;color:#999;">Loading analytics…</div>';
+            modal.style.display = 'flex';
+            try {
+                const res = await fetch(`/api/listings/${listingId}/analytics`, { credentials: 'include' });
+                if (!res.ok) { body.innerHTML = '<div style="color:#ef4444;padding:1rem;">Could not load analytics.</div>'; return; }
+                const d = await res.json();
+                const proposals = d.proposals || [];
+                const avgComm = proposals.length ? (proposals.reduce((s, p) => s + parseFloat(p.commission_pct || 0), 0) / proposals.length).toFixed(2) : '—';
+                const propHtml = proposals.length ? proposals.map(p => {
+                    const name = esc(p.realtor_name || 'Realtor');
+                    return `<tr>
+                        <td style="padding:8px 10px;font-weight:600;">${name}</td>
+                        <td style="padding:8px 10px;color:var(--accent);font-weight:700;">${p.commission_pct}%</td>
+                        <td style="padding:8px 10px;color:#666;">${p.avg_rating ? ('★'.repeat(Math.round(p.avg_rating)) + ' ' + parseFloat(p.avg_rating).toFixed(1)) : '—'}</td>
+                        <td style="padding:8px 10px;color:#666;">${p.years_experience || '—'} yrs</td>
+                        <td style="padding:8px 10px;"><span style="background:${p.status==='accepted'?'#d1fae5':p.status==='declined'?'#fee2e2':'#fef3c7'};color:${p.status==='accepted'?'#065f46':p.status==='declined'?'#991b1b':'#92400e'};padding:2px 8px;border-radius:20px;font-size:0.78rem;font-weight:600;">${p.status}</span></td>
+                    </tr>`;
+                }).join('') : '<tr><td colspan="5" style="padding:1rem;text-align:center;color:#9ca3af;">No proposals yet</td></tr>';
+                body.innerHTML = `
+                    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.5rem;">
+                        <div style="text-align:center;background:#f8f9fa;border-radius:10px;padding:1rem;">
+                            <div style="font-size:1.6rem;font-weight:900;color:#0a2540;">${d.view_count || 0}</div>
+                            <div style="font-size:0.75rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;">Views</div>
+                        </div>
+                        <div style="text-align:center;background:#f8f9fa;border-radius:10px;padding:1rem;">
+                            <div style="font-size:1.6rem;font-weight:900;color:#0a2540;">${d.share_views || 0}</div>
+                            <div style="font-size:0.75rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;">Share Views</div>
+                        </div>
+                        <div style="text-align:center;background:#f8f9fa;border-radius:10px;padding:1rem;">
+                            <div style="font-size:1.6rem;font-weight:900;color:var(--accent);">${proposals.length}</div>
+                            <div style="font-size:0.75rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;">Proposals</div>
+                        </div>
+                        <div style="text-align:center;background:#f8f9fa;border-radius:10px;padding:1rem;">
+                            <div style="font-size:1.6rem;font-weight:900;color:#0a2540;">${d.days_on_market || 0}</div>
+                            <div style="font-size:0.75rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;">Days Listed</div>
+                        </div>
+                    </div>
+                    <div style="font-size:0.85rem;color:#6b7280;margin-bottom:0.75rem;">Avg commission offered: <strong style="color:#0a2540;">${avgComm}%</strong></div>
+                    <div style="overflow-x:auto;">
+                        <table style="width:100%;border-collapse:collapse;font-size:0.875rem;">
+                            <thead><tr style="border-bottom:2px solid #e5e7eb;">
+                                <th style="padding:8px 10px;text-align:left;color:#666;font-weight:600;">Realtor</th>
+                                <th style="padding:8px 10px;text-align:left;color:#666;font-weight:600;">Commission</th>
+                                <th style="padding:8px 10px;text-align:left;color:#666;font-weight:600;">Rating</th>
+                                <th style="padding:8px 10px;text-align:left;color:#666;font-weight:600;">Experience</th>
+                                <th style="padding:8px 10px;text-align:left;color:#666;font-weight:600;">Status</th>
+                            </tr></thead>
+                            <tbody>${propHtml}</tbody>
+                        </table>
+                    </div>`;
+            } catch(e) { body.innerHTML = '<div style="color:#ef4444;padding:1rem;">Error loading analytics.</div>'; }
+        }
+
+        function closeListingAnalyticsModal() {
+            document.getElementById('listingAnalyticsModal').style.display = 'none';
+        }
     </script>
     <!-- Counter-offer modal -->
     <!-- Seller Onboarding Wizard -->
@@ -2581,6 +2742,17 @@
                 <button onclick="submitCounter()" style="flex:1;background:var(--accent);color:white;border:none;padding:0.875rem;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.95rem;">Send Counter</button>
                 <button onclick="closeCounterModal()" style="flex:1;background:#f3f4f6;color:#374151;border:none;padding:0.875rem;border-radius:8px;font-weight:600;cursor:pointer;">Cancel</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Listing Analytics Modal -->
+    <div id="listingAnalyticsModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;padding:1rem;">
+        <div style="background:white;border-radius:16px;padding:2rem;max-width:640px;width:100%;max-height:90vh;overflow-y:auto;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
+                <h2 style="font-family:'Crimson Pro',serif;font-size:1.5rem;color:#0a2540;">Listing Analytics</h2>
+                <button onclick="closeListingAnalyticsModal()" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:#666;">&times;</button>
+            </div>
+            <div id="listingAnalyticsBody"></div>
         </div>
     </div>
 
