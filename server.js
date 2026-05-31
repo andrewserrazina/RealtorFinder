@@ -1480,7 +1480,8 @@ app.put('/api/admin/users/:id/reactivate', requireAdmin, async (req, res) => {
 app.put('/api/admin/users/:id/approve', requireAdmin, async (req, res) => {
     try {
         const { rows } = await pool.query(
-            `UPDATE users SET is_approved = true WHERE id = $1 RETURNING id, email, first_name, user_type, is_approved`,
+            `UPDATE users SET is_approved = true, subscription_plan = COALESCE(subscription_plan, 'free')
+             WHERE id = $1 RETURNING id, email, first_name, user_type, is_approved, subscription_plan`,
             [parseInt(req.params.id)]
         );
         if (!rows.length) return res.status(404).json({ error: 'User not found' });
@@ -1970,7 +1971,7 @@ app.post('/api/stripe/checkout', auth.requireAuth, async (req, res) => {
             mode: 'subscription',
             payment_method_types: ['card'],
             line_items: [{ price: priceId, quantity: 1 }],
-            success_url: `${base}/subscription/success?session_id={CHECKOUT_SESSION_ID}`,
+            success_url: `${base}/dashboard/realtor?upgraded=1`,
             cancel_url: `${base}/pricing`,
             metadata: { userId: String(req.session.userId), plan },
         };

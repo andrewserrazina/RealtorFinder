@@ -817,6 +817,7 @@
             <div class="tab" data-view="reviews">Reviews</div>
             <div class="tab" data-view="referrals">Referrals</div>
             <div class="tab" data-view="company">My Company</div>
+            <div class="tab" data-view="settings">Settings</div>
             <div class="tab" data-view="messages" id="msgTab">Messages <span id="msgTabBadge" style="display:none;background:var(--accent);color:white;border-radius:50%;width:16px;height:16px;font-size:0.65rem;font-weight:700;text-align:center;line-height:16px;display:none;margin-left:4px;vertical-align:middle;"></span></div>
         </div>
     </div>
@@ -1226,11 +1227,8 @@
                 <!-- Subscription & Billing -->
                 <div style="background:white;border-radius:12px;border:1px solid var(--border);padding:1.5rem;margin-top:1.5rem;">
                     <h3 style="font-family:'Crimson Pro',serif;font-size:1.3rem;font-weight:700;margin-bottom:0.5rem;color:var(--ink);">Subscription</h3>
-                    <p style="font-size:0.9rem;color:#666;margin-bottom:1rem;">Manage your RealtorFinder plan and billing.</p>
-                    <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
-                        <button onclick="openBillingPortal()" style="background:var(--accent);color:white;border:none;padding:0.7rem 1.5rem;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.95rem;font-family:inherit;">Manage Subscription</button>
-                        <a href="/pricing" style="background:white;color:var(--ink);border:1.5px solid var(--border);padding:0.7rem 1.5rem;border-radius:8px;font-weight:600;font-size:0.95rem;text-decoration:none;display:inline-block;">View Plans</a>
-                    </div>
+                    <p style="font-size:0.9rem;color:#666;margin-bottom:1rem;">Manage your plan and billing.</p>
+                    <button onclick="document.querySelector('[data-view=settings]').click()" style="background:var(--accent);color:white;border:none;padding:0.7rem 1.5rem;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.95rem;font-family:inherit;">Manage Subscription →</button>
                 </div>
 
                 <!-- Change Password -->
@@ -1243,6 +1241,29 @@
                         <div id="passwordError" style="display:none;color:#dc2626;font-size:0.85rem;"></div>
                         <div id="passwordSuccess" style="display:none;color:#059669;font-size:0.85rem;">✓ Password changed successfully!</div>
                         <button onclick="changePassword()" style="background:var(--accent);color:white;border:none;padding:0.7rem 1.5rem;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.95rem;align-self:flex-start;">Update Password</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Settings View -->
+        <section id="settings-view" class="view-section">
+            <h2 style="font-family:'Crimson Pro',serif;font-size:2rem;margin-bottom:2rem;">Settings</h2>
+            <div style="max-width:680px;display:flex;flex-direction:column;gap:1.5rem;">
+
+                <!-- Subscription card (rendered dynamically by renderSubscriptionCard()) -->
+                <div id="subscriptionCard"></div>
+
+                <!-- Change Password -->
+                <div style="background:white;border-radius:12px;border:1px solid var(--border);padding:1.5rem;">
+                    <h3 style="font-family:'Crimson Pro',serif;font-size:1.3rem;font-weight:700;margin-bottom:1rem;color:var(--ink);">Change Password</h3>
+                    <div style="display:flex;flex-direction:column;gap:0.75rem;max-width:400px;">
+                        <input type="password" id="settingsCurrentPassword" placeholder="Current password" style="padding:0.7rem 1rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.95rem;">
+                        <input type="password" id="settingsNewPassword" placeholder="New password (min 8 characters)" style="padding:0.7rem 1rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.95rem;">
+                        <input type="password" id="settingsConfirmPassword" placeholder="Confirm new password" style="padding:0.7rem 1rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.95rem;">
+                        <div id="settingsPasswordError" style="display:none;color:#dc2626;font-size:0.85rem;"></div>
+                        <div id="settingsPasswordSuccess" style="display:none;color:#059669;font-size:0.85rem;">✓ Password changed successfully!</div>
+                        <button onclick="changePasswordSettings()" style="background:var(--accent);color:white;border:none;padding:0.7rem 1.5rem;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.95rem;align-self:flex-start;font-family:inherit;">Update Password</button>
                     </div>
                 </div>
             </div>
@@ -1267,6 +1288,24 @@
     </div>
 
     <!-- Onboarding Wizard Modal -->
+    <!-- Upgrade Prompt Modal -->
+    <div id="upgradePromptModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:1010;align-items:center;justify-content:center;padding:1rem;">
+        <div style="background:white;border-radius:20px;width:760px;max-width:100%;max-height:90vh;overflow-y:auto;position:relative;padding:2.5rem 2rem 2rem;">
+            <button onclick="dismissUpgradePrompt()" style="position:absolute;top:1rem;right:1rem;background:none;border:none;font-size:1.4rem;cursor:pointer;color:#9ca3af;line-height:1;">✕</button>
+            <div style="text-align:center;margin-bottom:2rem;">
+                <div style="display:inline-block;background:#FFF0EB;color:#FF6B35;font-weight:700;font-size:0.8rem;padding:0.35rem 1rem;border-radius:20px;letter-spacing:0.05em;text-transform:uppercase;margin-bottom:1rem;">You're on the Free Plan</div>
+                <h2 style="font-family:'Crimson Pro',serif;font-size:2rem;font-weight:900;color:#0A2540;margin-bottom:0.5rem;">Unlock more with a subscription</h2>
+                <p style="color:#6B7280;font-size:0.95rem;">Upgrade to submit unlimited proposals without paying per lead.</p>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.5rem;" id="upgradePlanGrid">
+                <!-- plan cards injected by JS -->
+            </div>
+            <div style="text-align:center;">
+                <button onclick="dismissUpgradePrompt()" style="background:none;border:none;color:#9ca3af;font-size:0.9rem;cursor:pointer;font-family:inherit;">Continue with Free — $15 per lead</button>
+            </div>
+        </div>
+    </div>
+
     <div id="onboardingWizard" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:1000;display:none;align-items:center;justify-content:center;">
         <div style="background:white;border-radius:16px;width:540px;max-width:95vw;padding:2.5rem;position:relative;max-height:90vh;overflow-y:auto;">
             <button onclick="closeWizard()" style="position:absolute;top:1rem;right:1rem;background:none;border:none;font-size:1.25rem;cursor:pointer;color:#999;line-height:1;">✕</button>
@@ -1486,6 +1525,11 @@
                     history.replaceState({}, '', window.location.pathname);
                     showToast('✓ Lead purchased! You can now submit a proposal.');
                 }
+                if (sp.get('upgraded') === '1') {
+                    history.replaceState({}, '', window.location.pathname);
+                    sessionStorage.setItem('upgrade_prompt_dismissed', '1');
+                    showToast('🎉 Plan upgraded! You now have unlimited proposals.');
+                }
                 return user;
             } catch (error) {
                 console.error('Error loading user:', error);
@@ -1567,6 +1611,7 @@
                 if (view === 'messages') { window.location.href = '/inbox'; return; }
                 if (view === 'reviews') loadReviews();
                 if (view === 'referrals') loadReferrals();
+                if (view === 'settings') renderSubscriptionCard();
             });
         });
 
@@ -2196,16 +2241,141 @@
         // ===== BILLING PORTAL =====
         async function openBillingPortal() {
             try {
-                const res = await fetch(`${API_BASE_URL}/billing/portal`, {
-                    method: 'POST',
-                    credentials: 'include'
+                const res = await fetch(`${API_BASE_URL}/billing/portal`, { method: 'POST', credentials: 'include' });
+                const data = await res.json();
+                if (data.url) { window.location.href = data.url; }
+                else { showToast(data.error || 'No active subscription found.', 'error'); }
+            } catch (e) {
+                showToast('Could not open billing portal. Please try again.', 'error');
+            }
+        }
+
+        // ===== SUBSCRIPTION MANAGEMENT =====
+        const PLANS = [
+            {
+                key: 'basic', name: 'Basic', price: '$99', period: '/month',
+                features: ['Submit up to 10 proposals/month', 'View all active listings', 'Basic agent profile', 'Email listing notifications', 'Performance dashboard'],
+                cta: 'Upgrade to Basic'
+            },
+            {
+                key: 'professional', name: 'Professional', price: '$249', period: '/month', featured: true,
+                features: ['Unlimited proposals', 'Priority listing alerts', 'Enhanced profile with media', 'Advanced analytics', 'Featured agent badge', 'Early access to new listings'],
+                cta: 'Upgrade to Professional'
+            },
+            {
+                key: 'firm', name: 'Firm', price: '$499', period: '/location/mo',
+                features: ['Unlimited agents per location', 'Unlimited proposals per agent', 'Team dashboard & reporting', 'Bulk bid submission', 'Priority support', 'Dedicated account manager'],
+                cta: 'Upgrade to Firm'
+            }
+        ];
+
+        const PLAN_LABELS = { free: 'Free', basic: 'Basic', professional: 'Professional', firm: 'Firm' };
+
+        function planCardHtml(plan, compact = false) {
+            const featuresHtml = plan.features.map(f => `
+                <div style="display:flex;align-items:flex-start;gap:0.5rem;font-size:${compact ? '0.82rem' : '0.88rem'};color:#374151;padding:0.3rem 0;border-bottom:1px solid #f3f4f6;">
+                    <span style="color:#FF6B35;font-weight:700;flex-shrink:0;">✓</span>${f}
+                </div>`).join('');
+            const bg = plan.featured ? '#0A2540' : 'white';
+            const color = plan.featured ? 'white' : '#0A2540';
+            const mutedColor = plan.featured ? 'rgba(255,255,255,0.7)' : '#6B7280';
+            const borderColor = plan.featured ? '#0A2540' : '#E5E1DB';
+            const featBorderColor = plan.featured ? 'rgba(255,255,255,0.1)' : '#f3f4f6';
+            return `
+                <div style="background:${bg};border:2px solid ${borderColor};border-radius:16px;padding:${compact ? '1.25rem' : '1.5rem'};position:relative;display:flex;flex-direction:column;">
+                    ${plan.featured ? '<div style="position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:#FF6B35;color:white;font-size:0.7rem;font-weight:700;padding:0.25rem 0.85rem;border-radius:20px;white-space:nowrap;letter-spacing:0.05em;text-transform:uppercase;">Most Popular</div>' : ''}
+                    <div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:${mutedColor};margin-bottom:0.4rem;">${plan.name}</div>
+                    <div style="font-family:'Crimson Pro',serif;font-size:${compact ? '1.8rem' : '2.2rem'};font-weight:900;color:${color};line-height:1;">${plan.price}<span style="font-size:0.85rem;font-family:'DM Sans',sans-serif;font-weight:400;opacity:0.7;">${plan.period}</span></div>
+                    <div style="margin:0.75rem 0;flex:1;">${featuresHtml.replace(/border-bottom:1px solid #f3f4f6/g, `border-bottom:1px solid ${featBorderColor}`).replace(/color:#374151/g, `color:${plan.featured ? 'rgba(255,255,255,0.85)' : '#374151'}`)}</div>
+                    <button onclick="subscribeFromDashboard('${plan.key}')" style="background:#FF6B35;color:white;border:none;padding:0.75rem;border-radius:10px;font-weight:600;font-size:0.9rem;cursor:pointer;width:100%;font-family:inherit;margin-top:0.5rem;">${plan.cta}</button>
+                </div>`;
+        }
+
+        async function subscribeFromDashboard(plan) {
+            try {
+                const res = await fetch(`${API_BASE_URL}/stripe/checkout`, {
+                    method: 'POST', credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ plan })
                 });
                 const data = await res.json();
                 if (data.url) { window.location.href = data.url; }
-                else { alert(data.error || 'No active subscription found. Please subscribe first.'); }
-            } catch (e) {
-                alert('Could not open billing portal. Please try again.');
+                else { showToast(data.error || 'Could not start checkout', 'error'); }
+            } catch { showToast('Could not start checkout. Please try again.', 'error'); }
+        }
+
+        function renderSubscriptionCard() {
+            const el = document.getElementById('subscriptionCard');
+            if (!el) return;
+            const plan = currentUser?.subscription_plan || 'free';
+            const isPaid = plan !== 'free';
+            const planLabel = PLAN_LABELS[plan] || plan;
+
+            if (isPaid) {
+                el.innerHTML = `
+                    <div style="background:white;border-radius:12px;border:1px solid var(--border);padding:1.5rem;">
+                        <h3 style="font-family:'Crimson Pro',serif;font-size:1.3rem;font-weight:700;margin-bottom:0.25rem;color:var(--ink);">Subscription</h3>
+                        <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.25rem;">
+                            <span style="background:#d1fae5;color:#065f46;font-weight:700;font-size:0.82rem;padding:0.3rem 0.85rem;border-radius:20px;">Active — ${planLabel}</span>
+                        </div>
+                        <p style="font-size:0.9rem;color:#555;margin-bottom:1.25rem;">Manage your billing, update payment method, or cancel from the Stripe customer portal.</p>
+                        <button onclick="openBillingPortal()" style="background:var(--accent);color:white;border:none;padding:0.75rem 1.5rem;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.95rem;font-family:inherit;">Manage Subscription</button>
+                    </div>`;
+            } else {
+                const planCards = PLANS.map(p => planCardHtml(p, true)).join('');
+                el.innerHTML = `
+                    <div style="background:white;border-radius:12px;border:1px solid var(--border);padding:1.5rem;">
+                        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.75rem;margin-bottom:1.25rem;">
+                            <div>
+                                <h3 style="font-family:'Crimson Pro',serif;font-size:1.3rem;font-weight:700;margin-bottom:0.25rem;color:var(--ink);">Subscription</h3>
+                                <span style="background:#f3f4f6;color:#374151;font-weight:600;font-size:0.82rem;padding:0.3rem 0.85rem;border-radius:20px;">Free Plan — $15 per lead</span>
+                            </div>
+                        </div>
+                        <p style="font-size:0.9rem;color:#555;margin-bottom:1.5rem;">Upgrade to submit unlimited proposals without paying per lead.</p>
+                        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1rem;">${planCards}</div>
+                    </div>`;
             }
+        }
+
+        function showUpgradePrompt() {
+            if (sessionStorage.getItem('upgrade_prompt_dismissed')) return;
+            const plan = currentUser?.subscription_plan || 'free';
+            if (plan !== 'free') return;
+            const modal = document.getElementById('upgradePromptModal');
+            const grid = document.getElementById('upgradePlanGrid');
+            if (!modal || !grid) return;
+            grid.innerHTML = PLANS.map(p => planCardHtml(p, false)).join('');
+            modal.style.display = 'flex';
+        }
+
+        function dismissUpgradePrompt() {
+            sessionStorage.setItem('upgrade_prompt_dismissed', '1');
+            const modal = document.getElementById('upgradePromptModal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        async function changePasswordSettings() {
+            const cur = document.getElementById('settingsCurrentPassword').value;
+            const nw = document.getElementById('settingsNewPassword').value;
+            const conf = document.getElementById('settingsConfirmPassword').value;
+            const errEl = document.getElementById('settingsPasswordError');
+            const okEl = document.getElementById('settingsPasswordSuccess');
+            errEl.style.display = 'none'; okEl.style.display = 'none';
+            if (nw !== conf) { errEl.textContent = 'Passwords do not match.'; errEl.style.display = 'block'; return; }
+            if (nw.length < 8) { errEl.textContent = 'Password must be at least 8 characters.'; errEl.style.display = 'block'; return; }
+            try {
+                const res = await fetch(`${API_BASE_URL}/profile/password`, {
+                    method: 'PUT', credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ currentPassword: cur, newPassword: nw })
+                });
+                const d = await res.json();
+                if (!res.ok) { errEl.textContent = d.error || 'Failed to update password.'; errEl.style.display = 'block'; return; }
+                okEl.style.display = 'block';
+                document.getElementById('settingsCurrentPassword').value = '';
+                document.getElementById('settingsNewPassword').value = '';
+                document.getElementById('settingsConfirmPassword').value = '';
+            } catch { errEl.textContent = 'Network error. Please try again.'; errEl.style.display = 'block'; }
         }
 
         function dismissOnboarding() {
@@ -3110,6 +3280,8 @@
             if (!user || (!user.isApproved && !user.isAdmin)) return;
             loadDashboard();
             loadProfile();
+            // Show upgrade prompt once per session for free-plan users
+            setTimeout(showUpgradePrompt, 1200);
             loadSavedIds();
             loadNotifications();
             loadUnreadMsgCount();
