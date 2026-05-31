@@ -927,7 +927,9 @@
 
         <!-- Won Listings View -->
         <section id="won-view" class="view-section">
-            <h2 style="font-family: 'Crimson Pro', serif; font-size: 2rem; margin-bottom: 2rem;">Won Listings</h2>
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem;">
+                <h2 style="font-family: 'Crimson Pro', serif; font-size: 2rem;">Won Listings &amp; Deals</h2>
+            </div>
             <div class="bids-list" id="wonListingsList"></div>
         </section>
 
@@ -1027,9 +1029,19 @@
 
         <!-- Showings View -->
         <section id="showings-view" class="view-section">
-            <h2 style="font-family:'Crimson Pro',serif;font-size:2rem;margin-bottom:0.5rem;">Showing Requests</h2>
-            <p style="color:#666;margin-bottom:2rem;">Buyers who have requested showings on listings you represent.</p>
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem;">
+                <div>
+                    <h2 style="font-family:'Crimson Pro',serif;font-size:2rem;margin-bottom:0.25rem;">Showings</h2>
+                    <p style="color:#666;font-size:0.95rem;">Buyer showing requests &amp; your realtor showing requests</p>
+                </div>
+                <button onclick="openRealtorShowingModal()" style="background:var(--accent);color:white;border:none;border-radius:8px;padding:0.65rem 1.25rem;font-weight:600;cursor:pointer;font-size:0.9rem;font-family:inherit;">+ Request Showing</button>
+            </div>
+            <div style="display:flex;gap:0.5rem;margin-bottom:1.5rem;">
+                <button id="showingsTabBuyer" onclick="switchShowingsTab('buyer')" style="background:var(--primary);color:white;border:none;border-radius:6px;padding:0.4rem 1rem;cursor:pointer;font-weight:600;font-size:0.85rem;font-family:inherit;">Buyer Requests</button>
+                <button id="showingsTabRealtor" onclick="switchShowingsTab('realtor')" style="background:#f3f4f6;color:#374151;border:none;border-radius:6px;padding:0.4rem 1rem;cursor:pointer;font-weight:600;font-size:0.85rem;font-family:inherit;">My Requests</button>
+            </div>
             <div id="showingsList" class="bids-list"></div>
+            <div id="realtorShowingsList" class="bids-list" style="display:none;"></div>
         </section>
 
         <!-- My Proposals View (Feature 1) -->
@@ -1336,6 +1348,20 @@
                     <div id="templatesLoading" style="color:#9ca3af;font-size:0.9rem;">Loading templates…</div>
                     <div id="templatesList" style="display:none;display:flex;flex-direction:column;gap:0.75rem;"></div>
                     <div id="templatesEmpty" style="display:none;color:#9ca3af;font-size:0.9rem;padding:1rem 0;">No templates yet. Create one to speed up your proposals.</div>
+                </div>
+
+                <!-- Saved Searches -->
+                <div style="background:white;border-radius:12px;border:1px solid var(--border);padding:1.5rem;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:0.75rem;">
+                        <div>
+                            <h3 style="font-family:'Crimson Pro',serif;font-size:1.3rem;font-weight:700;color:var(--ink);margin-bottom:0.25rem;">Saved Searches</h3>
+                            <p style="color:#6b7280;font-size:0.875rem;">Get emailed when new listings match your criteria.</p>
+                        </div>
+                        <button onclick="openSavedSearchModal()" style="background:var(--accent);color:white;border:none;padding:0.6rem 1.25rem;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.875rem;font-family:inherit;white-space:nowrap;">+ New Search Alert</button>
+                    </div>
+                    <div id="savedSearchesLoading" style="color:#9ca3af;font-size:0.9rem;">Loading…</div>
+                    <div id="savedSearchesList" style="display:none;flex-direction:column;gap:0.75rem;"></div>
+                    <div id="savedSearchesEmpty" style="display:none;color:#9ca3af;font-size:0.9rem;padding:0.5rem 0;">No saved searches yet. Create one to get alerts for new listings.</div>
                 </div>
 
                 <!-- Change Password -->
@@ -1719,7 +1745,7 @@
                 if (view === 'messages') { window.location.href = '/inbox'; return; }
                 if (view === 'reviews') loadReviews();
                 if (view === 'referrals') loadReferrals();
-                if (view === 'settings') { renderSubscriptionCard(); loadRNotifPrefs(); loadTemplates(); }
+                if (view === 'settings') { renderSubscriptionCard(); loadRNotifPrefs(); loadTemplates(); loadSavedSearches(); }
             });
         });
 
@@ -1965,10 +1991,10 @@
                 return;
             }
 
-            container.innerHTML = won.map(bid => {
+            const cards = won.map(bid => {
                 const fullAddress = `${bid.address}, ${bid.city}, ${bid.state} ${bid.zip}`;
                 return `
-                    <div class="bid-card" style="border-color: var(--success); border-width: 2px;">
+                    <div class="bid-card" id="won-bid-${bid.id}" style="border-color: var(--success); border-width: 2px;">
                         <div class="bid-info">
                             <h3>${fullAddress}</h3>
                             <div class="bid-price">${bid.price}</div>
@@ -1986,6 +2012,12 @@
                     </div>
                 `;
             }).join('');
+            container.innerHTML = cards;
+            // Async: load deal info for each won proposal
+            won.forEach(bid => {
+                const el = document.getElementById(`won-bid-${bid.id}`);
+                if (el) loadDealForWonListing(bid.id, el.querySelector('.bid-info'));
+            });
         }
 
         // ===== MAP FUNCTIONS =====
@@ -3863,11 +3895,18 @@
                         counterHtml = `<div style="margin-top:0.75rem;"><span style="background:#F3F4F6;color:#6B7280;font-size:0.8rem;font-weight:700;padding:4px 10px;border-radius:20px;">Counter Declined</span></div>`;
                     }
 
+                    const attachHtml = (p.attachments || []).length
+                        ? `<div style="margin-top:0.5rem;display:flex;flex-wrap:wrap;gap:0.5rem;">` +
+                          (p.attachments || []).map(a => {
+                              const att = typeof a === 'string' ? (() => { try { return JSON.parse(a); } catch { return { url: a, name: 'file' }; } })() : a;
+                              return `<a href="${esc(att.url)}" target="_blank" style="font-size:0.78rem;color:#0284c7;background:#eff6ff;border-radius:4px;padding:2px 8px;text-decoration:none;">📎 ${esc(att.name||'attachment')}</a>`;
+                          }).join('') + `</div>` : '';
                     return `<div ${p.counter_status === 'pending' ? 'data-has-counter="true"' : ''} style="background:white;border-radius:12px;padding:1.5rem;margin-bottom:1rem;border:1px solid var(--border);display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;">
                         <div style="flex:1;min-width:0;">
                             <div style="font-weight:700;font-size:1rem;margin-bottom:0.25rem;">${esc(addr)}</div>
                             <div style="color:#666;font-size:0.85rem;">Commission: <strong>${p.commission_pct}%</strong> · Timeline: ${esc(p.timeline || '—')}</div>
                             ${p.cover_note ? `<div style="color:#444;font-size:0.85rem;margin-top:0.25rem;font-style:italic;">"${esc(p.cover_note.slice(0, 100))}${p.cover_note.length > 100 ? '…' : ''}"</div>` : ''}
+                            ${attachHtml}
                             ${counterHtml}
                         </div>
                         <div style="display:flex;align-items:center;gap:0.75rem;flex-shrink:0;">
@@ -3934,12 +3973,16 @@
             const commission_pct = parseFloat(document.getElementById('proposalCommission').value);
             const cover_note = document.getElementById('proposalNote').value;
             const timeline = document.getElementById('proposalTimeline').value;
+            const fileInput = document.getElementById('proposalFile');
             const errEl = document.getElementById('proposalError');
+            const submitBtn = document.getElementById('proposalSubmitBtn');
             errEl.style.display = 'none';
             if (!commission_pct || commission_pct < 0.1 || commission_pct > 10) {
                 errEl.textContent = 'Commission must be between 0.1% and 10%';
                 errEl.style.display = 'block'; return;
             }
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Submitting…';
             try {
                 const res = await fetch('/api/proposals', {
                     method: 'POST', credentials: 'include',
@@ -3955,12 +3998,23 @@
                         errEl.textContent = d.error || d.message || 'Failed to submit';
                         errEl.style.display = 'block';
                     }
+                    submitBtn.disabled = false; submitBtn.textContent = 'Submit Proposal';
                     return;
+                }
+                // Upload attachment if selected
+                if (fileInput && fileInput.files && fileInput.files[0]) {
+                    const fd = new FormData();
+                    fd.append('file', fileInput.files[0]);
+                    try {
+                        await fetch(`/api/proposals/${d.id}/attachments`, {
+                            method: 'POST', credentials: 'include', body: fd
+                        });
+                    } catch(e) { /* non-fatal */ }
                 }
                 closeProposalModal();
                 showToast('Proposal submitted successfully!');
                 loadMyProposals();
-            } catch { errEl.textContent = 'Network error'; errEl.style.display = 'block'; }
+            } catch { errEl.textContent = 'Network error'; errEl.style.display = 'block'; submitBtn.disabled = false; submitBtn.textContent = 'Submit Proposal'; }
         }
 
         // ===== REFERRALS (Feature 4) =====
@@ -4146,6 +4200,239 @@
             if (input) { input.select(); document.execCommand('copy'); showToast('Link copied to clipboard!'); }
         }
 
+        // ===== SAVED SEARCHES (Feature 5) =====
+
+        async function loadSavedSearches() {
+            const loading = document.getElementById('savedSearchesLoading');
+            const list = document.getElementById('savedSearchesList');
+            const empty = document.getElementById('savedSearchesEmpty');
+            if (!loading) return;
+            loading.style.display = 'block'; list.style.display = 'none'; empty.style.display = 'none';
+            try {
+                const res = await fetch('/api/saved-searches', { credentials: 'include' });
+                if (!res.ok) { loading.textContent = 'Could not load saved searches.'; return; }
+                const searches = await res.json();
+                loading.style.display = 'none';
+                if (!searches.length) { empty.style.display = 'block'; return; }
+                list.style.display = 'flex';
+                list.innerHTML = searches.map(s => {
+                    const parts = [];
+                    if (s.city) parts.push(esc(s.city));
+                    if (s.zip) parts.push(esc(s.zip));
+                    if (s.min_price || s.max_price) parts.push(`$${s.min_price||0}–$${s.max_price||'∞'}`);
+                    if (s.min_beds) parts.push(`${s.min_beds}+ beds`);
+                    if (s.type) parts.push(esc(s.type));
+                    return `<div style="display:flex;justify-content:space-between;align-items:center;background:#f8f9fa;border-radius:8px;padding:0.75rem 1rem;gap:0.5rem;flex-wrap:wrap;">
+                        <div>
+                            <div style="font-weight:600;font-size:0.9rem;color:var(--ink);">${parts.join(' · ') || 'All listings'}</div>
+                            <div style="font-size:0.78rem;color:#9ca3af;margin-top:2px;">Created ${new Date(s.created_at).toLocaleDateString()}</div>
+                        </div>
+                        <button onclick="deleteSavedSearch(${s.id})" style="background:none;border:1px solid #e5e7eb;color:#9ca3af;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:0.8rem;">Delete</button>
+                    </div>`;
+                }).join('');
+            } catch(e) { loading.textContent = 'Error loading saved searches.'; }
+        }
+
+        async function deleteSavedSearch(id) {
+            if (!confirm('Delete this search alert?')) return;
+            try {
+                const res = await fetch(`/api/saved-searches/${id}`, { method: 'DELETE', credentials: 'include' });
+                if (res.ok) { showToast('Search alert deleted'); loadSavedSearches(); }
+            } catch(e) {}
+        }
+
+        function openSavedSearchModal() {
+            document.getElementById('savedSearchModal').style.display = 'flex';
+        }
+        function closeSavedSearchModal() {
+            document.getElementById('savedSearchModal').style.display = 'none';
+            document.getElementById('savedSearchForm').reset();
+        }
+
+        async function submitSavedSearch(e) {
+            e.preventDefault();
+            const city = document.getElementById('ssCity').value.trim();
+            const zip = document.getElementById('ssZip').value.trim();
+            const minPrice = document.getElementById('ssMinPrice').value ? parseInt(document.getElementById('ssMinPrice').value) : null;
+            const maxPrice = document.getElementById('ssMaxPrice').value ? parseInt(document.getElementById('ssMaxPrice').value) : null;
+            const minBeds = document.getElementById('ssMinBeds').value ? parseInt(document.getElementById('ssMinBeds').value) : null;
+            const type = document.getElementById('ssPropType').value || null;
+            try {
+                const res = await fetch('/api/saved-searches', {
+                    method: 'POST', credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ city, zip, type, minPrice, maxPrice, minBeds })
+                });
+                if (!res.ok) { const d = await res.json(); showToast(d.error || 'Failed to save', 'error'); return; }
+                showToast('Search alert created!');
+                closeSavedSearchModal();
+                loadSavedSearches();
+            } catch(e) { showToast('Network error', 'error'); }
+        }
+
+        // ===== REALTOR SHOWING REQUESTS (Feature 6) =====
+
+        let _currentShowingsTab = 'buyer';
+
+        function switchShowingsTab(tab) {
+            _currentShowingsTab = tab;
+            const buyerBtn = document.getElementById('showingsTabBuyer');
+            const realtorBtn = document.getElementById('showingsTabRealtor');
+            const buyerList = document.getElementById('showingsList');
+            const realtorList = document.getElementById('realtorShowingsList');
+            if (!buyerBtn) return;
+            if (tab === 'buyer') {
+                buyerBtn.style.background = 'var(--primary)'; buyerBtn.style.color = 'white';
+                realtorBtn.style.background = '#f3f4f6'; realtorBtn.style.color = '#374151';
+                buyerList.style.display = ''; realtorList.style.display = 'none';
+                loadShowings();
+            } else {
+                realtorBtn.style.background = 'var(--primary)'; realtorBtn.style.color = 'white';
+                buyerBtn.style.background = '#f3f4f6'; buyerBtn.style.color = '#374151';
+                realtorList.style.display = ''; buyerList.style.display = 'none';
+                loadRealtorShowingRequests();
+            }
+        }
+
+        function openRealtorShowingModal(listingId, listingAddr) {
+            document.getElementById('rsrListingId').value = listingId || '';
+            document.getElementById('rsrListingSelect').value = listingId ? String(listingId) : '';
+            document.getElementById('rsrAddrLabel').textContent = listingAddr || '';
+            document.getElementById('realtorShowingModal').style.display = 'flex';
+            // Populate listing dropdown
+            loadListingsForShowingSelect();
+        }
+        function closeRealtorShowingModal() {
+            document.getElementById('realtorShowingModal').style.display = 'none';
+            document.getElementById('rsrForm').reset();
+        }
+
+        async function loadListingsForShowingSelect() {
+            const sel = document.getElementById('rsrListingSelect');
+            if (!sel) return;
+            try {
+                const res = await fetch('/api/listings?limit=50', { credentials: 'include' });
+                if (!res.ok) return;
+                const listings = await res.json();
+                const currentVal = sel.value;
+                sel.innerHTML = '<option value="">Select a listing…</option>' +
+                    (listings.listings || listings).map(l => `<option value="${l.id}">${esc(l.address)}</option>`).join('');
+                if (currentVal) sel.value = currentVal;
+            } catch(e) {}
+        }
+
+        async function submitRealtorShowingRequest(e) {
+            e.preventDefault();
+            const listingId = parseInt(document.getElementById('rsrListingSelect').value);
+            const slot1 = document.getElementById('rsrSlot1').value;
+            const slot2 = document.getElementById('rsrSlot2').value;
+            const message = document.getElementById('rsrMessage').value.trim();
+            if (!listingId) { showToast('Please select a listing', 'error'); return; }
+            const proposed_slots = [slot1, slot2].filter(Boolean);
+            if (!proposed_slots.length) { showToast('Please add at least one proposed time slot', 'error'); return; }
+            try {
+                const res = await fetch('/api/realtor-showings', {
+                    method: 'POST', credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ listing_id: listingId, proposed_slots, message })
+                });
+                const d = await res.json();
+                if (!res.ok) { showToast(d.error || 'Failed to submit', 'error'); return; }
+                showToast('Showing request sent to seller!');
+                closeRealtorShowingModal();
+                switchShowingsTab('realtor');
+            } catch(e) { showToast('Network error', 'error'); }
+        }
+
+        async function loadRealtorShowingRequests() {
+            const container = document.getElementById('realtorShowingsList');
+            if (!container) return;
+            container.innerHTML = '<div style="color:#999;padding:2rem;text-align:center;">Loading…</div>';
+            try {
+                const res = await fetch('/api/realtor-showings/my', { credentials: 'include' });
+                if (!res.ok) throw new Error('Failed');
+                const requests = await res.json();
+                if (!requests.length) {
+                    container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">📅</div><h3>No showing requests sent</h3><p>Request showings on listings you're interested in representing.</p></div>`;
+                    return;
+                }
+                const statusColors = { pending: '#f59e0b', confirmed: '#10b981', declined: '#ef4444' };
+                container.innerHTML = requests.map(r => {
+                    const addr = esc(r.address || 'Listing');
+                    const statusColor = statusColors[r.status] || '#999';
+                    const slots = (r.proposed_slots || []).map(s => `<span style="background:#f3f4f6;padding:2px 8px;border-radius:4px;font-size:0.8rem;">${esc(s)}</span>`).join(' ');
+                    return `<div class="bid-card">
+                        <div class="bid-info">
+                            <h3>${addr}</h3>
+                            <div class="bid-details">
+                                <span style="color:${statusColor};font-weight:600;">● ${r.status.charAt(0).toUpperCase() + r.status.slice(1)}</span>
+                                ${r.confirmed_slot ? `<span>✓ Confirmed: ${esc(r.confirmed_slot)}</span>` : `<span>Proposed: ${slots}</span>`}
+                            </div>
+                            ${r.message ? `<div style="margin-top:0.5rem;color:#555;font-size:0.9rem;font-style:italic;">"${esc(r.message)}"</div>` : ''}
+                        </div>
+                        <div style="font-size:0.8rem;color:#9ca3af;">${new Date(r.created_at).toLocaleDateString()}</div>
+                    </div>`;
+                }).join('');
+            } catch(e) {
+                container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">⚠️</div><h3>Could not load requests</h3></div>`;
+            }
+        }
+
+        // ===== DEAL TRACKER (Feature 7) =====
+
+        async function loadDealForWonListing(proposalId, container) {
+            try {
+                const res = await fetch('/api/deals/my', { credentials: 'include' });
+                if (!res.ok) return;
+                const deals = await res.json();
+                const deal = deals.find(d => d.proposal_id === proposalId);
+                if (!deal) return;
+                const statusColors = { active: '#3b82f6', pending_close: '#f59e0b', closed: '#10b981', cancelled: '#ef4444' };
+                const statusColor = statusColors[deal.status] || '#6b7280';
+                const statusLabel = { active: 'Active', pending_close: 'Pending Close', closed: 'Closed', cancelled: 'Cancelled' }[deal.status] || deal.status;
+                container.insertAdjacentHTML('beforeend', `
+                    <div style="margin-top:1rem;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:0.875rem 1rem;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.5rem;">
+                            <div style="font-weight:700;font-size:0.9rem;color:#0c4a6e;">Deal Pipeline</div>
+                            <span style="background:${statusColor}20;color:${statusColor};font-size:0.78rem;font-weight:700;padding:3px 10px;border-radius:20px;">${statusLabel}</span>
+                        </div>
+                        ${deal.sale_price ? `<div style="font-size:0.85rem;color:#0369a1;margin-top:0.4rem;">Sale Price: <strong>$${Number(deal.sale_price).toLocaleString()}</strong></div>` : ''}
+                        ${deal.close_date ? `<div style="font-size:0.85rem;color:#0369a1;">Close Date: <strong>${deal.close_date}</strong></div>` : ''}
+                        ${deal.notes ? `<div style="font-size:0.82rem;color:#555;margin-top:0.3rem;font-style:italic;">${esc(deal.notes)}</div>` : ''}
+                        <button onclick="openDealModal(${deal.id})" style="margin-top:0.75rem;background:none;border:1px solid #0284c7;color:#0284c7;border-radius:6px;padding:4px 12px;font-size:0.8rem;cursor:pointer;font-family:inherit;">Update Deal</button>
+                    </div>
+                `);
+            } catch(e) {}
+        }
+
+        let _editingDealId = null;
+        function openDealModal(dealId) {
+            _editingDealId = dealId;
+            document.getElementById('dealModal').style.display = 'flex';
+        }
+        function closeDealModal() {
+            document.getElementById('dealModal').style.display = 'none';
+        }
+        async function submitDealUpdate(e) {
+            e.preventDefault();
+            const status = document.getElementById('dealStatus').value;
+            const sale_price = document.getElementById('dealSalePrice').value ? parseFloat(document.getElementById('dealSalePrice').value) : null;
+            const close_date = document.getElementById('dealCloseDate').value || null;
+            const notes = document.getElementById('dealNotes').value.trim() || null;
+            try {
+                const res = await fetch(`/api/deals/${_editingDealId}`, {
+                    method: 'PUT', credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status, sale_price, close_date, notes })
+                });
+                if (!res.ok) { const d = await res.json(); showToast(d.error || 'Failed to update deal', 'error'); return; }
+                showToast('Deal updated!');
+                closeDealModal();
+                // Re-render won listings
+                document.querySelector('[data-view="won"]').click();
+            } catch(e) { showToast('Network error', 'error'); }
+        }
+
         // Hook new tabs into tab-switching logic
         document.addEventListener('DOMContentLoaded', () => {
             document.querySelectorAll('.tab[data-view="my-proposals"]').forEach(el => {
@@ -4158,7 +4445,7 @@
                 el.addEventListener('click', loadReferrals);
             });
             document.querySelectorAll('.tab[data-view="showings"]').forEach(el => {
-                el.addEventListener('click', loadShowings);
+                el.addEventListener('click', () => { loadShowings(); _currentShowingsTab = 'buyer'; });
             });
 
             // Load Stripe publishable key
@@ -4205,8 +4492,119 @@
                     </div>
                     <textarea id="proposalNote" rows="4" placeholder="Introduce yourself, highlight your experience, explain why you're the best fit..." style="width:100%;padding:10px 14px;border:1px solid #e5e7eb;border-radius:8px;font-size:0.95rem;resize:vertical;"></textarea>
                 </div>
+                <div style="margin-bottom:1.5rem;">
+                    <label style="display:block;font-weight:600;font-size:0.9rem;margin-bottom:0.4rem;">Attach Document <span style="color:#9ca3af;font-weight:400;">(optional — PDF, DOC, max 10MB)</span></label>
+                    <input type="file" id="proposalFile" accept=".pdf,.doc,.docx" style="width:100%;font-size:0.9rem;color:#444;">
+                    <p style="font-size:0.78rem;color:#6b7280;margin-top:4px;">E.g. CMA report, marketing plan, bio sheet</p>
+                </div>
                 <div id="proposalError" style="display:none;background:#fee2e2;color:#991b1b;padding:10px 14px;border-radius:8px;font-size:0.9rem;margin-bottom:1rem;"></div>
-                <button type="submit" style="width:100%;background:var(--accent);color:white;border:none;border-radius:8px;padding:14px;font-weight:700;font-size:1rem;cursor:pointer;">Submit Proposal</button>
+                <button type="submit" id="proposalSubmitBtn" style="width:100%;background:var(--accent);color:white;border:none;border-radius:8px;padding:14px;font-weight:700;font-size:1rem;cursor:pointer;">Submit Proposal</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Saved Search Modal -->
+    <div id="savedSearchModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;padding:1rem;">
+        <div style="background:white;border-radius:16px;padding:2rem;max-width:440px;width:100%;max-height:90vh;overflow-y:auto;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
+                <h2 style="font-family:'Crimson Pro',serif;font-size:1.4rem;">Create Search Alert</h2>
+                <button onclick="closeSavedSearchModal()" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:#666;">&times;</button>
+            </div>
+            <p style="color:#666;font-size:0.875rem;margin-bottom:1.5rem;">Get emailed when new listings match these criteria.</p>
+            <form id="savedSearchForm" onsubmit="submitSavedSearch(event)" style="display:flex;flex-direction:column;gap:1rem;">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+                    <div><label style="display:block;font-weight:600;font-size:0.85rem;margin-bottom:0.3rem;">City</label>
+                        <input id="ssCity" type="text" placeholder="e.g. Austin" style="width:100%;padding:9px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:0.9rem;font-family:inherit;"></div>
+                    <div><label style="display:block;font-weight:600;font-size:0.85rem;margin-bottom:0.3rem;">Zip Code</label>
+                        <input id="ssZip" type="text" placeholder="e.g. 78701" maxlength="10" style="width:100%;padding:9px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:0.9rem;font-family:inherit;"></div>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+                    <div><label style="display:block;font-weight:600;font-size:0.85rem;margin-bottom:0.3rem;">Min Price ($)</label>
+                        <input id="ssMinPrice" type="number" placeholder="e.g. 200000" min="0" style="width:100%;padding:9px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:0.9rem;font-family:inherit;"></div>
+                    <div><label style="display:block;font-weight:600;font-size:0.85rem;margin-bottom:0.3rem;">Max Price ($)</label>
+                        <input id="ssMaxPrice" type="number" placeholder="e.g. 600000" min="0" style="width:100%;padding:9px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:0.9rem;font-family:inherit;"></div>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+                    <div><label style="display:block;font-weight:600;font-size:0.85rem;margin-bottom:0.3rem;">Min Beds</label>
+                        <input id="ssMinBeds" type="number" placeholder="e.g. 3" min="0" max="10" style="width:100%;padding:9px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:0.9rem;font-family:inherit;"></div>
+                    <div><label style="display:block;font-weight:600;font-size:0.85rem;margin-bottom:0.3rem;">Property Type</label>
+                        <select id="ssPropType" style="width:100%;padding:9px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:0.9rem;font-family:inherit;">
+                            <option value="">Any</option>
+                            <option value="Single Family">Single Family</option>
+                            <option value="Condo">Condo</option>
+                            <option value="Townhouse">Townhouse</option>
+                            <option value="Multi-Family">Multi-Family</option>
+                        </select></div>
+                </div>
+                <div style="display:flex;gap:0.75rem;margin-top:0.5rem;">
+                    <button type="submit" style="flex:1;background:var(--accent);color:white;border:none;border-radius:8px;padding:12px;font-weight:700;font-size:0.95rem;cursor:pointer;font-family:inherit;">Save Alert</button>
+                    <button type="button" onclick="closeSavedSearchModal()" style="background:#f3f4f6;color:#374151;border:none;border-radius:8px;padding:12px 20px;font-weight:600;font-size:0.95rem;cursor:pointer;font-family:inherit;">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Realtor Showing Request Modal -->
+    <div id="realtorShowingModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;padding:1rem;">
+        <div style="background:white;border-radius:16px;padding:2rem;max-width:440px;width:100%;max-height:90vh;overflow-y:auto;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
+                <h2 style="font-family:'Crimson Pro',serif;font-size:1.4rem;">Request Showing</h2>
+                <button onclick="closeRealtorShowingModal()" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:#666;">&times;</button>
+            </div>
+            <form id="rsrForm" onsubmit="submitRealtorShowingRequest(event)" style="display:flex;flex-direction:column;gap:1rem;">
+                <input type="hidden" id="rsrListingId">
+                <div>
+                    <label style="display:block;font-weight:600;font-size:0.85rem;margin-bottom:0.3rem;">Listing <span style="color:#ef4444;">*</span></label>
+                    <select id="rsrListingSelect" required style="width:100%;padding:9px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:0.9rem;font-family:inherit;">
+                        <option value="">Loading…</option>
+                    </select>
+                    <div id="rsrAddrLabel" style="font-size:0.8rem;color:#666;margin-top:2px;"></div>
+                </div>
+                <div>
+                    <label style="display:block;font-weight:600;font-size:0.85rem;margin-bottom:0.3rem;">Proposed Time Slot 1 <span style="color:#ef4444;">*</span></label>
+                    <input id="rsrSlot1" type="datetime-local" required style="width:100%;padding:9px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:0.9rem;font-family:inherit;">
+                </div>
+                <div>
+                    <label style="display:block;font-weight:600;font-size:0.85rem;margin-bottom:0.3rem;">Proposed Time Slot 2 (optional)</label>
+                    <input id="rsrSlot2" type="datetime-local" style="width:100%;padding:9px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:0.9rem;font-family:inherit;">
+                </div>
+                <div>
+                    <label style="display:block;font-weight:600;font-size:0.85rem;margin-bottom:0.3rem;">Message to Seller</label>
+                    <textarea id="rsrMessage" rows="3" placeholder="Briefly explain your interest in the listing…" style="width:100%;padding:9px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:0.9rem;resize:vertical;font-family:inherit;"></textarea>
+                </div>
+                <div style="display:flex;gap:0.75rem;">
+                    <button type="submit" style="flex:1;background:var(--accent);color:white;border:none;border-radius:8px;padding:12px;font-weight:700;font-size:0.95rem;cursor:pointer;font-family:inherit;">Send Request</button>
+                    <button type="button" onclick="closeRealtorShowingModal()" style="background:#f3f4f6;color:#374151;border:none;border-radius:8px;padding:12px 20px;font-weight:600;cursor:pointer;font-family:inherit;">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Deal Update Modal -->
+    <div id="dealModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;padding:1rem;">
+        <div style="background:white;border-radius:16px;padding:2rem;max-width:420px;width:100%;max-height:90vh;overflow-y:auto;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
+                <h2 style="font-family:'Crimson Pro',serif;font-size:1.4rem;">Update Deal</h2>
+                <button onclick="closeDealModal()" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:#666;">&times;</button>
+            </div>
+            <form onsubmit="submitDealUpdate(event)" style="display:flex;flex-direction:column;gap:1rem;">
+                <div><label style="display:block;font-weight:600;font-size:0.85rem;margin-bottom:0.3rem;">Deal Status</label>
+                    <select id="dealStatus" style="width:100%;padding:9px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:0.9rem;font-family:inherit;">
+                        <option value="active">Active</option>
+                        <option value="pending_close">Pending Close</option>
+                        <option value="closed">Closed</option>
+                        <option value="cancelled">Cancelled</option>
+                    </select></div>
+                <div><label style="display:block;font-weight:600;font-size:0.85rem;margin-bottom:0.3rem;">Sale Price ($)</label>
+                    <input id="dealSalePrice" type="number" min="0" placeholder="e.g. 450000" style="width:100%;padding:9px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:0.9rem;font-family:inherit;"></div>
+                <div><label style="display:block;font-weight:600;font-size:0.85rem;margin-bottom:0.3rem;">Close Date</label>
+                    <input id="dealCloseDate" type="date" style="width:100%;padding:9px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:0.9rem;font-family:inherit;"></div>
+                <div><label style="display:block;font-weight:600;font-size:0.85rem;margin-bottom:0.3rem;">Notes</label>
+                    <textarea id="dealNotes" rows="3" placeholder="Any notes about this deal…" style="width:100%;padding:9px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:0.9rem;resize:vertical;font-family:inherit;"></textarea></div>
+                <div style="display:flex;gap:0.75rem;margin-top:0.5rem;">
+                    <button type="submit" style="flex:1;background:var(--accent);color:white;border:none;border-radius:8px;padding:12px;font-weight:700;cursor:pointer;font-family:inherit;">Save</button>
+                    <button type="button" onclick="closeDealModal()" style="background:#f3f4f6;color:#374151;border:none;border-radius:8px;padding:12px 20px;font-weight:600;cursor:pointer;font-family:inherit;">Cancel</button>
+                </div>
             </form>
         </div>
     </div>

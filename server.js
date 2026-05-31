@@ -2586,8 +2586,30 @@ app.post('/api/stripe/checkout', auth.requireAuth, async (req, res) => {
             sessionParams.customer_email = user.email;
         }
 
+        // Apply referral credits as Stripe customer balance credit
+        const { rows: credRows } = await pool.query(
+            `SELECT referral_credits_cents FROM users WHERE id = $1`, [req.session.userId]
+        );
+        const credCents = parseInt(credRows[0]?.referral_credits_cents) || 0;
+        if (credCents > 0 && stripe) {
+            let customerId = existingCustomer;
+            if (!customerId) {
+                const cust = await stripe.customers.create({ email: user.email, name: `${user.first_name || ''} ${user.last_name || ''}`.trim() });
+                customerId = cust.id;
+                await pool.query(`UPDATE users SET stripe_customer_id = $1 WHERE id = $2`, [customerId, req.session.userId]);
+                sessionParams.customer = customerId;
+                delete sessionParams.customer_email;
+            }
+            await stripe.customers.createBalanceTransaction(customerId, {
+                amount: -credCents,
+                currency: 'usd',
+                description: 'Referral credit applied',
+            });
+            await pool.query(`UPDATE users SET referral_credits_cents = 0 WHERE id = $1`, [req.session.userId]);
+        }
+
         const session = await stripe.checkout.sessions.create(sessionParams);
-        res.json({ url: session.url });
+        res.json({ url: session.url, credits_applied: credCents > 0 ? credCents : 0 });
     } catch (err) {
         console.error('Stripe checkout error:', err);
         res.status(500).json({ error: 'Failed to create checkout session' });
@@ -3663,6 +3685,8 @@ app.put('/api/proposals/:id/accept', auth.requireAuth, async (req, res) => {
         // Email winning realtor
         emailService.sendProposalAccepted(proposal.realtor_email, realtorName, addr)
             .catch(e => console.error('Proposal accepted email failed:', e.message));
+        // Auto-create deal record
+        maybeCreateDealOnAccept(proposal.listing_id, proposal.realtor_id, proposalId).catch(() => {});
         res.json({ success: true, realtor_id: proposal.realtor_id, realtor_name: realtorName });
     } catch (error) {
         console.error('PUT /api/proposals/:id/accept error:', error);
@@ -4910,6 +4934,308 @@ app.get('/api/listings/share/:token', async (req, res) => {
     }
 });
 
+// ===== SELLER LISTING ANALYTICS =====
+
+app.get('/api/listings/:id/analytics', auth.requireAuth, async (req, res) => {
+    try {
+        const listingId = parseInt(req.params.id);
+        const { rows: listingRows } = await pool.query(
+            `SELECT l.*, u.first_name AS owner_first FROM listings l JOIN users u ON u.id = l.user_id WHERE l.id = $1`,
+            [listingId]
+        );
+        if (!listingRows.length) return res.status(404).json({ error: 'Listing not found' });
+        const l = listingRows[0];
+        if (req.user.user_type !== 'admin' && l.user_id !== req.session.userId) {
+            return res.status(403).json({ error: 'Forbidden' });
+        }
+        const { rows: proposals } = await pool.query(
+            `SELECT p.id, p.commission_pct, p.status, p.counter_status, p.created_at,
+                    u.first_name, u.last_name, u.profile_photo, u.years_experience, u.brokerage,
+                    COALESCE(AVG(r.rating), 0) AS avg_rating,
+                    COUNT(DISTINCT r.id) AS review_count,
+                    COUNT(DISTINCT wp.id) AS accepted_count
+             FROM proposals p
+             JOIN users u ON u.id = p.realtor_id
+             LEFT JOIN reviews r ON r.realtor_id = u.id
+             LEFT JOIN proposals wp ON wp.realtor_id = u.id AND wp.status = 'accepted'
+             WHERE p.listing_id = $1
+             GROUP BY p.id, u.id
+             ORDER BY p.created_at DESC`,
+            [listingId]
+        );
+        const days_on_market = Math.floor((Date.now() - new Date(l.created_at).getTime()) / 86400000);
+        res.json({
+            listing_id: listingId,
+            view_count: l.view_count || 0,
+            share_views: l.share_views || 0,
+            days_on_market,
+            proposal_count: proposals.length,
+            accepted_proposal: proposals.find(p => p.status === 'accepted') || null,
+            proposals: proposals.map(p => ({
+                id: p.id,
+                realtor_name: `${p.first_name} ${p.last_name}`.trim(),
+                profile_photo: p.profile_photo,
+                commission_pct: parseFloat(p.commission_pct),
+                status: p.status,
+                counter_status: p.counter_status,
+                years_experience: p.years_experience,
+                brokerage: p.brokerage,
+                avg_rating: parseFloat(p.avg_rating).toFixed(1),
+                review_count: parseInt(p.review_count),
+                accepted_count: parseInt(p.accepted_count),
+                submitted_at: p.created_at,
+            }))
+        });
+    } catch (err) {
+        console.error('Listing analytics error:', err);
+        res.status(500).json({ error: 'Failed to fetch analytics' });
+    }
+});
+
+// ===== REALTOR SHOWING REQUESTS =====
+
+app.post('/api/realtor-showings', auth.requireAuth, async (req, res) => {
+    try {
+        if (req.user.user_type !== 'realtor') return res.status(403).json({ error: 'Realtors only' });
+        const { listing_id, proposed_slots, message } = req.body;
+        if (!listing_id || !Array.isArray(proposed_slots) || !proposed_slots.length) {
+            return res.status(400).json({ error: 'listing_id and at least one proposed_slot required' });
+        }
+        const { rows: listingRows } = await pool.query(
+            `SELECT l.id, l.address, l.city, l.state, l.user_id,
+                    u.email AS seller_email, u.first_name AS seller_first
+             FROM listings l JOIN users u ON u.id = l.user_id
+             WHERE l.id = $1 AND l.status = 'active'`, [parseInt(listing_id)]
+        );
+        if (!listingRows.length) return res.status(404).json({ error: 'Listing not found' });
+        const listing = listingRows[0];
+        const { rows } = await pool.query(
+            `INSERT INTO realtor_showing_requests (listing_id, realtor_id, proposed_slots, message)
+             VALUES ($1, $2, $3::jsonb, $4) RETURNING *`,
+            [listing.id, req.session.userId, JSON.stringify(proposed_slots), message || null]
+        );
+        const addr = [listing.address, listing.city, listing.state].filter(Boolean).join(', ');
+        const r = req.user;
+        const realtorName = `${r.first_name || ''} ${r.last_name || ''}`.trim();
+        pool.query(
+            `INSERT INTO notifications (user_id, type, title, body, link) VALUES ($1,'showing_request','Showing Request',$2,'/dashboard/seller')`,
+            [listing.user_id, `${realtorName} has requested a showing for ${addr}.`]
+        ).then(() => sseNotify(listing.user_id, { type: 'notification' })).catch(() => {});
+        res.status(201).json(rows[0]);
+    } catch (err) {
+        console.error('Realtor showing request error:', err);
+        res.status(500).json({ error: 'Failed to create showing request' });
+    }
+});
+
+app.get('/api/realtor-showings/my', auth.requireAuth, async (req, res) => {
+    try {
+        const col = req.user.user_type === 'realtor' ? 'rsr.realtor_id' : 'l.user_id';
+        const { rows } = await pool.query(
+            `SELECT rsr.*, l.address, l.city, l.state, l.id AS listing_id,
+                    u.first_name AS realtor_first, u.last_name AS realtor_last, u.profile_photo AS realtor_photo,
+                    s.first_name AS seller_first, s.last_name AS seller_last
+             FROM realtor_showing_requests rsr
+             JOIN listings l ON l.id = rsr.listing_id
+             JOIN users u ON u.id = rsr.realtor_id
+             JOIN users s ON s.id = l.user_id
+             WHERE ${col} = $1
+             ORDER BY rsr.created_at DESC LIMIT 100`,
+            [req.session.userId]
+        );
+        res.json(rows);
+    } catch (err) {
+        console.error('Get realtor showings error:', err);
+        res.status(500).json({ error: 'Failed to fetch showing requests' });
+    }
+});
+
+app.put('/api/realtor-showings/:id/respond', auth.requireAuth, async (req, res) => {
+    try {
+        if (req.user.user_type !== 'seller') return res.status(403).json({ error: 'Sellers only' });
+        const { action, confirmed_slot } = req.body; // action: 'confirm' | 'decline'
+        if (!['confirm', 'decline'].includes(action)) return res.status(400).json({ error: 'action must be confirm or decline' });
+        const { rows: sr } = await pool.query(
+            `SELECT rsr.*, l.user_id AS seller_id, l.address, l.city, l.state,
+                    u.email AS realtor_email, u.first_name AS realtor_first
+             FROM realtor_showing_requests rsr
+             JOIN listings l ON l.id = rsr.listing_id
+             JOIN users u ON u.id = rsr.realtor_id
+             WHERE rsr.id = $1`,
+            [parseInt(req.params.id)]
+        );
+        if (!sr.length) return res.status(404).json({ error: 'Not found' });
+        if (sr[0].seller_id !== req.session.userId) return res.status(403).json({ error: 'Forbidden' });
+        const newStatus = action === 'confirm' ? 'confirmed' : 'declined';
+        const { rows } = await pool.query(
+            `UPDATE realtor_showing_requests SET status = $1, confirmed_slot = $2, responded_at = NOW()
+             WHERE id = $3 RETURNING *`,
+            [newStatus, action === 'confirm' ? (confirmed_slot || sr[0].proposed_slots[0]) : null, sr[0].id]
+        );
+        const addr = [sr[0].address, sr[0].city, sr[0].state].filter(Boolean).join(', ');
+        const msg = action === 'confirm'
+            ? `Your showing request for ${addr} has been confirmed.`
+            : `Your showing request for ${addr} was declined by the seller.`;
+        pool.query(
+            `INSERT INTO notifications (user_id, type, title, body, link) VALUES ($1,$2,$3,$4,'/dashboard/realtor')`,
+            [sr[0].realtor_id, `showing_${newStatus}`, action === 'confirm' ? 'Showing Confirmed!' : 'Showing Declined', msg]
+        ).then(() => sseNotify(sr[0].realtor_id, { type: 'notification' })).catch(() => {});
+        res.json(rows[0]);
+    } catch (err) {
+        console.error('Respond to showing error:', err);
+        res.status(500).json({ error: 'Failed to respond to showing request' });
+    }
+});
+
+// ===== DEAL / TRANSACTION TRACKER =====
+
+app.post('/api/deals', auth.requireAuth, async (req, res) => {
+    try {
+        if (!['realtor', 'admin'].includes(req.user.user_type)) return res.status(403).json({ error: 'Forbidden' });
+        const { listing_id, proposal_id, sale_price, notes } = req.body;
+        if (!listing_id) return res.status(400).json({ error: 'listing_id required' });
+        const { rows } = await pool.query(
+            `INSERT INTO deals (listing_id, realtor_id, proposal_id, sale_price, notes)
+             VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+            [parseInt(listing_id), req.session.userId, proposal_id ? parseInt(proposal_id) : null,
+             sale_price ? parseFloat(sale_price) : null, notes || null]
+        );
+        res.status(201).json(rows[0]);
+    } catch (err) {
+        console.error('Create deal error:', err);
+        res.status(500).json({ error: 'Failed to create deal' });
+    }
+});
+
+app.get('/api/deals/my', auth.requireAuth, async (req, res) => {
+    try {
+        const { rows } = await pool.query(
+            `SELECT d.*, l.address, l.city, l.state, l.price AS list_price,
+                    l.bedrooms, l.bathrooms,
+                    u.first_name AS seller_first, u.last_name AS seller_last
+             FROM deals d
+             JOIN listings l ON l.id = d.listing_id
+             JOIN users u ON u.id = l.user_id
+             WHERE d.realtor_id = $1
+             ORDER BY d.created_at DESC`,
+            [req.session.userId]
+        );
+        res.json(rows);
+    } catch (err) {
+        console.error('Get deals error:', err);
+        res.status(500).json({ error: 'Failed to fetch deals' });
+    }
+});
+
+app.put('/api/deals/:id', auth.requireAuth, async (req, res) => {
+    try {
+        const id = parseInt(req.params.id);
+        const { status, sale_price, close_date, notes, referral_fee_due, referral_fee_paid } = req.body;
+        const isAdmin = req.user.user_type === 'admin';
+        const ownerCheck = isAdmin ? '' : `AND realtor_id = ${req.session.userId}`;
+        const { rows } = await pool.query(
+            `UPDATE deals SET
+                status = COALESCE($1, status),
+                sale_price = COALESCE($2, sale_price),
+                close_date = COALESCE($3::date, close_date),
+                notes = COALESCE($4, notes),
+                referral_fee_due = COALESCE($5, referral_fee_due),
+                referral_fee_paid = COALESCE($6, referral_fee_paid),
+                updated_at = NOW()
+             WHERE id = $7 ${ownerCheck} RETURNING *`,
+            [status || null, sale_price ? parseFloat(sale_price) : null,
+             close_date || null, notes || null,
+             referral_fee_due ? parseFloat(referral_fee_due) : null,
+             referral_fee_paid !== undefined ? !!referral_fee_paid : null,
+             id]
+        );
+        if (!rows.length) return res.status(404).json({ error: 'Deal not found' });
+        res.json(rows[0]);
+    } catch (err) {
+        console.error('Update deal error:', err);
+        res.status(500).json({ error: 'Failed to update deal' });
+    }
+});
+
+app.get('/api/admin/deals', requireAdmin, async (req, res) => {
+    try {
+        const { rows } = await pool.query(
+            `SELECT d.*, l.address, l.city, l.state, l.price AS list_price,
+                    u.first_name AS realtor_first, u.last_name AS realtor_last, u.email AS realtor_email,
+                    s.first_name AS seller_first, s.last_name AS seller_last
+             FROM deals d
+             JOIN listings l ON l.id = d.listing_id
+             JOIN users u ON u.id = d.realtor_id
+             JOIN users s ON s.id = l.user_id
+             ORDER BY d.updated_at DESC LIMIT 500`
+        );
+        res.json(rows);
+    } catch (err) {
+        console.error('Admin deals error:', err);
+        res.status(500).json({ error: 'Failed to fetch deals' });
+    }
+});
+
+// Auto-create deal when proposal is accepted (if not already one)
+async function maybeCreateDealOnAccept(listingId, realtorId, proposalId) {
+    try {
+        const existing = await pool.query(`SELECT id FROM deals WHERE proposal_id = $1`, [proposalId]);
+        if (!existing.rows.length) {
+            await pool.query(
+                `INSERT INTO deals (listing_id, realtor_id, proposal_id) VALUES ($1, $2, $3)`,
+                [listingId, realtorId, proposalId]
+            );
+        }
+    } catch (e) { console.error('Auto-create deal error:', e.message); }
+}
+
+// ===== PROPOSAL DOCUMENT ATTACHMENTS =====
+
+app.post('/api/proposals/:id/attachments', auth.requireAuth, uploadLimiter, uploadDoc.single('file'), async (req, res) => {
+    try {
+        if (req.user.user_type !== 'realtor') return res.status(403).json({ error: 'Realtors only' });
+        if (!req.file) return res.status(400).json({ error: 'No file provided' });
+        const proposalId = parseInt(req.params.id);
+        const { rows } = await pool.query(
+            `SELECT id FROM proposals WHERE id = $1 AND realtor_id = $2`,
+            [proposalId, req.session.userId]
+        );
+        if (!rows.length) return res.status(404).json({ error: 'Proposal not found' });
+        const result = await uploadToCloudinaryDoc(req.file.buffer, req.file.mimetype);
+        const url = result.secure_url;
+        const name = req.file.originalname || 'attachment';
+        const attachment = JSON.stringify({ url, name });
+        const { rows: updated } = await pool.query(
+            `UPDATE proposals SET attachments = array_append(COALESCE(attachments, '{}'), $1)
+             WHERE id = $2 RETURNING attachments`,
+            [attachment, proposalId]
+        );
+        res.json({ attachments: updated[0].attachments });
+    } catch (err) {
+        console.error('Proposal attachment upload error:', err);
+        res.status(500).json({ error: 'Failed to upload attachment' });
+    }
+});
+
+app.delete('/api/proposals/:id/attachments/:idx', auth.requireAuth, async (req, res) => {
+    try {
+        if (req.user.user_type !== 'realtor') return res.status(403).json({ error: 'Realtors only' });
+        const proposalId = parseInt(req.params.id);
+        const idx = parseInt(req.params.idx);
+        const { rows } = await pool.query(
+            `SELECT attachments FROM proposals WHERE id = $1 AND realtor_id = $2`,
+            [proposalId, req.session.userId]
+        );
+        if (!rows.length) return res.status(404).json({ error: 'Proposal not found' });
+        const attachments = (rows[0].attachments || []).filter((_, i) => i !== idx);
+        await pool.query(`UPDATE proposals SET attachments = $1 WHERE id = $2`, [attachments, proposalId]);
+        res.json({ attachments });
+    } catch (err) {
+        console.error('Delete attachment error:', err);
+        res.status(500).json({ error: 'Failed to delete attachment' });
+    }
+});
+
 // ===== LISTING RENEWAL =====
 
 app.post('/api/listings/:id/renew', auth.requireAuth, async (req, res) => {
@@ -5857,6 +6183,34 @@ pool.query(`ALTER TABLE proposals ADD COLUMN IF NOT EXISTS review_request_sent B
 pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMPTZ`).catch(() => {});
 pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS notif_new_proposal BOOLEAN NOT NULL DEFAULT TRUE`).catch(() => {});
 pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS notif_messages BOOLEAN NOT NULL DEFAULT TRUE`).catch(() => {});
+
+// Schema migrations for batch 4 features
+pool.query(`ALTER TABLE proposals ADD COLUMN IF NOT EXISTS attachments TEXT[] DEFAULT '{}'`).catch(() => {});
+pool.query(`CREATE TABLE IF NOT EXISTS realtor_showing_requests (
+    id SERIAL PRIMARY KEY,
+    listing_id INTEGER NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
+    realtor_id INTEGER NOT NULL REFERENCES users(id),
+    proposed_slots JSONB NOT NULL DEFAULT '[]',
+    message TEXT,
+    status TEXT NOT NULL DEFAULT 'pending',
+    confirmed_slot TEXT,
+    responded_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+)`).catch(() => {});
+pool.query(`CREATE TABLE IF NOT EXISTS deals (
+    id SERIAL PRIMARY KEY,
+    listing_id INTEGER NOT NULL REFERENCES listings(id),
+    realtor_id INTEGER NOT NULL REFERENCES users(id),
+    proposal_id INTEGER REFERENCES proposals(id),
+    status TEXT NOT NULL DEFAULT 'active',
+    sale_price NUMERIC(12,2),
+    close_date DATE,
+    notes TEXT,
+    referral_fee_due NUMERIC(10,2),
+    referral_fee_paid BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+)`).catch(() => {});
 pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS notif_weekly_digest BOOLEAN NOT NULL DEFAULT TRUE`).catch(() => {});
 pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS notif_listing_alerts BOOLEAN NOT NULL DEFAULT TRUE`).catch(() => {});
 pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS notif_engagement_reminders BOOLEAN NOT NULL DEFAULT TRUE`).catch(() => {});
