@@ -1647,7 +1647,7 @@ app.get('/api/admin/analytics/funnel', requireAdmin, async (req, res) => {
                 GROUP BY w
             ) p ON p.w = wr.week_start
             LEFT JOIN (
-                SELECT DATE_TRUNC('week', updated_at) AS w, COUNT(*) AS proposals_accepted
+                SELECT DATE_TRUNC('week', created_at) AS w, COUNT(*) AS proposals_accepted
                 FROM proposals WHERE status = 'accepted'
                 GROUP BY w
             ) a ON a.w = wr.week_start
