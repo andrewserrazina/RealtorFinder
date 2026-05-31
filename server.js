@@ -3488,7 +3488,7 @@ app.get('/api/proposals/listing/:listingId', auth.requireAuth, async (req, res) 
         if (!listing) return res.status(404).json({ error: 'Listing not found' });
         if (listing.user_id !== req.session.userId) return res.status(403).json({ error: 'Forbidden' });
         const { rows } = await pool.query(
-            `SELECT p.*, u.first_name, u.last_name, u.profile_photo, u.brokerage, u.years_experience,
+            `SELECT p.*, u.first_name, u.last_name, u.profile_photo, u.brokerage, u.years_experience, u.license_verified,
                     COALESCE(
                         (SELECT AVG(rating)::numeric(3,1) FROM realtor_reviews WHERE realtor_id = u.id),
                         NULL
@@ -3503,6 +3503,38 @@ app.get('/api/proposals/listing/:listingId', auth.requireAuth, async (req, res) 
     } catch (error) {
         console.error('GET /api/proposals/listing/:id error:', error);
         res.status(500).json({ error: 'Failed to fetch proposals' });
+    }
+});
+
+app.put('/api/proposals/:id/mark-viewed', auth.requireAuth, async (req, res) => {
+    if (req.user.user_type !== 'seller') return res.status(403).json({ error: 'Sellers only' });
+    const id = parseInt(req.params.id);
+    try {
+        const { rows: [prop] } = await pool.query(
+            `SELECT p.id, p.seller_viewed_at, p.realtor_id, p.listing_id,
+                    l.address, l.city, l.state, l.user_id AS seller_id,
+                    u.email AS realtor_email, u.first_name AS realtor_first,
+                    u.notif_messages AS realtor_notif_msgs
+             FROM proposals p
+             JOIN listings l ON l.id = p.listing_id
+             JOIN users u ON u.id = p.realtor_id
+             WHERE p.id = $1 AND l.user_id = $2`,
+            [id, req.session.userId]
+        );
+        if (!prop) return res.status(404).json({ error: 'Not found' });
+        const isFirstView = !prop.seller_viewed_at;
+        if (isFirstView) {
+            await pool.query(`UPDATE proposals SET seller_viewed_at = NOW() WHERE id = $1`, [id]);
+            const addr = [prop.address, prop.city, prop.state].filter(Boolean).join(', ');
+            sseNotify(prop.realtor_id, { type: 'proposal_viewed', listingAddress: addr });
+            if (prop.realtor_notif_msgs !== false && prop.realtor_email) {
+                emailService.sendProposalViewed(prop.realtor_email, prop.realtor_first, addr).catch(() => {});
+            }
+        }
+        res.json({ ok: true, first_view: isFirstView });
+    } catch (err) {
+        console.error('mark-viewed error:', err);
+        res.status(500).json({ error: 'Failed' });
     }
 });
 
@@ -5150,6 +5182,26 @@ app.put('/api/deals/:id', auth.requireAuth, async (req, res) => {
              id]
         );
         if (!rows.length) return res.status(404).json({ error: 'Deal not found' });
+        if (status === 'closed' && rows[0]) {
+            try {
+                const { rows: info } = await pool.query(
+                    `SELECT seller.email AS seller_email, seller.first_name AS seller_name,
+                            realtor.first_name AS realtor_first, realtor.last_name AS realtor_last,
+                            realtor.id AS realtor_id, l.address, l.city, l.state
+                     FROM deals d
+                     JOIN listings l ON l.id = d.listing_id
+                     JOIN users seller ON seller.id = l.user_id
+                     JOIN users realtor ON realtor.id = d.realtor_id
+                     WHERE d.id = $1`, [rows[0].id]
+                );
+                if (info.length) {
+                    const { seller_email, seller_name, realtor_first, realtor_last, realtor_id, address, city, state } = info[0];
+                    const addr = [address, city, state].filter(Boolean).join(', ');
+                    const realtorName = `${realtor_first || ''} ${realtor_last || ''}`.trim();
+                    emailService.sendReviewRequestEmail(seller_email, seller_name, realtor_id, realtorName, addr).catch(() => {});
+                }
+            } catch(e) { console.error('Post-close review email error:', e.message); }
+        }
         res.json(rows[0]);
     } catch (err) {
         console.error('Update deal error:', err);
@@ -5173,6 +5225,40 @@ app.get('/api/admin/deals', requireAdmin, async (req, res) => {
     } catch (err) {
         console.error('Admin deals error:', err);
         res.status(500).json({ error: 'Failed to fetch deals' });
+    }
+});
+
+app.get('/api/admin/referral-stats', requireAdmin, async (req, res) => {
+    try {
+        const [totals, topEarners] = await Promise.all([
+            pool.query(`
+                SELECT
+                    COUNT(*) FILTER (WHERE referral_credits_cents > 0) AS users_with_credits,
+                    SUM(referral_credits_cents)                        AS outstanding_cents,
+                    COUNT(*) FILTER (WHERE referral_code IS NOT NULL)  AS users_with_code
+                FROM users WHERE user_type = 'realtor'
+            `),
+            pool.query(`
+                SELECT u.id, u.first_name, u.last_name, u.email, u.referral_credits_cents,
+                       COUNT(r.id) AS referral_count
+                FROM users u
+                LEFT JOIN users r ON r.referred_by = u.id
+                WHERE u.user_type = 'realtor'
+                GROUP BY u.id
+                HAVING u.referral_credits_cents > 0 OR COUNT(r.id) > 0
+                ORDER BY COUNT(r.id) DESC, u.referral_credits_cents DESC
+                LIMIT 50
+            `)
+        ]);
+        res.json({
+            outstanding_cents: parseInt(totals.rows[0].outstanding_cents) || 0,
+            users_with_credits: parseInt(totals.rows[0].users_with_credits) || 0,
+            users_with_code: parseInt(totals.rows[0].users_with_code) || 0,
+            top_earners: topEarners.rows,
+        });
+    } catch (err) {
+        console.error('Referral stats error:', err);
+        res.status(500).json({ error: 'Failed to fetch referral stats' });
     }
 });
 
@@ -5904,7 +5990,7 @@ async function runListingExpiryJob() {
              WHERE l.status IN ('active','pending')
                AND l.deleted_at IS NULL
                AND l.expiry_warning_sent = FALSE
-               AND COALESCE(l.expires_at, l.created_at + INTERVAL '90 days') <= NOW() + INTERVAL '3 days'
+               AND COALESCE(l.expires_at, l.created_at + INTERVAL '90 days') <= NOW() + INTERVAL '7 days'
                AND COALESCE(l.expires_at, l.created_at + INTERVAL '90 days') > NOW()
                AND NOT EXISTS (SELECT 1 FROM offers WHERE listing_id = l.id AND status = 'accepted')`
         );
@@ -5948,7 +6034,8 @@ _schemaMigrations.push(
     `ALTER TABLE lead_purchases ADD COLUMN IF NOT EXISTS paid BOOLEAN NOT NULL DEFAULT FALSE`,
     `ALTER TABLE lead_purchases ALTER COLUMN buyer_request_id DROP NOT NULL`,
     `DO $$ BEGIN ALTER TABLE lead_purchases ADD CONSTRAINT lead_purchases_realtor_listing UNIQUE(realtor_id, listing_id); EXCEPTION WHEN others THEN NULL; END $$`,
-    `ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_credits_cents INTEGER NOT NULL DEFAULT 0`
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_credits_cents INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE proposals ADD COLUMN IF NOT EXISTS seller_viewed_at TIMESTAMPTZ`
 );
 
 // Shared sleep helper for staggering bulk email sends
@@ -6091,7 +6178,8 @@ async function runWeeklyDigestJob() {
              WHERE user_type = 'realtor'
                AND is_active IS NOT FALSE
                AND is_approved = TRUE
-               AND email_unsubscribed IS NOT TRUE`
+               AND email_unsubscribed IS NOT TRUE
+               AND notif_weekly_digest IS NOT FALSE`
         );
         for (const r of realtors) {
             try {

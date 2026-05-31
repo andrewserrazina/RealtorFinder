@@ -1937,14 +1937,44 @@
             document.getElementById('editListingModal').classList.add('active');
             document.getElementById('editImageStatus').textContent = '';
             document.getElementById('editImageInput').value = '';
-            // Show current images with remove buttons
+            // Show current images with remove buttons + drag-to-reorder
             const previews = document.getElementById('editImagePreviews');
             const imgs = listing.image_urls || [];
             previews.innerHTML = imgs.map((url, i) => `
-                <div style="position:relative;">
-                    <img src="${url}" style="width:80px;height:60px;object-fit:cover;border-radius:6px;border:1px solid #e5e1db;">
+                <div class="img-sort-item" draggable="true" data-url="${url}" style="position:relative;cursor:grab;">
+                    <img src="${url}" style="width:80px;height:60px;object-fit:cover;border-radius:6px;border:1px solid #e5e1db;display:block;">
+                    <div style="position:absolute;top:0;left:0;background:rgba(0,0,0,0.4);color:white;font-size:9px;padding:2px 4px;border-radius:3px 0 0 0;line-height:1.2;">⠿</div>
                     <button type="button" onclick="removeEditImage(${listingId},'${url}')" style="position:absolute;top:-6px;right:-6px;background:#ef4444;color:white;border:none;border-radius:50%;width:18px;height:18px;font-size:11px;cursor:pointer;line-height:1;display:flex;align-items:center;justify-content:center;">✕</button>
                 </div>`).join('');
+            setupImageDragSort(previews, listingId);
+        }
+
+        function setupImageDragSort(container, listingId) {
+            let dragSrc = null;
+            container.querySelectorAll('.img-sort-item').forEach(item => {
+                item.addEventListener('dragstart', () => { dragSrc = item; item.style.opacity = '0.4'; });
+                item.addEventListener('dragend', () => { item.style.opacity = '1'; });
+                item.addEventListener('dragover', e => e.preventDefault());
+                item.addEventListener('drop', async e => {
+                    e.preventDefault();
+                    if (!dragSrc || dragSrc === item) return;
+                    const all = [...container.querySelectorAll('.img-sort-item')];
+                    const srcIdx = all.indexOf(dragSrc), dstIdx = all.indexOf(item);
+                    if (srcIdx < dstIdx) container.insertBefore(dragSrc, item.nextSibling);
+                    else container.insertBefore(dragSrc, item);
+                    const newOrder = [...container.querySelectorAll('.img-sort-item')].map(el => el.dataset.url);
+                    const listing = cachedListings.find(l => l.id === listingId);
+                    if (!listing) return;
+                    try {
+                        const res = await fetch(`${API_BASE_URL}/listings/${listingId}/images`, {
+                            method: 'PUT', credentials: 'include',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ imageUrls: newOrder })
+                        });
+                        if (res.ok) listing.image_urls = newOrder;
+                    } catch(e) {}
+                });
+            });
         }
 
         async function removeEditImage(listingId, urlToRemove) {
@@ -2361,10 +2391,13 @@
                     if (!proposals.length) {
                         card.innerHTML = `<h3 style="margin-bottom:0.5rem;">${esc(listingTitle)}</h3><p style="color:#666;font-size:0.9rem;">No proposals yet.</p>`;
                     } else {
+                        // Fire-and-forget: mark all proposals as viewed
+                        proposals.forEach(p => fetch(`/api/proposals/${p.id}/mark-viewed`, { method: 'PUT', credentials: 'include' }).catch(() => {}));
                         const rows = proposals.map((p, i) => {
                             const isLowest = i === 0;
                             const name = esc(`${p.first_name || ''} ${p.last_name || ''}`.trim());
                             const badge = isLowest ? '<span style="background:#d1fae5;color:#065f46;font-size:0.75rem;padding:2px 8px;border-radius:20px;font-weight:600;margin-left:6px;">Lowest ★</span>' : '';
+                            const verifiedBadge = p.license_verified ? '<span style="background:#ecfdf5;color:#059669;font-size:0.72rem;font-weight:700;padding:2px 7px;border-radius:20px;margin-left:4px;">✓ Verified</span>' : '';
                             const status = p.status === 'accepted' ? '<span style="background:#d1fae5;color:#065f46;font-size:0.75rem;padding:2px 8px;border-radius:20px;font-weight:600;">Accepted</span>'
                                          : p.status === 'declined' ? '<span style="background:#fee2e2;color:#991b1b;font-size:0.75rem;padding:2px 8px;border-radius:20px;font-weight:600;">Declined</span>'
                                          : '';
@@ -2380,7 +2413,7 @@
                             const realtorDisplayName = `${p.first_name || ''} ${p.last_name || ''}`.trim() || 'this realtor';
                             const acceptBtn = p.status === 'pending' ? `<button onclick="acceptProposal(${p.id}, ${listing.id}, ${p.realtor_id}, ${JSON.stringify(realtorDisplayName)})" style="background:var(--accent);color:white;border:none;border-radius:6px;padding:6px 14px;cursor:pointer;font-size:0.85rem;">Accept</button>` : status;
                             return `<tr style="${isLowest ? 'background:#f0fdf4;' : ''}">
-                                <td style="padding:10px 12px;font-weight:600;">${name}${badge}</td>
+                                <td style="padding:10px 12px;font-weight:600;">${name}${badge}${verifiedBadge}</td>
                                 <td style="padding:10px 12px;font-weight:700;color:${isLowest ? '#065f46' : 'var(--accent)'};">${p.commission_pct}%</td>
                                 <td style="padding:10px 12px;color:#666;font-size:0.85rem;">${esc(p.timeline || '—')}</td>
                                 <td style="padding:10px 12px;color:#444;font-size:0.85rem;max-width:200px;">${esc(p.cover_note || '—').slice(0, 80)}${(p.cover_note || '').length > 80 ? '…' : ''}
