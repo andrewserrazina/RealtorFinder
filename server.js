@@ -4772,7 +4772,7 @@ app.post('/api/billing/portal', auth.requireAuth, async (req, res) => {
 });
 
 // ===== ADMIN BILLING PORTAL (open Stripe portal for any user) =====
-app.post('/api/admin/users/:id/billing-portal', auth.requireAuth, auth.requireAdmin, async (req, res) => {
+app.post('/api/admin/users/:id/billing-portal', auth.requireAuth, requireAdmin, async (req, res) => {
     try {
         const targetId = parseInt(req.params.id);
         const { rows } = await pool.query(
