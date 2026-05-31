@@ -467,7 +467,11 @@
             const badgeRow = (verifiedChip || featuredChip)
                 ? `<div class="card-badges">${verifiedChip}${featuredChip}</div>` : '';
 
+            const premiumBadge = r.is_premium_profile
+                ? `<span class="badge-premium-card">⭐ Premium</span>` : '';
+
             return `<div class="realtor-card">
+                ${premiumBadge}
                 <div class="card-photo">${photoHtml}</div>
                 <div class="card-body">
                     <div class="card-name">${esc(r.first_name)} ${esc(r.last_name)}</div>
@@ -509,6 +513,8 @@
             if (!res.ok) throw new Error('Failed to load');
             const data = await res.json();
             const realtors = data.realtors || data;
+            // Sort: premium profiles first, then by existing order (rating/proposals from API)
+            realtors.sort((a, b) => (b.is_premium_profile ? 1 : 0) - (a.is_premium_profile ? 1 : 0));
             totalRealtors = data.total || realtors.length;
 
             const countEl = document.getElementById('resultsCount');
