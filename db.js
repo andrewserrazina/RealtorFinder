@@ -216,11 +216,14 @@ const db = {
             `SELECT l.id, l.address, l.city, l.state, l.zip, l.price, l.property_type,
                     l.bedrooms, l.bathrooms, l.sqft, l.description, l.image_urls,
                     l.created_at, l.user_id, l.latitude, l.longitude, l.status,
+                    l.boosted_until,
                     COALESCE(l.view_count, 0) as view_count,
                     (SELECT COUNT(*) FROM offers WHERE listing_id = l.id) as offer_count
              FROM listings l
              ${where}
-             ORDER BY l.created_at DESC
+             ORDER BY
+               CASE WHEN l.boosted_until IS NOT NULL AND l.boosted_until > NOW() THEN 0 ELSE 1 END ASC,
+               l.created_at DESC
              LIMIT $${params.length - 1} OFFSET $${params.length}`,
             params
         );

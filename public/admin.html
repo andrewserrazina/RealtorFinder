@@ -659,6 +659,9 @@
         <button class="tab-btn" onclick="switchTab('crm-recruitment', this)" style="color:#6366f1;font-weight:600;">CRM: Recruit</button>
         <button class="tab-btn" onclick="switchTab('deals', this)" style="color:#10b981;font-weight:600;">Deals</button>
         <button class="tab-btn" onclick="switchTab('referral-credits', this)" style="color:#f59e0b;font-weight:600;">Referral Credits</button>
+        <button class="tab-btn" onclick="switchTab('revenue', this)" style="color:#10b981;font-weight:600;">Revenue 💰</button>
+        <button class="tab-btn" onclick="switchTab('campaigns', this)" style="color:#6366f1;font-weight:600;">Campaigns 📣</button>
+        <button class="tab-btn" onclick="switchTab('health', this)" style="color:#0ea5e9;font-weight:600;">Health 🩺</button>
     </div>
 
     <!-- Stats tab -->
@@ -758,6 +761,15 @@
 
     <!-- Users tab -->
     <div class="tab-panel active" id="tab-users">
+        <!-- Bulk Actions Bar -->
+        <div style="background:var(--white);border:1px solid var(--border);border-radius:12px;padding:0.875rem 1.25rem;margin-bottom:1rem;display:flex;align-items:center;gap:0.6rem;flex-wrap:wrap;">
+            <span style="font-size:0.8rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-right:0.25rem;">Bulk Actions</span>
+            <button class="btn-action btn-reactivate" onclick="bulkAction('approve')" style="font-size:0.8rem;">☑ Approve Selected</button>
+            <button class="btn-action" onclick="bulkAction('reject')" style="font-size:0.8rem;background:#fef9c3;color:#854d0e;border:1px solid #fde68a;">✗ Reject Selected</button>
+            <button class="btn-action btn-deactivate" onclick="bulkAction('deactivate')" style="font-size:0.8rem;">🚫 Deactivate Selected</button>
+            <button class="btn-action btn-reactivate" onclick="bulkAction('reactivate')" style="font-size:0.8rem;">✓ Reactivate Selected</button>
+            <span id="bulk-selected-count" style="font-size:0.8rem;color:var(--text-muted);margin-left:0.5rem;">0 selected</span>
+        </div>
         <div class="table-wrapper">
             <div class="table-header">
                 <span class="table-title">All Users</span>
@@ -768,6 +780,7 @@
                 <table id="users-table">
                     <thead>
                         <tr>
+                            <th style="width:36px;text-align:center;"><input type="checkbox" id="users-select-all" onchange="toggleSelectAll(this)" title="Select all"></th>
                             <th>ID</th>
                             <th>Name</th>
                             <th>Email</th>
@@ -780,7 +793,7 @@
                         </tr>
                     </thead>
                     <tbody id="users-tbody">
-                        <tr><td colspan="8" class="empty-state">Loading users…</td></tr>
+                        <tr><td colspan="10" class="empty-state">Loading users…</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -1115,6 +1128,203 @@
         </div>
     </div>
 
+    <!-- Revenue tab -->
+    <div class="tab-panel" id="tab-revenue">
+        <div class="table-wrapper" style="padding:2rem;">
+            <div class="table-header" style="margin-bottom:1.5rem;">
+                <span class="table-title">Revenue Overview</span>
+                <button onclick="loadRevenue()" class="btn-action btn-reactivate" style="margin-left:auto;">↻ Refresh</button>
+            </div>
+            <!-- Summary Cards -->
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:2rem;max-width:700px;">
+                <div class="stat-card">
+                    <span class="stat-icon">💰</span>
+                    <span class="stat-value" id="rev-mrr" style="color:#10b981;">—</span>
+                    <span class="stat-label">Monthly Recurring Revenue</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-icon">✅</span>
+                    <span class="stat-value" id="rev-paid-subs">—</span>
+                    <span class="stat-label">Active Paid Subscribers</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-icon">🆓</span>
+                    <span class="stat-value" id="rev-free-users">—</span>
+                    <span class="stat-label">Free Users</span>
+                </div>
+            </div>
+            <!-- Plan Breakdown -->
+            <h3 style="font-size:1rem;font-weight:700;color:var(--primary);margin-bottom:0.75rem;">Plan Breakdown</h3>
+            <div style="overflow-x:auto;margin-bottom:2rem;max-width:600px;">
+                <table style="width:100%;border-collapse:collapse;font-size:0.9rem;">
+                    <thead>
+                        <tr style="background:var(--soft-bg);border-bottom:2px solid var(--border);">
+                            <th style="padding:0.6rem 1rem;text-align:left;color:var(--text-muted);font-size:0.75rem;text-transform:uppercase;letter-spacing:0.06em;">Plan</th>
+                            <th style="padding:0.6rem 1rem;text-align:right;color:var(--text-muted);font-size:0.75rem;text-transform:uppercase;letter-spacing:0.06em;">Users</th>
+                            <th style="padding:0.6rem 1rem;text-align:right;color:var(--text-muted);font-size:0.75rem;text-transform:uppercase;letter-spacing:0.06em;">Monthly Value</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rev-plan-tbody">
+                        <tr><td colspan="3" class="empty-state">Loading…</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <!-- Monthly Trend -->
+            <h3 style="font-size:1rem;font-weight:700;color:var(--primary);margin-bottom:0.75rem;">Monthly New Paid Subscribers (last 6 months)</h3>
+            <div id="rev-trend-list" style="display:flex;flex-direction:column;gap:0.4rem;max-width:400px;font-size:0.9rem;color:var(--text);">
+                <span style="color:var(--text-muted);">Loading…</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Campaigns tab -->
+    <div class="tab-panel" id="tab-campaigns">
+        <div class="table-wrapper" style="padding:2rem;max-width:720px;">
+            <div class="table-header" style="margin-bottom:1.5rem;">
+                <span class="table-title">Send Campaign Email</span>
+            </div>
+            <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:1rem 1.25rem;margin-bottom:1.5rem;font-size:0.875rem;color:#991b1b;font-weight:600;">
+                ⚠️ This will send real emails. Double-check your recipient count before sending.
+            </div>
+            <div style="display:flex;flex-direction:column;gap:1.25rem;">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+                    <div>
+                        <label style="display:block;font-size:0.875rem;font-weight:600;color:var(--primary);margin-bottom:0.4rem;">Segment</label>
+                        <select id="campaignSegment" onchange="onCampaignSegmentChange()" style="width:100%;padding:0.7rem 1rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.95rem;outline:none;background:white;">
+                            <option value="all">All Users</option>
+                            <option value="realtors">Realtors</option>
+                            <option value="sellers">Sellers</option>
+                            <option value="buyers">Buyers</option>
+                        </select>
+                    </div>
+                    <div id="campaign-plan-filter-wrap">
+                        <label style="display:block;font-size:0.875rem;font-weight:600;color:var(--primary);margin-bottom:0.4rem;">Plan Filter <span style="font-weight:400;color:var(--text-muted);">(realtors only)</span></label>
+                        <select id="campaignPlanFilter" style="width:100%;padding:0.7rem 1rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.95rem;outline:none;background:white;">
+                            <option value="">All Plans</option>
+                            <option value="free">Free Only</option>
+                            <option value="basic">Basic</option>
+                            <option value="professional">Professional</option>
+                            <option value="firm">Firm</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="font-size:0.85rem;color:var(--text-muted);">
+                    Estimated recipients: <strong id="campaign-recipient-est" style="color:var(--primary);">—</strong>
+                </div>
+                <div>
+                    <label style="display:block;font-size:0.875rem;font-weight:600;color:var(--primary);margin-bottom:0.4rem;">Subject</label>
+                    <input type="text" id="campaignSubject" placeholder="e.g. New features just launched" style="width:100%;padding:0.7rem 1rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.95rem;outline:none;">
+                </div>
+                <div>
+                    <label style="display:block;font-size:0.875rem;font-weight:600;color:var(--primary);margin-bottom:0.4rem;">Message</label>
+                    <textarea id="campaignMessage" rows="10" placeholder="Write your campaign message here…" style="width:100%;padding:0.75rem 1rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.95rem;resize:vertical;outline:none;"></textarea>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+                    <div>
+                        <label style="display:block;font-size:0.875rem;font-weight:600;color:var(--primary);margin-bottom:0.4rem;">CTA Label <span style="font-weight:400;color:var(--text-muted);">(optional)</span></label>
+                        <input type="text" id="campaignCtaLabel" placeholder="e.g. View Dashboard" style="width:100%;padding:0.7rem 1rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.95rem;outline:none;">
+                    </div>
+                    <div>
+                        <label style="display:block;font-size:0.875rem;font-weight:600;color:var(--primary);margin-bottom:0.4rem;">CTA URL <span style="font-weight:400;color:var(--text-muted);">(optional)</span></label>
+                        <input type="url" id="campaignCtaUrl" placeholder="https://…" style="width:100%;padding:0.7rem 1rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.95rem;outline:none;">
+                    </div>
+                </div>
+                <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
+                    <button onclick="previewCampaign()" style="background:var(--soft-bg);color:var(--primary);border:1px solid var(--border);padding:0.75rem 1.5rem;border-radius:8px;font-weight:600;font-size:0.95rem;cursor:pointer;font-family:inherit;">Preview Email</button>
+                    <button onclick="sendCampaign()" style="background:#6366f1;color:white;border:none;padding:0.75rem 2rem;border-radius:8px;font-weight:600;font-size:0.95rem;cursor:pointer;font-family:inherit;">Send Campaign</button>
+                </div>
+                <div id="campaignResult" style="display:none;padding:0.75rem 1rem;border-radius:8px;font-size:0.9rem;font-weight:500;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Campaign Preview Modal -->
+    <div id="campaign-preview-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:998;" onclick="closeCampaignPreview()"></div>
+    <div id="campaign-preview-modal" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;border-radius:14px;padding:0;box-shadow:0 20px 60px rgba(0,0,0,0.25);z-index:999;width:560px;max-width:95vw;max-height:85vh;overflow-y:auto;flex-direction:column;">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:1.25rem 1.5rem;border-bottom:1px solid var(--border);">
+            <h3 style="font-size:1rem;font-weight:700;color:#0A2540;">Email Preview</h3>
+            <button onclick="closeCampaignPreview()" style="background:none;border:none;font-size:1.2rem;cursor:pointer;color:#9ca3af;">✕</button>
+        </div>
+        <div id="campaign-preview-body" style="padding:1.5rem;"></div>
+    </div>
+
+    <!-- Health tab -->
+    <div class="tab-panel" id="tab-health">
+        <div class="table-wrapper" style="padding:2rem;max-width:860px;">
+            <div class="table-header" style="margin-bottom:1.5rem;">
+                <span class="table-title">System Health</span>
+                <span id="health-last-refreshed" style="font-size:0.8rem;color:var(--text-muted);margin-left:0.75rem;"></span>
+                <button onclick="loadHealth()" class="btn-action btn-reactivate" style="margin-left:auto;">↻ Refresh</button>
+            </div>
+            <!-- Status Banner -->
+            <div id="health-status-banner" style="display:flex;align-items:center;gap:0.75rem;padding:1rem 1.25rem;border-radius:10px;border:1px solid var(--border);margin-bottom:1.5rem;background:var(--soft-bg);">
+                <span id="health-status-dot" style="width:12px;height:12px;border-radius:50%;background:#d1d5db;display:inline-block;flex-shrink:0;"></span>
+                <span id="health-status-label" style="font-weight:600;font-size:0.95rem;">Loading…</span>
+            </div>
+            <!-- Stats Grid -->
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.5rem;">
+                <div class="stat-card">
+                    <span class="stat-icon">⏱</span>
+                    <span class="stat-value" id="health-uptime" style="font-size:1.4rem;">—</span>
+                    <span class="stat-label">Uptime</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-icon">🧠</span>
+                    <span class="stat-value" id="health-memory" style="font-size:1.4rem;">—</span>
+                    <span class="stat-label">Memory (MB)</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-icon">🟢</span>
+                    <span class="stat-value" id="health-node" style="font-size:1.4rem;">—</span>
+                    <span class="stat-label">Node Version</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-icon">🌍</span>
+                    <span class="stat-value" id="health-env" style="font-size:1.4rem;">—</span>
+                    <span class="stat-label">Environment</span>
+                </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem;">
+                <!-- DB Pool -->
+                <div class="stat-card" style="gap:0.75rem;">
+                    <span style="font-size:0.8rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;">DB Connection Pool</span>
+                    <div style="display:flex;gap:1rem;flex-wrap:wrap;">
+                        <div style="text-align:center;">
+                            <div class="stat-value" id="health-db-total" style="font-size:1.4rem;">—</div>
+                            <div class="stat-label">Total</div>
+                        </div>
+                        <div style="text-align:center;">
+                            <div class="stat-value" id="health-db-idle" style="font-size:1.4rem;">—</div>
+                            <div class="stat-label">Idle</div>
+                        </div>
+                        <div style="text-align:center;">
+                            <div class="stat-value" id="health-db-waiting" style="font-size:1.4rem;">—</div>
+                            <div class="stat-label">Waiting</div>
+                        </div>
+                    </div>
+                </div>
+                <!-- SSE + Services -->
+                <div class="stat-card" style="gap:0.75rem;">
+                    <span style="font-size:0.8rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;">Real-time &amp; Services</span>
+                    <div style="display:flex;flex-direction:column;gap:0.5rem;font-size:0.9rem;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;">
+                            <span style="color:var(--text-muted);">SSE Connections</span>
+                            <strong id="health-sse">—</strong>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;align-items:center;">
+                            <span style="color:var(--text-muted);">Stripe</span>
+                            <span id="health-stripe">—</span>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;align-items:center;">
+                            <span style="color:var(--text-muted);">Email</span>
+                            <span id="health-email">—</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Impersonate tab -->
     <div class="tab-panel" id="tab-impersonate">
         <div class="table-wrapper" style="padding:2rem;max-width:500px;">
@@ -1394,6 +1604,9 @@
         if (name === 'crm-recruitment') loadProspects();
         if (name === 'deals') loadAdminDeals();
         if (name === 'referral-credits') loadReferralCredits();
+        if (name === 'revenue') loadRevenue();
+        if (name === 'health') loadHealth();
+        if (name === 'campaigns') onCampaignSegmentChange();
     }
 
     // ── Announce ──────────────────────────────────────────────────────────────
@@ -1630,12 +1843,68 @@
         return `<span class="badge ${cls}">${escHtml(type || 'unknown')}</span>`;
     }
 
+    let selectedUserIds = new Set();
+
+    function updateBulkCount() {
+        document.getElementById('bulk-selected-count').textContent = selectedUserIds.size + ' selected';
+    }
+
+    function toggleSelectAll(cb) {
+        const checkboxes = document.querySelectorAll('#users-tbody .user-row-cb');
+        if (cb.checked) {
+            checkboxes.forEach(c => { c.checked = true; selectedUserIds.add(Number(c.dataset.id)); });
+        } else {
+            checkboxes.forEach(c => { c.checked = false; });
+            selectedUserIds.clear();
+        }
+        updateBulkCount();
+    }
+
+    function onUserCheckbox(cb) {
+        const id = Number(cb.dataset.id);
+        if (cb.checked) selectedUserIds.add(id);
+        else selectedUserIds.delete(id);
+        // update select-all state
+        const all = document.querySelectorAll('#users-tbody .user-row-cb');
+        const checked = document.querySelectorAll('#users-tbody .user-row-cb:checked');
+        const selAll = document.getElementById('users-select-all');
+        if (selAll) selAll.indeterminate = checked.length > 0 && checked.length < all.length;
+        if (selAll) selAll.checked = all.length > 0 && checked.length === all.length;
+        updateBulkCount();
+    }
+
+    async function bulkAction(action) {
+        if (!selectedUserIds.size) { showToast('Select at least one user first.', 'error'); return; }
+        const actionLabels = { approve: 'approve', reject: 'reject (waitlist)', deactivate: 'deactivate', reactivate: 'reactivate' };
+        if (!confirm(`Are you sure? This will ${actionLabels[action]} ${selectedUserIds.size} user(s).`)) return;
+        try {
+            const res = await fetch('/api/admin/bulk-users', {
+                method: 'POST', credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_ids: Array.from(selectedUserIds), action })
+            });
+            const d = await res.json();
+            if (!res.ok) throw new Error(d.error || 'Failed');
+            showToast(`Done — ${d.affected} user(s) updated.`, 'success');
+            selectedUserIds.clear();
+            updateBulkCount();
+            await loadUsers();
+        } catch (err) {
+            showToast('Bulk action failed: ' + err.message, 'error');
+        }
+    }
+
     function renderUsers() {
         const tbody = document.getElementById('users-tbody');
         document.getElementById('users-count').textContent = usersData.length + ' users';
+        // Reset select-all on re-render
+        const selAll = document.getElementById('users-select-all');
+        if (selAll) { selAll.checked = false; selAll.indeterminate = false; }
+        selectedUserIds.clear();
+        updateBulkCount();
 
         if (!usersData.length) {
-            tbody.innerHTML = '<tr><td colspan="9" class="empty-state">No users found.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="10" class="empty-state">No users found.</td></tr>';
             return;
         }
 
@@ -1659,6 +1928,7 @@
                 : `<button class="btn-action btn-reactivate" onclick="reactivateUser(${u.id}, this)">Reactivate</button>`;
 
             return `<tr>
+                <td style="text-align:center;"><input type="checkbox" class="user-row-cb" data-id="${u.id}" onchange="onUserCheckbox(this)"></td>
                 <td class="id-cell">#${u.id}</td>
                 <td class="name-cell">${escHtml(name)}</td>
                 <td>${escHtml(u.email)}</td>
@@ -2453,38 +2723,6 @@
         }
     }
 
-    async function loadReferralCredits() {
-        const tbody = document.getElementById('referral-credits-tbody');
-        const summary = document.getElementById('referral-credits-summary');
-        try {
-            const res = await fetch('/api/admin/referral-stats', { credentials: 'include' });
-            if (!res.ok) throw new Error('Failed');
-            const d = await res.json();
-            summary.innerHTML = `
-                <div style="background:white;border-radius:10px;padding:1.25rem;border:1px solid var(--border);text-align:center;">
-                    <div style="font-size:1.5rem;font-weight:900;color:#f59e0b;">$${((d.outstanding_cents||0)/100).toFixed(0)}</div>
-                    <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-top:4px;">Outstanding Credits</div>
-                </div>
-                <div style="background:white;border-radius:10px;padding:1.25rem;border:1px solid var(--border);text-align:center;">
-                    <div style="font-size:1.5rem;font-weight:900;color:var(--primary);">${d.users_with_credits||0}</div>
-                    <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-top:4px;">Realtors with Credits</div>
-                </div>
-                <div style="background:white;border-radius:10px;padding:1.25rem;border:1px solid var(--border);text-align:center;">
-                    <div style="font-size:1.5rem;font-weight:900;color:var(--primary);">${d.users_with_code||0}</div>
-                    <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-top:4px;">Active Referrers</div>
-                </div>`;
-            tbody.innerHTML = (d.top_earners||[]).map(u => `
-                <tr style="border-bottom:1px solid var(--border);">
-                    <td style="padding:10px 12px;font-weight:600;">${u.first_name||''} ${u.last_name||''}</td>
-                    <td style="padding:10px 12px;color:var(--text-muted);">${u.email}</td>
-                    <td style="padding:10px 12px;">${u.referral_count}</td>
-                    <td style="padding:10px 12px;color:#f59e0b;font-weight:700;">$${((u.referral_credits_cents||0)/100).toFixed(0)}</td>
-                </tr>`).join('') || '<tr><td colspan="4" style="padding:2rem;text-align:center;color:var(--text-muted);">No referral credits yet</td></tr>';
-        } catch(e) {
-            tbody.innerHTML = '<tr><td colspan="4" style="padding:2rem;text-align:center;color:#ef4444;">Error loading referral credits</td></tr>';
-        }
-    }
-
     // ── Referral Credits ──────────────────────────────────────────────────────
 
     async function loadReferralCredits() {
@@ -2518,6 +2756,253 @@
                 </tr>`).join('') || '<tr><td colspan="4" style="padding:2rem;text-align:center;color:var(--text-muted);">No referral credits yet</td></tr>';
         } catch(e) {
             tbody.innerHTML = '<tr><td colspan="4" style="padding:2rem;text-align:center;color:#ef4444;">Error loading referral credits</td></tr>';
+        }
+    }
+
+    // ── Revenue ───────────────────────────────────────────────────────────────
+
+    async function loadRevenue() {
+        const planPrices = { basic: 29, professional: 49, firm: 99, free: 0 };
+        const planLabels = { basic: 'Basic', professional: 'Professional', firm: 'Firm', free: 'Free' };
+        try {
+            const res = await fetch('/api/admin/revenue', { credentials: 'include' });
+            if (!res.ok) throw new Error('Failed to load revenue data');
+            const d = await res.json();
+
+            // MRR
+            const mrrTotal = (d.mrr_dollars || 0) + (d.mrr_cents || 0) / 100;
+            document.getElementById('rev-mrr').textContent = '$' + mrrTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+            // Active paid subs
+            const pb = d.plan_breakdown || {};
+            const paidSubs = (pb.basic || 0) + (pb.professional || 0) + (pb.firm || 0);
+            document.getElementById('rev-paid-subs').textContent = paidSubs.toLocaleString();
+            document.getElementById('rev-free-users').textContent = (pb.free || 0).toLocaleString();
+
+            // Plan breakdown table
+            const tbody = document.getElementById('rev-plan-tbody');
+            const rows = ['firm', 'professional', 'basic', 'free'].map(plan => {
+                const count = pb[plan] || 0;
+                const price = planPrices[plan];
+                const value = count * price;
+                return `<tr style="border-bottom:1px solid var(--border);">
+                    <td style="padding:0.6rem 1rem;font-weight:500;">${planLabels[plan]}</td>
+                    <td style="padding:0.6rem 1rem;text-align:right;">${count.toLocaleString()}</td>
+                    <td style="padding:0.6rem 1rem;text-align:right;font-weight:600;color:${price > 0 ? '#10b981' : 'var(--text-muted)'};">${price > 0 ? '$' + value.toLocaleString() + '/mo' : '—'}</td>
+                </tr>`;
+            }).join('');
+            tbody.innerHTML = rows || '<tr><td colspan="3" class="empty-state">No data</td></tr>';
+
+            // Monthly trend (last 6 months)
+            const trendEl = document.getElementById('rev-trend-list');
+            const trend = Array.isArray(d.monthly_new_paid) ? d.monthly_new_paid.slice(-6) : [];
+            if (!trend.length) {
+                trendEl.innerHTML = '<span style="color:var(--text-muted);">No trend data available.</span>';
+            } else {
+                trendEl.innerHTML = trend.map(item => {
+                    const sign = item.new_paid >= 0 ? '+' : '';
+                    const color = item.new_paid > 0 ? '#10b981' : item.new_paid < 0 ? '#ef4444' : 'var(--text-muted)';
+                    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:0.5rem 0.75rem;background:var(--soft-bg);border-radius:8px;border:1px solid var(--border);">
+                        <span style="font-weight:500;">${escHtml(String(item.month))}</span>
+                        <span style="font-weight:700;color:${color};">${sign}${item.new_paid} new paid</span>
+                    </div>`;
+                }).join('');
+            }
+        } catch (err) {
+            showToast('Failed to load revenue data', 'error');
+            document.getElementById('rev-mrr').textContent = 'Error';
+            document.getElementById('rev-plan-tbody').innerHTML = '<tr><td colspan="3" class="empty-state" style="color:#ef4444;">Failed to load</td></tr>';
+        }
+    }
+
+    // ── Campaigns ─────────────────────────────────────────────────────────────
+
+    function onCampaignSegmentChange() {
+        const segment = document.getElementById('campaignSegment').value;
+        const planWrap = document.getElementById('campaign-plan-filter-wrap');
+        planWrap.style.visibility = segment === 'realtors' ? 'visible' : 'hidden';
+        updateCampaignRecipientEstimate();
+    }
+
+    async function updateCampaignRecipientEstimate() {
+        const segment = document.getElementById('campaignSegment').value;
+        const estEl = document.getElementById('campaign-recipient-est');
+        estEl.textContent = '…';
+        try {
+            // Map segment to userType query param
+            const typeMap = { realtors: 'realtor', sellers: 'seller', buyers: 'buyer', all: '' };
+            const userType = typeMap[segment] || '';
+            const params = new URLSearchParams();
+            if (userType) params.set('userType', userType);
+            const res = await fetch(`/api/admin/users?${params}`, { credentials: 'include' });
+            if (!res.ok) throw new Error();
+            const data = await res.json();
+            const users = Array.isArray(data) ? data : (Array.isArray(data.users) ? data.users : []);
+            const planFilter = document.getElementById('campaignPlanFilter').value;
+            let filtered = users;
+            if (segment === 'realtors' && planFilter) {
+                filtered = users.filter(u => {
+                    const plan = u.subscription_plan || 'free';
+                    return planFilter === 'free' ? plan === 'free' || !plan : plan === planFilter;
+                });
+            }
+            estEl.textContent = filtered.length.toLocaleString();
+        } catch {
+            estEl.textContent = '—';
+        }
+    }
+
+    function previewCampaign() {
+        const subject = document.getElementById('campaignSubject').value || '(No subject)';
+        const message = document.getElementById('campaignMessage').value || '(No message)';
+        const ctaLabel = document.getElementById('campaignCtaLabel').value;
+        const ctaUrl = document.getElementById('campaignCtaUrl').value;
+        const ctaBlock = ctaLabel && ctaUrl
+            ? `<div style="text-align:center;margin:24px 0;"><a href="${escHtml(ctaUrl)}" style="background:#FF6B35;color:white;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;font-size:0.95rem;">${escHtml(ctaLabel)}</a></div>`
+            : '';
+
+        document.getElementById('campaign-preview-body').innerHTML = `
+            <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:1rem;">Subject: <strong style="color:var(--primary);">${escHtml(subject)}</strong></div>
+            <div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;">
+                <div style="background:#0A2540;padding:20px 24px;text-align:center;">
+                    <span style="font-family:'Georgia',serif;font-size:1.3rem;font-weight:700;color:white;">Realtor<span style="color:#FF6B35;">Finder</span></span>
+                </div>
+                <div style="padding:28px 24px;background:white;">
+                    <div style="white-space:pre-wrap;font-size:0.95rem;line-height:1.6;color:#1A1A1A;">${escHtml(message)}</div>
+                    ${ctaBlock}
+                </div>
+                <div style="background:#f8f6f3;padding:16px 24px;text-align:center;font-size:0.75rem;color:#9ca3af;">
+                    You're receiving this because you have an account on RealtorFinder.
+                </div>
+            </div>`;
+        document.getElementById('campaign-preview-overlay').style.display = 'block';
+        document.getElementById('campaign-preview-modal').style.display = 'flex';
+    }
+
+    function closeCampaignPreview() {
+        document.getElementById('campaign-preview-overlay').style.display = 'none';
+        document.getElementById('campaign-preview-modal').style.display = 'none';
+    }
+
+    async function sendCampaign() {
+        const subject = document.getElementById('campaignSubject').value.trim();
+        const message = document.getElementById('campaignMessage').value.trim();
+        const segment = document.getElementById('campaignSegment').value;
+        const plan_filter = document.getElementById('campaignPlanFilter').value || undefined;
+        const cta_label = document.getElementById('campaignCtaLabel').value.trim() || undefined;
+        const cta_url = document.getElementById('campaignCtaUrl').value.trim() || undefined;
+        const resultEl = document.getElementById('campaignResult');
+
+        if (!subject) {
+            resultEl.textContent = 'Please enter a subject.';
+            resultEl.style.cssText = 'display:block;background:#fee2e2;color:#991b1b;';
+            return;
+        }
+        if (!message) {
+            resultEl.textContent = 'Please enter a message.';
+            resultEl.style.cssText = 'display:block;background:#fee2e2;color:#991b1b;';
+            return;
+        }
+
+        const est = document.getElementById('campaign-recipient-est').textContent;
+        if (!confirm(`Send this campaign to approximately ${est} users? This will send real emails.`)) return;
+
+        resultEl.textContent = 'Sending…';
+        resultEl.style.cssText = 'display:block;background:#fef3c7;color:#92400e;';
+
+        try {
+            const body = { segment, subject, message };
+            if (plan_filter) body.plan_filter = plan_filter;
+            if (cta_label) body.cta_label = cta_label;
+            if (cta_url) body.cta_url = cta_url;
+
+            const res = await fetch('/api/admin/campaign', {
+                method: 'POST', credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+            const d = await res.json();
+            if (!res.ok) throw new Error(d.error || 'Failed to send campaign');
+            resultEl.textContent = `✓ Sent to ${d.sent} of ${d.total} users.`;
+            resultEl.style.cssText = 'display:block;background:#d1fae5;color:#065f46;';
+            showToast(`Campaign sent to ${d.sent} users`, 'success');
+        } catch (err) {
+            resultEl.textContent = 'Error: ' + err.message;
+            resultEl.style.cssText = 'display:block;background:#fee2e2;color:#991b1b;';
+            showToast('Failed to send campaign', 'error');
+        }
+    }
+
+    // ── Health ────────────────────────────────────────────────────────────────
+
+    let healthRefreshTimer = null;
+
+    function formatUptime(seconds) {
+        const d = Math.floor(seconds / 86400);
+        const h = Math.floor((seconds % 86400) / 3600);
+        const m = Math.floor((seconds % 3600) / 60);
+        const parts = [];
+        if (d > 0) parts.push(d + 'd');
+        if (h > 0) parts.push(h + 'h');
+        parts.push(m + 'm');
+        return parts.join(' ');
+    }
+
+    async function loadHealth() {
+        try {
+            const res = await fetch('/api/admin/health', { credentials: 'include' });
+            if (!res.ok) throw new Error('Health check failed');
+            const d = await res.json();
+
+            // Status banner
+            const isHealthy = d.status === 'ok' || d.status === 'healthy';
+            const dot = document.getElementById('health-status-dot');
+            const label = document.getElementById('health-status-label');
+            const banner = document.getElementById('health-status-banner');
+            dot.style.background = isHealthy ? '#10b981' : '#ef4444';
+            label.textContent = isHealthy ? 'Healthy' : 'Issue Detected';
+            label.style.color = isHealthy ? '#065f46' : '#991b1b';
+            banner.style.borderColor = isHealthy ? '#a7f3d0' : '#fecaca';
+            banner.style.background = isHealthy ? '#ecfdf5' : '#fef2f2';
+
+            // Stats
+            document.getElementById('health-uptime').textContent = formatUptime(d.uptime_seconds || 0);
+            document.getElementById('health-memory').textContent = (d.memory_mb || 0).toFixed(1);
+            document.getElementById('health-node').textContent = d.node_version || '—';
+            document.getElementById('health-env').textContent = d.environment || '—';
+
+            // DB Pool
+            const pool = d.db_pool || {};
+            document.getElementById('health-db-total').textContent = pool.total ?? '—';
+            document.getElementById('health-db-idle').textContent = pool.idle ?? '—';
+            const waitingEl = document.getElementById('health-db-waiting');
+            waitingEl.textContent = pool.waiting ?? '—';
+            waitingEl.style.color = (pool.waiting > 0) ? '#f59e0b' : 'var(--primary)';
+
+            // SSE + Services
+            document.getElementById('health-sse').textContent = d.sse_connections ?? '—';
+            document.getElementById('health-stripe').innerHTML = d.stripe_configured
+                ? '<span style="color:#10b981;font-weight:700;">✓ Configured</span>'
+                : '<span style="color:#ef4444;font-weight:700;">✗ Not configured</span>';
+            document.getElementById('health-email').innerHTML = d.email_configured
+                ? '<span style="color:#10b981;font-weight:700;">✓ Configured</span>'
+                : '<span style="color:#ef4444;font-weight:700;">✗ Not configured</span>';
+
+            // Last refreshed
+            const ts = d.timestamp ? new Date(d.timestamp) : new Date();
+            document.getElementById('health-last-refreshed').textContent =
+                'Last refreshed: ' + ts.toLocaleTimeString();
+
+            // Schedule next auto-refresh if health tab is active
+            clearTimeout(healthRefreshTimer);
+            const healthPanel = document.getElementById('tab-health');
+            if (healthPanel && healthPanel.classList.contains('active')) {
+                healthRefreshTimer = setTimeout(loadHealth, 30000);
+            }
+        } catch (err) {
+            const label = document.getElementById('health-status-label');
+            if (label) label.textContent = 'Failed to load health data';
+            showToast('Failed to load health data', 'error');
         }
     }
 

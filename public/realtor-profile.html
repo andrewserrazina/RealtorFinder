@@ -181,10 +181,48 @@
         }
         @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 
+        /* Enhanced stats bar */
+        .stats-row { justify-content: flex-start; }
+        .stat-stars { color: #F59E0B; font-size: 1.1rem; line-height: 1; }
+
+        /* Earned badges chips */
+        .earned-badges { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+        .earned-badge {
+            display: inline-flex; align-items: center; gap: 0.35rem;
+            padding: 0.35rem 0.85rem; border-radius: 20px;
+            font-size: 0.82rem; font-weight: 600;
+        }
+
+        /* Reviews */
+        .review-item { padding: 1rem 0; border-top: 1px solid var(--border); }
+        .review-meta { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 0.4rem; }
+        .review-stars { color: #F59E0B; }
+        .review-name { font-weight: 600; font-size: 0.9rem; }
+        .review-date { color: var(--muted); font-size: 0.8rem; }
+        .chip-verified-sale { background: #d1fae5; color: #065f46; font-size: 0.72rem; padding: 2px 8px; border-radius: 20px; font-weight: 700; }
+
+        /* Availability grid */
+        .avail-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.5rem; }
+        .avail-day { background: var(--soft-bg); border-radius: 8px; padding: 0.6rem 0.4rem; text-align: center; }
+        .avail-day-name { font-size: 0.72rem; font-weight: 700; color: var(--muted); text-transform: uppercase; margin-bottom: 0.35rem; }
+        .avail-slot { font-size: 0.72rem; color: var(--primary); background: #e8f4ff; border-radius: 4px; padding: 2px 4px; margin-top: 0.25rem; line-height: 1.4; }
+        .avail-none { font-size: 0.72rem; color: #ccc; margin-top: 0.25rem; }
+        .avail-day.has-slots { background: #f0f9ff; border: 1px solid #bae6fd; }
+        .avail-day.has-slots .avail-day-name { color: #0369a1; }
+
+        /* CTA section */
+        .cta-row { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+        .cta-btn-primary { background: var(--accent); color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.95rem; text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem; }
+        .cta-btn-secondary { background: white; color: var(--primary); border: 1.5px solid var(--primary); padding: 0.75rem 1.5rem; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.95rem; text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem; }
+        .cta-btn-primary:hover { opacity: 0.9; }
+        .cta-btn-secondary:hover { background: var(--soft-bg); }
+
         @media (max-width: 600px) {
             .profile-header { flex-direction: column; }
             .details-grid { grid-template-columns: 1fr; }
             .stats-row { gap: 1.25rem; }
+            .avail-grid { grid-template-columns: repeat(4, 1fr); }
+            .cta-row { flex-direction: column; }
         }
     </style>
     <link rel="manifest" href="/manifest.json">
@@ -219,7 +257,8 @@
 </div>
 
 <script>
-    const realtorId = parseInt(window.location.pathname.split('/').pop());
+    const _urlParams = new URLSearchParams(window.location.search);
+    const realtorId = parseInt(_urlParams.get('id')) || parseInt(window.location.pathname.split('/').pop());
     let isRealtorSaved = false;
     let currentUserId = null;
 
@@ -256,23 +295,156 @@
     async function loadProfile() {
         await initSaveState();
         try {
-            const [profileRes, rtRes, badgesRes] = await Promise.all([
+            const [profileRes, rtRes, badgesRes, reviewsRes, availRes] = await Promise.all([
                 fetch(`/api/realtors/${realtorId}/public`),
                 fetch(`/api/realtors/${realtorId}/response-time`),
-                fetch(`/api/realtors/${realtorId}/badges`)
+                fetch(`/api/realtors/${realtorId}/badges`),
+                fetch(`/api/realtors/${realtorId}/reviews`),
+                fetch(`/api/realtors/${realtorId}/availability`)
             ]);
             if (!profileRes.ok) { showNotFound(); return; }
             const r = await profileRes.json();
             const rt = rtRes.ok ? await rtRes.json() : { label: null };
             const bd = badgesRes.ok ? await badgesRes.json() : {};
-            renderProfile(r, rt, bd);
+
+            // Normalize reviews response: API may return a plain array or {reviews, avg, count}
+            let rv = {};
+            if (reviewsRes.ok) {
+                const raw = await reviewsRes.json();
+                if (Array.isArray(raw)) {
+                    const reviews = raw.slice(0, 5);
+                    const count = raw.length;
+                    const avg = count
+                        ? (raw.reduce((s, x) => s + (parseFloat(x.rating) || 0), 0) / count).toFixed(1)
+                        : null;
+                    rv = { reviews, avg: avg ? parseFloat(avg) : null, count };
+                } else {
+                    // Already shaped as {reviews, avg, count} or similar
+                    rv = {
+                        reviews: (raw.reviews || []).slice(0, 5),
+                        avg: raw.avg != null ? parseFloat(raw.avg) : (raw.avg_rating != null ? parseFloat(raw.avg_rating) : null),
+                        count: raw.count != null ? raw.count : (raw.review_count != null ? raw.review_count : (raw.reviews || []).length)
+                    };
+                }
+            }
+
+            // Normalize badges response: ensure bd.badges is an array
+            const bdNorm = {
+                badges: Array.isArray(bd.badges) ? bd.badges : (Array.isArray(bd) ? bd : []),
+                winRate: bd.winRate != null ? bd.winRate : null,
+                totalProposals: bd.totalProposals != null ? bd.totalProposals : null,
+                avgRating: bd.avgRating != null ? bd.avgRating : (bd.avg_rating != null ? bd.avg_rating : null),
+                reviewCount: bd.reviewCount != null ? bd.reviewCount : (bd.review_count != null ? bd.review_count : null),
+            };
+
+            // Normalize availability: must be an array
+            const av = availRes.ok ? await availRes.json() : [];
+            const avArr = Array.isArray(av) ? av : [];
+
+            renderProfile(r, rt, bdNorm, rv, avArr);
             document.title = `${r.first_name} ${r.last_name} — RealtorFinder`;
-        } catch {
+        } catch (err) {
+            console.error('loadProfile error:', err);
             showNotFound();
         }
     }
 
-    function renderProfile(r, rt, bd = {}) {
+    function renderStars(n, total = 5) {
+        const filled = Math.round(n);
+        return '★'.repeat(filled) + '☆'.repeat(total - filled);
+    }
+
+    function relativeDate(dateStr) {
+        const d = new Date(dateStr);
+        const now = new Date();
+        const diffMs = now - d;
+        const diffDays = Math.floor(diffMs / 86400000);
+        if (diffDays < 1)  return 'Today';
+        if (diffDays < 7)  return `${diffDays}d ago`;
+        if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`;
+        if (diffDays < 365) return `${Math.floor(diffDays / 30)}mo ago`;
+        return `${Math.floor(diffDays / 365)}y ago`;
+    }
+
+    function renderBadgeChip(b) {
+        // b may be an object {label, icon, color, bg} or a plain string
+        if (typeof b === 'object' && b !== null) {
+            const bg  = b.bg    || b.background || '#FFF7ED';
+            const clr = b.color || '#C2410C';
+            const icon = b.icon ? `${esc(b.icon)} ` : '';
+            const label = esc(b.label || b.name || '');
+            return `<span class="earned-badge" style="background:${esc(bg)};color:${esc(clr)};">${icon}${label}</span>`;
+        }
+        return `<span class="earned-badge" style="background:#FFF7ED;color:#C2410C;">${esc(String(b))}</span>`;
+    }
+
+    function renderAvailability(avail) {
+        const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        // Group slots by day_of_week
+        const byDay = {};
+        (avail || []).forEach(slot => {
+            const d = slot.day_of_week;
+            if (!byDay[d]) byDay[d] = [];
+            byDay[d].push(slot);
+        });
+
+        function fmtTime(t) {
+            if (!t) return '';
+            const [hh, mm] = t.split(':').map(Number);
+            const ampm = hh >= 12 ? 'PM' : 'AM';
+            const h = ((hh % 12) || 12);
+            return mm ? `${h}:${String(mm).padStart(2,'0')}${ampm}` : `${h}${ampm}`;
+        }
+
+        const cells = DAY_NAMES.map((name, idx) => {
+            const slots = byDay[idx] || [];
+            const hasSlots = slots.length > 0;
+            const slotsHtml = hasSlots
+                ? slots.map(s => `<div class="avail-slot">${fmtTime(s.start_time)}–${fmtTime(s.end_time)}</div>`).join('')
+                : `<div class="avail-none">—</div>`;
+            return `<div class="avail-day${hasSlots ? ' has-slots' : ''}">
+                <div class="avail-day-name">${name}</div>
+                ${slotsHtml}
+            </div>`;
+        }).join('');
+
+        return cells;
+    }
+
+    function renderReviewsHtml(rv) {
+        const reviews = (rv.reviews || []).slice(0, 5);
+        const avg = rv.avg;
+        const count = rv.count || 0;
+
+        if (!count) return '<p style="color:var(--muted);font-size:0.9rem;">No reviews yet.</p>';
+
+        const avgNum = parseFloat(avg) || 0;
+        const summaryHtml = `
+            <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.25rem;">
+                <span style="font-family:'Crimson Pro',serif;font-size:2rem;font-weight:900;color:var(--primary);">${avgNum.toFixed(1)}</span>
+                <span class="review-stars" style="font-size:1.2rem;">${renderStars(avgNum)}</span>
+                <span style="color:var(--muted);font-size:0.85rem;">${count} review${count !== 1 ? 's' : ''}</span>
+            </div>`;
+
+        const reviewItems = reviews.map(r => {
+            const name = esc(r.reviewer_name || ((r.first_name || '') + (r.last_name ? ' ' + r.last_name[0] + '.' : '')) || 'Anonymous');
+            const body = r.body || r.comment;
+            return `<div class="review-item">
+                <div class="review-meta">
+                    <span class="review-stars">${renderStars(r.rating)}</span>
+                    <span class="review-name">${name}</span>
+                    <span class="review-date">${relativeDate(r.created_at)}</span>
+                    ${r.verified_sale ? '<span class="chip-verified-sale">✓ Verified Sale</span>' : ''}
+                </div>
+                ${body ? `<p style="font-size:0.9rem;color:#444;line-height:1.6;">${esc(body)}</p>` : ''}
+                ${r.listing_address ? `<p style="font-size:0.78rem;color:var(--muted);margin-top:0.3rem;">📍 ${esc(r.listing_address)}</p>` : ''}
+            </div>`;
+        }).join('');
+
+        return summaryHtml + reviewItems;
+    }
+
+    function renderProfile(r, rt, bd = {}, rv = {}, av = []) {
         const initials = ((r.first_name || '')[0] || '') + ((r.last_name || '')[0] || '');
         const isFeatured = ['professional', 'firm'].includes(r.subscription_plan || r.company_plan);
         const hasLicense = r.license_number && r.license_number.trim();
@@ -282,69 +454,134 @@
             ? (Array.isArray(r.service_areas) ? r.service_areas : r.service_areas.split(',').map(s => s.trim())).filter(Boolean)
             : [];
 
+        // Prefer reviews endpoint data for rating/count, fall back to profile then badges
+        const avgRating  = (rv.avg != null ? rv.avg : null)
+                        || parseFloat(r.avg_rating || 0) || null
+                        || (bd.avgRating != null ? parseFloat(bd.avgRating) : null);
+        const reviewCount = (rv.count != null ? rv.count : 0)
+                         || parseInt(r.review_count || 0) || 0
+                         || parseInt(bd.reviewCount || 0) || 0;
+        const acceptedProposals = parseInt(r.accepted_proposals || 0) || 0;
+        const totalProposals    = parseInt(r.total_proposals    || bd.totalProposals || 0) || 0;
+        const winRate = bd.winRate != null
+            ? bd.winRate
+            : (totalProposals > 0 ? Math.round((acceptedProposals / totalProposals) * 100) : null);
+
         const statsHtml = [
-            hasYears ? `<div class="stat"><div class="stat-value">${r.years_experience}</div><div class="stat-label">Years Experience</div></div>` : '',
-            hasLicense ? `<div class="stat"><div class="stat-value" style="font-size:1rem;padding-top:0.3rem;">${r.license_number}</div><div class="stat-label">License #</div></div>` : '',
-            bd.winRate != null ? `<div class="stat"><div class="stat-value">${bd.winRate}%</div><div class="stat-label">Win Rate</div></div>` : '',
-            bd.totalProposals > 0 ? `<div class="stat"><div class="stat-value">${bd.totalProposals}</div><div class="stat-label">Proposals Sent</div></div>` : '',
-            bd.reviewCount > 0 ? `<div class="stat"><div class="stat-value">${bd.avgRating ? parseFloat(bd.avgRating).toFixed(1) : '—'}</div><div class="stat-label">Avg Rating</div></div>` : '',
+            avgRating ? `<div class="stat">
+                <div class="stat-stars">${renderStars(avgRating)}</div>
+                <div class="stat-value" style="font-size:1.4rem;">${avgRating.toFixed(1)}</div>
+                <div class="stat-label">Avg Rating${reviewCount ? ` (${reviewCount})` : ''}</div>
+            </div>` : '',
+            acceptedProposals > 0 ? `<div class="stat"><div class="stat-value">${acceptedProposals}</div><div class="stat-label">Accepted Proposals</div></div>` : '',
+            winRate != null ? `<div class="stat"><div class="stat-value">${winRate}%</div><div class="stat-label">Win Rate</div></div>` : '',
+            hasYears ? `<div class="stat"><div class="stat-value">${r.years_experience}</div><div class="stat-label">Yrs Experience</div></div>` : '',
+            hasLicense ? `<div class="stat"><div class="stat-value" style="font-size:0.95rem;padding-top:0.4rem;">${esc(r.license_number)}</div><div class="stat-label">License #</div></div>` : '',
         ].filter(Boolean).join('');
 
+        // Earned badges from API (objects with label/icon/color, or plain strings)
+        const earnedBadgesHtml = (bd.badges && bd.badges.length)
+            ? `<div class="earned-badges">${bd.badges.map(renderBadgeChip).join('')}</div>`
+            : '';
+
         const detailsHtml = [
-            r.company_name ? `<div class="detail-item"><div class="detail-label">Company / Brokerage</div><div class="detail-value">${esc(r.company_name)}</div></div>` : '',
+            r.company_name || r.brokerage ? `<div class="detail-item"><div class="detail-label">Company / Brokerage</div><div class="detail-value">${esc(r.company_name || r.brokerage)}</div></div>` : '',
             r.zip_code     ? `<div class="detail-item"><div class="detail-label">Primary Market</div><div class="detail-value">${esc(r.zip_code)}</div></div>` : '',
         ].filter(Boolean).join('');
+
+        // Availability
+        const hasAvail = av && av.length > 0;
+        const availSection = `
+            <div class="profile-card" id="availCard">
+                <div class="section-title">Weekly Availability</div>
+                ${hasAvail
+                    ? `<div class="avail-grid">${renderAvailability(av)}</div>`
+                    : `<p style="color:var(--muted);font-size:0.9rem;">No schedule set. Schedule a showing request via the listing page.</p>`
+                }
+            </div>`;
+
+        // Rating badge for header (from reviews endpoint or profile data)
+        const headerRating = avgRating && reviewCount
+            ? `<span class="review-stars" style="font-size:1.1rem;">${renderStars(avgRating)}</span>
+               <strong>${avgRating.toFixed(1)}</strong>
+               <span style="color:#888;font-size:0.85rem;">(${reviewCount} review${reviewCount !== 1 ? 's' : ''})</span>`
+            : '';
 
         document.getElementById('profileContent').innerHTML = `
             <div class="profile-card">
                 <div class="profile-header">
-                    <div class="avatar">${r.profile_photo ? `<img src="${esc(r.profile_photo)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : esc(initials.toUpperCase())}</div>
+                    <div class="avatar">${r.profile_photo
+                        ? `<img src="${esc(r.profile_photo)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`
+                        : esc(initials.toUpperCase())
+                    }</div>
                     <div class="profile-name-block">
                         <h1>${esc(r.first_name)} ${esc(r.last_name)}</h1>
-                        ${r.company_name ? `<div class="company-name">${esc(r.company_name)}</div>` : ''}
-                        <div class="badges">
+                        ${r.company_name || r.brokerage ? `<div class="company-name">${esc(r.company_name || r.brokerage)}</div>` : ''}
+                        <div class="badges" style="margin-top:0.6rem;">
                             ${isFeatured ? '<span class="badge badge-featured">⭐ Featured Agent</span>' : ''}
-                            ${r.license_verified ? '<span class="badge badge-verified" style="background:#ECFDF5;color:#059669;">✓ Verified License</span>' : (hasLicense ? '<span class="badge badge-verified">✓ Licensed</span>' : '')}
-                            ${(bd.badges || []).map(b => `<span class="badge" style="background:#FFF7ED;color:#C2410C;">${b}</span>`).join('')}
+                            ${r.license_verified
+                                ? '<span class="badge badge-verified" style="background:#ECFDF5;color:#059669;">✓ License Verified</span>'
+                                : (hasLicense ? '<span class="badge badge-verified">✓ Licensed</span>' : '')}
                             ${serviceAreas.map(a => `<span class="badge badge-area">${esc(a)}</span>`).join('')}
                         </div>
-                        <div id="profileRatingBadge" style="margin-top:0.5rem;display:flex;align-items:center;gap:0.5rem;"></div>
+                        ${headerRating ? `<div style="margin-top:0.5rem;display:flex;align-items:center;gap:0.4rem;">${headerRating}</div>` : ''}
                         <button id="saveRealtorBtn" onclick="toggleSaveProfile()" style="margin-top:0.75rem;background:none;border:1px solid #e5e7eb;border-radius:20px;padding:6px 16px;cursor:pointer;font-size:0.9rem;font-weight:600;color:${isRealtorSaved ? '#ef4444' : '#666'};border-color:${isRealtorSaved ? '#ef4444' : '#e5e7eb'};">${isRealtorSaved ? '♥ Saved' : '♡ Save Realtor'}</button>
                     </div>
                 </div>
 
                 ${statsHtml ? `<div class="stats-row">${statsHtml}</div>` : ''}
 
-                ${hasBio ? `
-                    <div class="section-title">About</div>
-                    <p class="bio-text">${esc(r.bio)}</p>
-                ` : ''}
+                ${hasBio ? `<div class="section-title">About</div><p class="bio-text">${esc(r.bio)}</p>` : ''}
                 ${rt && rt.label ? `<div style="display:inline-block;background:#f0fdf4;border:1px solid #bbf7d0;color:#15803d;border-radius:20px;padding:4px 12px;font-size:0.85rem;font-weight:600;margin-top:0.5rem;">⚡ ${esc(rt.label)}</div>` : ''}
             </div>
+
+            ${earnedBadgesHtml ? `
+                <div class="profile-card">
+                    <div class="section-title">Earned Badges</div>
+                    ${earnedBadgesHtml}
+                </div>` : ''}
 
             ${detailsHtml ? `
                 <div class="profile-card">
                     <div class="section-title">Details</div>
                     <div class="details-grid">${detailsHtml}</div>
-                </div>
-            ` : ''}
+                </div>` : ''}
+
             <div class="profile-card" id="reviewsCard">
                 <div class="section-title">Reviews</div>
-                <div id="reviewsList"><p style="color:var(--muted);font-size:0.9rem;">Loading reviews…</p></div>
+                <div id="reviewsList">${renderReviewsHtml(rv)}</div>
+                <div id="reviewFormSection" style="margin-top:1.5rem;padding-top:1.5rem;border-top:1px solid var(--border);">
+                    <h3 style="font-size:1rem;font-weight:700;margin-bottom:1rem;">Leave a Review</h3>
+                    <div style="display:flex;gap:0.5rem;margin-bottom:1rem;" id="starRating">
+                        ${[1,2,3,4,5].map(n => `<span data-star="${n}" onclick="selectStar(${n})" style="font-size:2rem;cursor:pointer;color:#d1d5db;transition:color 0.15s;">★</span>`).join('')}
+                    </div>
+                    <textarea id="reviewComment" rows="3" placeholder="Share your experience working with this realtor…" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-size:0.9rem;resize:vertical;margin-bottom:0.75rem;font-family:inherit;"></textarea>
+                    <div id="reviewError" style="display:none;color:#ef4444;font-size:0.85rem;margin-bottom:0.75rem;"></div>
+                    <button onclick="submitReview()" style="background:var(--accent);color:white;border:none;border-radius:8px;padding:10px 20px;font-weight:700;cursor:pointer;">Submit Review</button>
+                </div>
             </div>
+
+            ${availSection}
+
             <div class="profile-card" id="contactCard">
-                <div class="section-title">Send a Message</div>
-                <p style="color:var(--muted);font-size:0.9rem;margin-bottom:1rem;">Interested in working with this agent? Send them a message directly.</p>
-                <textarea id="contactMsg" rows="4" placeholder="Hi, I'm interested in selling my home at..."
-                          style="width:100%;padding:0.75rem;border:1px solid #e5e7eb;border-radius:8px;font-size:0.9rem;resize:vertical;margin-bottom:0.75rem;font-family:inherit;"></textarea>
-                <button onclick="sendContactMessage()"
-                        style="background:#FF6B35;color:white;border:none;padding:0.75rem 1.5rem;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.95rem;width:100%;">
-                    Send Message
-                </button>
-                <p id="contactStatus" style="margin-top:0.5rem;font-size:0.85rem;text-align:center;"></p>
+                <div class="section-title">Get in Touch</div>
+                <p style="color:var(--muted);font-size:0.9rem;margin-bottom:1.25rem;">Ready to work with this agent? Send a direct message or request a showing from a listing.</p>
+                <div class="cta-row" style="margin-bottom:1.5rem;">
+                    <a href="/inbox" class="cta-btn-primary">✉ Send Message</a>
+                    <a href="/" class="cta-btn-secondary">🏠 Request Showing</a>
+                </div>
+                <div style="border-top:1px solid var(--border);padding-top:1.25rem;">
+                    <p style="font-size:0.85rem;font-weight:600;color:var(--primary);margin-bottom:0.75rem;">Or send a quick message below:</p>
+                    <textarea id="contactMsg" rows="4" placeholder="Hi, I'm interested in selling my home at…"
+                              style="width:100%;padding:0.75rem;border:1px solid #e5e7eb;border-radius:8px;font-size:0.9rem;resize:vertical;margin-bottom:0.75rem;font-family:inherit;"></textarea>
+                    <button onclick="sendContactMessage()"
+                            style="background:var(--primary);color:white;border:none;padding:0.75rem 1.5rem;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.95rem;">
+                        Send Message
+                    </button>
+                    <p id="contactStatus" style="margin-top:0.5rem;font-size:0.85rem;text-align:center;"></p>
+                </div>
             </div>
         `;
-        loadReviews();
     }
 
     async function loadReviews() {

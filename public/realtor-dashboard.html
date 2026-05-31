@@ -769,6 +769,242 @@
             .msg-conv-list { border-right: none; border-bottom: 1px solid var(--border); max-height: 200px; }
             .msg-thread { height: 400px; }
         }
+
+        /* ── Batch 10+11 additions ────────────────────────────────────────────── */
+
+        /* Plan Usage Bar */
+        .plan-usage-bar {
+            background: white;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            padding: 1.5rem;
+        }
+        .plan-usage-bar h3 {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+            color: var(--ink);
+        }
+        .plan-usage-meter {
+            height: 8px;
+            background: #e5e7eb;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 0.5rem 0;
+        }
+        .plan-usage-fill {
+            height: 100%;
+            border-radius: 4px;
+            background: var(--accent);
+            transition: width 0.5s;
+        }
+        .plan-usage-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            margin-top: 0.75rem;
+        }
+        .credits-balance {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-radius: 8px;
+            padding: 0.5rem 1rem;
+            font-weight: 600;
+            color: #065f46;
+            font-size: 0.9rem;
+        }
+
+        /* Buy Credits Modal */
+        .credit-pack-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+        @media (max-width: 520px) {
+            .credit-pack-grid { grid-template-columns: 1fr; }
+        }
+        .credit-pack-card {
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 1.25rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .credit-pack-card:hover,
+        .credit-pack-card.selected {
+            border-color: var(--accent);
+            background: #fff5f2;
+        }
+        .credit-pack-card.selected {
+            box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.2);
+        }
+        .credit-pack-credits {
+            font-family: 'Crimson Pro', serif;
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--ink);
+            line-height: 1;
+        }
+        .credit-pack-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #888;
+            margin: 0.25rem 0;
+        }
+        .credit-pack-price {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: var(--accent);
+        }
+        .credit-pack-name {
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: var(--ink);
+            margin-bottom: 0.5rem;
+        }
+
+        /* Premium Profile Section */
+        .premium-profile-card {
+            background: white;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            padding: 1.5rem;
+        }
+        .premium-profile-card h3 {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+            color: var(--ink);
+        }
+        .premium-upgrade-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+        @media (max-width: 480px) {
+            .premium-upgrade-grid { grid-template-columns: 1fr; }
+        }
+        .premium-duration-btn {
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            padding: 0.875rem;
+            text-align: center;
+            background: white;
+            cursor: pointer;
+            font-family: 'DM Sans', sans-serif;
+            transition: all 0.2s;
+        }
+        .premium-duration-btn:hover {
+            border-color: var(--accent);
+            background: #fff5f2;
+        }
+        .premium-duration-btn .duration-name {
+            font-weight: 700;
+            color: var(--ink);
+            font-size: 0.95rem;
+        }
+        .premium-duration-btn .duration-price {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        /* Settings completeness widget */
+        .settings-completeness-widget {
+            background: white;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            padding: 1.5rem;
+        }
+        .settings-completeness-widget h3 {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: var(--ink);
+        }
+        .completeness-step-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        .completeness-step {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-size: 0.9rem;
+        }
+        .completeness-step .step-icon {
+            font-size: 0.95rem;
+            flex-shrink: 0;
+        }
+        .completeness-step.done { color: #059669; }
+        .completeness-step.pending { color: #374151; }
+
+        /* Onboarding Status Modal */
+        .onboarding-status-modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.55);
+            z-index: 1200;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+        .onboarding-status-modal-overlay.visible {
+            display: flex;
+        }
+        .onboarding-status-modal-box {
+            background: white;
+            border-radius: 16px;
+            width: 500px;
+            max-width: 95vw;
+            padding: 2.5rem;
+            position: relative;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .onboarding-step-row {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.6rem 0;
+            border-bottom: 1px solid #f3f4f6;
+            font-size: 0.9rem;
+        }
+        .onboarding-step-row:last-child { border-bottom: none; }
+        .onboarding-step-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 0.8rem;
+        }
+        .onboarding-step-icon.done {
+            background: #d1fae5;
+            color: #059669;
+            font-weight: 700;
+        }
+        .onboarding-step-icon.pending {
+            border: 2px solid #d1d5db;
+            color: #d1d5db;
+        }
     </style>
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#0A2540">
@@ -1317,6 +1553,23 @@
             <h2 style="font-family:'Crimson Pro',serif;font-size:2rem;margin-bottom:2rem;">Settings</h2>
             <div style="max-width:680px;display:flex;flex-direction:column;gap:1.5rem;">
 
+                <!-- Plan & Credits Usage Bar -->
+                <div class="plan-usage-bar" id="planUsageBar">
+                    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;margin-bottom:0.25rem;">
+                        <h3 id="planUsagePlanName">Loading plan…</h3>
+                        <span id="planUsageProposalText" style="font-size:0.85rem;color:#666;"></span>
+                    </div>
+                    <div class="plan-usage-meter">
+                        <div class="plan-usage-fill" id="planUsageFill" style="width:0%"></div>
+                    </div>
+                    <div class="plan-usage-row">
+                        <span class="credits-balance" id="planCreditsBalance" style="display:none;">
+                            🪙 <span id="planCreditsCount">0</span> lead credits
+                        </span>
+                        <button onclick="openBuyCreditsModal()" class="btn btn-primary" style="padding:0.55rem 1.25rem;font-size:0.875rem;">Buy Credits</button>
+                    </div>
+                </div>
+
                 <!-- Subscription card (rendered dynamically by renderSubscriptionCard()) -->
                 <div id="subscriptionCard"></div>
 
@@ -1362,6 +1615,94 @@
                     <div id="savedSearchesLoading" style="color:#9ca3af;font-size:0.9rem;">Loading…</div>
                     <div id="savedSearchesList" style="display:none;flex-direction:column;gap:0.75rem;"></div>
                     <div id="savedSearchesEmpty" style="display:none;color:#9ca3af;font-size:0.9rem;padding:0.5rem 0;">No saved searches yet. Create one to get alerts for new listings.</div>
+                </div>
+
+                <!-- Availability -->
+                <div style="background:white;border-radius:12px;border:1px solid var(--border);padding:1.5rem;">
+                    <h3 style="font-family:'Crimson Pro',serif;font-size:1.3rem;font-weight:700;margin-bottom:0.25rem;color:var(--ink);">Availability</h3>
+                    <p style="color:#6b7280;font-size:0.875rem;margin-bottom:1.25rem;">Set the days and times you're available to meet with sellers.</p>
+                    <!-- Add slot form -->
+                    <div style="display:flex;gap:0.75rem;flex-wrap:wrap;align-items:flex-end;margin-bottom:1.25rem;">
+                        <div style="display:flex;flex-direction:column;gap:0.3rem;">
+                            <label style="font-size:0.8rem;font-weight:600;color:#374151;">Day</label>
+                            <select id="availDay" style="padding:0.6rem 0.75rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.875rem;">
+                                <option value="0">Sunday</option>
+                                <option value="1">Monday</option>
+                                <option value="2">Tuesday</option>
+                                <option value="3">Wednesday</option>
+                                <option value="4">Thursday</option>
+                                <option value="5">Friday</option>
+                                <option value="6">Saturday</option>
+                            </select>
+                        </div>
+                        <div style="display:flex;flex-direction:column;gap:0.3rem;">
+                            <label style="font-size:0.8rem;font-weight:600;color:#374151;">Start</label>
+                            <input type="time" id="availStart" style="padding:0.6rem 0.75rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.875rem;">
+                        </div>
+                        <div style="display:flex;flex-direction:column;gap:0.3rem;">
+                            <label style="font-size:0.8rem;font-weight:600;color:#374151;">End</label>
+                            <input type="time" id="availEnd" style="padding:0.6rem 0.75rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.875rem;">
+                        </div>
+                        <button onclick="addAvailabilitySlot()" style="background:var(--accent);color:white;border:none;padding:0.6rem 1.25rem;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.875rem;font-family:inherit;white-space:nowrap;">+ Add</button>
+                    </div>
+                    <div id="availabilityLoading" style="color:#9ca3af;font-size:0.9rem;">Loading…</div>
+                    <div id="availabilityList" style="display:none;flex-direction:column;gap:0.5rem;"></div>
+                    <div id="availabilityEmpty" style="display:none;color:#9ca3af;font-size:0.875rem;padding:0.5rem 0;">No availability slots yet. Add your first one above.</div>
+                </div>
+
+                <!-- Profile Completeness Widget (Settings) -->
+                <div class="settings-completeness-widget" id="settingsCompletenessWidget" style="display:none;">
+                    <h3>Profile Completeness</h3>
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem;">
+                        <span id="settingsCompletenessLabel" style="font-size:0.95rem;font-weight:600;color:#374151;">Loading…</span>
+                        <span id="settingsCompletenessPercent" style="font-size:1.1rem;font-weight:700;color:#FF6B35;">—</span>
+                    </div>
+                    <div style="height:10px;background:#e5e7eb;border-radius:6px;overflow:hidden;margin-bottom:1rem;">
+                        <div id="settingsCompletenessBar" style="height:100%;width:0%;border-radius:6px;transition:width 0.5s,background 0.5s;background:var(--accent);"></div>
+                    </div>
+                    <div class="completeness-step-list" id="settingsCompletenessSteps"></div>
+                </div>
+
+                <!-- Premium Profile -->
+                <div class="premium-profile-card" id="premiumProfileCard">
+                    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;margin-bottom:0.25rem;">
+                        <h3>Premium Profile</h3>
+                        <span id="premiumStatusBadge" style="font-size:0.82rem;font-weight:600;padding:0.3rem 0.85rem;border-radius:20px;background:#f3f4f6;color:#374151;">Checking…</span>
+                    </div>
+                    <p style="font-size:0.875rem;color:#666;margin-bottom:1rem;">Premium profiles appear at the top of search results with a highlighted badge.</p>
+                    <div id="premiumUpgradeSection">
+                        <div class="premium-upgrade-grid">
+                            <button class="premium-duration-btn" onclick="premiumCheckout('monthly')">
+                                <div class="duration-name">1 Month</div>
+                                <div class="duration-price">$49</div>
+                            </button>
+                            <button class="premium-duration-btn" onclick="premiumCheckout('quarterly')">
+                                <div class="duration-name">3 Months</div>
+                                <div class="duration-price">$99</div>
+                                <div style="font-size:0.72rem;color:#10b981;font-weight:600;margin-top:2px;">Save 33%</div>
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Banner image upload -->
+                    <div style="margin-top:1.25rem;padding-top:1.25rem;border-top:1px solid var(--border);">
+                        <div style="font-weight:600;font-size:0.9rem;color:var(--ink);margin-bottom:0.4rem;">Banner Image</div>
+                        <div style="font-size:0.82rem;color:#666;margin-bottom:0.65rem;">Shown at the top of your public profile. JPG/PNG, max 5MB.</div>
+                        <label style="cursor:pointer;display:inline-block;padding:0.45rem 1rem;border:1.5px solid var(--border);border-radius:8px;font-size:0.85rem;font-weight:600;color:var(--ink);">
+                            Upload Banner
+                            <input type="file" id="bannerInput" accept="image/*" style="display:none;" onchange="uploadBannerImage(this)">
+                        </label>
+                        <span id="bannerUploadStatus" style="font-size:0.8rem;color:#666;margin-left:0.75rem;"></span>
+                    </div>
+                    <!-- Video URL -->
+                    <div style="margin-top:1rem;">
+                        <div style="font-weight:600;font-size:0.9rem;color:var(--ink);margin-bottom:0.4rem;">Profile Video URL</div>
+                        <div style="font-size:0.82rem;color:#666;margin-bottom:0.65rem;">YouTube or Vimeo link shown on your profile page.</div>
+                        <div style="display:flex;gap:0.5rem;">
+                            <input type="url" id="profileVideoUrl" placeholder="https://youtube.com/watch?v=…" style="flex:1;padding:0.6rem 0.875rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.875rem;">
+                            <button onclick="saveVideoUrl()" style="background:var(--accent);color:white;border:none;padding:0.6rem 1.1rem;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.875rem;font-family:inherit;white-space:nowrap;">Save</button>
+                        </div>
+                        <span id="videoSaveStatus" style="font-size:0.8rem;color:#059669;display:none;margin-top:0.35rem;">✓ Saved</span>
+                    </div>
                 </div>
 
                 <!-- Change Password -->
@@ -1745,7 +2086,7 @@
                 if (view === 'messages') { window.location.href = '/inbox'; return; }
                 if (view === 'reviews') loadReviews();
                 if (view === 'referrals') loadReferrals();
-                if (view === 'settings') { renderSubscriptionCard(); loadRNotifPrefs(); loadTemplates(); loadSavedSearches(); }
+                if (view === 'settings') { renderSubscriptionCard(); loadRNotifPrefs(); loadTemplates(); loadSavedSearches(); loadSubscriptionLimits(); loadPremiumStatus(); loadSettingsCompleteness(); loadAvailability(); }
             });
         });
 
@@ -3655,6 +3996,9 @@
             loadNotifications();
             loadUnreadMsgCount();
             checkStaleRealtor();
+            // Batch 10+11 init
+            loadSubscriptionLimits();
+            setTimeout(checkOnboardingStatus, 800);
             setInterval(loadNotifications, 60000);
             setInterval(loadUnreadMsgCount, 60000);
 
@@ -3911,6 +4255,7 @@
                         </div>
                         <div style="display:flex;align-items:center;gap:0.75rem;flex-shrink:0;">
                             <span style="background:${color}20;color:${color};padding:4px 12px;border-radius:20px;font-size:0.8rem;font-weight:700;text-transform:capitalize;">${p.status}</span>
+                            <button onclick="openFollowUpModal(${p.id})" style="background:none;border:1px solid var(--accent);color:var(--accent);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:0.8rem;font-weight:600;">Follow Up</button>
                             ${p.status === 'pending' ? `<button onclick="deleteProposal(${p.id})" style="background:none;border:1px solid #e5e7eb;color:#666;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:0.8rem;">Withdraw</button>` : ''}
                         </div>
                     </div>`;
@@ -3944,6 +4289,107 @@
                 showToast(accept ? 'Counter-offer accepted!' : 'Counter-offer declined');
                 typeof loadMyProposals === 'function' && loadMyProposals();
             } catch { showToast('Failed to respond to counter-offer', 'error'); }
+        }
+
+        // ─── Follow-up Modal ─────────────────────────────────────────────────────
+        let _followUpProposalId = null;
+        function openFollowUpModal(proposalId) {
+            _followUpProposalId = proposalId;
+            document.getElementById('followUpMessage').value = '';
+            document.getElementById('followUpError').style.display = 'none';
+            document.getElementById('followUpModal').style.display = 'flex';
+        }
+        function closeFollowUpModal() {
+            _followUpProposalId = null;
+            document.getElementById('followUpModal').style.display = 'none';
+        }
+        async function sendFollowUp() {
+            const message = document.getElementById('followUpMessage').value.trim();
+            const errEl = document.getElementById('followUpError');
+            const btn = document.getElementById('followUpSendBtn');
+            if (!message) { errEl.textContent = 'Please enter a message.'; errEl.style.display = 'block'; return; }
+            errEl.style.display = 'none';
+            btn.disabled = true; btn.textContent = 'Sending…';
+            try {
+                const res = await fetch(`/api/proposals/${_followUpProposalId}/followup`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ message }),
+                });
+                if (!res.ok) {
+                    const d = await res.json().catch(() => ({}));
+                    errEl.textContent = d.error || 'Failed to send follow-up. Please try again.';
+                    errEl.style.display = 'block';
+                } else {
+                    closeFollowUpModal();
+                    showToast('Follow-up sent!');
+                }
+            } catch(e) {
+                errEl.textContent = 'Network error. Please try again.';
+                errEl.style.display = 'block';
+            } finally {
+                btn.disabled = false; btn.textContent = 'Send Message';
+            }
+        }
+
+        // ─── Availability ─────────────────────────────────────────────────────────
+        const DAY_NAMES = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+        async function loadAvailability() {
+            const loading = document.getElementById('availabilityLoading');
+            const list = document.getElementById('availabilityList');
+            const empty = document.getElementById('availabilityEmpty');
+            if (!loading) return;
+            loading.style.display = 'block'; list.style.display = 'none'; empty.style.display = 'none';
+            try {
+                const res = await fetch('/api/availability', { credentials: 'include' });
+                if (!res.ok) { loading.textContent = 'Could not load availability.'; return; }
+                const slots = await res.json();
+                loading.style.display = 'none';
+                if (!slots.length) { empty.style.display = 'block'; return; }
+                // Group by day
+                const byDay = {};
+                slots.forEach(s => { (byDay[s.day_of_week] = byDay[s.day_of_week] || []).push(s); });
+                list.style.display = 'flex';
+                list.innerHTML = Object.keys(byDay).sort((a,b) => a-b).map(day => {
+                    const daySlots = byDay[day].map(s =>
+                        `<span style="display:inline-flex;align-items:center;gap:0.4rem;background:#f3f4f6;border-radius:6px;padding:3px 10px;font-size:0.85rem;">
+                            ${s.start_time.slice(0,5)}–${s.end_time.slice(0,5)}
+                            <button onclick="deleteAvailabilitySlot(${s.id})" style="background:none;border:none;cursor:pointer;color:#9ca3af;font-size:0.9rem;line-height:1;padding:0;" title="Remove">×</button>
+                        </span>`
+                    ).join('');
+                    return `<div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;padding:0.4rem 0;border-bottom:1px solid #f3f4f6;">
+                        <span style="font-weight:600;font-size:0.875rem;min-width:90px;color:#374151;">${DAY_NAMES[day]}</span>
+                        <div style="display:flex;flex-wrap:wrap;gap:0.5rem;">${daySlots}</div>
+                    </div>`;
+                }).join('');
+            } catch(e) { loading.textContent = 'Error loading availability.'; }
+        }
+        async function addAvailabilitySlot() {
+            const day_of_week = parseInt(document.getElementById('availDay').value);
+            const start_time = document.getElementById('availStart').value;
+            const end_time = document.getElementById('availEnd').value;
+            if (!start_time || !end_time) { showToast('Please set a start and end time.', 'error'); return; }
+            if (start_time >= end_time) { showToast('End time must be after start time.', 'error'); return; }
+            try {
+                const res = await fetch('/api/availability', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ day_of_week, start_time, end_time }),
+                });
+                if (!res.ok) { const d = await res.json().catch(()=>({})); showToast(d.error || 'Failed to add slot.', 'error'); return; }
+                document.getElementById('availStart').value = '';
+                document.getElementById('availEnd').value = '';
+                loadAvailability();
+            } catch(e) { showToast('Network error. Please try again.', 'error'); }
+        }
+        async function deleteAvailabilitySlot(id) {
+            try {
+                const res = await fetch(`/api/availability/${id}`, { method: 'DELETE', credentials: 'include' });
+                if (res.ok) loadAvailability();
+                else showToast('Failed to remove slot.', 'error');
+            } catch(e) { showToast('Network error.', 'error'); }
         }
 
         function showProposalModal(listingId, listingAddress) {
@@ -4433,6 +4879,319 @@
             } catch(e) { showToast('Network error', 'error'); }
         }
 
+        // ===== BATCH 10+11: PLAN USAGE BAR =====
+
+        async function loadSubscriptionLimits() {
+            try {
+                const res = await fetch('/api/subscription/limits', { credentials: 'include' });
+                if (!res.ok) return;
+                const d = await res.json();
+
+                // Plan name
+                const planName = document.getElementById('planUsagePlanName');
+                if (planName) planName.textContent = d.plan_label || d.plan || 'Free Plan';
+
+                // Proposals used
+                const used = d.proposals_used ?? 0;
+                const limit = d.proposals_limit; // null = unlimited
+                const proposalText = document.getElementById('planUsageProposalText');
+                const fill = document.getElementById('planUsageFill');
+                if (proposalText) {
+                    proposalText.textContent = limit == null
+                        ? `${used} proposals sent (Unlimited)`
+                        : `${used} / ${limit} proposals this month`;
+                }
+                if (fill) {
+                    const pct = limit ? Math.min(100, Math.round((used / limit) * 100)) : 0;
+                    fill.style.width = pct + '%';
+                    fill.style.background = pct >= 90 ? '#ef4444' : pct >= 70 ? '#f59e0b' : 'var(--accent)';
+                }
+
+                // Credits
+                const credits = d.lead_credits ?? null;
+                if (credits !== null) {
+                    const balanceEl = document.getElementById('planCreditsBalance');
+                    const countEl = document.getElementById('planCreditsCount');
+                    if (balanceEl) balanceEl.style.display = 'inline-flex';
+                    if (countEl) countEl.textContent = credits;
+                }
+            } catch (e) { /* silent */ }
+        }
+
+        // ===== BATCH 10+11: BUY CREDITS MODAL =====
+
+        let _selectedCreditPack = null;
+
+        async function openBuyCreditsModal() {
+            _selectedCreditPack = null;
+            document.getElementById('buyCreditsError').style.display = 'none';
+            document.getElementById('buyCreditsModal').style.display = 'flex';
+            // Try to load packs dynamically; fallback to hardcoded cards above
+            try {
+                const res = await fetch('/api/credits/packs', { credentials: 'include' });
+                if (!res.ok) return;
+                const packs = await res.json();
+                if (!packs || !packs.length) return;
+                const grid = document.getElementById('creditPackGrid');
+                grid.innerHTML = packs.map(p => `
+                    <div class="credit-pack-card" onclick="selectCreditPack(this,'${esc(p.id || p.name)}')">
+                        <div class="credit-pack-name">${esc(p.name)}</div>
+                        <div class="credit-pack-credits">${p.credits}</div>
+                        <div class="credit-pack-label">credits</div>
+                        <div class="credit-pack-price">$${p.price}</div>
+                        ${p.badge ? `<div style="font-size:0.72rem;color:#10b981;font-weight:600;margin-top:3px;">${esc(p.badge)}</div>` : ''}
+                    </div>
+                `).join('');
+            } catch (e) { /* use hardcoded fallback */ }
+        }
+
+        function closeBuyCreditsModal() {
+            document.getElementById('buyCreditsModal').style.display = 'none';
+            _selectedCreditPack = null;
+        }
+
+        function selectCreditPack(el, packId) {
+            document.querySelectorAll('.credit-pack-card').forEach(c => c.classList.remove('selected'));
+            el.classList.add('selected');
+            _selectedCreditPack = packId;
+        }
+
+        async function checkoutCreditPack() {
+            if (!_selectedCreditPack) {
+                const errEl = document.getElementById('buyCreditsError');
+                errEl.textContent = 'Please select a pack first.';
+                errEl.style.display = 'block';
+                return;
+            }
+            const btn = document.getElementById('buyCreditsCheckoutBtn');
+            btn.disabled = true; btn.textContent = 'Redirecting…';
+            try {
+                const res = await fetch('/api/credits/checkout', {
+                    method: 'POST', credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ pack: _selectedCreditPack })
+                });
+                const d = await res.json();
+                if (!res.ok || !d.url) {
+                    const errEl = document.getElementById('buyCreditsError');
+                    errEl.textContent = d.error || 'Failed to start checkout. Please try again.';
+                    errEl.style.display = 'block';
+                    btn.disabled = false; btn.textContent = 'Continue to Checkout';
+                    return;
+                }
+                window.location.href = d.url;
+            } catch (e) {
+                const errEl = document.getElementById('buyCreditsError');
+                errEl.textContent = 'Network error. Please try again.';
+                errEl.style.display = 'block';
+                btn.disabled = false; btn.textContent = 'Continue to Checkout';
+            }
+        }
+
+        // ===== BATCH 10+11: PREMIUM PROFILE =====
+
+        async function loadPremiumStatus() {
+            try {
+                const res = await fetch('/api/profile/premium-status', { credentials: 'include' });
+                if (!res.ok) return;
+                const d = await res.json();
+
+                const badge = document.getElementById('premiumStatusBadge');
+                const upgradeSection = document.getElementById('premiumUpgradeSection');
+                if (d.active) {
+                    const expiry = d.expires_at ? new Date(d.expires_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : null;
+                    if (badge) {
+                        badge.textContent = expiry ? `Active until ${expiry}` : 'Active';
+                        badge.style.background = '#d1fae5';
+                        badge.style.color = '#065f46';
+                    }
+                    // Hide upgrade buttons when already active
+                    if (upgradeSection) upgradeSection.style.display = 'none';
+                } else {
+                    if (badge) {
+                        badge.textContent = 'Not active';
+                        badge.style.background = '#f3f4f6';
+                        badge.style.color = '#6b7280';
+                    }
+                    if (upgradeSection) upgradeSection.style.display = 'block';
+                }
+
+                // Pre-fill video url if present
+                if (d.video_url) {
+                    const videoInput = document.getElementById('profileVideoUrl');
+                    if (videoInput) videoInput.value = d.video_url;
+                }
+            } catch (e) { /* silent */ }
+        }
+
+        async function premiumCheckout(duration) {
+            try {
+                const res = await fetch('/api/profile/premium-checkout', {
+                    method: 'POST', credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ duration })
+                });
+                const d = await res.json();
+                if (!res.ok || !d.url) { showToast(d.error || 'Failed to start checkout', 'error'); return; }
+                window.location.href = d.url;
+            } catch (e) { showToast('Network error. Please try again.', 'error'); }
+        }
+
+        async function uploadBannerImage(input) {
+            if (!input.files[0]) return;
+            const statusEl = document.getElementById('bannerUploadStatus');
+            statusEl.textContent = 'Uploading…';
+            const fd = new FormData();
+            fd.append('banner', input.files[0]);
+            try {
+                const res = await fetch('/api/profile/banner', { method: 'POST', credentials: 'include', body: fd });
+                if (!res.ok) throw new Error();
+                statusEl.textContent = '✓ Banner uploaded';
+                setTimeout(() => { statusEl.textContent = ''; }, 4000);
+            } catch (e) {
+                statusEl.textContent = 'Upload failed. Try again.';
+            }
+        }
+
+        async function saveVideoUrl() {
+            const url = document.getElementById('profileVideoUrl').value.trim();
+            const statusEl = document.getElementById('videoSaveStatus');
+            statusEl.style.display = 'none';
+            try {
+                const res = await fetch('/api/profile/video', {
+                    method: 'PUT', credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ video_url: url })
+                });
+                if (!res.ok) { const d = await res.json(); showToast(d.error || 'Failed to save', 'error'); return; }
+                statusEl.style.display = 'block';
+                setTimeout(() => { statusEl.style.display = 'none'; }, 3000);
+            } catch (e) { showToast('Network error. Please try again.', 'error'); }
+        }
+
+        // ===== BATCH 10+11: PROFILE COMPLETENESS WIDGET (SETTINGS) =====
+
+        async function loadSettingsCompleteness() {
+            try {
+                const res = await fetch('/api/profile/completeness', { credentials: 'include' });
+                if (!res.ok) {
+                    // Fallback: compute from currentUser + profile form values
+                    computeCompletenessFromDOM();
+                    return;
+                }
+                const { score, items } = await res.json();
+                renderSettingsCompletenessWidget(score, items);
+            } catch (e) {
+                computeCompletenessFromDOM();
+            }
+        }
+
+        function computeCompletenessFromDOM() {
+            // Use profile form fields as fallback
+            const form = document.getElementById('profileForm');
+            if (!form) return;
+            const fields = [
+                { key: 'Photo', done: !!document.querySelector('#profilePhotoWrap img') },
+                { key: 'Bio', done: (form.elements.bio?.value || '').trim().length >= 20 },
+                { key: 'Phone', done: !!(form.elements.phone?.value || '').trim() },
+                { key: 'License Number', done: !!(form.elements.licenseNumber?.value || '').trim() },
+                { key: 'Service Areas', done: !!(form.elements.serviceAreas?.value || '').trim() },
+                { key: 'Years Experience', done: !!(form.elements.yearsExperience?.value || '').trim() },
+            ];
+            const done = fields.filter(f => f.done).length;
+            const score = Math.round((done / fields.length) * 100);
+            const items = fields.map(f => ({ label: f.key, done: f.done }));
+            renderSettingsCompletenessWidget(score, items);
+        }
+
+        function renderSettingsCompletenessWidget(score, items) {
+            const widget = document.getElementById('settingsCompletenessWidget');
+            if (!widget) return;
+            widget.style.display = 'block';
+
+            const pct = Math.round(score);
+            const bar = document.getElementById('settingsCompletenessBar');
+            const label = document.getElementById('settingsCompletenessLabel');
+            const pctEl = document.getElementById('settingsCompletenessPercent');
+            const stepsEl = document.getElementById('settingsCompletenessSteps');
+
+            if (bar) { bar.style.width = pct + '%'; bar.style.background = pct >= 100 ? '#10B981' : 'var(--accent)'; }
+            if (label) label.textContent = `Profile ${pct}% complete`;
+            if (pctEl) { pctEl.textContent = pct + '%'; pctEl.style.color = pct >= 100 ? '#10B981' : '#FF6B35'; }
+
+            if (stepsEl && items) {
+                const labelMap = {
+                    has_photo: 'Profile Photo',
+                    has_bio: 'Bio',
+                    has_service_areas: 'Service Areas',
+                    has_license: 'License Number',
+                    has_brokerage: 'Brokerage',
+                    Photo: 'Profile Photo',
+                    Bio: 'Bio',
+                    Phone: 'Phone',
+                    'License Number': 'License Number',
+                    'Service Areas': 'Service Areas',
+                    'Years Experience': 'Years of Experience',
+                };
+                stepsEl.innerHTML = items.map(i => {
+                    const name = labelMap[i.label] || i.label;
+                    const isDone = i.done;
+                    return `<div class="completeness-step ${isDone ? 'done' : 'pending'}">
+                        <span class="step-icon">${isDone ? '✓' : '○'}</span>
+                        <span>${esc(name)}</span>
+                    </div>`;
+                }).join('');
+            }
+        }
+
+        // ===== BATCH 10+11: ONBOARDING STATUS MODAL =====
+
+        async function checkOnboardingStatus() {
+            if (sessionStorage.getItem('onboarding_status_dismissed')) return;
+            try {
+                const res = await fetch('/api/onboarding/status', { credentials: 'include' });
+                if (!res.ok) return;
+                const d = await res.json();
+                if (d.completed) return;
+
+                const stepsEl = document.getElementById('onboardingStatusSteps');
+                if (stepsEl && d.steps && d.steps.length) {
+                    const stepLinks = {
+                        profile: '/realtor-dashboard.html#settings',
+                        photo: '/realtor-dashboard.html#profile',
+                        bio: '/realtor-dashboard.html#profile',
+                        license: '/realtor-dashboard.html#profile',
+                        first_proposal: null, // handled via button
+                        service_areas: '/realtor-dashboard.html#profile',
+                    };
+                    stepsEl.innerHTML = d.steps.map(s => {
+                        const link = stepLinks[s.key] || null;
+                        const isDone = s.done || s.completed;
+                        return `<div class="onboarding-step-row">
+                            <div class="onboarding-step-icon ${isDone ? 'done' : 'pending'}">${isDone ? '✓' : '○'}</div>
+                            <div style="flex:1;font-weight:${isDone ? '400' : '600'};color:${isDone ? '#6b7280' : 'var(--ink)'};">${esc(s.label || s.key)}</div>
+                            ${!isDone && link ? `<a href="${esc(link)}" style="font-size:0.8rem;color:var(--accent);font-weight:600;text-decoration:none;white-space:nowrap;">Get Started →</a>` : ''}
+                            ${!isDone && s.key === 'first_proposal' ? `<button onclick="document.querySelector('[data-view=browse]').click();dismissOnboardingStatusModal()" style="background:none;border:none;color:var(--accent);font-size:0.8rem;font-weight:600;cursor:pointer;padding:0;font-family:inherit;">Browse Listings →</button>` : ''}
+                        </div>`;
+                    }).join('');
+                }
+
+                document.getElementById('onboardingStatusModal').classList.add('visible');
+            } catch (e) { /* silent */ }
+        }
+
+        function dismissOnboardingStatusModal() {
+            document.getElementById('onboardingStatusModal').classList.remove('visible');
+        }
+
+        async function skipOnboardingStatusModal() {
+            sessionStorage.setItem('onboarding_status_dismissed', '1');
+            dismissOnboardingStatusModal();
+            try {
+                await fetch('/api/onboarding/dismiss', { method: 'POST', credentials: 'include' });
+            } catch (e) { /* silent */ }
+        }
+
         // Hook new tabs into tab-switching logic
         document.addEventListener('DOMContentLoaded', () => {
             document.querySelectorAll('.tab[data-view="my-proposals"]').forEach(el => {
@@ -4606,6 +5365,68 @@
                     <button type="button" onclick="closeDealModal()" style="background:#f3f4f6;color:#374151;border:none;border-radius:8px;padding:12px 20px;font-weight:600;cursor:pointer;font-family:inherit;">Cancel</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Follow-up Modal -->
+    <div id="followUpModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1100;align-items:center;justify-content:center;padding:1rem;">
+        <div style="background:white;border-radius:16px;padding:2rem;max-width:460px;width:100%;position:relative;">
+            <button onclick="closeFollowUpModal()" style="position:absolute;top:1rem;right:1rem;background:none;border:none;font-size:1.3rem;cursor:pointer;color:#9ca3af;">✕</button>
+            <h3 style="font-family:'Crimson Pro',serif;font-size:1.5rem;font-weight:700;margin-bottom:0.5rem;color:var(--ink);">Send Follow-Up</h3>
+            <p style="color:#6b7280;font-size:0.875rem;margin-bottom:1.25rem;">Send a follow-up message to the seller about this proposal.</p>
+            <textarea id="followUpMessage" rows="5" placeholder="Write your follow-up message here…" style="width:100%;padding:0.75rem 1rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.95rem;resize:vertical;margin-bottom:1rem;"></textarea>
+            <div id="followUpError" style="display:none;color:#dc2626;font-size:0.85rem;margin-bottom:0.75rem;"></div>
+            <div style="display:flex;gap:0.75rem;">
+                <button onclick="sendFollowUp()" id="followUpSendBtn" style="flex:1;background:var(--accent);color:white;border:none;border-radius:8px;padding:0.75rem;font-weight:700;cursor:pointer;font-family:inherit;">Send Message</button>
+                <button onclick="closeFollowUpModal()" style="background:#f3f4f6;color:#374151;border:none;border-radius:8px;padding:0.75rem 1.25rem;font-weight:600;cursor:pointer;font-family:inherit;">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Buy Credits Modal -->
+    <div id="buyCreditsModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:1200;align-items:center;justify-content:center;padding:1rem;">
+        <div style="background:white;border-radius:16px;width:520px;max-width:95vw;padding:2rem;position:relative;max-height:90vh;overflow-y:auto;">
+            <button onclick="closeBuyCreditsModal()" style="position:absolute;top:1rem;right:1rem;background:none;border:none;font-size:1.3rem;cursor:pointer;color:#9ca3af;">✕</button>
+            <h2 style="font-family:'Crimson Pro',serif;font-size:1.6rem;font-weight:700;margin-bottom:0.4rem;color:var(--ink);">Buy Lead Credits</h2>
+            <p style="color:#666;font-size:0.9rem;margin-bottom:1.25rem;">Credits let you unlock individual leads. Choose a pack that fits your needs.</p>
+            <div class="credit-pack-grid" id="creditPackGrid">
+                <!-- Packs injected by JS; fallback below -->
+                <div class="credit-pack-card" onclick="selectCreditPack(this,'starter')">
+                    <div class="credit-pack-name">Starter</div>
+                    <div class="credit-pack-credits">5</div>
+                    <div class="credit-pack-label">credits</div>
+                    <div class="credit-pack-price">$45</div>
+                </div>
+                <div class="credit-pack-card" onclick="selectCreditPack(this,'value')">
+                    <div class="credit-pack-name">Value</div>
+                    <div class="credit-pack-credits">10</div>
+                    <div class="credit-pack-label">credits</div>
+                    <div class="credit-pack-price">$79</div>
+                    <div style="font-size:0.72rem;color:#10b981;font-weight:600;margin-top:3px;">Best value</div>
+                </div>
+                <div class="credit-pack-card" onclick="selectCreditPack(this,'pro')">
+                    <div class="credit-pack-name">Pro</div>
+                    <div class="credit-pack-credits">25</div>
+                    <div class="credit-pack-label">credits</div>
+                    <div class="credit-pack-price">$149</div>
+                    <div style="font-size:0.72rem;color:#10b981;font-weight:600;margin-top:3px;">Save 33%</div>
+                </div>
+            </div>
+            <div id="buyCreditsError" style="display:none;color:#dc2626;font-size:0.875rem;margin-bottom:0.75rem;"></div>
+            <button id="buyCreditsCheckoutBtn" onclick="checkoutCreditPack()" style="width:100%;background:var(--accent);color:white;border:none;border-radius:8px;padding:0.875rem;font-weight:700;font-size:1rem;cursor:pointer;font-family:inherit;">Continue to Checkout</button>
+        </div>
+    </div>
+
+    <!-- Onboarding Status Modal -->
+    <div class="onboarding-status-modal-overlay" id="onboardingStatusModal">
+        <div class="onboarding-status-modal-box">
+            <h2 style="font-family:'Crimson Pro',serif;font-size:1.8rem;font-weight:700;margin-bottom:0.5rem;color:var(--ink);">Welcome to RealtorFinder!</h2>
+            <p style="color:#666;font-size:0.9rem;margin-bottom:1.5rem;">Here's what to do to get started and win your first listing.</p>
+            <div id="onboardingStatusSteps" style="margin-bottom:1.5rem;"></div>
+            <div style="display:flex;gap:0.75rem;">
+                <button onclick="dismissOnboardingStatusModal()" style="flex:1;background:var(--accent);color:white;border:none;border-radius:8px;padding:0.75rem;font-weight:700;cursor:pointer;font-family:inherit;">Get Started</button>
+                <button onclick="skipOnboardingStatusModal()" style="background:#f3f4f6;color:#374151;border:none;border-radius:8px;padding:0.75rem 1.25rem;font-weight:600;cursor:pointer;font-family:inherit;">Skip for now</button>
+            </div>
         </div>
     </div>
 

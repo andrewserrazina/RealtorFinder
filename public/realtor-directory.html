@@ -107,7 +107,7 @@
         .realtor-card {
             background: white; border: 1px solid var(--border); border-radius: 12px;
             overflow: hidden; transition: box-shadow 0.2s, transform 0.2s;
-            display: flex; flex-direction: column;
+            display: flex; flex-direction: column; position: relative;
         }
         .realtor-card:hover { box-shadow: 0 8px 24px rgba(0,0,0,0.1); transform: translateY(-2px); }
         .card-photo {
@@ -148,6 +148,60 @@
         @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
         .skeleton-card { height: 320px; border-radius: 12px; }
 
+        /* LEADERBOARD */
+        .leaderboard-section {
+            background: var(--soft-bg); border-bottom: 1px solid var(--border);
+            padding: 2.5rem 2rem;
+        }
+        .leaderboard-section h2 {
+            font-family: 'Playfair Display', serif; font-size: 1.5rem; color: var(--primary);
+            margin-bottom: 1.25rem; text-align: center;
+        }
+        .leaderboard-row {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;
+            max-width: 1100px; margin: 0 auto;
+            overflow-x: auto;
+        }
+        .lb-card {
+            background: white; border: 1px solid var(--border); border-radius: 12px;
+            padding: 1.25rem; display: flex; flex-direction: column; align-items: center;
+            text-align: center; text-decoration: none; color: inherit;
+            transition: box-shadow 0.2s, transform 0.2s;
+        }
+        .lb-card:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.1); transform: translateY(-2px); }
+        .lb-avatar {
+            width: 60px; height: 60px; border-radius: 50%;
+            background: var(--primary); color: white;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.4rem; font-weight: 700; font-family: 'Playfair Display', serif;
+            margin-bottom: 0.75rem; overflow: hidden; flex-shrink: 0;
+        }
+        .lb-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .lb-name { font-size: 0.95rem; font-weight: 700; color: var(--primary); margin-bottom: 0.15rem; }
+        .lb-company { font-size: 0.78rem; color: var(--text-light); margin-bottom: 0.5rem; }
+        .lb-stars { color: #f59e0b; font-size: 0.85rem; margin-bottom: 0.35rem; }
+        .lb-deals { font-size: 0.78rem; color: var(--text-light); margin-bottom: 0.5rem; }
+        .lb-verified {
+            display: inline-block; background: #ECFDF5; color: #059669;
+            font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 20px;
+        }
+
+        /* BADGE CHIPS */
+        .card-badges { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.5rem; }
+        .badge-chip {
+            display: inline-block; font-size: 0.7rem; font-weight: 700;
+            padding: 2px 8px; border-radius: 20px;
+        }
+        .badge-verified { background: #ECFDF5; color: #059669; }
+        .badge-featured { background: #fff3ed; color: #c2410c; }
+        .badge-premium-card {
+            position: absolute; top: 10px; right: 10px;
+            background: #FF6B35; color: white;
+            font-size: 0.7rem; font-weight: 700;
+            padding: 3px 8px; border-radius: 20px;
+            z-index: 1; pointer-events: none;
+        }
+
         /* FOOTER */
         footer { background: var(--primary); color: rgba(255,255,255,0.7); text-align: center; padding: 2rem; font-size: 0.85rem; }
         footer a { color: rgba(255,255,255,0.85); text-decoration: none; }
@@ -159,6 +213,11 @@
             .directory-grid { padding: 1rem 1rem 3rem; gap: 1rem; }
             .hero { padding: 2.5rem 1rem 2rem; }
             .hero-stats { gap: 1.5rem; }
+            .leaderboard-section { padding: 2rem 1rem; }
+            .leaderboard-row { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 480px) {
+            .leaderboard-row { grid-template-columns: 1fr 1fr; }
         }
     </style>
     <link rel="manifest" href="/manifest.json">
@@ -196,6 +255,11 @@
             <div class="label">Cities & Towns</div>
         </div>
     </div>
+</section>
+
+<section class="leaderboard-section" id="leaderboardSection" style="display:none;">
+    <h2>🏆 Top Realtors This Month</h2>
+    <div class="leaderboard-row" id="leaderboardRow"></div>
 </section>
 
 <div class="filter-bar">
@@ -255,6 +319,51 @@
     let currentFilters = {};
     let savedRealtorIds = new Set();
     let currentUserId = null;
+
+    // Leaderboard
+    function renderStars(avg) {
+        if (!avg) return '';
+        const full = Math.round(avg);
+        return '★'.repeat(Math.min(full, 5)) + '☆'.repeat(Math.max(0, 5 - full));
+    }
+
+    async function loadLeaderboard() {
+        try {
+            const res = await fetch(`${API}/api/realtors/leaderboard?limit=6`);
+            if (!res.ok) return;
+            const data = await res.json();
+            const realtors = Array.isArray(data) ? data : (data.realtors || []);
+            if (!realtors.length) return;
+
+            const section = document.getElementById('leaderboardSection');
+            const row = document.getElementById('leaderboardRow');
+
+            row.innerHTML = realtors.map(r => {
+                const avatarInner = r.profile_photo
+                    ? `<img src="${esc(r.profile_photo)}" alt="${esc(r.first_name)} ${esc(r.last_name)}" loading="lazy">`
+                    : esc(initials(r.first_name, r.last_name));
+                const stars = renderStars(r.avg_rating);
+                const ratingLine = stars
+                    ? `<div class="lb-stars">${stars} <span style="color:var(--text-light);font-size:0.75rem;">(${r.review_count || 0})</span></div>`
+                    : '';
+                const deals = r.accepted_proposals
+                    ? `<div class="lb-deals">${r.accepted_proposals} deal${r.accepted_proposals !== 1 ? 's' : ''} closed</div>`
+                    : '';
+                const verified = r.license_verified
+                    ? `<span class="lb-verified">✓ Verified</span>` : '';
+                return `<a href="/realtor-profile?id=${r.id}" class="lb-card">
+                    <div class="lb-avatar">${avatarInner}</div>
+                    <div class="lb-name">${esc(r.first_name)} ${esc(r.last_name)}</div>
+                    ${r.company_name ? `<div class="lb-company">${esc(r.company_name)}</div>` : ''}
+                    ${ratingLine}
+                    ${deals}
+                    ${verified}
+                </a>`;
+            }).join('');
+
+            section.style.display = '';
+        } catch {}
+    }
 
     // Load current user and saved realtors
     async function initUserState() {
@@ -350,11 +459,24 @@
                 style="background:none;border:1px solid #e5e7eb;border-radius:8px;padding:0.45rem 0.6rem;cursor:pointer;font-size:1.1rem;color:${isSaved ? '#ef4444' : '#999'};line-height:1;"
             >${isSaved ? '♥' : '♡'}</button>`;
 
+            const verifiedChip = r.license_verified
+                ? `<span class="badge-chip badge-verified">✓ Verified</span>` : '';
+            const plan = (r.subscription_plan || r.company_plan || '').toLowerCase();
+            const featuredChip = (plan === 'professional' || plan === 'firm')
+                ? `<span class="badge-chip badge-featured">Featured</span>` : '';
+            const badgeRow = (verifiedChip || featuredChip)
+                ? `<div class="card-badges">${verifiedChip}${featuredChip}</div>` : '';
+
+            const premiumBadge = r.is_premium_profile
+                ? `<span class="badge-premium-card">⭐ Premium</span>` : '';
+
             return `<div class="realtor-card">
+                ${premiumBadge}
                 <div class="card-photo">${photoHtml}</div>
                 <div class="card-body">
-                    <div class="card-name">${esc(r.first_name)} ${esc(r.last_name)} ${r.license_verified ? '<span style="display:inline-block;background:#ECFDF5;color:#059669;font-size:0.7rem;font-weight:700;padding:2px 7px;border-radius:20px;vertical-align:middle;">✓ Verified</span>' : ''}</div>
+                    <div class="card-name">${esc(r.first_name)} ${esc(r.last_name)}</div>
                     ${r.brokerage ? `<div class="card-brokerage">${esc(r.brokerage)}</div>` : (r.company_name ? `<div class="card-brokerage">${esc(r.company_name)}</div>` : '')}
+                    ${badgeRow}
                     <div class="card-meta">
                         ${tierBadge}
                         ${yrsExp}
@@ -391,6 +513,8 @@
             if (!res.ok) throw new Error('Failed to load');
             const data = await res.json();
             const realtors = data.realtors || data;
+            // Sort: premium profiles first, then by existing order (rating/proposals from API)
+            realtors.sort((a, b) => (b.is_premium_profile ? 1 : 0) - (a.is_premium_profile ? 1 : 0));
             totalRealtors = data.total || realtors.length;
 
             const countEl = document.getElementById('resultsCount');
@@ -454,6 +578,7 @@
     document.getElementById('filterState').addEventListener('change', applyFilters);
 
     // Initial load
+    loadLeaderboard();
     initUserState().then(() => loadRealtors(1, false));
 </script>
     <script>

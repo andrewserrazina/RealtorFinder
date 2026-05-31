@@ -832,6 +832,85 @@
                 grid-template-columns: 1fr;
             }
         }
+
+        /* Boost button & badge */
+        .btn-boost {
+            background: linear-gradient(135deg, #FF6B35, #e85d2a);
+            color: white;
+            border: none;
+            font-size: 0.85rem;
+            font-weight: 700;
+            letter-spacing: 0.2px;
+        }
+        .btn-boost:hover {
+            background: linear-gradient(135deg, #e85d2a, #cc4e1f);
+            transform: translateY(-1px);
+        }
+        .boost-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            background: linear-gradient(135deg, #FF6B35, #e85d2a);
+            color: white;
+            padding: 0.45rem 0.9rem;
+            border-radius: 8px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        /* Boost modal */
+        .boost-option-card {
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            flex: 1;
+        }
+        .boost-option-card:hover {
+            border-color: #FF6B35;
+            box-shadow: 0 4px 16px rgba(255,107,53,0.15);
+        }
+        .boost-option-price {
+            font-family: 'Crimson Pro', serif;
+            font-size: 2rem;
+            font-weight: 700;
+            color: #0A2540;
+            margin-bottom: 0.25rem;
+        }
+        .boost-option-label {
+            font-weight: 700;
+            font-size: 1rem;
+            margin-bottom: 0.5rem;
+            color: #0A2540;
+        }
+        .boost-option-desc {
+            font-size: 0.88rem;
+            color: #666;
+            line-height: 1.5;
+            margin-bottom: 1.25rem;
+        }
+        .boost-option-btn {
+            background: #0A2540;
+            color: white;
+            border: none;
+            padding: 0.65rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 0.9rem;
+            cursor: pointer;
+            width: 100%;
+            transition: background 0.2s;
+            font-family: 'DM Sans', sans-serif;
+        }
+        .boost-option-btn:hover {
+            background: #FF6B35;
+        }
+        .boost-option-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
     </style>
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#0A2540">
@@ -1653,6 +1732,7 @@
                         <button class="btn btn-outline" onclick="openListingAnalytics(${listing.id})" style="font-size:0.85rem;">📊 Analytics</button>
                         ${status !== 'sold' && !isExpired ? `<button class="btn btn-outline" onclick="markListingSold(${listing.id})" style="font-size:0.85rem;">Mark Sold</button>` : ''}
                         <button class="btn btn-outline" onclick="deleteListing(${listing.id})" style="font-size:0.85rem;border-color:#ef4444;color:#ef4444;">Delete</button>
+                        ${renderBoostControl(listing)}
                     </div>
                 </div>
             `}).join('');
@@ -2709,6 +2789,61 @@
         function closeListingAnalyticsModal() {
             document.getElementById('listingAnalyticsModal').style.display = 'none';
         }
+
+        // ===== BOOST =====
+
+        let _boostListingId = null;
+
+        function renderBoostControl(listing) {
+            const until = listing.boosted_until ? new Date(listing.boosted_until) : null;
+            if (until && until > new Date()) {
+                const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+                const label = `Boosted until ${monthNames[until.getMonth()]} ${until.getDate()}`;
+                return `<div class="boost-badge">🚀 ${esc(label)}</div>`;
+            }
+            return `<button class="btn btn-boost" onclick="openBoostModal(${listing.id})" style="font-size:0.85rem;">⚡ Boost</button>`;
+        }
+
+        function openBoostModal(listingId) {
+            _boostListingId = listingId;
+            const listing = cachedListings.find(l => l.id === listingId);
+            const address = listing ? listing.address : '';
+            document.getElementById('boostModalAddress').textContent = address;
+            document.querySelectorAll('.boost-option-btn').forEach(b => { b.disabled = false; b.textContent = 'Select'; });
+            document.getElementById('boost-modal').classList.add('active');
+        }
+
+        function closeBoostModal() {
+            document.getElementById('boost-modal').classList.remove('active');
+            _boostListingId = null;
+        }
+
+        async function selectBoost(days) {
+            if (!_boostListingId) return;
+            const btns = document.querySelectorAll('.boost-option-btn');
+            btns.forEach(b => { b.disabled = true; b.textContent = 'Loading…'; });
+            try {
+                const res = await fetch(`${API_BASE_URL}/listings/${_boostListingId}/boost`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ days })
+                });
+                if (!res.ok) {
+                    const d = await res.json().catch(() => ({}));
+                    throw new Error(d.error || 'Failed to initiate boost');
+                }
+                const { url } = await res.json();
+                if (url) {
+                    window.location.href = url;
+                } else {
+                    throw new Error('No checkout URL returned');
+                }
+            } catch (err) {
+                btns.forEach(b => { b.disabled = false; b.textContent = 'Select'; });
+                showToast(err.message || 'Failed to start boost checkout. Please try again.');
+            }
+        }
     </script>
     <!-- Counter-offer modal -->
     <!-- Seller Onboarding Wizard -->
@@ -2786,6 +2921,33 @@
                 <button onclick="closeListingAnalyticsModal()" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:#666;">&times;</button>
             </div>
             <div id="listingAnalyticsBody"></div>
+        </div>
+    </div>
+
+    <!-- Boost Modal -->
+    <div id="boost-modal" class="modal">
+        <div class="modal-content" style="max-width:560px;">
+            <span class="modal-close" onclick="closeBoostModal()">&times;</span>
+            <div class="modal-header">
+                <h2 style="font-family:'Crimson Pro',serif;font-size:1.8rem;">Boost Your Listing</h2>
+                <p id="boostModalAddress" style="color:#666;font-size:1rem;margin-top:0.25rem;"></p>
+            </div>
+            <p style="color:#555;margin-bottom:1.75rem;font-size:0.95rem;">Get more visibility by appearing at the top of search results.</p>
+            <div style="display:flex;gap:1rem;flex-wrap:wrap;">
+                <div class="boost-option-card">
+                    <div class="boost-option-label">7-Day Boost</div>
+                    <div class="boost-option-price">$9</div>
+                    <div class="boost-option-desc">Your listing appears first in search results for 7 days</div>
+                    <button class="boost-option-btn" onclick="selectBoost(7)">Select</button>
+                </div>
+                <div class="boost-option-card" style="border-color:#FF6B35;">
+                    <div style="display:inline-block;background:#FF6B35;color:white;font-size:0.72rem;font-weight:700;padding:2px 10px;border-radius:20px;margin-bottom:0.5rem;letter-spacing:0.4px;">BEST VALUE</div>
+                    <div class="boost-option-label">30-Day Boost</div>
+                    <div class="boost-option-price">$29</div>
+                    <div class="boost-option-desc">Maximum visibility for a full month</div>
+                    <button class="boost-option-btn" onclick="selectBoost(30)">Select</button>
+                </div>
+            </div>
         </div>
     </div>
 

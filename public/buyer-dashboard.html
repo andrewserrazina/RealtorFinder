@@ -714,6 +714,33 @@
             }
         }
 
+        /* Listing compare bar (distinct from realtor compare-bar) */
+        #listing-compare-bar { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 2px solid #3b82f6; padding: 0.875rem 2rem; display: flex; align-items: center; gap: 1.5rem; z-index: 201; box-shadow: 0 -4px 20px rgba(0,0,0,0.1); transition: transform 0.3s; }
+        #listing-compare-bar.hidden { transform: translateY(100%); }
+        .listing-compare-slots { display: flex; gap: 0.75rem; flex: 1; }
+        .listing-compare-slot { background: #eff6ff; border: 2px dashed #93c5fd; border-radius: 8px; padding: 0.5rem 1rem; font-size: 0.85rem; min-width: 130px; display: flex; align-items: center; gap: 0.5rem; }
+        .listing-compare-slot.filled { border-style: solid; border-color: #3b82f6; background: #dbeafe; }
+        #listing-compare-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 602; display: none; align-items: flex-start; justify-content: center; padding: 3rem 1rem; overflow-y: auto; }
+        #listing-compare-modal.active { display: flex; }
+        .lc-modal-inner { background: white; border-radius: 16px; padding: 2.5rem; width: 100%; max-width: 980px; position: relative; }
+
+        /* Browse card compare checkbox */
+        .browse-card-compare { display: flex; align-items: center; gap: 0.4rem; margin-top: 0.6rem; font-size: 0.82rem; color: #666; cursor: pointer; user-select: none; }
+        .browse-card-compare input[type=checkbox] { accent-color: #3b82f6; width: 15px; height: 15px; cursor: pointer; flex-shrink: 0; }
+
+        /* Nearby stats card inside browse card */
+        .nearby-stats-card { border-top: 1px solid var(--border); margin-top: 0.75rem; padding-top: 0.75rem; font-size: 0.82rem; color: #555; }
+        .nearby-stats-card .ns-title { font-weight: 600; color: var(--ink); margin-bottom: 0.4rem; font-size: 0.85rem; }
+        .nearby-stats-card .ns-row { display: flex; gap: 1rem; flex-wrap: wrap; }
+        .nearby-stats-card .ns-item { display: flex; flex-direction: column; gap: 0.1rem; }
+        .nearby-stats-card .ns-label { font-size: 0.73rem; text-transform: uppercase; letter-spacing: 0.4px; color: #aaa; font-weight: 600; }
+        .nearby-stats-card .ns-val { font-weight: 700; color: var(--ink); font-size: 0.9rem; }
+
+        /* Calculator responsive */
+        @media (max-width: 860px) {
+            #calculator-view > div { grid-template-columns: 1fr !important; }
+        }
+
         @media (max-width: 640px) {
             .header-container {
                 flex-wrap: wrap;
@@ -792,6 +819,17 @@
                 flex-wrap: wrap;
             }
 
+            #listing-compare-bar {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.75rem;
+                padding: 0.875rem 1rem;
+            }
+
+            .listing-compare-slots {
+                flex-wrap: wrap;
+            }
+
             .notif-dropdown {
                 width: 280px;
                 right: -60px;
@@ -866,6 +904,10 @@
                     <div class="nav-item" data-view="saved-realtors">
                         <span class="nav-icon">❤️</span>
                         <span>Saved Realtors</span>
+                    </div>
+                    <div class="nav-item" data-view="calculator">
+                        <span class="nav-icon">🧮</span>
+                        <span>Calculator</span>
                     </div>
                 </div>
             </nav>
@@ -1027,6 +1069,97 @@
                     <p class="page-subtitle">Realtors you've saved from the directory</p>
                 </div>
                 <div id="savedRealtorsList"></div>
+            </section>
+
+            <!-- Mortgage Calculator View -->
+            <section id="calculator-view" class="view-section">
+                <div class="page-header">
+                    <h1 class="page-title">Mortgage Calculator</h1>
+                    <p class="page-subtitle">Estimate your monthly payment and total cost</p>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;align-items:start;">
+                    <!-- Inputs -->
+                    <div style="background:white;border:1px solid var(--border);border-radius:12px;padding:2rem;">
+                        <h2 style="font-family:'Crimson Pro',serif;font-size:1.5rem;margin-bottom:1.5rem;">Loan Details</h2>
+                        <div class="form-group">
+                            <label for="calcHomePrice">Home Price ($)</label>
+                            <input type="number" id="calcHomePrice" value="400000" min="0" step="1000" oninput="calcMortgage()">
+                        </div>
+                        <div class="form-group">
+                            <label for="calcDownPct">Down Payment (%)</label>
+                            <input type="number" id="calcDownPct" value="20" min="0" max="100" step="0.5" oninput="calcMortgage()">
+                        </div>
+                        <div class="form-group">
+                            <label for="calcRate">Interest Rate (% per year)</label>
+                            <input type="number" id="calcRate" value="7.0" min="0" max="30" step="0.05" oninput="calcMortgage()">
+                        </div>
+                        <div class="form-group">
+                            <label for="calcTerm">Loan Term</label>
+                            <select id="calcTerm" onchange="calcMortgage()">
+                                <option value="30">30 Years</option>
+                                <option value="15">15 Years</option>
+                                <option value="10">10 Years</option>
+                            </select>
+                        </div>
+                        <div style="background:var(--soft-accent);border-radius:8px;padding:0.875rem 1rem;font-size:0.85rem;color:#666;">
+                            <strong>Down Payment:</strong> <span id="calcDownAmt">$80,000</span> &nbsp;·&nbsp;
+                            <strong>Loan Amount:</strong> <span id="calcLoanAmt">$320,000</span>
+                        </div>
+                    </div>
+                    <!-- Results -->
+                    <div>
+                        <div style="background:white;border:1px solid var(--border);border-radius:12px;padding:2rem;margin-bottom:1.5rem;text-align:center;">
+                            <div style="font-size:0.85rem;text-transform:uppercase;letter-spacing:0.8px;color:#888;font-weight:600;margin-bottom:0.5rem;">Monthly Payment</div>
+                            <div id="calcMonthly" style="font-family:'Crimson Pro',serif;font-size:3rem;font-weight:700;color:var(--accent);line-height:1;">—</div>
+                            <div style="font-size:0.85rem;color:#aaa;margin-top:0.25rem;">Principal &amp; Interest</div>
+                        </div>
+                        <!-- Payment bar -->
+                        <div style="background:white;border:1px solid var(--border);border-radius:12px;padding:1.5rem;margin-bottom:1.5rem;">
+                            <div style="font-weight:600;font-size:0.9rem;margin-bottom:0.875rem;">Payment Breakdown</div>
+                            <div id="calcBar" style="height:18px;border-radius:9px;overflow:hidden;display:flex;margin-bottom:0.75rem;">
+                                <div id="calcBarPrincipal" style="background:#3b82f6;height:100%;transition:width 0.4s;"></div>
+                                <div id="calcBarInterest" style="background:#f97316;height:100%;flex:1;transition:width 0.4s;"></div>
+                            </div>
+                            <div style="display:flex;gap:1.5rem;font-size:0.85rem;">
+                                <span style="display:flex;align-items:center;gap:0.4rem;"><span style="width:12px;height:12px;border-radius:3px;background:#3b82f6;display:inline-block;"></span>Principal (<span id="calcPrincipalPct">—</span>)</span>
+                                <span style="display:flex;align-items:center;gap:0.4rem;"><span style="width:12px;height:12px;border-radius:3px;background:#f97316;display:inline-block;"></span>Interest (<span id="calcInterestPct">—</span>)</span>
+                            </div>
+                        </div>
+                        <!-- Summary -->
+                        <div style="background:white;border:1px solid var(--border);border-radius:12px;padding:1.5rem;margin-bottom:1.5rem;">
+                            <div style="font-weight:600;font-size:0.9rem;margin-bottom:1rem;">Loan Summary</div>
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+                                <div style="background:var(--soft-accent);border-radius:8px;padding:0.875rem;">
+                                    <div style="font-size:0.75rem;color:#888;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.25rem;">Total Interest</div>
+                                    <div id="calcTotalInterest" style="font-family:'Crimson Pro',serif;font-size:1.4rem;font-weight:700;color:var(--ink);">—</div>
+                                </div>
+                                <div style="background:var(--soft-accent);border-radius:8px;padding:0.875rem;">
+                                    <div style="font-size:0.75rem;color:#888;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.25rem;">Total Cost</div>
+                                    <div id="calcTotalCost" style="font-family:'Crimson Pro',serif;font-size:1.4rem;font-weight:700;color:var(--ink);">—</div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Equity milestones -->
+                        <div style="background:white;border:1px solid var(--border);border-radius:12px;padding:1.5rem;">
+                            <div style="font-weight:600;font-size:0.9rem;margin-bottom:0.875rem;">Equity at Year…</div>
+                            <div id="calcEquity" style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.75rem;font-size:0.875rem;text-align:center;">
+                                <div style="background:var(--soft-accent);border-radius:8px;padding:0.75rem;">
+                                    <div style="font-weight:700;color:#888;margin-bottom:0.2rem;">Year 5</div>
+                                    <div id="calcEq5" style="font-family:'Crimson Pro',serif;font-size:1.2rem;font-weight:700;">—</div>
+                                </div>
+                                <div style="background:var(--soft-accent);border-radius:8px;padding:0.75rem;">
+                                    <div style="font-weight:700;color:#888;margin-bottom:0.2rem;">Year 10</div>
+                                    <div id="calcEq10" style="font-family:'Crimson Pro',serif;font-size:1.2rem;font-weight:700;">—</div>
+                                </div>
+                                <div style="background:var(--soft-accent);border-radius:8px;padding:0.75rem;">
+                                    <div style="font-weight:700;color:#888;margin-bottom:0.2rem;">Year 15</div>
+                                    <div id="calcEq15" style="font-family:'Crimson Pro',serif;font-size:1.2rem;font-weight:700;">—</div>
+                                </div>
+                            </div>
+                            <div style="font-size:0.78rem;color:#aaa;margin-top:0.75rem;">Principal paid only — does not include appreciation or down payment equity.</div>
+                        </div>
+                    </div>
+                </div>
             </section>
         </main>
     </div>
@@ -1418,6 +1551,7 @@
             document.getElementById(`${view}-view`).classList.add('active');
             if (view === 'browse') { loadBrowseListings(); loadSavedSearches(); }
             if (view === 'saved') loadSavedListings();
+            if (view === 'calculator') calcMortgage();
         }
 
         // ─── Form Handlers ─────────────────────────────────────────────────────────
@@ -1498,6 +1632,7 @@
                 if (view === 'saved') loadSavedListings();
                 if (view === 'showings') loadBuyerShowings();
                 if (view === 'saved-realtors') loadSavedRealtors();
+                if (view === 'calculator') calcMortgage();
             });
         });
 
@@ -1623,19 +1758,59 @@
             }
             grid.innerHTML = listings.map(l => {
                 const img = l.image_urls && l.image_urls.length ? l.image_urls[0] : '';
-                return `<div class="browse-card" onclick="window.open('/listing/${l.id}','_blank')">
-                    <div class="browse-card-img" style="${img ? `background-image:url('${img}')` : 'background:#e8ded8;'}"></div>
+                const isSelected = listingCompareList.some(x => x.id === l.id);
+                return `<div class="browse-card" id="browse-card-${l.id}">
+                    <div class="browse-card-img" style="${img ? `background-image:url('${img}')` : 'background:#e8ded8;'}" onclick="openBrowseListing(${l.id})"></div>
                     <div class="browse-card-body">
-                        <div class="browse-card-price">$${Number(l.price).toLocaleString()}</div>
-                        <div class="browse-card-addr">${esc2(l.address)}, ${esc2(l.city)}, ${esc2(l.state)}</div>
+                        <div class="browse-card-price" onclick="openBrowseListing(${l.id})" style="cursor:pointer;">$${Number(l.price).toLocaleString()}</div>
+                        <div class="browse-card-addr" onclick="openBrowseListing(${l.id})" style="cursor:pointer;">${esc2(l.address)}, ${esc2(l.city)}, ${esc2(l.state)}</div>
                         <div class="browse-card-meta">
                             ${l.bedrooms ? `<span>🛏 ${l.bedrooms}bd</span>` : ''}
                             ${l.bathrooms ? `<span>🚿 ${l.bathrooms}ba</span>` : ''}
                             ${l.sqft ? `<span>📐 ${Number(l.sqft).toLocaleString()} sqft</span>` : ''}
                         </div>
+                        <label class="browse-card-compare" onclick="event.stopPropagation()">
+                            <input type="checkbox" ${isSelected ? 'checked' : ''} onchange="toggleListingCompare(${l.id}, this.checked, ${JSON.stringify(l).replace(/"/g,'&quot;')})"> Compare
+                        </label>
+                        <div id="nearby-stats-${l.id}" class="nearby-stats-card" style="display:none;"></div>
                     </div>
                 </div>`;
             }).join('');
+        }
+
+        function openBrowseListing(listingId) {
+            window.open(`/listing/${listingId}`, '_blank');
+            loadNearbyStats(listingId);
+        }
+
+        // ─── Nearby Stats ─────────────────────────────────────────────────────────
+        async function loadNearbyStats(listingId) {
+            const el = document.getElementById(`nearby-stats-${listingId}`);
+            if (!el) return;
+            // Toggle: if already visible and loaded, hide it
+            if (el.style.display === 'block' && el.dataset.loaded === '1') {
+                el.style.display = 'none';
+                el.dataset.loaded = '';
+                return;
+            }
+            el.style.display = 'block';
+            el.innerHTML = '<div style="color:#aaa;font-size:0.8rem;padding:0.25rem 0;">Loading nearby stats…</div>';
+            try {
+                const res = await fetch(`${API_BASE_URL}/listings/${listingId}/nearby-stats`, { credentials: 'include' });
+                if (!res.ok) throw new Error();
+                const d = await res.json();
+                el.dataset.loaded = '1';
+                el.innerHTML = `
+                    <div class="ns-title">📍 Nearby Market — ${esc2(d.city || '')}${d.zip ? ' ' + esc2(d.zip) : ''}</div>
+                    <div class="ns-row">
+                        <div class="ns-item"><span class="ns-label">Active</span><span class="ns-val">${d.total_active ?? '—'}</span></div>
+                        <div class="ns-item"><span class="ns-label">Avg Price</span><span class="ns-val">${d.avg_price ? '$' + Math.round(d.avg_price).toLocaleString() : '—'}</span></div>
+                        <div class="ns-item"><span class="ns-label">Range</span><span class="ns-val" style="font-size:0.78rem;">${d.min_price && d.max_price ? '$' + Math.round(d.min_price).toLocaleString() + ' – $' + Math.round(d.max_price).toLocaleString() : '—'}</span></div>
+                        ${d.avg_sqft ? `<div class="ns-item"><span class="ns-label">Avg Sqft</span><span class="ns-val">${Math.round(d.avg_sqft).toLocaleString()}</span></div>` : ''}
+                    </div>`;
+            } catch {
+                el.innerHTML = '<div style="color:#aaa;font-size:0.8rem;">Could not load nearby stats.</div>';
+            }
         }
 
         function renderMap(listings) {
@@ -1990,7 +2165,184 @@
                 loadSavedRealtors();
             } catch (err) { showToast(err.message || 'Failed to unsave', 'error'); }
         }
+
+        // ─── Mortgage Calculator ──────────────────────────────────────────────────
+        function calcMortgage() {
+            const homePrice = parseFloat(document.getElementById('calcHomePrice').value) || 0;
+            const downPct   = parseFloat(document.getElementById('calcDownPct').value)   || 0;
+            const rate      = parseFloat(document.getElementById('calcRate').value)       || 0;
+            const termYears = parseInt(document.getElementById('calcTerm').value)         || 30;
+
+            const downAmt  = homePrice * (downPct / 100);
+            const loanAmt  = homePrice - downAmt;
+            const n        = termYears * 12;
+            const r        = (rate / 100) / 12;
+
+            document.getElementById('calcDownAmt').textContent  = '$' + Math.round(downAmt).toLocaleString();
+            document.getElementById('calcLoanAmt').textContent  = '$' + Math.round(loanAmt).toLocaleString();
+
+            if (loanAmt <= 0 || rate <= 0 || n <= 0) {
+                ['calcMonthly','calcTotalInterest','calcTotalCost','calcPrincipalPct','calcInterestPct','calcEq5','calcEq10','calcEq15'].forEach(id => {
+                    document.getElementById(id).textContent = '—';
+                });
+                document.getElementById('calcBarPrincipal').style.width = '0%';
+                return;
+            }
+
+            // Monthly payment: M = P * r(1+r)^n / [(1+r)^n - 1]
+            const monthly    = loanAmt * (r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
+            const totalPaid  = monthly * n;
+            const totalInt   = totalPaid - loanAmt;
+
+            document.getElementById('calcMonthly').textContent      = '$' + Math.round(monthly).toLocaleString();
+            document.getElementById('calcTotalInterest').textContent = '$' + Math.round(totalInt).toLocaleString();
+            document.getElementById('calcTotalCost').textContent     = '$' + Math.round(totalPaid + downAmt).toLocaleString();
+
+            // Payment bar — principal portion of first payment vs interest portion of first payment
+            const firstInterest   = loanAmt * r;
+            const firstPrincipal  = monthly - firstInterest;
+            const principalPct    = Math.round((firstPrincipal / monthly) * 100);
+            const interestPct     = 100 - principalPct;
+            document.getElementById('calcBarPrincipal').style.width = principalPct + '%';
+            document.getElementById('calcPrincipalPct').textContent  = principalPct + '%';
+            document.getElementById('calcInterestPct').textContent   = interestPct + '%';
+
+            // Equity milestones — principal paid after Y years
+            function principalPaidAfterMonths(months) {
+                if (months >= n) return loanAmt;
+                // remaining balance after k payments
+                const balance = loanAmt * (Math.pow(1 + r, months) - 1) / (Math.pow(1 + r, n) - 1) * Math.pow(1 + r, n - months);
+                return loanAmt - balance;
+            }
+            [5, 10, 15].forEach(yr => {
+                const el = document.getElementById(`calcEq${yr}`);
+                if (!el) return;
+                const paid = principalPaidAfterMonths(yr * 12);
+                el.textContent = '$' + Math.round(paid).toLocaleString();
+            });
+        }
+
+        // ─── Listing Comparison ───────────────────────────────────────────────────
+        let listingCompareList = [];
+
+        function toggleListingCompare(id, checked, listingData) {
+            if (checked) {
+                if (listingCompareList.length >= 3) {
+                    showToast('Max 3 listings can be compared at once', 'error');
+                    // uncheck the box
+                    const cb = document.querySelector(`#browse-card-${id} input[type=checkbox]`);
+                    if (cb) cb.checked = false;
+                    return;
+                }
+                if (!listingCompareList.some(x => x.id === id)) {
+                    listingCompareList.push(typeof listingData === 'string' ? JSON.parse(listingData) : listingData);
+                }
+            } else {
+                listingCompareList = listingCompareList.filter(x => x.id !== id);
+            }
+            updateListingCompareBar();
+        }
+
+        function updateListingCompareBar() {
+            const bar = document.getElementById('listing-compare-bar');
+            if (!bar) return;
+            const n = listingCompareList.length;
+            if (n < 2) {
+                bar.classList.add('hidden');
+            } else {
+                bar.classList.remove('hidden');
+                const slotsEl = bar.querySelector('.listing-compare-slots');
+                slotsEl.innerHTML = listingCompareList.map(l =>
+                    `<div class="listing-compare-slot filled">
+                        <span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">$${Number(l.price).toLocaleString()} · ${esc2(l.city || '')}</span>
+                        <button class="remove-btn" onclick="toggleListingCompare(${l.id}, false); document.querySelector('#browse-card-${l.id} input[type=checkbox]') && (document.querySelector('#browse-card-${l.id} input[type=checkbox]').checked=false);" title="Remove">✕</button>
+                    </div>`
+                ).join('');
+                bar.querySelector('#lcCompareBtn').textContent = `Compare (${n})`;
+            }
+        }
+
+        async function openListingCompareModal() {
+            if (listingCompareList.length < 2) { showToast('Select at least 2 listings to compare', 'error'); return; }
+            const modal = document.getElementById('listing-compare-modal');
+            modal.classList.add('active');
+            const body = document.getElementById('lcCompareBody');
+            body.innerHTML = '<div style="text-align:center;padding:2rem;color:#888;">Loading comparison…</div>';
+
+            try {
+                const ids = listingCompareList.map(l => l.id).join(',');
+                const res = await fetch(`${API_BASE_URL}/listings/compare?ids=${ids}`, { credentials: 'include' });
+                if (!res.ok) throw new Error();
+                const listings = await res.json();
+                const colCount = listings.length + 1;
+
+                function daysSince(dateStr) {
+                    if (!dateStr) return '—';
+                    return Math.max(0, Math.floor((Date.now() - new Date(dateStr)) / 86400000)) + 'd';
+                }
+                function pricePerSqft(l) {
+                    if (!l.price || !l.sqft) return '—';
+                    return '$' + Math.round(l.price / l.sqft).toLocaleString() + '/sqft';
+                }
+
+                const rows = [
+                    { label: 'Price',           fn: l => '$' + Number(l.price).toLocaleString() },
+                    { label: 'Beds',            fn: l => l.bedrooms ?? '—' },
+                    { label: 'Baths',           fn: l => l.bathrooms ?? '—' },
+                    { label: 'Sq Ft',           fn: l => l.sqft ? Number(l.sqft).toLocaleString() : '—' },
+                    { label: 'Price / sqft',    fn: l => pricePerSqft(l) },
+                    { label: 'Type',            fn: l => esc2(l.property_type || '—') },
+                    { label: 'Days Listed',     fn: l => daysSince(l.created_at) },
+                    { label: 'Offers',          fn: l => l.offer_count != null ? l.offer_count : '—' },
+                    { label: 'Description',     fn: l => l.description ? `<span style="font-size:0.82rem;color:#555;">${esc2(l.description.slice(0,120))}${l.description.length > 120 ? '…' : ''}</span>` : '—' }
+                ];
+
+                body.innerHTML = `
+                    <div class="compare-table" style="grid-template-columns:repeat(${colCount},1fr);">
+                        <div class="compare-row" style="grid-template-columns:repeat(${colCount},1fr);">
+                            <div class="compare-cell label"></div>
+                            ${listings.map(l => `<div class="compare-cell header" style="font-size:0.85rem;">${esc2(l.address)}<br><span style="font-weight:400;font-size:0.78rem;">${esc2(l.city)}, ${esc2(l.state)}</span></div>`).join('')}
+                        </div>
+                        ${rows.map(row => `
+                            <div class="compare-row" style="grid-template-columns:repeat(${colCount},1fr);">
+                                <div class="compare-cell label">${row.label}</div>
+                                ${listings.map(l => `<div class="compare-cell">${row.fn(l)}</div>`).join('')}
+                            </div>
+                        `).join('')}
+                    </div>`;
+            } catch {
+                body.innerHTML = '<div style="color:#aaa;text-align:center;padding:2rem;">Could not load comparison data.</div>';
+            }
+        }
+
+        function closeListingCompareModal() {
+            document.getElementById('listing-compare-modal').classList.remove('active');
+        }
     </script>
+
+    <!-- Listing Compare Bar -->
+    <div id="listing-compare-bar" class="hidden">
+        <span class="compare-bar-label">Compare Listings</span>
+        <div class="listing-compare-slots"></div>
+        <button id="lcCompareBtn" class="btn btn-primary" onclick="openListingCompareModal()" style="white-space:nowrap;padding:0.6rem 1.25rem;font-size:0.9rem;">Compare (2)</button>
+        <button class="btn btn-outline" onclick="listingCompareList=[];updateListingCompareBar();document.querySelectorAll('.browse-card-compare input').forEach(cb=>cb.checked=false);" style="padding:0.6rem 1rem;font-size:0.9rem;">Clear</button>
+    </div>
+
+    <!-- Listing Compare Modal -->
+    <div id="listing-compare-modal" onclick="if(event.target===this)closeListingCompareModal()">
+        <div class="lc-modal-inner">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
+                <h2 style="font-family:'Crimson Pro',serif;font-size:2rem;">Compare Listings</h2>
+                <button onclick="closeListingCompareModal()" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:#aaa;">&times;</button>
+            </div>
+            <p style="color:#666;margin-bottom:0.5rem;">Side-by-side comparison of selected listings</p>
+            <div id="lcCompareBody"></div>
+            <div style="margin-top:1.5rem;display:flex;gap:1rem;">
+                <button class="btn btn-outline" onclick="listingCompareList=[];updateListingCompareBar();document.querySelectorAll('.browse-card-compare input').forEach(cb=>cb.checked=false);closeListingCompareModal();">Clear & Close</button>
+                <button class="btn btn-secondary" onclick="closeListingCompareModal()">Close</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Compare Modal -->
     <div id="compareModal" class="compare-modal" onclick="if(event.target===this)closeCompareModal()">
