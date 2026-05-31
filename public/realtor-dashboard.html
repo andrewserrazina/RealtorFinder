@@ -823,6 +823,18 @@
     </div>
 
     <div class="dashboard-container">
+        <!-- Re-engagement Banner -->
+        <div id="staleRealtorBanner" style="display:none;background:linear-gradient(135deg,#0A2540,#1a3a6b);border-radius:14px;padding:1.25rem 1.5rem;margin-bottom:1.5rem;">
+            <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+                <div style="font-size:1.75rem;">👋</div>
+                <div style="flex:1;">
+                    <div style="font-weight:700;color:white;font-size:0.975rem;" id="staleBannerTitle">Welcome back!</div>
+                    <div style="color:#93c5fd;font-size:0.875rem;margin-top:0.2rem;" id="staleBannerSub">Check out new listings in your area while you were away.</div>
+                </div>
+                <button onclick="document.getElementById('staleRealtorBanner').style.display='none'" style="background:rgba(255,255,255,0.15);color:white;border:none;padding:0.5rem 1rem;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.85rem;white-space:nowrap;">Dismiss</button>
+            </div>
+        </div>
+
         <!-- Browse Listings View -->
         <section id="browse-view" class="view-section active">
             <div class="stats-row">
@@ -1296,6 +1308,36 @@
                 <!-- Subscription card (rendered dynamically by renderSubscriptionCard()) -->
                 <div id="subscriptionCard"></div>
 
+                <!-- Notification Preferences -->
+                <div style="background:white;border-radius:12px;border:1px solid var(--border);padding:1.5rem;">
+                    <h3 style="font-family:'Crimson Pro',serif;font-size:1.3rem;font-weight:700;margin-bottom:0.5rem;color:var(--ink);">Email Notifications</h3>
+                    <p style="color:#6b7280;font-size:0.875rem;margin-bottom:1.25rem;">Choose which emails you receive from RealtorFinder.</p>
+                    <div id="rNotifPrefsLoading" style="color:#9ca3af;font-size:0.9rem;">Loading…</div>
+                    <div id="rNotifPrefsForm" style="display:none;flex-direction:column;gap:0.75rem;">
+                        <label style="display:flex;align-items:center;gap:0.75rem;cursor:pointer;"><input type="checkbox" id="rnp-new-proposal" style="width:16px;height:16px;accent-color:var(--accent);"> <span>New listings matching my service areas</span></label>
+                        <label style="display:flex;align-items:center;gap:0.75rem;cursor:pointer;"><input type="checkbox" id="rnp-messages" style="width:16px;height:16px;accent-color:var(--accent);"> <span>Messages from sellers</span></label>
+                        <label style="display:flex;align-items:center;gap:0.75rem;cursor:pointer;"><input type="checkbox" id="rnp-weekly-digest" style="width:16px;height:16px;accent-color:var(--accent);"> <span>Weekly activity digest</span></label>
+                        <label style="display:flex;align-items:center;gap:0.75rem;cursor:pointer;"><input type="checkbox" id="rnp-listing-alerts" style="width:16px;height:16px;accent-color:var(--accent);"> <span>Listing alerts &amp; opportunity notifications</span></label>
+                        <label style="display:flex;align-items:center;gap:0.75rem;cursor:pointer;"><input type="checkbox" id="rnp-engagement" style="width:16px;height:16px;accent-color:var(--accent);"> <span>Activity reminders &amp; check-ins</span></label>
+                        <div id="rNotifPrefsSaved" style="display:none;color:#059669;font-size:0.85rem;">✓ Preferences saved</div>
+                        <button onclick="saveRNotifPrefs()" style="background:var(--accent);color:white;border:none;padding:0.65rem 1.5rem;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.9rem;align-self:flex-start;font-family:inherit;">Save Preferences</button>
+                    </div>
+                </div>
+
+                <!-- Proposal Templates -->
+                <div style="background:white;border-radius:12px;border:1px solid var(--border);padding:1.5rem;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:0.75rem;">
+                        <div>
+                            <h3 style="font-family:'Crimson Pro',serif;font-size:1.3rem;font-weight:700;color:var(--ink);margin-bottom:0.25rem;">Proposal Templates</h3>
+                            <p style="color:#6b7280;font-size:0.875rem;">Save reusable cover notes to fill in when submitting proposals.</p>
+                        </div>
+                        <button onclick="openTemplateModal()" style="background:var(--accent);color:white;border:none;padding:0.6rem 1.25rem;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.875rem;font-family:inherit;white-space:nowrap;">+ New Template</button>
+                    </div>
+                    <div id="templatesLoading" style="color:#9ca3af;font-size:0.9rem;">Loading templates…</div>
+                    <div id="templatesList" style="display:none;display:flex;flex-direction:column;gap:0.75rem;"></div>
+                    <div id="templatesEmpty" style="display:none;color:#9ca3af;font-size:0.9rem;padding:1rem 0;">No templates yet. Create one to speed up your proposals.</div>
+                </div>
+
                 <!-- Change Password -->
                 <div style="background:white;border-radius:12px;border:1px solid var(--border);padding:1.5rem;">
                     <h3 style="font-family:'Crimson Pro',serif;font-size:1.3rem;font-weight:700;margin-bottom:1rem;color:var(--ink);">Change Password</h3>
@@ -1310,6 +1352,30 @@
                 </div>
             </div>
         </section>
+
+        <!-- Template Modal -->
+        <div id="templateModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:1100;align-items:center;justify-content:center;padding:1rem;">
+            <div style="background:white;border-radius:16px;width:560px;max-width:100%;max-height:90vh;overflow-y:auto;padding:2rem;position:relative;">
+                <button onclick="closeTemplateModal()" style="position:absolute;top:1rem;right:1rem;background:none;border:none;font-size:1.3rem;cursor:pointer;color:#9ca3af;">✕</button>
+                <h3 style="font-family:'Crimson Pro',serif;font-size:1.5rem;font-weight:700;margin-bottom:1.25rem;color:var(--ink);" id="templateModalTitle">New Template</h3>
+                <div style="display:flex;flex-direction:column;gap:0.75rem;">
+                    <div>
+                        <label style="display:block;font-weight:600;font-size:0.875rem;margin-bottom:0.35rem;color:#374151;">Template Name</label>
+                        <input type="text" id="templateName" placeholder="e.g. First-time buyer intro" maxlength="100" style="width:100%;padding:0.7rem 1rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.95rem;">
+                    </div>
+                    <div>
+                        <label style="display:block;font-weight:600;font-size:0.875rem;margin-bottom:0.35rem;color:#374151;">Cover Note</label>
+                        <textarea id="templateContent" rows="8" placeholder="Write your proposal cover note here. You can customize it per listing when submitting." maxlength="5000" style="width:100%;padding:0.7rem 1rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.95rem;resize:vertical;"></textarea>
+                        <div style="text-align:right;font-size:0.8rem;color:#9ca3af;" id="templateCharCount">0 / 5000</div>
+                    </div>
+                    <div id="templateSaveError" style="display:none;color:#dc2626;font-size:0.85rem;"></div>
+                    <div style="display:flex;gap:0.75rem;">
+                        <button onclick="saveTemplate()" style="background:var(--accent);color:white;border:none;padding:0.7rem 1.5rem;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.95rem;font-family:inherit;flex:1;" id="templateSaveBtn">Save Template</button>
+                        <button onclick="closeTemplateModal()" style="background:white;color:#374151;border:1px solid var(--border);padding:0.7rem 1.5rem;border-radius:8px;cursor:pointer;font-family:inherit;">Cancel</button>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <!-- Messages View -->
         <section id="messages-view" class="view-section">
@@ -1653,7 +1719,7 @@
                 if (view === 'messages') { window.location.href = '/inbox'; return; }
                 if (view === 'reviews') loadReviews();
                 if (view === 'referrals') loadReferrals();
-                if (view === 'settings') renderSubscriptionCard();
+                if (view === 'settings') { renderSubscriptionCard(); loadRNotifPrefs(); loadTemplates(); }
             });
         });
 
@@ -2417,6 +2483,190 @@
             sessionStorage.setItem('upgrade_prompt_dismissed', '1');
             const modal = document.getElementById('upgradePromptModal');
             if (modal) modal.style.display = 'none';
+        }
+
+        // ── Notification Preferences ─────────────────────────────────────────────
+
+        async function loadRNotifPrefs() {
+            try {
+                const res = await fetch('/api/me/notification-preferences', { credentials: 'include' });
+                if (!res.ok) return;
+                const d = await res.json();
+                document.getElementById('rnp-new-proposal').checked = d.notif_new_proposal !== false;
+                document.getElementById('rnp-messages').checked = d.notif_messages !== false;
+                document.getElementById('rnp-weekly-digest').checked = d.notif_weekly_digest !== false;
+                document.getElementById('rnp-listing-alerts').checked = d.notif_listing_alerts !== false;
+                document.getElementById('rnp-engagement').checked = d.notif_engagement_reminders !== false;
+                document.getElementById('rNotifPrefsLoading').style.display = 'none';
+                document.getElementById('rNotifPrefsForm').style.display = 'flex';
+            } catch (e) { console.error('Notif prefs load error', e); }
+        }
+
+        async function saveRNotifPrefs() {
+            try {
+                const body = {
+                    notif_new_proposal: document.getElementById('rnp-new-proposal').checked,
+                    notif_messages: document.getElementById('rnp-messages').checked,
+                    notif_weekly_digest: document.getElementById('rnp-weekly-digest').checked,
+                    notif_listing_alerts: document.getElementById('rnp-listing-alerts').checked,
+                    notif_engagement_reminders: document.getElementById('rnp-engagement').checked
+                };
+                await fetch('/api/me/notification-preferences', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify(body) });
+                const saved = document.getElementById('rNotifPrefsSaved');
+                saved.style.display = 'block';
+                setTimeout(() => saved.style.display = 'none', 3000);
+            } catch (e) { console.error('Save notif prefs error', e); }
+        }
+
+        // ── Proposal Templates ────────────────────────────────────────────────────
+
+        let _templates = [];
+        let _editingTemplateId = null;
+
+        async function loadTemplates() {
+            try {
+                const res = await fetch('/api/proposal-templates', { credentials: 'include' });
+                if (!res.ok) return;
+                _templates = await res.json();
+                renderTemplates();
+            } catch (e) { console.error('Templates load error', e); }
+        }
+
+        function renderTemplates() {
+            const list = document.getElementById('templatesList');
+            const empty = document.getElementById('templatesEmpty');
+            const loading = document.getElementById('templatesLoading');
+            loading.style.display = 'none';
+            if (!_templates.length) {
+                list.style.display = 'none';
+                empty.style.display = 'block';
+                return;
+            }
+            empty.style.display = 'none';
+            list.style.display = 'flex';
+            list.innerHTML = _templates.map(t => `
+                <div style="border:1px solid var(--border);border-radius:10px;padding:1rem 1.25rem;display:flex;align-items:flex-start;gap:1rem;">
+                    <div style="flex:1;min-width:0;">
+                        <div style="font-weight:600;color:var(--ink);margin-bottom:0.35rem;font-size:0.95rem;">${esc(t.name)}</div>
+                        <div style="color:#6b7280;font-size:0.85rem;white-space:pre-wrap;overflow:hidden;max-height:3.5em;text-overflow:ellipsis;">${esc(t.content.slice(0,160))}${t.content.length>160?'…':''}</div>
+                    </div>
+                    <div style="display:flex;gap:0.5rem;flex-shrink:0;">
+                        <button onclick="editTemplate(${t.id})" style="background:white;border:1px solid var(--border);color:#374151;padding:0.4rem 0.75rem;border-radius:6px;cursor:pointer;font-size:0.8rem;font-family:inherit;">Edit</button>
+                        <button onclick="deleteTemplate(${t.id})" style="background:white;border:1px solid #fca5a5;color:#dc2626;padding:0.4rem 0.75rem;border-radius:6px;cursor:pointer;font-size:0.8rem;font-family:inherit;">Delete</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function openTemplateModal(id) {
+            _editingTemplateId = id || null;
+            const t = id ? _templates.find(x => x.id === id) : null;
+            document.getElementById('templateModalTitle').textContent = id ? 'Edit Template' : 'New Template';
+            document.getElementById('templateName').value = t ? t.name : '';
+            document.getElementById('templateContent').value = t ? t.content : '';
+            document.getElementById('templateSaveError').style.display = 'none';
+            updateTemplateCharCount();
+            document.getElementById('templateModal').style.display = 'flex';
+        }
+
+        function closeTemplateModal() {
+            document.getElementById('templateModal').style.display = 'none';
+        }
+
+        function updateTemplateCharCount() {
+            const len = (document.getElementById('templateContent').value || '').length;
+            document.getElementById('templateCharCount').textContent = `${len} / 5000`;
+        }
+
+        document.getElementById('templateContent')?.addEventListener('input', updateTemplateCharCount);
+
+        function editTemplate(id) { openTemplateModal(id); }
+
+        async function deleteTemplate(id) {
+            if (!confirm('Delete this template?')) return;
+            try {
+                await fetch(`/api/proposal-templates/${id}`, { method: 'DELETE', credentials: 'include' });
+                _templates = _templates.filter(t => t.id !== id);
+                renderTemplates();
+            } catch (e) { alert('Failed to delete template'); }
+        }
+
+        async function saveTemplate() {
+            const name = document.getElementById('templateName').value.trim();
+            const content = document.getElementById('templateContent').value.trim();
+            const errEl = document.getElementById('templateSaveError');
+            const btn = document.getElementById('templateSaveBtn');
+            if (!name || !content) { errEl.textContent = 'Name and content are required.'; errEl.style.display = 'block'; return; }
+            btn.disabled = true; btn.textContent = 'Saving…';
+            try {
+                const url = _editingTemplateId ? `/api/proposal-templates/${_editingTemplateId}` : '/api/proposal-templates';
+                const method = _editingTemplateId ? 'PUT' : 'POST';
+                const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ name, content }) });
+                const d = await res.json();
+                if (!res.ok) { errEl.textContent = d.error || 'Failed to save'; errEl.style.display = 'block'; return; }
+                if (_editingTemplateId) {
+                    _templates = _templates.map(t => t.id === _editingTemplateId ? d : t);
+                } else {
+                    _templates.unshift(d);
+                }
+                renderTemplates();
+                closeTemplateModal();
+            } catch (e) { errEl.textContent = 'Network error, please try again.'; errEl.style.display = 'block'; }
+            finally { btn.disabled = false; btn.textContent = 'Save Template'; }
+        }
+
+        function toggleTemplatePicker() {
+            const picker = document.getElementById('templatePicker');
+            if (picker.style.display === 'none' || !picker.style.display) {
+                const list = document.getElementById('templatePickerList');
+                if (!_templates.length) {
+                    list.innerHTML = '<div style="padding:0.75rem;color:#9ca3af;font-size:0.85rem;">No templates yet. Create one in Settings.</div>';
+                } else {
+                    list.innerHTML = _templates.map(t => `
+                        <div onclick="applyTemplate(${t.id})" style="padding:0.65rem 0.75rem;cursor:pointer;border-radius:6px;font-size:0.875rem;color:#374151;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='none'">
+                            <div style="font-weight:600;">${esc(t.name)}</div>
+                            <div style="color:#9ca3af;font-size:0.78rem;margin-top:2px;">${esc(t.content.slice(0,50))}…</div>
+                        </div>
+                    `).join('');
+                }
+                picker.style.display = 'block';
+            } else {
+                picker.style.display = 'none';
+            }
+        }
+
+        function applyTemplate(id) {
+            const t = _templates.find(x => x.id === id);
+            if (t) document.getElementById('proposalNote').value = t.content;
+            document.getElementById('templatePicker').style.display = 'none';
+        }
+
+        // Close template picker when clicking outside
+        document.addEventListener('click', (e) => {
+            const wrap = document.getElementById('templatePickerWrap');
+            if (wrap && !wrap.contains(e.target)) {
+                const picker = document.getElementById('templatePicker');
+                if (picker) picker.style.display = 'none';
+            }
+        });
+
+        // ── Re-engagement Check ───────────────────────────────────────────────────
+
+        async function checkStaleRealtor() {
+            try {
+                const res = await fetch('/api/me/stale-check', { credentials: 'include' });
+                if (!res.ok) return;
+                const d = await res.json();
+                if (!d.stale) return;
+                const banner = document.getElementById('staleRealtorBanner');
+                const title = document.getElementById('staleBannerTitle');
+                const sub = document.getElementById('staleBannerSub');
+                title.textContent = `Welcome back! You were away for ${d.days_since_login} days.`;
+                sub.textContent = d.new_listings > 0
+                    ? `${d.new_listings} new listing${d.new_listings !== 1 ? 's' : ''} posted in your area while you were away.`
+                    : 'Check out the latest listings in your service area.';
+                banner.style.display = 'block';
+            } catch (e) { /* silent */ }
         }
 
         async function changePasswordSettings() {
@@ -3371,6 +3621,7 @@
             loadSavedIds();
             loadNotifications();
             loadUnreadMsgCount();
+            checkStaleRealtor();
             setInterval(loadNotifications, 60000);
             setInterval(loadUnreadMsgCount, 60000);
 
@@ -3667,6 +3918,8 @@
             document.getElementById('proposalListingId').value = listingId;
             document.getElementById('proposalListingAddr').textContent = listingAddress;
             modal.style.display = 'flex';
+            // Load templates if not yet loaded
+            if (!_templates.length) loadTemplates();
         }
 
         function closeProposalModal() {
@@ -3940,7 +4193,15 @@
                     </select>
                 </div>
                 <div style="margin-bottom:1.5rem;">
-                    <label style="display:block;font-weight:600;margin-bottom:0.4rem;font-size:0.9rem;">Cover Note</label>
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.4rem;">
+                        <label style="font-weight:600;font-size:0.9rem;">Cover Note</label>
+                        <div id="templatePickerWrap" style="position:relative;">
+                            <button type="button" onclick="toggleTemplatePicker()" style="background:white;border:1px solid #e5e7eb;color:#374151;padding:0.3rem 0.75rem;border-radius:6px;font-size:0.8rem;cursor:pointer;font-family:inherit;">Use Template ▾</button>
+                            <div id="templatePicker" style="display:none;position:absolute;right:0;top:calc(100% + 4px);background:white;border:1px solid #e5e7eb;border-radius:10px;width:280px;box-shadow:0 4px 16px rgba(0,0,0,0.1);z-index:200;max-height:240px;overflow-y:auto;">
+                                <div id="templatePickerList" style="padding:0.5rem;"></div>
+                            </div>
+                        </div>
+                    </div>
                     <textarea id="proposalNote" rows="4" placeholder="Introduce yourself, highlight your experience, explain why you're the best fit..." style="width:100%;padding:10px 14px;border:1px solid #e5e7eb;border-radius:8px;font-size:0.95rem;resize:vertical;"></textarea>
                 </div>
                 <div id="proposalError" style="display:none;background:#fee2e2;color:#991b1b;padding:10px 14px;border-radius:8px;font-size:0.9rem;margin-bottom:1rem;"></div>

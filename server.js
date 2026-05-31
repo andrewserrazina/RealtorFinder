@@ -684,6 +684,9 @@ app.post('/api/auth/login', authLimiter, async (req, res) => {
         
         console.log('✅ User verified:', user.id, user.userType);
         
+        // Track last login time for re-engagement detection
+        pool.query(`UPDATE users SET last_login_at = NOW() WHERE id = $1`, [user.id]).catch(() => {});
+
         // Create session
         req.session.userId = user.id;
         req.session.userType = user.userType;
@@ -1462,6 +1465,142 @@ app.post('/api/profile/license-doc', auth.requireAuth, uploadLimiter, uploadDoc.
     }
 });
 
+// ===== NOTIFICATION PREFERENCES =====
+
+app.get('/api/me/notification-preferences', auth.requireAuth, async (req, res) => {
+    try {
+        const { rows } = await pool.query(
+            `SELECT notif_new_proposal, notif_messages, notif_weekly_digest,
+                    notif_listing_alerts, notif_engagement_reminders
+             FROM users WHERE id = $1`,
+            [req.session.userId]
+        );
+        if (!rows.length) return res.status(404).json({ error: 'User not found' });
+        res.json(rows[0]);
+    } catch (err) {
+        console.error('Notification prefs error:', err);
+        res.status(500).json({ error: 'Failed to load preferences' });
+    }
+});
+
+app.put('/api/me/notification-preferences', auth.requireAuth, async (req, res) => {
+    try {
+        const fields = ['notif_new_proposal','notif_messages','notif_weekly_digest','notif_listing_alerts','notif_engagement_reminders'];
+        const sets = fields.map((f, i) => `${f} = $${i + 1}`).join(', ');
+        const vals = fields.map(f => req.body[f] !== undefined ? !!req.body[f] : true);
+        vals.push(req.session.userId);
+        await pool.query(`UPDATE users SET ${sets} WHERE id = $${vals.length}`, vals);
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Update notification prefs error:', err);
+        res.status(500).json({ error: 'Failed to update preferences' });
+    }
+});
+
+// ===== RE-ENGAGEMENT STALE CHECK =====
+
+app.get('/api/me/stale-check', auth.requireAuth, async (req, res) => {
+    try {
+        if (req.user.user_type !== 'realtor') return res.json({ stale: false });
+        const { rows } = await pool.query(
+            `SELECT last_login_at, service_areas, zip_code FROM users WHERE id = $1`,
+            [req.session.userId]
+        );
+        if (!rows.length) return res.json({ stale: false });
+        const u = rows[0];
+        const daysSince = u.last_login_at
+            ? Math.floor((Date.now() - new Date(u.last_login_at).getTime()) / (1000 * 60 * 60 * 24))
+            : 999;
+        if (daysSince < 14) return res.json({ stale: false });
+
+        // Count new listings since last login in their area
+        let newListings = 0;
+        if (u.last_login_at) {
+            const area = u.service_areas || u.zip_code || '';
+            const terms = area.split(',').map(t => t.trim()).filter(Boolean).slice(0, 3);
+            if (terms.length > 0) {
+                const conditions = terms.map((_, i) => `(l.city ILIKE $${i + 2} OR l.zip ILIKE $${i + 2} OR l.state ILIKE $${i + 2})`).join(' OR ');
+                const params = [u.last_login_at, ...terms.map(t => `%${t}%`)];
+                const { rows: lr } = await pool.query(
+                    `SELECT COUNT(*) AS cnt FROM listings l WHERE l.created_at > $1 AND l.deleted_at IS NULL AND l.status = 'active' AND (${conditions})`,
+                    params
+                );
+                newListings = parseInt(lr[0].cnt) || 0;
+            }
+        }
+        res.json({ stale: true, days_since_login: daysSince, new_listings: newListings });
+    } catch (err) {
+        console.error('Stale check error:', err);
+        res.json({ stale: false });
+    }
+});
+
+// ===== PROPOSAL TEMPLATES =====
+
+app.get('/api/proposal-templates', auth.requireAuth, async (req, res) => {
+    try {
+        if (req.user.user_type !== 'realtor') return res.status(403).json({ error: 'Realtors only' });
+        const { rows } = await pool.query(
+            `SELECT id, name, content, created_at FROM proposal_templates WHERE realtor_id = $1 ORDER BY created_at DESC`,
+            [req.session.userId]
+        );
+        res.json(rows);
+    } catch (err) {
+        console.error('Proposal templates error:', err);
+        res.status(500).json({ error: 'Failed to load templates' });
+    }
+});
+
+app.post('/api/proposal-templates', auth.requireAuth, async (req, res) => {
+    try {
+        if (req.user.user_type !== 'realtor') return res.status(403).json({ error: 'Realtors only' });
+        const { name, content } = req.body;
+        if (!name || !content) return res.status(400).json({ error: 'Name and content required' });
+        if (name.length > 100) return res.status(400).json({ error: 'Name too long' });
+        if (content.length > 5000) return res.status(400).json({ error: 'Content too long' });
+        const { rows } = await pool.query(
+            `INSERT INTO proposal_templates (realtor_id, name, content) VALUES ($1, $2, $3) RETURNING id, name, content, created_at`,
+            [req.session.userId, name.trim(), content.trim()]
+        );
+        res.json(rows[0]);
+    } catch (err) {
+        console.error('Create template error:', err);
+        res.status(500).json({ error: 'Failed to create template' });
+    }
+});
+
+app.put('/api/proposal-templates/:id', auth.requireAuth, async (req, res) => {
+    try {
+        if (req.user.user_type !== 'realtor') return res.status(403).json({ error: 'Realtors only' });
+        const { name, content } = req.body;
+        if (!name || !content) return res.status(400).json({ error: 'Name and content required' });
+        const { rows } = await pool.query(
+            `UPDATE proposal_templates SET name = $1, content = $2 WHERE id = $3 AND realtor_id = $4 RETURNING id, name, content`,
+            [name.trim(), content.trim(), parseInt(req.params.id), req.session.userId]
+        );
+        if (!rows.length) return res.status(404).json({ error: 'Template not found' });
+        res.json(rows[0]);
+    } catch (err) {
+        console.error('Update template error:', err);
+        res.status(500).json({ error: 'Failed to update template' });
+    }
+});
+
+app.delete('/api/proposal-templates/:id', auth.requireAuth, async (req, res) => {
+    try {
+        if (req.user.user_type !== 'realtor') return res.status(403).json({ error: 'Realtors only' });
+        const { rowCount } = await pool.query(
+            `DELETE FROM proposal_templates WHERE id = $1 AND realtor_id = $2`,
+            [parseInt(req.params.id), req.session.userId]
+        );
+        if (!rowCount) return res.status(404).json({ error: 'Template not found' });
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Delete template error:', err);
+        res.status(500).json({ error: 'Failed to delete template' });
+    }
+});
+
 // ===== ADMIN ROUTES =====
 
 function requireAdmin(req, res, next) {
@@ -1477,6 +1616,59 @@ app.get('/api/admin/stats', requireAdmin, async (req, res) => {
     } catch (error) {
         console.error('Admin stats error:', error);
         res.status(500).json({ error: 'Failed to fetch stats' });
+    }
+});
+
+// ===== ADMIN ANALYTICS FUNNEL =====
+app.get('/api/admin/analytics/funnel', requireAdmin, async (req, res) => {
+    try {
+        const { rows } = await pool.query(`
+            WITH weeks AS (
+                SELECT generate_series(0, 7) AS offset
+            ),
+            week_ranges AS (
+                SELECT
+                    DATE_TRUNC('week', NOW()) - (offset * INTERVAL '1 week') AS week_start,
+                    DATE_TRUNC('week', NOW()) - (offset * INTERVAL '1 week') + INTERVAL '1 week' AS week_end,
+                    offset
+                FROM weeks
+            )
+            SELECT
+                TO_CHAR(wr.week_start, 'Mon DD') AS week,
+                wr.week_start,
+                COALESCE(l.listings_posted, 0) AS listings_posted,
+                COALESCE(p.proposals_submitted, 0) AS proposals_submitted,
+                COALESCE(a.proposals_accepted, 0) AS proposals_accepted
+            FROM week_ranges wr
+            LEFT JOIN (
+                SELECT DATE_TRUNC('week', created_at) AS w, COUNT(*) AS listings_posted
+                FROM listings WHERE deleted_at IS NULL
+                GROUP BY w
+            ) l ON l.w = wr.week_start
+            LEFT JOIN (
+                SELECT DATE_TRUNC('week', created_at) AS w, COUNT(*) AS proposals_submitted
+                FROM proposals
+                GROUP BY w
+            ) p ON p.w = wr.week_start
+            LEFT JOIN (
+                SELECT DATE_TRUNC('week', updated_at) AS w, COUNT(*) AS proposals_accepted
+                FROM proposals WHERE status = 'accepted'
+                GROUP BY w
+            ) a ON a.w = wr.week_start
+            ORDER BY wr.week_start DESC
+        `);
+        res.json(rows.map(r => ({
+            week: r.week,
+            listings_posted: parseInt(r.listings_posted),
+            proposals_submitted: parseInt(r.proposals_submitted),
+            proposals_accepted: parseInt(r.proposals_accepted),
+            conversion_rate: r.listings_posted > 0
+                ? Math.round((r.proposals_accepted / r.listings_posted) * 100)
+                : 0
+        })));
+    } catch (err) {
+        console.error('Funnel analytics error:', err);
+        res.status(500).json({ error: 'Failed to fetch funnel data' });
     }
 });
 
@@ -1982,9 +2174,16 @@ app.get('/api/admin/crm/realtors', requireAdmin, async (req, res) => {
                    u.is_approved, u.is_active, u.is_admin,
                    u.subscription_plan, u.license_number, u.license_verified,
                    u.service_areas, u.years_experience, u.bio, u.zip_code,
-                   u.created_at,
+                   u.profile_photo, u.created_at, u.last_login_at,
                    COUNT(DISTINCT p.id) AS proposals_sent,
-                   COUNT(DISTINCT lm.id) AS matches_count
+                   COUNT(DISTINCT lm.id) AS matches_count,
+                   (
+                       (CASE WHEN u.profile_photo IS NOT NULL THEN 1 ELSE 0 END) +
+                       (CASE WHEN u.bio IS NOT NULL AND LENGTH(TRIM(u.bio)) > 20 THEN 1 ELSE 0 END) +
+                       (CASE WHEN u.license_number IS NOT NULL THEN 1 ELSE 0 END) +
+                       (CASE WHEN u.service_areas IS NOT NULL AND TRIM(u.service_areas) != '' THEN 1 ELSE 0 END) +
+                       (CASE WHEN COUNT(DISTINCT p.id) > 0 THEN 1 ELSE 0 END)
+                   ) AS onboarding_score
             FROM users u
             LEFT JOIN proposals p ON p.realtor_id = u.id
             LEFT JOIN lead_matches lm ON lm.realtor_id = u.id
@@ -4856,12 +5055,88 @@ app.get('/api/company/analytics', auth.requireAuth, async (req, res) => {
 app.get('/s/:token', async (req, res) => {
     try {
         const { rows } = await pool.query(
-            `SELECT id FROM listings WHERE share_token = $1 AND status != 'inactive'`,
+            `SELECT l.id, l.address, l.city, l.state, l.zip, l.price,
+                    l.property_type, l.bedrooms, l.bathrooms, l.sqft,
+                    l.description, l.image_urls, l.share_token
+             FROM listings l
+             WHERE l.share_token = $1 AND l.status != 'inactive' AND l.deleted_at IS NULL`,
             [req.params.token]
         );
         if (!rows.length) return res.redirect('/');
-        await pool.query(`UPDATE listings SET share_views = COALESCE(share_views, 0) + 1 WHERE id = $1`, [rows[0].id]);
-        res.redirect(`/listing/${rows[0].id}`);
+        const l = rows[0];
+        pool.query(`UPDATE listings SET share_views = COALESCE(share_views, 0) + 1 WHERE id = $1`, [l.id]).catch(() => {});
+        const base = (process.env.FRONTEND_URL || 'https://realtorfinder.net').replace(/\/$/, '');
+        const title = `${l.address}${l.city ? ', ' + l.city : ''} — RealtorFinder`;
+        const priceStr = l.price ? '$' + Number(l.price).toLocaleString() : null;
+        const desc = [priceStr, l.bedrooms ? l.bedrooms + ' bed' : null, l.bathrooms ? l.bathrooms + ' bath' : null, l.sqft ? Number(l.sqft).toLocaleString() + ' sqft' : null].filter(Boolean).join(' · ');
+        const img = Array.isArray(l.image_urls) && l.image_urls[0] ? l.image_urls[0] : `${base}/og-default.png`;
+        const shareUrl = `${base}/s/${l.share_token}`;
+        const html = `<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${title}</title>
+<meta name="description" content="${desc}">
+<meta property="og:title" content="${title}">
+<meta property="og:description" content="${desc}">
+<meta property="og:image" content="${img}">
+<meta property="og:url" content="${shareUrl}">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700;900&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:#f8fafc;color:#0A2540;min-height:100vh}
+.nav{background:#0A2540;padding:1rem 2rem;display:flex;align-items:center;justify-content:space-between}
+.nav-logo{color:white;font-family:'Crimson Pro',serif;font-size:1.5rem;font-weight:700;text-decoration:none}
+.nav-cta{background:#FF6B35;color:white;padding:0.5rem 1.25rem;border-radius:8px;font-weight:600;text-decoration:none;font-size:0.9rem}
+.hero-img{width:100%;max-height:480px;object-fit:cover;display:block}
+.hero-img-placeholder{width:100%;height:300px;background:linear-gradient(135deg,#0A2540,#1a3a6b);display:flex;align-items:center;justify-content:center;font-size:4rem}
+.container{max-width:760px;margin:0 auto;padding:2rem 1.5rem}
+.address{font-family:'Crimson Pro',serif;font-size:2rem;font-weight:700;margin-bottom:0.5rem;line-height:1.2}
+.location{color:#6b7280;font-size:1rem;margin-bottom:1.5rem}
+.price{font-size:1.75rem;font-weight:700;color:#FF6B35;margin-bottom:1.5rem;font-family:'Crimson Pro',serif}
+.details{display:flex;gap:1.5rem;flex-wrap:wrap;margin-bottom:1.5rem}
+.detail{background:white;border:1px solid #e5e7eb;border-radius:10px;padding:0.75rem 1.25rem;text-align:center}
+.detail-val{font-size:1.25rem;font-weight:700;color:#0A2540;display:block}
+.detail-lbl{font-size:0.8rem;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em}
+.desc{color:#374151;line-height:1.75;margin-bottom:2rem;font-size:0.975rem}
+.cta-card{background:#0A2540;border-radius:16px;padding:2rem;text-align:center;margin-bottom:2rem}
+.cta-card h2{font-family:'Crimson Pro',serif;font-size:1.75rem;font-weight:700;color:white;margin-bottom:0.75rem}
+.cta-card p{color:#93c5fd;margin-bottom:1.5rem;font-size:0.95rem}
+.cta-btn{display:inline-block;background:#FF6B35;color:white;padding:0.9rem 2rem;border-radius:10px;font-weight:700;font-size:1rem;text-decoration:none;margin-bottom:0.75rem}
+.cta-sub{color:#93c5fd;font-size:0.85rem}
+.footer{text-align:center;padding:2rem;color:#9ca3af;font-size:0.85rem}
+.footer a{color:#9ca3af}
+@media(max-width:600px){.address{font-size:1.5rem}.details{gap:0.75rem}}
+</style></head><body>
+<nav class="nav">
+  <a href="/" class="nav-logo">RealtorFinder</a>
+  <a href="/login?tab=signup&type=seller" class="nav-cta">List My Home Free</a>
+</nav>
+${Array.isArray(l.image_urls) && l.image_urls[0]
+    ? `<img class="hero-img" src="${l.image_urls[0]}" alt="${l.address}" loading="lazy">`
+    : `<div class="hero-img-placeholder">🏡</div>`}
+<div class="container">
+  <div class="address">${l.address || 'Property Listing'}</div>
+  <div class="location">${[l.city, l.state, l.zip].filter(Boolean).join(', ')}</div>
+  ${l.price ? `<div class="price">$${Number(l.price).toLocaleString()}</div>` : ''}
+  <div class="details">
+    ${l.bedrooms ? `<div class="detail"><span class="detail-val">${l.bedrooms}</span><span class="detail-lbl">Beds</span></div>` : ''}
+    ${l.bathrooms ? `<div class="detail"><span class="detail-val">${l.bathrooms}</span><span class="detail-lbl">Baths</span></div>` : ''}
+    ${l.sqft ? `<div class="detail"><span class="detail-val">${Number(l.sqft).toLocaleString()}</span><span class="detail-lbl">Sq ft</span></div>` : ''}
+    ${l.property_type ? `<div class="detail"><span class="detail-val">${l.property_type}</span><span class="detail-lbl">Type</span></div>` : ''}
+  </div>
+  ${l.description ? `<div class="desc">${l.description.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>` : ''}
+  <div class="cta-card">
+    <h2>Are you looking to sell your home?</h2>
+    <p>Post your home for free on RealtorFinder and let top local realtors compete for your listing — no obligation.</p>
+    <a href="/login?tab=signup&type=seller" class="cta-btn">List My Home Free →</a><br>
+    <span class="cta-sub">Free to list · No commitment · Cancel anytime</span>
+  </div>
+  <a href="/listing/${l.id}" style="display:block;text-align:center;color:#6b7280;font-size:0.9rem;margin-bottom:2rem;">View full listing details →</a>
+</div>
+<div class="footer"><p>Shared via <a href="/">RealtorFinder</a> — where sellers post free and realtors compete</p></div>
+</body></html>`;
+        res.send(html);
     } catch { res.redirect('/'); }
 });
 
@@ -5580,8 +5855,21 @@ async function runEngagementReminderJob() {
 runEngagementReminderJob();
 setInterval(runEngagementReminderJob, 24 * 60 * 60 * 1000).unref();
 
-// Schema migration for review_request_sent
+// Schema migrations for batch 3 features
 pool.query(`ALTER TABLE proposals ADD COLUMN IF NOT EXISTS review_request_sent BOOLEAN DEFAULT FALSE`).catch(() => {});
+pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMPTZ`).catch(() => {});
+pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS notif_new_proposal BOOLEAN NOT NULL DEFAULT TRUE`).catch(() => {});
+pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS notif_messages BOOLEAN NOT NULL DEFAULT TRUE`).catch(() => {});
+pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS notif_weekly_digest BOOLEAN NOT NULL DEFAULT TRUE`).catch(() => {});
+pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS notif_listing_alerts BOOLEAN NOT NULL DEFAULT TRUE`).catch(() => {});
+pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS notif_engagement_reminders BOOLEAN NOT NULL DEFAULT TRUE`).catch(() => {});
+pool.query(`CREATE TABLE IF NOT EXISTS proposal_templates (
+    id SERIAL PRIMARY KEY,
+    realtor_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    content TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+)`).catch(() => {});
 
 // Review request job — emails sellers to review their accepted realtor 3 days after acceptance
 async function runReviewRequestJob() {
