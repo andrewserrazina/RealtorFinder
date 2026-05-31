@@ -2913,11 +2913,211 @@ app.post('/api/webhook/stripe', express.raw({ type: 'application/json' }), async
 
 // Health check
 app.get('/api/health', (req, res) => {
-    res.json({ 
-        status: 'ok', 
+    res.json({
+        status: 'ok',
         timestamp: new Date(),
         environment: process.env.NODE_ENV || 'development'
     });
+});
+
+// ===== BATCH 9: ADMIN REVENUE ANALYTICS =====
+
+const PLAN_MONTHLY_CENTS = { basic: 2900, professional: 4900, firm: 9900 };
+
+app.get('/api/admin/revenue', requireAdmin, async (req, res) => {
+    try {
+        const [planRows, monthlyRows, churnRows] = await Promise.all([
+            pool.query(`
+                SELECT COALESCE(u.subscription_plan, 'free') AS plan, COUNT(*) AS cnt
+                FROM users u
+                WHERE u.user_type = 'realtor' AND u.is_active IS NOT FALSE
+                GROUP BY plan
+            `),
+            pool.query(`
+                SELECT DATE_TRUNC('month', created_at) AS month,
+                       COUNT(*) FILTER (WHERE subscription_plan NOT IN ('free') AND subscription_plan IS NOT NULL) AS new_paid
+                FROM users
+                WHERE user_type = 'realtor' AND created_at >= NOW() - INTERVAL '12 months'
+                GROUP BY month ORDER BY month ASC
+            `),
+            pool.query(`
+                SELECT DATE_TRUNC('month', updated_at) AS month, COUNT(*) AS churned
+                FROM users
+                WHERE user_type = 'realtor'
+                  AND subscription_plan = 'free'
+                  AND updated_at >= NOW() - INTERVAL '12 months'
+                  AND is_active IS NOT FALSE
+                GROUP BY month ORDER BY month ASC
+            `),
+        ]);
+        let mrr_cents = 0;
+        const plan_breakdown = {};
+        for (const r of planRows.rows) {
+            const cnt = parseInt(r.cnt);
+            plan_breakdown[r.plan] = cnt;
+            mrr_cents += (PLAN_MONTHLY_CENTS[r.plan] || 0) * cnt;
+        }
+        res.json({
+            mrr_cents,
+            mrr_dollars: (mrr_cents / 100).toFixed(2),
+            plan_breakdown,
+            monthly_new_paid: monthlyRows.rows.map(r => ({
+                month: r.month,
+                new_paid: parseInt(r.new_paid)
+            })),
+            monthly_churned: churnRows.rows.map(r => ({
+                month: r.month,
+                churned: parseInt(r.churned)
+            }))
+        });
+    } catch (err) {
+        console.error('Revenue analytics error:', err);
+        res.status(500).json({ error: 'Failed to fetch revenue data' });
+    }
+});
+
+// ===== BATCH 9: ADMIN BULK USER ACTIONS =====
+
+app.post('/api/admin/bulk-users', requireAdmin, async (req, res) => {
+    try {
+        const { user_ids, action } = req.body;
+        if (!Array.isArray(user_ids) || !user_ids.length)
+            return res.status(400).json({ error: 'user_ids array required' });
+        if (!['approve', 'reject', 'deactivate', 'reactivate'].includes(action))
+            return res.status(400).json({ error: 'Invalid action' });
+
+        const ids = user_ids.map(Number).filter(Boolean);
+        let query;
+        if (action === 'approve')
+            query = `UPDATE users SET is_approved = TRUE WHERE id = ANY($1::int[])`;
+        else if (action === 'reject')
+            query = `UPDATE users SET is_approved = FALSE WHERE id = ANY($1::int[])`;
+        else if (action === 'deactivate')
+            query = `UPDATE users SET is_active = FALSE WHERE id = ANY($1::int[])`;
+        else
+            query = `UPDATE users SET is_active = TRUE WHERE id = ANY($1::int[])`;
+
+        const { rowCount } = await pool.query(query, [ids]);
+        console.log(`[AUDIT] Admin ${req.user.id} bulk ${action} on ${rowCount} users from IP ${req.ip}`);
+        await pool.query(
+            `INSERT INTO admin_audit_log (admin_id, action, ip_address) VALUES ($1, $2, $3)`,
+            [req.user.id, `bulk_${action}_${rowCount}_users`, req.ip]
+        ).catch(() => {});
+        res.json({ ok: true, affected: rowCount });
+    } catch (err) {
+        console.error('Bulk users error:', err);
+        res.status(500).json({ error: 'Failed to perform bulk action' });
+    }
+});
+
+// ===== BATCH 9: ADMIN EMAIL CAMPAIGN =====
+
+app.post('/api/admin/campaign', requireAdmin, async (req, res) => {
+    try {
+        const { segment, subject, message, cta_label, cta_url, plan_filter } = req.body;
+        if (!subject?.trim() || !message?.trim()) return res.status(400).json({ error: 'subject and message required' });
+        if (!['realtors', 'sellers', 'buyers', 'all'].includes(segment))
+            return res.status(400).json({ error: 'Invalid segment' });
+
+        const conditions = [`u.is_active IS NOT FALSE`, `u.email_unsubscribed IS NOT TRUE`, `u.email_verified = TRUE`];
+        if (segment === 'realtors') conditions.push(`u.user_type = 'realtor'`);
+        else if (segment === 'sellers') conditions.push(`u.user_type = 'seller'`);
+        else if (segment === 'buyers') conditions.push(`u.user_type = 'buyer'`);
+        if (plan_filter && segment === 'realtors') {
+            conditions.push(`COALESCE(u.subscription_plan, 'free') = '${plan_filter.replace(/[^a-z]/g, '')}'`);
+        }
+
+        const { rows: users } = await pool.query(
+            `SELECT u.id, u.email, u.first_name FROM users u WHERE ${conditions.join(' AND ')} LIMIT 5000`,
+            []
+        );
+
+        const sent = [];
+        const sleep = ms => new Promise(r => setTimeout(r, ms));
+        for (const user of users) {
+            try {
+                await emailService.sendCampaignEmail(user.email, user.first_name, subject, message, cta_label, cta_url);
+                sent.push(user.id);
+                await sleep(100); // ~10/s send rate
+            } catch (_) {}
+        }
+        console.log(`[AUDIT] Admin ${req.user.id} sent campaign "${subject}" to ${sent.length}/${users.length} users (segment: ${segment})`);
+        await pool.query(
+            `INSERT INTO admin_audit_log (admin_id, action, ip_address) VALUES ($1, $2, $3)`,
+            [req.user.id, `campaign_${segment}_${sent.length}`, req.ip]
+        ).catch(() => {});
+        res.json({ ok: true, sent: sent.length, total: users.length });
+    } catch (err) {
+        console.error('Campaign error:', err);
+        res.status(500).json({ error: 'Failed to send campaign' });
+    }
+});
+
+// ===== BATCH 9: PLATFORM HEALTH =====
+
+app.get('/api/admin/health', requireAdmin, (req, res) => {
+    const poolStats = pool.totalCount !== undefined ? {
+        total: pool.totalCount,
+        idle: pool.idleCount,
+        waiting: pool.waitingCount
+    } : null;
+    let sseCount = 0;
+    for (const clients of sseClients.values()) sseCount += clients.size;
+    res.json({
+        status: 'ok',
+        uptime_seconds: Math.floor(process.uptime()),
+        node_version: process.version,
+        environment: process.env.NODE_ENV || 'development',
+        db_pool: poolStats,
+        sse_connections: sseCount,
+        stripe_configured: !!stripe,
+        email_configured: !!process.env.SENDGRID_API_KEY,
+        memory_mb: Math.round(process.memoryUsage().rss / 1024 / 1024),
+        timestamp: new Date().toISOString()
+    });
+});
+
+// ===== BATCH 8: LISTING COMPARISON =====
+
+app.get('/api/listings/compare', async (req, res) => {
+    try {
+        const ids = (req.query.ids || '').split(',').map(Number).filter(Boolean).slice(0, 3);
+        if (!ids.length) return res.status(400).json({ error: 'ids required (comma-separated, max 3)' });
+        const { rows } = await pool.query(
+            `SELECT id, address, city, state, zip, price, property_type, bedrooms, bathrooms, sqft,
+                    description, image_urls, created_at, status,
+                    COALESCE(view_count, 0) AS view_count,
+                    (SELECT COUNT(*) FROM offers WHERE listing_id = l.id) AS offer_count
+             FROM listings l WHERE id = ANY($1::int[]) AND deleted_at IS NULL`,
+            [ids]
+        );
+        res.json(rows);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to load listings' });
+    }
+});
+
+// ===== BATCH 8: NEARBY STATS =====
+
+app.get('/api/listings/:id/nearby-stats', async (req, res) => {
+    try {
+        const { rows: listing } = await pool.query(`SELECT zip, city FROM listings WHERE id=$1`, [parseInt(req.params.id)]);
+        if (!listing.length) return res.status(404).json({ error: 'Listing not found' });
+        const { zip, city } = listing[0];
+        const { rows } = await pool.query(`
+            SELECT COUNT(*) AS total_active,
+                   ROUND(AVG(price)) AS avg_price,
+                   ROUND(MIN(price)) AS min_price,
+                   ROUND(MAX(price)) AS max_price,
+                   ROUND(AVG(sqft)) AS avg_sqft
+            FROM listings
+            WHERE (zip = $1 OR city ILIKE $2)
+              AND status = 'active' AND deleted_at IS NULL AND price > 0
+        `, [zip, city]);
+        res.json({ zip, city, ...rows[0] });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch nearby stats' });
+    }
 });
 
 // ===== SEO CITY PAGES =====

@@ -1136,6 +1136,26 @@ const emailService = {
         });
     },
 
+    async sendCampaignEmail(toEmail, firstName, subject, message, ctaLabel, ctaUrl) {
+        assertEmailConfig();
+        const ctaBlock = ctaLabel && ctaUrl
+            ? `<div style="text-align:center;margin:2rem 0;"><a href="${ctaUrl}" style="background:#FF6B35;color:white;padding:14px 32px;border-radius:8px;font-weight:700;text-decoration:none;display:inline-block;font-size:1rem;">${ctaLabel}</a></div>`
+            : '';
+        const body = `
+<div style="font-family:'DM Sans',Arial,sans-serif;max-width:600px;margin:0 auto;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;">
+  <div style="background:#0A2540;padding:1.5rem 2rem;">
+    <p style="color:white;font-size:1.4rem;font-weight:700;margin:0;font-family:'Crimson Pro',Georgia,serif;">RealtorFinder</p>
+  </div>
+  <div style="padding:2rem;">
+    <p style="font-size:1rem;color:#444;">Hi ${firstName || 'there'},</p>
+    <div style="font-size:1rem;color:#444;margin:1rem 0;line-height:1.75;">${message.replace(/\n/g, '<br>')}</div>
+    ${ctaBlock}
+    <p style="font-size:0.8rem;color:#aaa;text-align:center;margin-top:2rem;">You received this because you have an account on RealtorFinder. <a href="${BASE_URL}/unsubscribe" style="color:#aaa;">Unsubscribe</a></p>
+  </div>
+</div>`;
+        return await send({ to: toEmail, subject, html: body });
+    },
+
     async sendFollowUpEmail(sellerEmail, sellerName, realtorName, listingAddress, message) {
         assertEmailConfig();
         const body = `
