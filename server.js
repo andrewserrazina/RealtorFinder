@@ -1623,15 +1623,11 @@ app.get('/api/admin/stats', requireAdmin, async (req, res) => {
 app.get('/api/admin/analytics/funnel', requireAdmin, async (req, res) => {
     try {
         const { rows } = await pool.query(`
-            WITH weeks AS (
-                SELECT generate_series(0, 7) AS offset
-            ),
-            week_ranges AS (
+            WITH week_ranges AS (
                 SELECT
-                    DATE_TRUNC('week', NOW()) - (offset * INTERVAL '1 week') AS week_start,
-                    DATE_TRUNC('week', NOW()) - (offset * INTERVAL '1 week') + INTERVAL '1 week' AS week_end,
-                    offset
-                FROM weeks
+                    DATE_TRUNC('week', NOW()) - (n * INTERVAL '1 week') AS week_start,
+                    DATE_TRUNC('week', NOW()) - (n * INTERVAL '1 week') + INTERVAL '1 week' AS week_end
+                FROM generate_series(0, 7) AS n
             )
             SELECT
                 TO_CHAR(wr.week_start, 'Mon DD') AS week,
