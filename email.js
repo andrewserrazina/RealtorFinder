@@ -967,6 +967,20 @@ const emailService = {
         } catch (error) { logSendgridError('Review request email', error); }
     },
 
+    async sendProposalViewed(realtorEmail, realtorName, listingAddress) {
+        const body = `
+            ${h1('A Seller Viewed Your Proposal 👀')}
+            ${p(`Hi ${realtorName}, a seller just viewed your proposal on <strong>${listingAddress}</strong>.`)}
+            ${p(`They may be comparing proposals right now — make sure your cover note stands out.`)}
+            ${btn(`${BASE_URL}/dashboard`, 'View My Proposals')}
+            ${divider()}
+            <p style="color:#999;font-size:13px;margin:0;">The RealtorFinder Team</p>
+        `;
+        try {
+            await send({ to: realtorEmail, subject: `A seller viewed your proposal on ${listingAddress}`, html: emailWrap('For Realtors', body) });
+        } catch (err) { logSendgridError('Proposal viewed email', err); }
+    },
+
     // ─── Showing Request Emails ───────────────────────────────────────────────
 
     async sendShowingRequest(recipientEmail, recipientName, buyerName, listingAddress, date, time, message) {
