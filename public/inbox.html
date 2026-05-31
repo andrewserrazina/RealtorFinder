@@ -410,6 +410,13 @@
             border-bottom-left-radius: 4px;
         }
 
+        .message-seen {
+            font-size: 0.7rem;
+            color: #9ca3af;
+            text-align: right;
+            margin-top: 0.2rem;
+        }
+
         /* Send box */
         .send-box {
             padding: 1rem 1.5rem;
@@ -595,6 +602,21 @@
         return new Date(dateStr).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
     }
 
+    function formatReadAt(readAtStr) {
+        const now = Date.now();
+        const then = new Date(readAtStr).getTime();
+        const diff = Math.floor((now - then) / 1000);
+        if (diff < 3600) return 'Seen just now';
+        if (diff < 86400) {
+            const t = new Date(readAtStr).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+            return 'Seen at ' + t;
+        }
+        const d = new Date(readAtStr);
+        const day = d.toLocaleDateString(undefined, { weekday: 'short' });
+        const t = d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+        return 'Seen ' + day + ' ' + t;
+    }
+
     // ---- Auth ----
 
     async function checkAuth() {
@@ -771,15 +793,25 @@
             return;
         }
 
-        container.innerHTML = messages.map(msg => {
+        // Find the index of the last sent message that has been read
+        let lastReadSentIdx = -1;
+        messages.forEach((msg, idx) => {
+            if (msg.from_user_id === currentUser.id && msg.read_at) {
+                lastReadSentIdx = idx;
+            }
+        });
+
+        container.innerHTML = messages.map((msg, idx) => {
             const isMine = msg.from_user_id === currentUser.id;
             const senderName = isMine ? 'You' : `${escHtml(msg.first_name || '')} ${escHtml(msg.last_name || '')}`.trim();
+            const showSeen = isMine && msg.read_at && idx === lastReadSentIdx;
             return `<div class="message-row ${isMine ? 'mine' : 'theirs'}">
                 <div class="message-meta">
                     <span class="message-sender">${senderName}</span>
                     <span>${shortTime(msg.created_at)}</span>
                 </div>
                 <div class="message-bubble">${escHtml(msg.body)}</div>
+                ${showSeen ? `<div class="message-seen">${escHtml(formatReadAt(msg.read_at))}</div>` : ''}
             </div>`;
         }).join('');
 
@@ -863,6 +895,9 @@
                 conversations[convIdx].last_at = new Date().toISOString();
                 renderConvList();
             }
+
+            // Poll for read receipts every 30s while tab is focused (no SSE endpoint available)
+            scheduleReadReceiptPoll(activeConv);
         } catch (e) {
             // Remove optimistic message on error
             const container = document.getElementById('threadMessages');
@@ -877,6 +912,50 @@
             textarea.disabled = false;
             textarea.focus();
         }
+    }
+
+    // ---- Read receipt polling ----
+
+    let readReceiptTimer = null;
+
+    function scheduleReadReceiptPoll(conv) {
+        if (readReceiptTimer) clearTimeout(readReceiptTimer);
+        let attempts = 0;
+        const maxAttempts = 6; // poll up to 6 times (every 30s for 3 min)
+
+        async function poll() {
+            if (!document.hidden && activeConv &&
+                activeConv.other_user_id === conv.other_user_id &&
+                activeConv.listing_id === conv.listing_id) {
+                try {
+                    let url = `${API_BASE_URL}/messages/thread?with=${conv.other_user_id}`;
+                    if (conv.listing_id) url += `&listing=${conv.listing_id}`;
+                    const res = await fetch(url, { credentials: 'include' });
+                    if (res.ok) {
+                        const messages = await res.json();
+                        const container = document.getElementById('threadMessages');
+                        if (container) {
+                            const lastReadSent = [...messages].reverse().find(m => m.from_user_id === currentUser.id && m.read_at);
+                            const currentSeenEl = container.querySelector('.message-seen');
+                            const currentSeenText = currentSeenEl ? currentSeenEl.textContent : '';
+                            const newSeenText = lastReadSent ? formatReadAt(lastReadSent.read_at) : '';
+                            const currentCount = container.querySelectorAll('.message-row').length;
+                            if (messages.length !== currentCount || newSeenText !== currentSeenText) {
+                                renderMessages(messages);
+                            }
+                            // Stop polling once we have a read receipt
+                            if (lastReadSent) return;
+                        }
+                    }
+                } catch (e) { /* silently ignore */ }
+            }
+            attempts++;
+            if (attempts < maxAttempts) {
+                readReceiptTimer = setTimeout(poll, 30000);
+            }
+        }
+
+        readReceiptTimer = setTimeout(poll, 30000);
     }
 
     // ---- Polling ----
@@ -899,9 +978,13 @@
                         const messages = await tRes.json();
                         const container = document.getElementById('threadMessages');
                         if (container) {
-                            // Only re-render if count changed (avoid scroll jump)
+                            // Re-render if count changed or if read_at on last sent message changed
                             const currentCount = container.querySelectorAll('.message-row').length;
-                            if (messages.length !== currentCount) {
+                            const lastReadSent = [...messages].reverse().find(m => m.from_user_id === currentUser.id && m.read_at);
+                            const currentSeenEl = container.querySelector('.message-seen');
+                            const currentSeenText = currentSeenEl ? currentSeenEl.textContent : '';
+                            const newSeenText = lastReadSent ? formatReadAt(lastReadSent.read_at) : '';
+                            if (messages.length !== currentCount || newSeenText !== currentSeenText) {
                                 renderMessages(messages);
                             }
                         }

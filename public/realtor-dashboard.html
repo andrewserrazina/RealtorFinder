@@ -1364,6 +1364,39 @@
                     <div id="savedSearchesEmpty" style="display:none;color:#9ca3af;font-size:0.9rem;padding:0.5rem 0;">No saved searches yet. Create one to get alerts for new listings.</div>
                 </div>
 
+                <!-- Availability -->
+                <div style="background:white;border-radius:12px;border:1px solid var(--border);padding:1.5rem;">
+                    <h3 style="font-family:'Crimson Pro',serif;font-size:1.3rem;font-weight:700;margin-bottom:0.25rem;color:var(--ink);">Availability</h3>
+                    <p style="color:#6b7280;font-size:0.875rem;margin-bottom:1.25rem;">Set the days and times you're available to meet with sellers.</p>
+                    <!-- Add slot form -->
+                    <div style="display:flex;gap:0.75rem;flex-wrap:wrap;align-items:flex-end;margin-bottom:1.25rem;">
+                        <div style="display:flex;flex-direction:column;gap:0.3rem;">
+                            <label style="font-size:0.8rem;font-weight:600;color:#374151;">Day</label>
+                            <select id="availDay" style="padding:0.6rem 0.75rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.875rem;">
+                                <option value="0">Sunday</option>
+                                <option value="1">Monday</option>
+                                <option value="2">Tuesday</option>
+                                <option value="3">Wednesday</option>
+                                <option value="4">Thursday</option>
+                                <option value="5">Friday</option>
+                                <option value="6">Saturday</option>
+                            </select>
+                        </div>
+                        <div style="display:flex;flex-direction:column;gap:0.3rem;">
+                            <label style="font-size:0.8rem;font-weight:600;color:#374151;">Start</label>
+                            <input type="time" id="availStart" style="padding:0.6rem 0.75rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.875rem;">
+                        </div>
+                        <div style="display:flex;flex-direction:column;gap:0.3rem;">
+                            <label style="font-size:0.8rem;font-weight:600;color:#374151;">End</label>
+                            <input type="time" id="availEnd" style="padding:0.6rem 0.75rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.875rem;">
+                        </div>
+                        <button onclick="addAvailabilitySlot()" style="background:var(--accent);color:white;border:none;padding:0.6rem 1.25rem;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.875rem;font-family:inherit;white-space:nowrap;">+ Add</button>
+                    </div>
+                    <div id="availabilityLoading" style="color:#9ca3af;font-size:0.9rem;">Loading…</div>
+                    <div id="availabilityList" style="display:none;flex-direction:column;gap:0.5rem;"></div>
+                    <div id="availabilityEmpty" style="display:none;color:#9ca3af;font-size:0.875rem;padding:0.5rem 0;">No availability slots yet. Add your first one above.</div>
+                </div>
+
                 <!-- Change Password -->
                 <div style="background:white;border-radius:12px;border:1px solid var(--border);padding:1.5rem;">
                     <h3 style="font-family:'Crimson Pro',serif;font-size:1.3rem;font-weight:700;margin-bottom:1rem;color:var(--ink);">Change Password</h3>
@@ -3911,6 +3944,7 @@
                         </div>
                         <div style="display:flex;align-items:center;gap:0.75rem;flex-shrink:0;">
                             <span style="background:${color}20;color:${color};padding:4px 12px;border-radius:20px;font-size:0.8rem;font-weight:700;text-transform:capitalize;">${p.status}</span>
+                            <button onclick="openFollowUpModal(${p.id})" style="background:none;border:1px solid var(--accent);color:var(--accent);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:0.8rem;font-weight:600;">Follow Up</button>
                             ${p.status === 'pending' ? `<button onclick="deleteProposal(${p.id})" style="background:none;border:1px solid #e5e7eb;color:#666;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:0.8rem;">Withdraw</button>` : ''}
                         </div>
                     </div>`;
@@ -3944,6 +3978,107 @@
                 showToast(accept ? 'Counter-offer accepted!' : 'Counter-offer declined');
                 typeof loadMyProposals === 'function' && loadMyProposals();
             } catch { showToast('Failed to respond to counter-offer', 'error'); }
+        }
+
+        // ─── Follow-up Modal ─────────────────────────────────────────────────────
+        let _followUpProposalId = null;
+        function openFollowUpModal(proposalId) {
+            _followUpProposalId = proposalId;
+            document.getElementById('followUpMessage').value = '';
+            document.getElementById('followUpError').style.display = 'none';
+            document.getElementById('followUpModal').style.display = 'flex';
+        }
+        function closeFollowUpModal() {
+            _followUpProposalId = null;
+            document.getElementById('followUpModal').style.display = 'none';
+        }
+        async function sendFollowUp() {
+            const message = document.getElementById('followUpMessage').value.trim();
+            const errEl = document.getElementById('followUpError');
+            const btn = document.getElementById('followUpSendBtn');
+            if (!message) { errEl.textContent = 'Please enter a message.'; errEl.style.display = 'block'; return; }
+            errEl.style.display = 'none';
+            btn.disabled = true; btn.textContent = 'Sending…';
+            try {
+                const res = await fetch(`/api/proposals/${_followUpProposalId}/followup`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ message }),
+                });
+                if (!res.ok) {
+                    const d = await res.json().catch(() => ({}));
+                    errEl.textContent = d.error || 'Failed to send follow-up. Please try again.';
+                    errEl.style.display = 'block';
+                } else {
+                    closeFollowUpModal();
+                    showToast('Follow-up sent!');
+                }
+            } catch(e) {
+                errEl.textContent = 'Network error. Please try again.';
+                errEl.style.display = 'block';
+            } finally {
+                btn.disabled = false; btn.textContent = 'Send Message';
+            }
+        }
+
+        // ─── Availability ─────────────────────────────────────────────────────────
+        const DAY_NAMES = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+        async function loadAvailability() {
+            const loading = document.getElementById('availabilityLoading');
+            const list = document.getElementById('availabilityList');
+            const empty = document.getElementById('availabilityEmpty');
+            if (!loading) return;
+            loading.style.display = 'block'; list.style.display = 'none'; empty.style.display = 'none';
+            try {
+                const res = await fetch('/api/availability', { credentials: 'include' });
+                if (!res.ok) { loading.textContent = 'Could not load availability.'; return; }
+                const slots = await res.json();
+                loading.style.display = 'none';
+                if (!slots.length) { empty.style.display = 'block'; return; }
+                // Group by day
+                const byDay = {};
+                slots.forEach(s => { (byDay[s.day_of_week] = byDay[s.day_of_week] || []).push(s); });
+                list.style.display = 'flex';
+                list.innerHTML = Object.keys(byDay).sort((a,b) => a-b).map(day => {
+                    const daySlots = byDay[day].map(s =>
+                        `<span style="display:inline-flex;align-items:center;gap:0.4rem;background:#f3f4f6;border-radius:6px;padding:3px 10px;font-size:0.85rem;">
+                            ${s.start_time.slice(0,5)}–${s.end_time.slice(0,5)}
+                            <button onclick="deleteAvailabilitySlot(${s.id})" style="background:none;border:none;cursor:pointer;color:#9ca3af;font-size:0.9rem;line-height:1;padding:0;" title="Remove">×</button>
+                        </span>`
+                    ).join('');
+                    return `<div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;padding:0.4rem 0;border-bottom:1px solid #f3f4f6;">
+                        <span style="font-weight:600;font-size:0.875rem;min-width:90px;color:#374151;">${DAY_NAMES[day]}</span>
+                        <div style="display:flex;flex-wrap:wrap;gap:0.5rem;">${daySlots}</div>
+                    </div>`;
+                }).join('');
+            } catch(e) { loading.textContent = 'Error loading availability.'; }
+        }
+        async function addAvailabilitySlot() {
+            const day_of_week = parseInt(document.getElementById('availDay').value);
+            const start_time = document.getElementById('availStart').value;
+            const end_time = document.getElementById('availEnd').value;
+            if (!start_time || !end_time) { showToast('Please set a start and end time.', 'error'); return; }
+            if (start_time >= end_time) { showToast('End time must be after start time.', 'error'); return; }
+            try {
+                const res = await fetch('/api/availability', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ day_of_week, start_time, end_time }),
+                });
+                if (!res.ok) { const d = await res.json().catch(()=>({})); showToast(d.error || 'Failed to add slot.', 'error'); return; }
+                document.getElementById('availStart').value = '';
+                document.getElementById('availEnd').value = '';
+                loadAvailability();
+            } catch(e) { showToast('Network error. Please try again.', 'error'); }
+        }
+        async function deleteAvailabilitySlot(id) {
+            try {
+                const res = await fetch(`/api/availability/${id}`, { method: 'DELETE', credentials: 'include' });
+                if (res.ok) loadAvailability();
+                else showToast('Failed to remove slot.', 'error');
+            } catch(e) { showToast('Network error.', 'error'); }
         }
 
         function showProposalModal(listingId, listingAddress) {
@@ -4606,6 +4741,21 @@
                     <button type="button" onclick="closeDealModal()" style="background:#f3f4f6;color:#374151;border:none;border-radius:8px;padding:12px 20px;font-weight:600;cursor:pointer;font-family:inherit;">Cancel</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Follow-up Modal -->
+    <div id="followUpModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1100;align-items:center;justify-content:center;padding:1rem;">
+        <div style="background:white;border-radius:16px;padding:2rem;max-width:460px;width:100%;position:relative;">
+            <button onclick="closeFollowUpModal()" style="position:absolute;top:1rem;right:1rem;background:none;border:none;font-size:1.3rem;cursor:pointer;color:#9ca3af;">✕</button>
+            <h3 style="font-family:'Crimson Pro',serif;font-size:1.5rem;font-weight:700;margin-bottom:0.5rem;color:var(--ink);">Send Follow-Up</h3>
+            <p style="color:#6b7280;font-size:0.875rem;margin-bottom:1.25rem;">Send a follow-up message to the seller about this proposal.</p>
+            <textarea id="followUpMessage" rows="5" placeholder="Write your follow-up message here…" style="width:100%;padding:0.75rem 1rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.95rem;resize:vertical;margin-bottom:1rem;"></textarea>
+            <div id="followUpError" style="display:none;color:#dc2626;font-size:0.85rem;margin-bottom:0.75rem;"></div>
+            <div style="display:flex;gap:0.75rem;">
+                <button onclick="sendFollowUp()" id="followUpSendBtn" style="flex:1;background:var(--accent);color:white;border:none;border-radius:8px;padding:0.75rem;font-weight:700;cursor:pointer;font-family:inherit;">Send Message</button>
+                <button onclick="closeFollowUpModal()" style="background:#f3f4f6;color:#374151;border:none;border-radius:8px;padding:0.75rem 1.25rem;font-weight:600;cursor:pointer;font-family:inherit;">Cancel</button>
+            </div>
         </div>
     </div>
 

@@ -2748,6 +2748,21 @@ app.post('/api/webhook/stripe', express.raw({ type: 'application/json' }), async
     if (event.type === 'checkout.session.completed') {
         const sess = event.data.object;
 
+        // Listing boost checkout
+        if (sess.metadata?.type === 'listing_boost') {
+            try {
+                const listingId = parseInt(sess.metadata.listing_id);
+                const days = parseInt(sess.metadata.days) || 7;
+                await pool.query(
+                    `UPDATE listings SET boosted_until = NOW() + ($1 || ' days')::INTERVAL WHERE id = $2`,
+                    [days, listingId]
+                );
+                console.log(`✅ Stripe: listing ${listingId} boosted for ${days} days`);
+            } catch (err) {
+                console.error('Stripe boost webhook DB error:', err);
+            }
+        }
+
         // Lead purchase checkout
         if (sess.metadata?.type === 'listing_lead') {
             const client = await pool.connect();
@@ -3452,23 +3467,37 @@ app.get('/api/realtors/search', async (req, res) => {
 
 app.get('/api/realtors/:id/public', async (req, res) => {
     try {
-        const { rows } = await pool.query(
-            `SELECT u.id, u.first_name, u.last_name, u.bio, u.years_experience,
-                    u.license_number, u.service_areas, u.subscription_plan, u.zip_code,
-                    u.profile_photo, u.license_verified, u.license_doc_url, u.license_rejection_note,
-                    c.name AS company_name, c.plan AS company_plan
-             FROM users u
-             LEFT JOIN companies c ON u.company_id = c.id
-             WHERE u.id = $1 AND u.user_type = 'realtor' AND u.is_active IS NOT FALSE`,
-            [parseInt(req.params.id)]
-        );
-        if (!rows.length) return res.status(404).json({ error: 'Realtor not found' });
-        // Track profile view (fire-and-forget)
-        pool.query(
-            `INSERT INTO profile_views (realtor_id, viewer_ip) VALUES ($1, $2)`,
-            [parseInt(req.params.id), req.ip]
-        ).catch(() => {});
-        res.json(rows[0]);
+        const rid = parseInt(req.params.id);
+        const [profileRows, reviewRow, proposalRow] = await Promise.all([
+            pool.query(
+                `SELECT u.id, u.first_name, u.last_name, u.bio, u.years_experience,
+                        u.license_number, u.service_areas, u.subscription_plan, u.zip_code,
+                        u.profile_photo, u.license_verified, u.brokerage,
+                        c.name AS company_name, c.plan AS company_plan
+                 FROM users u
+                 LEFT JOIN companies c ON u.company_id = c.id
+                 WHERE u.id = $1 AND u.user_type = 'realtor' AND u.is_active IS NOT FALSE`,
+                [rid]
+            ),
+            pool.query(
+                `SELECT ROUND(AVG(rating), 1) AS avg_rating, COUNT(*) AS review_count
+                 FROM realtor_reviews WHERE realtor_id = $1`, [rid]
+            ),
+            pool.query(
+                `SELECT COUNT(*) AS total,
+                        SUM(CASE WHEN status='accepted' THEN 1 ELSE 0 END) AS accepted
+                 FROM proposals WHERE realtor_id = $1`, [rid]
+            ),
+        ]);
+        if (!profileRows.rows.length) return res.status(404).json({ error: 'Realtor not found' });
+        pool.query(`INSERT INTO profile_views (realtor_id, viewer_ip) VALUES ($1, $2)`, [rid, req.ip]).catch(() => {});
+        res.json({
+            ...profileRows.rows[0],
+            avg_rating: parseFloat(reviewRow.rows[0].avg_rating) || null,
+            review_count: parseInt(reviewRow.rows[0].review_count) || 0,
+            total_proposals: parseInt(proposalRow.rows[0].total) || 0,
+            accepted_proposals: parseInt(proposalRow.rows[0].accepted) || 0,
+        });
     } catch (err) {
         console.error('Public profile error:', err);
         res.status(500).json({ error: 'Failed to load profile' });
@@ -4475,6 +4504,192 @@ pool.query(`
     )
 `).catch(err => console.error('realtor_reviews table init error:', err.message));
 
+// ===== BATCH 6: LEADERBOARD =====
+
+app.get('/api/realtors/leaderboard', async (req, res) => {
+    try {
+        const { area, limit: lim = 10 } = req.query;
+        const params = [];
+        let areaClause = '';
+        if (area) { params.push(`%${area}%`); areaClause = `AND u.service_areas ILIKE $1`; }
+        const { rows } = await pool.query(
+            `SELECT u.id, u.first_name, u.last_name, u.profile_photo, u.bio,
+                    u.years_experience, u.service_areas, u.license_verified, u.subscription_plan,
+                    c.name AS company_name,
+                    ROUND(COALESCE(AVG(r.rating), 0), 1) AS avg_rating,
+                    COUNT(DISTINCT r.id) AS review_count,
+                    COUNT(DISTINCT p.id) FILTER (WHERE p.status = 'accepted') AS accepted_proposals,
+                    COUNT(DISTINCT p.id) AS total_proposals
+             FROM users u
+             LEFT JOIN companies c ON u.company_id = c.id
+             LEFT JOIN realtor_reviews r ON r.realtor_id = u.id
+             LEFT JOIN proposals p ON p.realtor_id = u.id
+             WHERE u.user_type = 'realtor' AND u.is_approved = TRUE AND u.is_active IS NOT FALSE
+               ${areaClause}
+             GROUP BY u.id, c.name
+             HAVING COUNT(DISTINCT p.id) > 0 OR COUNT(DISTINCT r.id) > 0
+             ORDER BY avg_rating DESC, accepted_proposals DESC, total_proposals DESC
+             LIMIT $${params.length + 1}`,
+            [...params, Math.min(parseInt(lim) || 10, 50)]
+        );
+        res.json(rows);
+    } catch (err) {
+        console.error('Leaderboard error:', err);
+        res.status(500).json({ error: 'Failed to load leaderboard' });
+    }
+});
+
+// ===== BATCH 6: LISTING BOOST =====
+
+const BOOST_PRICES = { 7: 900, 30: 2900 }; // cents
+
+app.post('/api/listings/:id/boost', auth.requireAuth, async (req, res) => {
+    if (!stripe) return res.status(503).json({ error: 'stripe_not_configured' });
+    try {
+        if (req.user.user_type !== 'seller') return res.status(403).json({ error: 'Sellers only' });
+        const listingId = parseInt(req.params.id);
+        const days = parseInt(req.body.days);
+        if (![7, 30].includes(days)) return res.status(400).json({ error: 'days must be 7 or 30' });
+
+        const { rows } = await pool.query(
+            `SELECT id, address, city, state FROM listings WHERE id=$1 AND user_id=$2 AND deleted_at IS NULL`,
+            [listingId, req.session.userId]
+        );
+        if (!rows.length) return res.status(404).json({ error: 'Listing not found' });
+        const l = rows[0];
+        const address = [l.address, l.city, l.state].filter(Boolean).join(', ');
+
+        const baseUrl = process.env.FRONTEND_URL || `http://localhost:${PORT}`;
+        const session = await stripe.checkout.sessions.create({
+            mode: 'payment',
+            payment_method_types: ['card'],
+            line_items: [{
+                price_data: {
+                    currency: 'usd',
+                    unit_amount: BOOST_PRICES[days],
+                    product_data: { name: `${days}-Day Listing Boost`, description: address }
+                },
+                quantity: 1
+            }],
+            metadata: { type: 'listing_boost', listing_id: listingId, days, seller_id: req.session.userId },
+            success_url: `${baseUrl}/dashboard/seller?boost=success`,
+            cancel_url: `${baseUrl}/dashboard/seller`,
+        });
+        res.json({ url: session.url });
+    } catch (err) {
+        console.error('Boost checkout error:', err);
+        res.status(500).json({ error: 'Failed to create boost checkout' });
+    }
+});
+
+app.get('/api/listings/:id/boost-status', auth.requireAuth, async (req, res) => {
+    try {
+        const { rows } = await pool.query(
+            `SELECT boosted_until FROM listings WHERE id=$1 AND user_id=$2`,
+            [parseInt(req.params.id), req.session.userId]
+        );
+        if (!rows.length) return res.status(404).json({ error: 'Not found' });
+        const boostedUntil = rows[0].boosted_until;
+        const active = boostedUntil && new Date(boostedUntil) > new Date();
+        res.json({ active, boosted_until: boostedUntil || null });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to check boost status' });
+    }
+});
+
+// ===== BATCH 7: REALTOR AVAILABILITY =====
+
+app.get('/api/availability', auth.requireAuth, async (req, res) => {
+    try {
+        if (req.user.user_type !== 'realtor') return res.status(403).json({ error: 'Realtors only' });
+        const { rows } = await pool.query(
+            `SELECT id, day_of_week, start_time, end_time
+             FROM realtor_availability WHERE realtor_id=$1 ORDER BY day_of_week, start_time`,
+            [req.session.userId]
+        );
+        res.json(rows);
+    } catch (err) { res.status(500).json({ error: 'Failed to load availability' }); }
+});
+
+app.post('/api/availability', auth.requireAuth, async (req, res) => {
+    try {
+        if (req.user.user_type !== 'realtor') return res.status(403).json({ error: 'Realtors only' });
+        const { day_of_week, start_time, end_time } = req.body;
+        if (day_of_week === undefined || !start_time || !end_time)
+            return res.status(400).json({ error: 'day_of_week, start_time, end_time required' });
+        const { rows } = await pool.query(
+            `INSERT INTO realtor_availability (realtor_id, day_of_week, start_time, end_time)
+             VALUES ($1,$2,$3,$4)
+             ON CONFLICT (realtor_id, day_of_week, start_time) DO UPDATE SET end_time=EXCLUDED.end_time
+             RETURNING *`,
+            [req.session.userId, parseInt(day_of_week), start_time, end_time]
+        );
+        res.json(rows[0]);
+    } catch (err) { res.status(500).json({ error: 'Failed to save availability' }); }
+});
+
+app.delete('/api/availability/:id', auth.requireAuth, async (req, res) => {
+    try {
+        if (req.user.user_type !== 'realtor') return res.status(403).json({ error: 'Realtors only' });
+        await pool.query(
+            `DELETE FROM realtor_availability WHERE id=$1 AND realtor_id=$2`,
+            [parseInt(req.params.id), req.session.userId]
+        );
+        res.json({ ok: true });
+    } catch (err) { res.status(500).json({ error: 'Failed to delete slot' }); }
+});
+
+app.get('/api/realtors/:id/availability', async (req, res) => {
+    try {
+        const { rows } = await pool.query(
+            `SELECT day_of_week, start_time, end_time
+             FROM realtor_availability WHERE realtor_id=$1 ORDER BY day_of_week, start_time`,
+            [parseInt(req.params.id)]
+        );
+        res.json(rows);
+    } catch (err) { res.status(500).json({ error: 'Failed to load availability' }); }
+});
+
+// ===== BATCH 7: PROPOSAL FOLLOW-UP EMAIL =====
+
+app.post('/api/proposals/:id/followup', auth.requireAuth, async (req, res) => {
+    try {
+        if (req.user.user_type !== 'realtor') return res.status(403).json({ error: 'Realtors only' });
+        const propId = parseInt(req.params.id);
+        const { message } = req.body;
+        if (!message?.trim()) return res.status(400).json({ error: 'Message required' });
+        if (message.length > 2000) return res.status(400).json({ error: 'Message must be under 2000 characters' });
+
+        const { rows } = await pool.query(
+            `SELECT p.id, p.listing_id,
+                    l.address, l.city, l.state, l.user_id AS seller_id,
+                    su.email AS seller_email, su.first_name AS seller_first,
+                    su.notif_messages AS seller_notif_msgs,
+                    ru.first_name AS realtor_first, ru.last_name AS realtor_last
+             FROM proposals p
+             JOIN listings l ON l.id = p.listing_id
+             JOIN users su ON su.id = l.user_id
+             JOIN users ru ON ru.id = p.realtor_id
+             WHERE p.id=$1 AND p.realtor_id=$2`,
+            [propId, req.session.userId]
+        );
+        if (!rows.length) return res.status(404).json({ error: 'Proposal not found' });
+        const r = rows[0];
+        const addr = [r.address, r.city, r.state].filter(Boolean).join(', ');
+        const realtorName = `${r.realtor_first} ${r.realtor_last}`.trim();
+
+        if (r.seller_notif_msgs !== false && r.seller_email) {
+            emailService.sendFollowUpEmail(r.seller_email, r.seller_first, realtorName, addr, message.trim())
+                .catch(err => console.error('Follow-up email error:', err.message));
+        }
+        sseNotify(r.seller_id, { type: 'proposal_followup', realtorName, listingAddress: addr });
+        res.json({ ok: true });
+    } catch (err) {
+        console.error('Follow-up error:', err);
+        res.status(500).json({ error: 'Failed to send follow-up' });
+    }
+});
+
 // ===== MESSAGING =====
 
 // ALTER TABLE migrations run at startup — collected here so they await before listen
@@ -4612,6 +4827,20 @@ const _schemaMigrations = [
     `ALTER TABLE listings ADD COLUMN IF NOT EXISTS owner_attested BOOLEAN DEFAULT FALSE`,
     `ALTER TABLE listings ADD COLUMN IF NOT EXISTS owner_attested_at TIMESTAMPTZ`,
 ];
+
+// ===== BATCH 6+7 SCHEMA =====
+_schemaMigrations.push(
+    `ALTER TABLE listings ADD COLUMN IF NOT EXISTS boosted_until TIMESTAMPTZ`,
+    `CREATE TABLE IF NOT EXISTS realtor_availability (
+        id SERIAL PRIMARY KEY,
+        realtor_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        day_of_week SMALLINT NOT NULL CHECK (day_of_week BETWEEN 0 AND 6),
+        start_time TIME NOT NULL,
+        end_time TIME NOT NULL,
+        UNIQUE(realtor_id, day_of_week, start_time)
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_realtor_avail ON realtor_availability(realtor_id)`
+);
 
 // ===== ADMIN AUDIT LOG =====
 _schemaMigrations.push(

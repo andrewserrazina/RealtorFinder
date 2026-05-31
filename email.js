@@ -1135,6 +1135,32 @@ const emailService = {
             html: body,
         });
     },
+
+    async sendFollowUpEmail(sellerEmail, sellerName, realtorName, listingAddress, message) {
+        assertEmailConfig();
+        const body = `
+<div style="font-family:'DM Sans',Arial,sans-serif;max-width:600px;margin:0 auto;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;">
+  <div style="background:#0A2540;padding:1.5rem 2rem;">
+    <p style="color:white;font-size:1.4rem;font-weight:700;margin:0;font-family:'Crimson Pro',Georgia,serif;">RealtorFinder</p>
+  </div>
+  <div style="padding:2rem;">
+    <p style="font-size:1rem;color:#444;">Hi ${sellerName || 'there'},</p>
+    <p style="font-size:1rem;color:#444;margin:1rem 0;">You have a follow-up message from <strong>${realtorName}</strong> regarding your listing at <strong>${listingAddress}</strong>:</p>
+    <div style="background:#f8f9fa;border-left:4px solid #FF6B35;padding:1rem 1.25rem;border-radius:0 8px 8px 0;margin:1.5rem 0;">
+      <p style="color:#1a1a1a;font-size:0.975rem;line-height:1.7;margin:0;">${message.replace(/\n/g, '<br>')}</p>
+    </div>
+    <div style="text-align:center;margin:2rem 0;">
+      <a href="${BASE_URL}/dashboard/seller" style="background:#FF6B35;color:white;padding:14px 32px;border-radius:8px;font-weight:700;text-decoration:none;display:inline-block;font-size:1rem;">View Proposal →</a>
+    </div>
+    <p style="font-size:0.85rem;color:#999;text-align:center;">You can respond directly in your seller dashboard.</p>
+  </div>
+</div>`;
+        return await send({
+            to: sellerEmail,
+            subject: `Follow-up from ${realtorName} — ${listingAddress}`,
+            html: body,
+        });
+    },
 };
 
 module.exports = emailService;
