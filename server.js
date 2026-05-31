@@ -6,6 +6,28 @@ const cookieParser = require('cookie-parser');
 const session = require('express-session');
 const pgSession = require('connect-pg-simple')(session);
 require('dotenv').config();
+
+// ===== STARTUP ENVIRONMENT VALIDATION =====
+const _requiredEnv = ['DATABASE_URL', 'SESSION_SECRET'];
+const _missingEnv = _requiredEnv.filter(k => !process.env[k]);
+if (_missingEnv.length) {
+    console.error(`FATAL: Missing required environment variables: ${_missingEnv.join(', ')}`);
+    process.exit(1);
+}
+if (!process.env.STRIPE_WEBHOOK_SECRET) {
+    console.warn('WARNING: STRIPE_WEBHOOK_SECRET not set — Stripe webhooks will fail signature verification');
+}
+if (process.env.NODE_ENV === 'production') {
+    if (!process.env.STRIPE_SECRET_KEY?.startsWith('sk_live_')) {
+        console.error('FATAL: STRIPE_SECRET_KEY must be a live key (sk_live_...) in production');
+        process.exit(1);
+    }
+    if (!process.env.FRONTEND_URL) {
+        console.error('FATAL: FRONTEND_URL is required in production');
+        process.exit(1);
+    }
+}
+
 const https = require('https');
 const crypto = require('crypto');
 const bcrypt = require('bcrypt');
@@ -63,7 +85,7 @@ const uploadLimiter = rateLimit({
 });
 
 // Middleware
-const allowedOrigin = process.env.FRONTEND_URL || true; // set FRONTEND_URL=https://yourdomain.com in production
+const allowedOrigin = process.env.FRONTEND_URL || 'http://localhost:3000';
 app.use(cors({
     origin: allowedOrigin,
     credentials: true
@@ -86,16 +108,16 @@ const sessionStore = new pgSession({
 
 app.use(session({
     store: sessionStore,
-    secret: process.env.SESSION_SECRET || 'realtorfinder-temp-secret-change-in-production',
+    secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
     rolling: true,
     proxy: true, // Trust the reverse proxy
     cookie: {
-        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
         httpOnly: true,
         secure: true,
-        sameSite: 'lax' // Back to lax since same domain
+        sameSite: 'lax'
     }
 }));
 
@@ -243,23 +265,29 @@ async function notifyNearbyRealtors(listing) {
     }
 }
 
-// Simple in-memory rate limiter (windowMs = window in ms, max = max requests per window per IP)
-function createRateLimiter(windowMs, max, message) {
-    const hits = new Map();
-    setInterval(() => hits.clear(), windowMs).unref();
-    return (req, res, next) => {
-        const key = req.ip;
-        const count = (hits.get(key) || 0) + 1;
-        hits.set(key, count);
-        if (count > max) {
-            return res.status(429).json({ error: message || 'Too many requests. Please try again later.' });
-        }
-        next();
-    };
-}
+const waitlistLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000,
+    max: 5,
+    message: { error: 'Too many signups from this IP. Please try again later.' },
+    standardHeaders: true,
+    legacyHeaders: false
+});
 
-const authLimiter     = createRateLimiter(15 * 60 * 1000, 20, 'Too many attempts. Please try again in 15 minutes.');
-const waitlistLimiter = createRateLimiter(60 * 60 * 1000, 5,  'Too many signups from this IP. Please try again later.');
+const contactLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000,
+    max: 10,
+    message: { error: 'Too many contact requests. Please try again later.' },
+    standardHeaders: true,
+    legacyHeaders: false
+});
+
+const impersonateLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 5,
+    message: { error: 'Too many impersonation attempts. Please slow down.' },
+    standardHeaders: true,
+    legacyHeaders: false
+});
 
 // SSE: in-memory client registry — userId -> Set<res>
 const sseClients = new Map();
@@ -281,7 +309,7 @@ app.use('/api', apiLimiter);
 // ===== AUTHENTICATION ROUTES =====
 
 // Signup
-app.post('/api/auth/signup', authLimiter, async (req, res) => {
+app.post('/api/auth/signup', async (req, res) => {
     try {
         const { email, password, userType, firstName, lastName, zipCode, companyName } = req.body;
 
@@ -328,7 +356,7 @@ app.post('/api/auth/signup', authLimiter, async (req, res) => {
 
         // Send verification email (non-blocking)
         const verifyToken = crypto.randomBytes(32).toString('hex');
-        const verifyExpiry = new Date(Date.now() + 48 * 60 * 60 * 1000);
+        const verifyExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
         await db.setVerificationToken(user.id, verifyToken, verifyExpiry);
         const baseUrl = process.env.FRONTEND_URL || `http://localhost:${PORT}`;
         emailService.sendEmailVerification(user.email, `${baseUrl}/api/auth/verify-email?token=${verifyToken}`)
@@ -552,6 +580,9 @@ app.post('/api/buyer-requests', auth.requireAuth, async (req, res) => {
         if (!property_type || !target_areas) {
             return res.status(400).json({ error: 'property_type and target_areas are required' });
         }
+        if (String(target_areas).length > 500) {
+            return res.status(400).json({ error: 'target_areas must be under 500 characters' });
+        }
         if (budget_min !== undefined && budget_min !== null && budget_min !== '') {
             const bmin = parseFloat(budget_min);
             if (isNaN(bmin) || bmin < 0) return res.status(400).json({ error: 'budget_min must be a non-negative number' });
@@ -665,7 +696,7 @@ app.post('/api/buyer-requests/:id/respond', auth.requireAuth, async (req, res) =
 });
 
 // Login
-app.post('/api/auth/login', authLimiter, async (req, res) => {
+app.post('/api/auth/login', async (req, res) => {
     try {
         console.log('🔑 Login attempt for:', req.body.email);
         
@@ -773,7 +804,7 @@ app.get('/api/auth/verify-email', async (req, res) => {
 });
 
 // Resend verification email
-app.post('/api/auth/resend-verification', auth.requireAuth, authLimiter, async (req, res) => {
+app.post('/api/auth/resend-verification', auth.requireAuth, async (req, res) => {
     try {
         const token = crypto.randomBytes(32).toString('hex');
         const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000);
@@ -789,7 +820,7 @@ app.post('/api/auth/resend-verification', auth.requireAuth, authLimiter, async (
 });
 
 // Forgot password
-app.post('/api/auth/forgot-password', authLimiter, async (req, res) => {
+app.post('/api/auth/forgot-password', async (req, res) => {
     const { email } = req.body;
     if (!email || !email.includes('@')) {
         return res.status(400).json({ error: 'Valid email required' });
@@ -798,6 +829,15 @@ app.post('/api/auth/forgot-password', authLimiter, async (req, res) => {
         const user = await db.getUserByEmail(email);
         // Always return success to prevent email enumeration
         if (user) {
+            // Per-email rate limit: max 3 reset emails per hour
+            const { rows: recentTokens } = await pool.query(
+                `SELECT COUNT(*) AS cnt FROM password_reset_tokens
+                 WHERE user_id = $1 AND created_at > NOW() - INTERVAL '1 hour'`,
+                [user.id]
+            );
+            if (parseInt(recentTokens[0].cnt) >= 3) {
+                return res.json({ success: true, message: 'If that email is registered, a reset link has been sent.' });
+            }
             const token = crypto.randomBytes(32).toString('hex');
             const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
             await db.createPasswordResetToken(user.id, token, expiresAt);
@@ -815,24 +855,39 @@ app.post('/api/auth/forgot-password', authLimiter, async (req, res) => {
 });
 
 // Reset password
-app.post('/api/auth/reset-password', authLimiter, async (req, res) => {
+const _strongPassword = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+app.post('/api/auth/reset-password', async (req, res) => {
     const { token, newPassword } = req.body;
-    if (!token || !newPassword || newPassword.length < 8) {
-        return res.status(400).json({ error: 'Token and a password of at least 8 characters are required' });
+    if (!token || !newPassword) {
+        return res.status(400).json({ error: 'Token and new password are required' });
     }
+    if (!_strongPassword.test(newPassword)) {
+        return res.status(400).json({ error: 'Password must be at least 8 characters and include uppercase, lowercase, and a number' });
+    }
+    const client = await pool.connect();
     try {
-        const row = await db.getUserByResetToken(token);
-        if (!row) return res.status(400).json({ error: 'Invalid or expired reset link' });
-        if (row.used) return res.status(400).json({ error: 'This reset link has already been used' });
-        if (new Date(row.expires_at) < new Date()) return res.status(400).json({ error: 'This reset link has expired' });
-
-        const hashedPassword = await bcrypt.hash(newPassword, 10);
-        await db.updateUserPassword(row.id, hashedPassword);
-        await db.markResetTokenUsed(token);
+        await client.query('BEGIN');
+        const { rows } = await client.query(
+            `UPDATE password_reset_tokens SET used = TRUE
+             WHERE token = $1 AND used = FALSE AND expires_at > NOW()
+             RETURNING user_id`,
+            [token]
+        );
+        if (!rows.length) {
+            await client.query('ROLLBACK');
+            return res.status(400).json({ error: 'Invalid, expired, or already-used reset link' });
+        }
+        const userId = rows[0].user_id;
+        const hashedPassword = await bcrypt.hash(newPassword, 12);
+        await client.query(`UPDATE users SET password_hash = $1 WHERE id = $2`, [hashedPassword, userId]);
+        await client.query('COMMIT');
         res.json({ success: true, message: 'Password updated. You can now log in.' });
     } catch (error) {
+        await client.query('ROLLBACK');
         console.error('Reset password error:', error);
         res.status(500).json({ error: 'Failed to reset password' });
+    } finally {
+        client.release();
     }
 });
 
@@ -897,17 +952,23 @@ app.get('/api/listings', async (req, res) => {
     }
 });
 
-// Get single listing
+// Get single listing — strip owner PII for unauthenticated/non-owner callers
 app.get('/api/listings/:id', async (req, res) => {
     try {
         const listing = await db.getListingById(req.params.id);
         if (!listing) {
             return res.status(404).json({ error: 'Listing not found' });
         }
-        res.json({
-            ...listing,
-            date: formatDate(listing.created_at)
-        });
+        const isOwner = req.session?.userId && req.session.userId === listing.user_id;
+        const isAdmin = req.user?.is_admin;
+        const { owner_name, owner_email, owner_phone, ...publicListing } = listing;
+        const payload = { ...publicListing, date: formatDate(listing.created_at) };
+        if (isOwner || isAdmin) {
+            payload.owner_name = owner_name;
+            payload.owner_email = owner_email;
+            payload.owner_phone = owner_phone;
+        }
+        res.json(payload);
     } catch (error) {
         console.error('Error fetching listing:', error);
         res.status(500).json({ error: 'Failed to fetch listing' });
@@ -1086,27 +1147,38 @@ app.post('/api/listings/:id/offers', auth.requireAuth, async (req, res) => {
 
 // Accept or decline an offer (listing owner only)
 app.put('/api/offers/:id/status', auth.requireAuth, async (req, res) => {
+    const client = await pool.connect();
     try {
         const offerId = parseInt(req.params.id);
         const { action } = req.body; // 'accept' or 'decline'
         if (!['accept', 'decline'].includes(action)) {
+            client.release();
             return res.status(400).json({ error: 'action must be accept or decline' });
         }
 
-        // Verify the offer exists and belongs to the current seller's listing
-        const offerRows = await pool.query(
+        await client.query('BEGIN');
+
+        // Lock the offer row and verify ownership atomically
+        const offerRows = await client.query(
             `SELECT o.*, l.user_id as listing_owner_id, l.address, l.city, l.state, l.zip, l.price,
                     l.owner_name, l.owner_email, l.owner_phone
-             FROM offers o JOIN listings l ON o.listing_id = l.id WHERE o.id = $1`,
+             FROM offers o JOIN listings l ON o.listing_id = l.id WHERE o.id = $1 FOR UPDATE`,
             [offerId]
         );
-        if (!offerRows.rows.length) return res.status(404).json({ error: 'Offer not found' });
+        if (!offerRows.rows.length) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({ error: 'Offer not found' });
+        }
         const offerRow = offerRows.rows[0];
-        if (offerRow.listing_owner_id !== req.session.userId) return res.status(403).json({ error: 'Forbidden' });
+        if (offerRow.listing_owner_id !== req.session.userId) {
+            await client.query('ROLLBACK');
+            return res.status(403).json({ error: 'Forbidden' });
+        }
 
         if (action === 'accept') {
             const declinedOffers = await db.acceptOffer(offerId, offerRow.listing_id);
-            // Notify winning realtor
+            await client.query('COMMIT');
+            // Post-transaction notifications (fire and forget)
             emailService.sendOfferAcceptedEmail(offerRow, offerRow).catch(err =>
                 console.error('Offer accepted email failed:', err.message)
             );
@@ -1114,7 +1186,6 @@ app.put('/api/offers/:id/status', auth.requireAuth, async (req, res) => {
                 pool.query(`INSERT INTO notifications (user_id, type, title, body, link) VALUES ($1,'offer_accepted','Proposal Accepted!',$2,'/dashboard/realtor')`,
                     [offerRow.user_id, `Your proposal on ${offerRow.address} was accepted!`]).then(() => sseNotify(offerRow.user_id, { type: 'notification' })).catch(() => {});
             }
-            // Notify each losing realtor
             declinedOffers.forEach(declined => {
                 emailService.sendOfferDeclinedEmail(declined, offerRow).catch(err =>
                     console.error('Offer declined email failed:', err.message)
@@ -1128,7 +1199,8 @@ app.put('/api/offers/:id/status', auth.requireAuth, async (req, res) => {
         }
 
         // decline single offer
-        await db.declineOffer(offerId);
+        await client.query(`UPDATE offers SET status = 'declined' WHERE id = $1`, [offerId]);
+        await client.query('COMMIT');
         emailService.sendOfferDeclinedEmail(offerRow, offerRow).catch(err =>
             console.error('Offer declined email failed:', err.message)
         );
@@ -1138,8 +1210,11 @@ app.put('/api/offers/:id/status', auth.requireAuth, async (req, res) => {
         }
         res.json({ success: true, status: 'declined' });
     } catch (error) {
+        await client.query('ROLLBACK').catch(() => {});
         console.error('Error updating offer status:', error);
         res.status(500).json({ error: 'Failed to update offer status' });
+    } finally {
+        client.release();
     }
 });
 
@@ -1956,8 +2031,9 @@ app.delete('/api/admin/reviews/:id', requireAdmin, async (req, res) => {
 
 // ===== ADMIN IMPERSONATION =====
 
-app.post('/api/admin/impersonate/:userId', requireAdmin, async (req, res) => {
+app.post('/api/admin/impersonate/:userId', requireAdmin, impersonateLimiter, async (req, res) => {
     try {
+        const adminId = req.session.userId;
         const targetId = parseInt(req.params.userId);
         const { rows } = await pool.query(
             `SELECT id, first_name, last_name, user_type FROM users WHERE id = $1`,
@@ -1965,7 +2041,13 @@ app.post('/api/admin/impersonate/:userId', requireAdmin, async (req, res) => {
         );
         if (!rows.length) return res.status(404).json({ error: 'User not found' });
         const target = rows[0];
-        req.session.impersonating = req.session.userId;
+        // Audit log every impersonation
+        console.log(`[AUDIT] Admin ${adminId} impersonating user ${targetId} (${target.first_name} ${target.last_name}) from IP ${req.ip} at ${new Date().toISOString()}`);
+        await pool.query(
+            `INSERT INTO admin_audit_log (admin_id, action, target_user_id, ip_address) VALUES ($1, 'impersonate_start', $2, $3)`,
+            [adminId, targetId, req.ip]
+        ).catch(err => console.error('Audit log insert failed:', err.message));
+        req.session.impersonating = adminId;
         req.session.userId = targetId;
         req.session.userType = target.user_type;
         req.session.firstName = target.first_name;
@@ -1987,6 +2069,11 @@ app.post('/api/admin/impersonate/end', auth.requireAuth, async (req, res) => {
         );
         if (!rows.length) return res.status(404).json({ error: 'Original user not found' });
         const orig = rows[0];
+        console.log(`[AUDIT] Admin ${origId} ended impersonation of user ${req.session.userId} from IP ${req.ip} at ${new Date().toISOString()}`);
+        await pool.query(
+            `INSERT INTO admin_audit_log (admin_id, action, target_user_id, ip_address) VALUES ($1, 'impersonate_end', $2, $3)`,
+            [origId, req.session.userId, req.ip]
+        ).catch(err => console.error('Audit log insert failed:', err.message));
         req.session.userId = origId;
         req.session.userType = orig.user_type;
         req.session.firstName = orig.first_name;
@@ -2030,10 +2117,19 @@ app.get('/api/admin/leads', requireAdmin, async (req, res) => {
 
 app.get('/api/admin/leads/export.csv', requireAdmin, async (req, res) => {
     try {
+        const days = Math.min(parseInt(req.query.days) || 30, 365);
         const { rows } = await pool.query(
             `SELECT id, type, name, email, phone, city_name, state_code, created_at
-             FROM city_leads ORDER BY created_at DESC`
+             FROM city_leads
+             WHERE created_at >= NOW() - ($1 || ' days')::INTERVAL
+             ORDER BY created_at DESC`,
+            [days]
         );
+        console.log(`[AUDIT] Admin ${req.user.id} exported ${rows.length} leads (last ${days} days) from IP ${req.ip} at ${new Date().toISOString()}`);
+        await pool.query(
+            `INSERT INTO admin_audit_log (admin_id, action, ip_address) VALUES ($1, 'leads_export', $2)`,
+            [req.user.id, req.ip]
+        ).catch(err => console.error('Audit log insert failed:', err.message));
         const header = 'ID,Type,Name,Email,Phone,City,State,Date\n';
         const csv = rows.map(r =>
             [r.id, r.type, r.name || '', r.email, r.phone || '', r.city_name || '', r.state_code || '',
@@ -2042,7 +2138,7 @@ app.get('/api/admin/leads/export.csv', requireAdmin, async (req, res) => {
             .join(',')
         ).join('\n');
         res.setHeader('Content-Type', 'text/csv');
-        res.setHeader('Content-Disposition', 'attachment; filename="city-leads.csv"');
+        res.setHeader('Content-Disposition', `attachment; filename="city-leads-${days}d.csv"`);
         res.send(header + csv);
     } catch (error) {
         console.error('Leads CSV error:', error);
@@ -2471,7 +2567,7 @@ app.post('/api/waitlist', waitlistLimiter, async (req, res) => {
 });
 
 // Contact form submission
-app.post('/api/contact', createRateLimiter(60 * 60 * 1000, 10, 'Too many contact requests. Please try again later.'), async (req, res) => {
+app.post('/api/contact', contactLimiter, async (req, res) => {
     try {
         const { name, email, subject, message } = req.body;
         if (!name || !email || !subject || !message) {
@@ -2479,6 +2575,12 @@ app.post('/api/contact', createRateLimiter(60 * 60 * 1000, 10, 'Too many contact
         }
         if (!email.includes('@')) {
             return res.status(400).json({ error: 'Valid email required' });
+        }
+        if (name.length > 200 || subject.length > 200) {
+            return res.status(400).json({ error: 'Name and subject must be under 200 characters' });
+        }
+        if (message.length > 5000) {
+            return res.status(400).json({ error: 'Message must be under 5000 characters' });
         }
         console.log(`📩 Contact form: [${subject}] from ${name} <${email}>`);
         emailService.sendContactEmail({ name, email, subject, message })
@@ -2648,16 +2750,30 @@ app.post('/api/webhook/stripe', express.raw({ type: 'application/json' }), async
 
         // Lead purchase checkout
         if (sess.metadata?.type === 'listing_lead') {
+            const client = await pool.connect();
             try {
                 const realtorId = parseInt(sess.metadata.realtor_id);
                 const listingId = parseInt(sess.metadata.listing_id);
-                await pool.query(
-                    `UPDATE lead_purchases SET paid = TRUE WHERE realtor_id = $1 AND listing_id = $2`,
-                    [realtorId, listingId]
+                // Validate both records exist before updating
+                const { rows: realtorCheck } = await client.query(
+                    `SELECT id FROM users WHERE id = $1 AND user_type = 'realtor'`, [realtorId]
                 );
-                console.log(`✅ Stripe: lead purchase confirmed — realtor ${realtorId}, listing ${listingId}`);
+                const { rows: listingCheck } = await client.query(
+                    `SELECT id FROM listings WHERE id = $1`, [listingId]
+                );
+                if (!realtorCheck.length || !listingCheck.length) {
+                    console.error(`Stripe webhook: invalid metadata — realtor ${realtorId}, listing ${listingId}`);
+                } else {
+                    await client.query(
+                        `UPDATE lead_purchases SET paid = TRUE WHERE realtor_id = $1 AND listing_id = $2`,
+                        [realtorId, listingId]
+                    );
+                    console.log(`✅ Stripe: lead purchase confirmed — realtor ${realtorId}, listing ${listingId}`);
+                }
             } catch (err) {
                 console.error('Stripe lead purchase webhook DB error:', err);
+            } finally {
+                client.release();
             }
         }
 
@@ -2665,18 +2781,21 @@ app.post('/api/webhook/stripe', express.raw({ type: 'application/json' }), async
         const userId = parseInt(sess.metadata?.userId);
         const plan   = sess.metadata?.plan;
         if (userId && plan) {
+            const client = await pool.connect();
             try {
-                await pool.query(
+                await client.query('BEGIN');
+                await client.query(
                     `UPDATE users SET subscription_plan=$1, stripe_customer_id=$2 WHERE id=$3`,
                     [plan, sess.customer, userId]
                 );
-                await pool.query(
+                await client.query(
                     `UPDATE companies SET plan=$1, stripe_customer_id=$2, stripe_subscription_id=$3, updated_at=NOW() WHERE owner_user_id=$4`,
                     [plan, sess.customer, sess.subscription, userId]
                 );
+                await client.query('COMMIT');
                 console.log(`✅ Stripe: upgraded user ${userId} to ${plan}`);
 
-                // Credit referrer $25 on first subscription
+                // Credit referrer $25 on first subscription (outside transaction — non-critical)
                 const refRow = await pool.query(
                     `SELECT referred_by FROM users WHERE id=$1 AND referred_by IS NOT NULL`, [userId]
                 );
@@ -2686,7 +2805,6 @@ app.post('/api/webhook/stripe', express.raw({ type: 'application/json' }), async
                         `UPDATE users SET referral_credits_cents = referral_credits_cents + 2500 WHERE id=$1`,
                         [referrerId]
                     );
-                    // Apply as Stripe customer balance credit if referrer has a Stripe customer
                     if (stripe) {
                         const custRow = await pool.query(
                             `SELECT stripe_customer_id FROM users WHERE id=$1 AND stripe_customer_id IS NOT NULL`, [referrerId]
@@ -2701,7 +2819,10 @@ app.post('/api/webhook/stripe', express.raw({ type: 'application/json' }), async
                     console.log(`✅ Stripe: credited $25 referral bonus to user ${referrerId}`);
                 }
             } catch (err) {
+                await client.query('ROLLBACK').catch(() => {});
                 console.error('Stripe webhook DB error:', err);
+            } finally {
+                client.release();
             }
         }
     }
@@ -4491,6 +4612,19 @@ const _schemaMigrations = [
     `ALTER TABLE listings ADD COLUMN IF NOT EXISTS owner_attested BOOLEAN DEFAULT FALSE`,
     `ALTER TABLE listings ADD COLUMN IF NOT EXISTS owner_attested_at TIMESTAMPTZ`,
 ];
+
+// ===== ADMIN AUDIT LOG =====
+_schemaMigrations.push(
+    `CREATE TABLE IF NOT EXISTS admin_audit_log (
+        id SERIAL PRIMARY KEY,
+        admin_id INTEGER REFERENCES users(id),
+        action TEXT NOT NULL,
+        target_user_id INTEGER REFERENCES users(id),
+        ip_address TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_admin_audit_log_admin ON admin_audit_log(admin_id, created_at DESC)`
+);
 
 // ===== REFERRAL COLUMNS (Feature 4) =====
 _schemaMigrations.push(
