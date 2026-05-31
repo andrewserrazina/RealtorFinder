@@ -644,7 +644,7 @@
         <button onclick="endImpersonation()" style="background:#fff;color:#92400e;border:none;padding:4px 14px;border-radius:6px;font-weight:700;cursor:pointer;font-size:0.85rem;">End Session</button>
     </div>
 
-    <div class="tabs">
+    <div class="tabs" style="flex-wrap:wrap;">
         <button class="tab-btn" onclick="switchTab('stats', this)">Stats</button>
         <button class="tab-btn active" onclick="switchTab('users', this)">Users</button>
         <button class="tab-btn" onclick="switchTab('listings', this)">Listings</button>
@@ -653,6 +653,10 @@
         <button class="tab-btn" onclick="switchTab('license-queue', this)">License Queue</button>
         <button class="tab-btn" onclick="switchTab('impersonate', this)">Impersonate</button>
         <button class="tab-btn" onclick="switchTab('announce', this)">Announce</button>
+        <button class="tab-btn" onclick="switchTab('crm-realtors', this)" style="color:#6366f1;font-weight:600;">CRM: Realtors</button>
+        <button class="tab-btn" onclick="switchTab('crm-homeowner-leads', this)" style="color:#6366f1;font-weight:600;">CRM: Leads</button>
+        <button class="tab-btn" onclick="switchTab('crm-matches', this)" style="color:#6366f1;font-weight:600;">CRM: Matches</button>
+        <button class="tab-btn" onclick="switchTab('crm-recruitment', this)" style="color:#6366f1;font-weight:600;">CRM: Recruit</button>
     </div>
 
     <!-- Stats tab -->
@@ -712,6 +716,21 @@
                 <h3 style="font-size:1.1rem;font-weight:700;color:#0A2540;margin-bottom:16px;">City Pages</h3>
                 <button class="btn-action btn-reactivate" onclick="seedCities()">Seed All City Pages</button>
                 <span id="seed-cities-result" style="margin-left:14px;font-size:0.9rem;color:#6b7280;"></span>
+            </div>
+
+            <div style="padding:0 28px 28px;">
+                <h3 style="font-size:1.1rem;font-weight:700;color:#0A2540;margin-bottom:16px;">CRM Overview</h3>
+                <div class="stats-grid" id="crm-stats-grid">
+                    <div class="stat-card"><span class="stat-icon">🤝</span><span class="stat-value" id="cs-realtors">—</span><span class="stat-label">Total Realtors</span></div>
+                    <div class="stat-card"><span class="stat-icon">✅</span><span class="stat-value" id="cs-active-realtors">—</span><span class="stat-label">Active Realtors</span></div>
+                    <div class="stat-card"><span class="stat-icon">⏳</span><span class="stat-value" id="cs-pending">—</span><span class="stat-label">Pending Applications</span></div>
+                    <div class="stat-card"><span class="stat-icon">🏠</span><span class="stat-value" id="cs-new-leads">—</span><span class="stat-label">New Leads</span></div>
+                    <div class="stat-card"><span class="stat-icon">📭</span><span class="stat-value" id="cs-unassigned">—</span><span class="stat-label">Unassigned Leads</span></div>
+                    <div class="stat-card"><span class="stat-icon">🔗</span><span class="stat-value" id="cs-matches">—</span><span class="stat-label">Active Matches</span></div>
+                    <div class="stat-card"><span class="stat-icon">🏆</span><span class="stat-value" id="cs-closed">—</span><span class="stat-label">Closed Deals</span></div>
+                    <div class="stat-card"><span class="stat-icon">💸</span><span class="stat-value" id="cs-fees-due">—</span><span class="stat-label">Referral Fees Due</span></div>
+                    <div class="stat-card"><span class="stat-icon">💰</span><span class="stat-value" id="cs-fees-received">—</span><span class="stat-label">Fees Received</span></div>
+                </div>
             </div>
         </div>
     </div>
@@ -909,6 +928,120 @@
         <div id="reject-note-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:998;" onclick="document.getElementById('reject-note-form').style.display='none';document.getElementById('reject-note-overlay').style.display='none';"></div>
     </div>
 
+    <!-- CRM: Realtors tab -->
+    <div class="tab-panel" id="tab-crm-realtors">
+        <div class="table-wrapper">
+            <div class="table-header" style="flex-wrap:wrap;gap:0.75rem;">
+                <span class="table-title">Realtor CRM</span>
+                <span class="table-count" id="crm-realtors-count">—</span>
+                <select id="crm-realtor-status-filter" onchange="loadCrmRealtors()" style="padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-size:0.85rem;background:white;margin-left:auto;">
+                    <option value="">All Statuses</option>
+                    <option value="applied">Applied</option>
+                    <option value="approved">Approved (Free)</option>
+                    <option value="active">Active (Paid)</option>
+                    <option value="inactive">Inactive</option>
+                </select>
+                <input type="text" id="crm-realtor-search" placeholder="Search name or email…" oninput="loadCrmRealtors()" style="padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-size:0.85rem;width:200px;">
+            </div>
+            <div class="table-scroll">
+                <table>
+                    <thead><tr>
+                        <th>ID</th><th>Name</th><th>Email</th><th>Status</th><th>Plan</th>
+                        <th>License</th><th>Service Areas</th><th>Proposals</th><th>Matches</th><th>Joined</th><th>Notes</th>
+                    </tr></thead>
+                    <tbody id="crm-realtors-tbody">
+                        <tr><td colspan="11" class="empty-state">Loading…</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- CRM: Homeowner Leads tab -->
+    <div class="tab-panel" id="tab-crm-homeowner-leads">
+        <div class="table-wrapper">
+            <div class="table-header" style="flex-wrap:wrap;gap:0.75rem;">
+                <span class="table-title">Homeowner Leads</span>
+                <span class="table-count" id="crm-leads-count">—</span>
+                <select id="crm-lead-status-filter" onchange="loadCrmLeads()" style="padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-size:0.85rem;background:white;margin-left:auto;">
+                    <option value="">All Statuses</option>
+                    <option value="new">New</option>
+                    <option value="reviewing">Reviewing</option>
+                    <option value="assigned">Assigned</option>
+                    <option value="contacted">Contacted</option>
+                    <option value="under_contract">Under Contract</option>
+                    <option value="closed">Closed</option>
+                    <option value="lost">Lost</option>
+                </select>
+                <input type="text" id="crm-lead-search" placeholder="Search address, city, seller…" oninput="loadCrmLeads()" style="padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-size:0.85rem;width:220px;">
+            </div>
+            <div class="table-scroll">
+                <table>
+                    <thead><tr>
+                        <th>ID</th><th>Address</th><th>Seller</th><th>Price</th><th>Proposals</th>
+                        <th>CRM Status</th><th>Assigned Realtor</th><th>Follow-up</th><th>Submitted</th><th>Actions</th>
+                    </tr></thead>
+                    <tbody id="crm-leads-tbody">
+                        <tr><td colspan="10" class="empty-state">Loading…</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- CRM: Matches tab -->
+    <div class="tab-panel" id="tab-crm-matches">
+        <div class="table-wrapper">
+            <div class="table-header" style="flex-wrap:wrap;gap:0.75rem;">
+                <span class="table-title">Match Tracking</span>
+                <span class="table-count" id="crm-matches-count">—</span>
+                <button onclick="openCreateMatchModal()" class="btn-action btn-reactivate" style="margin-left:auto;">+ New Match</button>
+            </div>
+            <div class="table-scroll">
+                <table>
+                    <thead><tr>
+                        <th>ID</th><th>Listing</th><th>Realtor</th><th>Status</th>
+                        <th>Accepted</th><th>Contact</th><th>Appt</th><th>Agreement</th><th>Contract</th><th>Closed</th>
+                        <th>Est. Value</th><th>Ref. Fee</th><th>Payment</th><th>Close Date</th><th>Actions</th>
+                    </tr></thead>
+                    <tbody id="crm-matches-tbody">
+                        <tr><td colspan="15" class="empty-state">Loading…</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- CRM: Recruitment tab -->
+    <div class="tab-panel" id="tab-crm-recruitment">
+        <div class="table-wrapper">
+            <div class="table-header" style="flex-wrap:wrap;gap:0.75rem;">
+                <span class="table-title">Realtor Recruitment</span>
+                <span class="table-count" id="crm-prospects-count">—</span>
+                <select id="crm-prospect-status-filter" onchange="loadProspects()" style="padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-size:0.85rem;background:white;margin-left:auto;">
+                    <option value="">All Statuses</option>
+                    <option value="not_contacted">Not Contacted</option>
+                    <option value="contacted">Contacted</option>
+                    <option value="responded">Responded</option>
+                    <option value="not_interested">Not Interested</option>
+                    <option value="converted">Converted</option>
+                </select>
+                <button onclick="openProspectModal(null)" class="btn-action btn-reactivate">+ Add Prospect</button>
+            </div>
+            <div class="table-scroll">
+                <table>
+                    <thead><tr>
+                        <th>ID</th><th>Name</th><th>Brokerage</th><th>Email</th><th>Phone</th>
+                        <th>City/State</th><th>Source</th><th>Status</th><th>Last Contact</th><th>Follow-up</th><th>Actions</th>
+                    </tr></thead>
+                    <tbody id="crm-prospects-tbody">
+                        <tr><td colspan="11" class="empty-state">Loading…</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
     <!-- Impersonate tab -->
     <div class="tab-panel" id="tab-impersonate">
         <div class="table-wrapper" style="padding:2rem;max-width:500px;">
@@ -929,6 +1062,137 @@
         </div>
     </div>
 </main>
+
+<!-- ── CRM Modals ──────────────────────────────────────────────────────────── -->
+
+<!-- Notes Modal -->
+<div id="notes-modal-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:998;" onclick="closeNotesModal()"></div>
+<div id="notes-modal" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;border-radius:14px;padding:1.5rem;box-shadow:0 20px 60px rgba(0,0,0,0.2);z-index:999;width:480px;max-width:95vw;max-height:80vh;flex-direction:column;gap:1rem;">
+    <div style="display:flex;align-items:center;justify-content:space-between;">
+        <h3 id="notes-modal-title" style="font-size:1rem;font-weight:700;color:#0A2540;">Notes</h3>
+        <button onclick="closeNotesModal()" style="background:none;border:none;font-size:1.2rem;cursor:pointer;color:#9ca3af;">✕</button>
+    </div>
+    <div id="notes-modal-list" style="overflow-y:auto;flex:1;min-height:80px;max-height:300px;"></div>
+    <div style="display:flex;gap:0.5rem;">
+        <textarea id="notes-modal-new" rows="2" placeholder="Add a note…" style="flex:1;padding:8px 10px;border:1px solid #e5e1db;border-radius:8px;font-family:inherit;font-size:0.875rem;resize:none;"></textarea>
+        <button onclick="saveNote()" style="background:#0A2540;color:white;border:none;border-radius:8px;padding:0 16px;font-weight:600;cursor:pointer;font-size:0.875rem;">Save</button>
+    </div>
+</div>
+
+<!-- Lead Edit Modal -->
+<div id="lead-edit-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:998;" onclick="closeLeadEditModal()"></div>
+<div id="lead-edit-modal" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;border-radius:14px;padding:1.5rem;box-shadow:0 20px 60px rgba(0,0,0,0.2);z-index:999;width:420px;max-width:95vw;flex-direction:column;gap:1rem;">
+    <div style="display:flex;align-items:center;justify-content:space-between;">
+        <h3 style="font-size:1rem;font-weight:700;color:#0A2540;">Update Lead</h3>
+        <button onclick="closeLeadEditModal()" style="background:none;border:none;font-size:1.2rem;cursor:pointer;color:#9ca3af;">✕</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:0.75rem;">
+        <div><label style="font-size:0.8rem;font-weight:600;color:#374151;display:block;margin-bottom:3px;">CRM Status</label>
+            <select id="lead-edit-status" style="width:100%;padding:8px 10px;border:1px solid #e5e1db;border-radius:8px;font-family:inherit;font-size:0.9rem;background:white;">
+                <option value="new">New</option><option value="reviewing">Reviewing</option>
+                <option value="assigned">Assigned</option><option value="contacted">Contacted</option>
+                <option value="under_contract">Under Contract</option><option value="closed">Closed</option><option value="lost">Lost</option>
+            </select>
+        </div>
+        <div><label style="font-size:0.8rem;font-weight:600;color:#374151;display:block;margin-bottom:3px;">Assign Realtor</label>
+            <select id="lead-edit-realtor" style="width:100%;padding:8px 10px;border:1px solid #e5e1db;border-radius:8px;font-family:inherit;font-size:0.9rem;background:white;"></select>
+        </div>
+        <div><label style="font-size:0.8rem;font-weight:600;color:#374151;display:block;margin-bottom:3px;">Follow-up Date</label>
+            <input type="date" id="lead-edit-followup" style="width:100%;padding:8px 10px;border:1px solid #e5e1db;border-radius:8px;font-family:inherit;font-size:0.9rem;">
+        </div>
+        <div style="display:flex;gap:0.5rem;margin-top:0.25rem;">
+            <button onclick="saveLeadEdit()" style="flex:1;background:#0A2540;color:white;border:none;border-radius:8px;padding:0.7rem;font-weight:600;cursor:pointer;font-family:inherit;">Save</button>
+            <button onclick="closeLeadEditModal()" style="flex:1;background:#e5e1db;color:#374151;border:none;border-radius:8px;padding:0.7rem;font-weight:600;cursor:pointer;font-family:inherit;">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<!-- Match Create/Edit Modal -->
+<div id="match-modal-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:998;" onclick="closeMatchModal()"></div>
+<div id="match-modal" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;border-radius:14px;padding:1.5rem;box-shadow:0 20px 60px rgba(0,0,0,0.2);z-index:999;width:520px;max-width:95vw;max-height:90vh;overflow-y:auto;flex-direction:column;gap:1rem;">
+    <div style="display:flex;align-items:center;justify-content:space-between;">
+        <h3 id="match-modal-title" style="font-size:1rem;font-weight:700;color:#0A2540;">New Match</h3>
+        <button onclick="closeMatchModal()" style="background:none;border:none;font-size:1.2rem;cursor:pointer;color:#9ca3af;">✕</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+        <div><label style="font-size:0.78rem;font-weight:600;color:#374151;display:block;margin-bottom:3px;">Listing ID</label>
+            <input type="number" id="match-listing-id" style="width:100%;padding:7px 10px;border:1px solid #e5e1db;border-radius:8px;font-family:inherit;font-size:0.9rem;"></div>
+        <div><label style="font-size:0.78rem;font-weight:600;color:#374151;display:block;margin-bottom:3px;">Realtor ID</label>
+            <input type="number" id="match-realtor-id" style="width:100%;padding:7px 10px;border:1px solid #e5e1db;border-radius:8px;font-family:inherit;font-size:0.9rem;"></div>
+        <div><label style="font-size:0.78rem;font-weight:600;color:#374151;display:block;margin-bottom:3px;">Status</label>
+            <select id="match-status" style="width:100%;padding:7px 10px;border:1px solid #e5e1db;border-radius:8px;font-family:inherit;font-size:0.9rem;background:white;">
+                <option value="pending">Pending</option><option value="accepted">Accepted</option>
+                <option value="declined">Declined</option><option value="active">Active</option>
+                <option value="closed">Closed</option><option value="lost">Lost</option>
+            </select></div>
+        <div><label style="font-size:0.78rem;font-weight:600;color:#374151;display:block;margin-bottom:3px;">Payment Status</label>
+            <select id="match-payment-status" style="width:100%;padding:7px 10px;border:1px solid #e5e1db;border-radius:8px;font-family:inherit;font-size:0.9rem;background:white;">
+                <option value="pending">Pending</option><option value="invoiced">Invoiced</option>
+                <option value="received">Received</option><option value="waived">Waived</option>
+            </select></div>
+        <div><label style="font-size:0.78rem;font-weight:600;color:#374151;display:block;margin-bottom:3px;">Est. Home Value ($)</label>
+            <input type="number" id="match-est-value" step="1000" style="width:100%;padding:7px 10px;border:1px solid #e5e1db;border-radius:8px;font-family:inherit;font-size:0.9rem;"></div>
+        <div><label style="font-size:0.78rem;font-weight:600;color:#374151;display:block;margin-bottom:3px;">Commission % (e.g. 3.00)</label>
+            <input type="number" id="match-commission-pct" step="0.01" min="0" max="10" style="width:100%;padding:7px 10px;border:1px solid #e5e1db;border-radius:8px;font-family:inherit;font-size:0.9rem;"></div>
+        <div><label style="font-size:0.78rem;font-weight:600;color:#374151;display:block;margin-bottom:3px;">Referral Fee Expected ($)</label>
+            <input type="number" id="match-ref-fee" step="100" style="width:100%;padding:7px 10px;border:1px solid #e5e1db;border-radius:8px;font-family:inherit;font-size:0.9rem;"></div>
+        <div><label style="font-size:0.78rem;font-weight:600;color:#374151;display:block;margin-bottom:3px;">Referral Fee Paid ($)</label>
+            <input type="number" id="match-ref-paid" step="100" style="width:100%;padding:7px 10px;border:1px solid #e5e1db;border-radius:8px;font-family:inherit;font-size:0.9rem;"></div>
+        <div><label style="font-size:0.78rem;font-weight:600;color:#374151;display:block;margin-bottom:3px;">Close Date</label>
+            <input type="date" id="match-close-date" style="width:100%;padding:7px 10px;border:1px solid #e5e1db;border-radius:8px;font-family:inherit;font-size:0.9rem;"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.5rem;background:#f8f6f3;border-radius:10px;padding:0.75rem;">
+        <label style="display:flex;align-items:center;gap:6px;font-size:0.82rem;cursor:pointer;"><input type="checkbox" id="match-cb-accepted"> Accepted</label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:0.82rem;cursor:pointer;"><input type="checkbox" id="match-cb-contact"> Contact Made</label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:0.82rem;cursor:pointer;"><input type="checkbox" id="match-cb-appt"> Appt Scheduled</label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:0.82rem;cursor:pointer;"><input type="checkbox" id="match-cb-agreement"> Agreement Signed</label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:0.82rem;cursor:pointer;"><input type="checkbox" id="match-cb-contract"> Under Contract</label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:0.82rem;cursor:pointer;"><input type="checkbox" id="match-cb-closed"> Closed</label>
+    </div>
+    <div><label style="font-size:0.78rem;font-weight:600;color:#374151;display:block;margin-bottom:3px;">Notes</label>
+        <textarea id="match-notes" rows="3" style="width:100%;padding:8px 10px;border:1px solid #e5e1db;border-radius:8px;font-family:inherit;font-size:0.875rem;resize:vertical;"></textarea>
+    </div>
+    <div style="display:flex;gap:0.5rem;">
+        <button onclick="saveMatch()" style="flex:1;background:#0A2540;color:white;border:none;border-radius:8px;padding:0.7rem;font-weight:600;cursor:pointer;font-family:inherit;">Save Match</button>
+        <button onclick="closeMatchModal()" style="flex:1;background:#e5e1db;color:#374151;border:none;border-radius:8px;padding:0.7rem;font-weight:600;cursor:pointer;font-family:inherit;">Cancel</button>
+    </div>
+</div>
+
+<!-- Prospect Create/Edit Modal -->
+<div id="prospect-modal-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:998;" onclick="closeProspectModal()"></div>
+<div id="prospect-modal" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;border-radius:14px;padding:1.5rem;box-shadow:0 20px 60px rgba(0,0,0,0.2);z-index:999;width:540px;max-width:95vw;max-height:90vh;overflow-y:auto;flex-direction:column;gap:1rem;">
+    <div style="display:flex;align-items:center;justify-content:space-between;">
+        <h3 id="prospect-modal-title" style="font-size:1rem;font-weight:700;color:#0A2540;">Add Prospect</h3>
+        <button onclick="closeProspectModal()" style="background:none;border:none;font-size:1.2rem;cursor:pointer;color:#9ca3af;">✕</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+        <div><label style="font-size:0.78rem;font-weight:600;color:#374151;display:block;margin-bottom:3px;">First Name</label><input type="text" id="prospect-first-name" style="width:100%;padding:7px 10px;border:1px solid #e5e1db;border-radius:8px;font-family:inherit;font-size:0.9rem;"></div>
+        <div><label style="font-size:0.78rem;font-weight:600;color:#374151;display:block;margin-bottom:3px;">Last Name</label><input type="text" id="prospect-last-name" style="width:100%;padding:7px 10px;border:1px solid #e5e1db;border-radius:8px;font-family:inherit;font-size:0.9rem;"></div>
+        <div style="grid-column:span 2;"><label style="font-size:0.78rem;font-weight:600;color:#374151;display:block;margin-bottom:3px;">Brokerage</label><input type="text" id="prospect-brokerage" style="width:100%;padding:7px 10px;border:1px solid #e5e1db;border-radius:8px;font-family:inherit;font-size:0.9rem;"></div>
+        <div><label style="font-size:0.78rem;font-weight:600;color:#374151;display:block;margin-bottom:3px;">Email</label><input type="email" id="prospect-email" style="width:100%;padding:7px 10px;border:1px solid #e5e1db;border-radius:8px;font-family:inherit;font-size:0.9rem;"></div>
+        <div><label style="font-size:0.78rem;font-weight:600;color:#374151;display:block;margin-bottom:3px;">Phone</label><input type="tel" id="prospect-phone" style="width:100%;padding:7px 10px;border:1px solid #e5e1db;border-radius:8px;font-family:inherit;font-size:0.9rem;"></div>
+        <div><label style="font-size:0.78rem;font-weight:600;color:#374151;display:block;margin-bottom:3px;">City</label><input type="text" id="prospect-city" style="width:100%;padding:7px 10px;border:1px solid #e5e1db;border-radius:8px;font-family:inherit;font-size:0.9rem;"></div>
+        <div><label style="font-size:0.78rem;font-weight:600;color:#374151;display:block;margin-bottom:3px;">State</label><input type="text" id="prospect-state" maxlength="2" style="width:100%;padding:7px 10px;border:1px solid #e5e1db;border-radius:8px;font-family:inherit;font-size:0.9rem;"></div>
+        <div><label style="font-size:0.78rem;font-weight:600;color:#374151;display:block;margin-bottom:3px;">Source</label>
+            <select id="prospect-source" style="width:100%;padding:7px 10px;border:1px solid #e5e1db;border-radius:8px;font-family:inherit;font-size:0.9rem;background:white;">
+                <option value="manual">Manual</option><option value="referral">Referral</option>
+                <option value="imported">Imported</option><option value="conference">Conference</option><option value="social">Social Media</option>
+            </select></div>
+        <div><label style="font-size:0.78rem;font-weight:600;color:#374151;display:block;margin-bottom:3px;">Outreach Status</label>
+            <select id="prospect-outreach-status" style="width:100%;padding:7px 10px;border:1px solid #e5e1db;border-radius:8px;font-family:inherit;font-size:0.9rem;background:white;">
+                <option value="not_contacted">Not Contacted</option><option value="contacted">Contacted</option>
+                <option value="responded">Responded</option><option value="not_interested">Not Interested</option><option value="converted">Converted</option>
+            </select></div>
+        <div><label style="font-size:0.78rem;font-weight:600;color:#374151;display:block;margin-bottom:3px;">Last Contact</label><input type="date" id="prospect-last-contact" style="width:100%;padding:7px 10px;border:1px solid #e5e1db;border-radius:8px;font-family:inherit;font-size:0.9rem;"></div>
+        <div><label style="font-size:0.78rem;font-weight:600;color:#374151;display:block;margin-bottom:3px;">Follow-up Date</label><input type="date" id="prospect-follow-up" style="width:100%;padding:7px 10px;border:1px solid #e5e1db;border-radius:8px;font-family:inherit;font-size:0.9rem;"></div>
+        <div style="grid-column:span 2;"><label style="font-size:0.78rem;font-weight:600;color:#374151;display:block;margin-bottom:3px;">Notes</label>
+            <textarea id="prospect-notes" rows="3" style="width:100%;padding:8px 10px;border:1px solid #e5e1db;border-radius:8px;font-family:inherit;font-size:0.875rem;resize:vertical;"></textarea></div>
+    </div>
+    <div style="display:flex;gap:0.5rem;">
+        <button onclick="saveProspect()" style="flex:1;background:#0A2540;color:white;border:none;border-radius:8px;padding:0.7rem;font-weight:600;cursor:pointer;font-family:inherit;">Save</button>
+        <button onclick="closeProspectModal()" style="flex:1;background:#e5e1db;color:#374151;border:none;border-radius:8px;padding:0.7rem;font-weight:600;cursor:pointer;font-family:inherit;">Cancel</button>
+    </div>
+</div>
 
 <!-- Toast -->
 <div id="toast"></div>
@@ -992,6 +1256,7 @@
             document.getElementById('main-content').style.display = 'block';
 
             loadStats();
+            loadCrmStats();
             loadUsers();
             loadListings();
             loadLeads();
@@ -1047,6 +1312,11 @@
         document.getElementById('tab-' + name).classList.add('active');
         if (name === 'reviews') loadAdminReviews();
         if (name === 'license-queue') loadLicenseQueue();
+        if (name === 'stats') loadCrmStats();
+        if (name === 'crm-realtors') loadCrmRealtors();
+        if (name === 'crm-homeowner-leads') { loadCrmLeads(); loadApprovedRealtorsList(); }
+        if (name === 'crm-matches') loadMatches();
+        if (name === 'crm-recruitment') loadProspects();
     }
 
     // ── Announce ──────────────────────────────────────────────────────────────
@@ -1546,6 +1816,485 @@
         } catch (e) {
             resultEl.textContent = 'Error: ' + e.message;
         }
+    }
+
+    // ── CRM Stats ─────────────────────────────────────────────────────────────
+    async function loadCrmStats() {
+        try {
+            const res = await fetch('/api/admin/crm-stats', { credentials: 'include' });
+            if (!res.ok) return;
+            const d = await res.json();
+            document.getElementById('cs-realtors').textContent = d.total_realtors ?? '—';
+            document.getElementById('cs-active-realtors').textContent = d.active_realtors ?? '—';
+            document.getElementById('cs-pending').textContent = d.pending_realtors ?? '—';
+            document.getElementById('cs-new-leads').textContent = d.new_leads ?? '—';
+            document.getElementById('cs-unassigned').textContent = d.unassigned_leads ?? '—';
+            document.getElementById('cs-matches').textContent = d.active_matches ?? '—';
+            document.getElementById('cs-closed').textContent = d.closed_deals ?? '—';
+            document.getElementById('cs-fees-due').textContent = d.fees_due != null ? '$' + Number(d.fees_due).toLocaleString() : '—';
+            document.getElementById('cs-fees-received').textContent = d.fees_received != null ? '$' + Number(d.fees_received).toLocaleString() : '—';
+        } catch (e) { console.error('CRM stats error', e); }
+    }
+
+    // ── CRM helpers ───────────────────────────────────────────────────────────
+    function crmStatusBadge(status) {
+        const map = {
+            new:           { cls: '#e0e7ff', color: '#3730a3', label: 'New' },
+            reviewing:     { cls: '#fef9c3', color: '#854d0e', label: 'Reviewing' },
+            assigned:      { cls: '#dbeafe', color: '#1d4ed8', label: 'Assigned' },
+            contacted:     { cls: '#d1fae5', color: '#065f46', label: 'Contacted' },
+            under_contract:{ cls: '#fde8d8', color: '#c2410c', label: 'Under Contract' },
+            closed:        { cls: '#dcfce7', color: '#166534', label: 'Closed' },
+            lost:          { cls: '#fee2e2', color: '#991b1b', label: 'Lost' },
+        };
+        const s = map[status] || { cls: '#f3f4f6', color: '#374151', label: status || '—' };
+        return `<span style="background:${s.cls};color:${s.color};padding:2px 9px;border-radius:12px;font-size:0.75rem;font-weight:600;">${s.label}</span>`;
+    }
+
+    function realtorCrmStatus(u) {
+        if (u.is_active === false) return { label: 'Inactive', bg: '#fee2e2', color: '#991b1b' };
+        if (!u.is_approved) return { label: 'Applied', bg: '#fef9c3', color: '#854d0e' };
+        if (!u.subscription_plan || u.subscription_plan === 'free') return { label: 'Approved', bg: '#dbeafe', color: '#1d4ed8' };
+        return { label: 'Active', bg: '#d1fae5', color: '#065f46' };
+    }
+
+    function outreachBadge(s) {
+        const map = {
+            not_contacted: { bg: '#f3f4f6', color: '#374151' },
+            contacted:     { bg: '#dbeafe', color: '#1d4ed8' },
+            responded:     { bg: '#d1fae5', color: '#065f46' },
+            not_interested:{ bg: '#fee2e2', color: '#991b1b' },
+            converted:     { bg: '#dcfce7', color: '#166534' },
+        };
+        const v = map[s] || { bg: '#f3f4f6', color: '#374151' };
+        return `<span style="background:${v.bg};color:${v.color};padding:2px 9px;border-radius:12px;font-size:0.75rem;font-weight:600;">${escHtml(s || '—').replace('_',' ')}</span>`;
+    }
+
+    function checkBox(val) {
+        return val ? '✅' : '⬜';
+    }
+
+    // ── Admin Notes ───────────────────────────────────────────────────────────
+    let notesModalResourceType = '', notesModalResourceId = null;
+
+    function openNotesModal(type, id, label) {
+        notesModalResourceType = type;
+        notesModalResourceId = id;
+        document.getElementById('notes-modal-title').textContent = 'Notes — ' + label;
+        document.getElementById('notes-modal-new').value = '';
+        document.getElementById('notes-modal').style.display = 'flex';
+        document.getElementById('notes-modal-overlay').style.display = 'block';
+        loadNotesForModal();
+    }
+
+    function closeNotesModal() {
+        document.getElementById('notes-modal').style.display = 'none';
+        document.getElementById('notes-modal-overlay').style.display = 'none';
+    }
+
+    async function loadNotesForModal() {
+        const list = document.getElementById('notes-modal-list');
+        list.innerHTML = '<p style="color:#9ca3af;font-size:0.85rem;">Loading…</p>';
+        try {
+            const res = await fetch(`/api/admin/notes/${notesModalResourceType}/${notesModalResourceId}`, { credentials: 'include' });
+            const notes = await res.json();
+            if (!notes.length) { list.innerHTML = '<p style="color:#9ca3af;font-size:0.85rem;">No notes yet.</p>'; return; }
+            list.innerHTML = notes.map(n => `
+                <div style="border-bottom:1px solid #f3f4f6;padding:8px 0;display:flex;gap:8px;align-items:flex-start;">
+                    <div style="flex:1;">
+                        <div style="font-size:0.8rem;color:#9ca3af;">${fmtDate(n.created_at)} — ${escHtml(n.admin_name || 'Admin')}</div>
+                        <div style="font-size:0.9rem;white-space:pre-wrap;">${escHtml(n.body)}</div>
+                    </div>
+                    <button onclick="deleteNote(${n.id}, this)" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:0.8rem;flex-shrink:0;">✕</button>
+                </div>`).join('');
+        } catch { list.innerHTML = '<p style="color:#ef4444;font-size:0.85rem;">Failed to load notes.</p>'; }
+    }
+
+    async function saveNote() {
+        const body = document.getElementById('notes-modal-new').value.trim();
+        if (!body) return;
+        try {
+            const res = await fetch('/api/admin/notes', {
+                method: 'POST', credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ resource_type: notesModalResourceType, resource_id: notesModalResourceId, body })
+            });
+            if (!res.ok) throw new Error();
+            document.getElementById('notes-modal-new').value = '';
+            await loadNotesForModal();
+        } catch { showToast('Failed to save note', 'error'); }
+    }
+
+    async function deleteNote(id, btn) {
+        btn.disabled = true;
+        try {
+            await fetch(`/api/admin/notes/${id}`, { method: 'DELETE', credentials: 'include' });
+            await loadNotesForModal();
+        } catch { showToast('Failed to delete note', 'error'); btn.disabled = false; }
+    }
+
+    // ── CRM: Realtors ─────────────────────────────────────────────────────────
+    let crmRealtorsData = [];
+
+    async function loadCrmRealtors() {
+        const status = document.getElementById('crm-realtor-status-filter').value;
+        const search = document.getElementById('crm-realtor-search').value;
+        const params = new URLSearchParams();
+        if (status) params.set('status', status);
+        if (search) params.set('search', search);
+        try {
+            const res = await fetch(`/api/admin/crm/realtors?${params}`, { credentials: 'include' });
+            crmRealtorsData = await res.json();
+            renderCrmRealtors();
+        } catch { document.getElementById('crm-realtors-tbody').innerHTML = '<tr><td colspan="11" class="empty-state">Failed to load.</td></tr>'; }
+    }
+
+    function renderCrmRealtors() {
+        const tbody = document.getElementById('crm-realtors-tbody');
+        document.getElementById('crm-realtors-count').textContent = crmRealtorsData.length + ' realtors';
+        if (!crmRealtorsData.length) { tbody.innerHTML = '<tr><td colspan="11" class="empty-state">No realtors match filters.</td></tr>'; return; }
+        tbody.innerHTML = crmRealtorsData.map(u => {
+            const s = realtorCrmStatus(u);
+            const name = [u.first_name, u.last_name].filter(Boolean).join(' ') || '—';
+            const serviceAreas = Array.isArray(u.service_areas) ? u.service_areas.join(', ') : (u.service_areas || '—');
+            return `<tr>
+                <td class="id-cell">#${u.id}</td>
+                <td class="name-cell">${escHtml(name)}</td>
+                <td><a href="mailto:${escHtml(u.email)}" style="color:var(--accent)">${escHtml(u.email)}</a></td>
+                <td><span style="background:${s.bg};color:${s.color};padding:2px 9px;border-radius:12px;font-size:0.75rem;font-weight:600;">${s.label}</span></td>
+                <td>${escHtml(u.subscription_plan || 'free')}</td>
+                <td>${u.license_verified ? '✅ Verified' : '—'}</td>
+                <td style="max-width:140px;font-size:0.8rem;white-space:normal;">${escHtml(serviceAreas)}</td>
+                <td style="text-align:center">${u.proposals_sent}</td>
+                <td style="text-align:center">${u.matches_count}</td>
+                <td class="td-muted">${fmtDate(u.created_at)}</td>
+                <td><button class="btn-action" onclick="openNotesModal('realtor',${u.id},${JSON.stringify(name)})" style="font-size:0.78rem;">📝 Notes</button></td>
+            </tr>`;
+        }).join('');
+    }
+
+    // ── CRM: Homeowner Leads ──────────────────────────────────────────────────
+    let crmLeadsData = [], approvedRealtorsList = [];
+
+    async function loadApprovedRealtorsList() {
+        try {
+            const res = await fetch('/api/admin/crm/realtors-list', { credentials: 'include' });
+            approvedRealtorsList = await res.json();
+        } catch {}
+    }
+
+    async function loadCrmLeads() {
+        const status = document.getElementById('crm-lead-status-filter').value;
+        const search = document.getElementById('crm-lead-search').value;
+        const params = new URLSearchParams();
+        if (status) params.set('status', status);
+        if (search) params.set('search', search);
+        try {
+            const res = await fetch(`/api/admin/crm/leads?${params}`, { credentials: 'include' });
+            crmLeadsData = await res.json();
+            renderCrmLeads();
+        } catch { document.getElementById('crm-leads-tbody').innerHTML = '<tr><td colspan="10" class="empty-state">Failed to load.</td></tr>'; }
+    }
+
+    function renderCrmLeads() {
+        const tbody = document.getElementById('crm-leads-tbody');
+        document.getElementById('crm-leads-count').textContent = crmLeadsData.length + ' leads';
+        if (!crmLeadsData.length) { tbody.innerHTML = '<tr><td colspan="10" class="empty-state">No leads match filters.</td></tr>'; return; }
+        tbody.innerHTML = crmLeadsData.map(l => {
+            const addr = [l.address, l.city, l.state].filter(Boolean).join(', ');
+            return `<tr>
+                <td class="id-cell">#${l.id}</td>
+                <td class="address-cell" style="max-width:160px;white-space:normal;font-size:0.85rem;">${escHtml(addr || '—')}</td>
+                <td style="font-size:0.85rem;">${escHtml(l.seller_name || '—')}<br><a href="mailto:${escHtml(l.seller_email||'')}" style="color:var(--accent);font-size:0.78rem;">${escHtml(l.seller_email||'')}</a></td>
+                <td style="white-space:nowrap">${fmtPrice(l.price)}</td>
+                <td style="text-align:center">${l.proposal_count ?? 0}</td>
+                <td>${crmStatusBadge(l.crm_status)}</td>
+                <td style="font-size:0.85rem;">${escHtml(l.assigned_realtor_name || '—')}</td>
+                <td class="td-muted">${l.crm_follow_up_date ? fmtDate(l.crm_follow_up_date) : '—'}</td>
+                <td class="td-muted">${fmtDate(l.created_at)}</td>
+                <td style="display:flex;gap:4px;flex-wrap:wrap;">
+                    <button class="btn-action" onclick="openLeadEditModal(${l.id})" style="font-size:0.78rem;">Edit</button>
+                    <button class="btn-action" onclick="openNotesModal('listing',${l.id},${JSON.stringify('#' + l.id + ' ' + (l.address || ''))})" style="font-size:0.78rem;">📝</button>
+                </td>
+            </tr>`;
+        }).join('');
+    }
+
+    let editingLeadId = null;
+
+    function openLeadEditModal(id) {
+        const l = crmLeadsData.find(x => x.id === id);
+        if (!l) return;
+        editingLeadId = id;
+        document.getElementById('lead-edit-status').value = l.crm_status || 'new';
+        document.getElementById('lead-edit-followup').value = l.crm_follow_up_date ? l.crm_follow_up_date.slice(0,10) : '';
+        const sel = document.getElementById('lead-edit-realtor');
+        sel.innerHTML = '<option value="">— None —</option>' +
+            approvedRealtorsList.map(r => `<option value="${r.id}" ${r.id === l.crm_assigned_realtor_id ? 'selected' : ''}>${escHtml(r.first_name + ' ' + r.last_name)} (${escHtml(r.email)})</option>`).join('');
+        document.getElementById('lead-edit-modal').style.display = 'flex';
+        document.getElementById('lead-edit-overlay').style.display = 'block';
+    }
+
+    function closeLeadEditModal() {
+        document.getElementById('lead-edit-modal').style.display = 'none';
+        document.getElementById('lead-edit-overlay').style.display = 'none';
+    }
+
+    async function saveLeadEdit() {
+        const crm_status = document.getElementById('lead-edit-status').value;
+        const crm_follow_up_date = document.getElementById('lead-edit-followup').value || null;
+        const crm_assigned_realtor_id = document.getElementById('lead-edit-realtor').value || null;
+        try {
+            const res = await fetch(`/api/admin/crm/leads/${editingLeadId}`, {
+                method: 'PUT', credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ crm_status, crm_follow_up_date, crm_assigned_realtor_id })
+            });
+            if (!res.ok) throw new Error();
+            closeLeadEditModal();
+            await loadCrmLeads();
+            showToast('Lead updated', 'success');
+        } catch { showToast('Failed to update lead', 'error'); }
+    }
+
+    // ── CRM: Matches ──────────────────────────────────────────────────────────
+    let matchesData = [], editingMatchId = null;
+
+    async function loadMatches() {
+        try {
+            const res = await fetch('/api/admin/matches', { credentials: 'include' });
+            matchesData = await res.json();
+            renderMatches();
+        } catch { document.getElementById('crm-matches-tbody').innerHTML = '<tr><td colspan="15" class="empty-state">Failed to load.</td></tr>'; }
+    }
+
+    function renderMatches() {
+        const tbody = document.getElementById('crm-matches-tbody');
+        document.getElementById('crm-matches-count').textContent = matchesData.length + ' matches';
+        if (!matchesData.length) { tbody.innerHTML = '<tr><td colspan="15" class="empty-state">No matches yet. Create one to start tracking.</td></tr>'; return; }
+        tbody.innerHTML = matchesData.map(m => {
+            const addr = [m.address, m.city, m.state].filter(Boolean).join(', ');
+            const estCommission = m.estimated_home_value && m.estimated_commission_pct
+                ? '$' + Number(m.estimated_home_value * m.estimated_commission_pct).toLocaleString()
+                : '—';
+            return `<tr>
+                <td class="id-cell">#${m.id}</td>
+                <td style="max-width:140px;white-space:normal;font-size:0.82rem;">${escHtml(addr || '—')}</td>
+                <td style="font-size:0.82rem;">${escHtml(m.realtor_name || '—')}</td>
+                <td>${crmStatusBadge(m.status)}</td>
+                <td style="text-align:center">${checkBox(m.realtor_accepted)}</td>
+                <td style="text-align:center">${checkBox(m.contact_made)}</td>
+                <td style="text-align:center">${checkBox(m.appointment_scheduled)}</td>
+                <td style="text-align:center">${checkBox(m.listing_agreement_signed)}</td>
+                <td style="text-align:center">${checkBox(m.under_contract)}</td>
+                <td style="text-align:center">${checkBox(m.closed)}</td>
+                <td style="white-space:nowrap">${m.estimated_home_value ? fmtPrice(m.estimated_home_value) : '—'}</td>
+                <td style="white-space:nowrap">${m.referral_fee_expected ? '$' + Number(m.referral_fee_expected).toLocaleString() : estCommission}</td>
+                <td><span style="font-size:0.78rem;font-weight:600;">${escHtml(m.payment_status || '—')}</span></td>
+                <td class="td-muted">${m.close_date ? fmtDate(m.close_date) : '—'}</td>
+                <td style="display:flex;gap:4px;">
+                    <button class="btn-action" onclick="openMatchEditModal(${m.id})" style="font-size:0.78rem;">Edit</button>
+                    <button class="btn-action" onclick="openNotesModal('match',${m.id},'Match #${m.id}')" style="font-size:0.78rem;">📝</button>
+                    <button class="btn-action btn-delete" onclick="deleteMatch(${m.id},this)" style="font-size:0.78rem;">✕</button>
+                </td>
+            </tr>`;
+        }).join('');
+    }
+
+    function openCreateMatchModal() {
+        editingMatchId = null;
+        document.getElementById('match-modal-title').textContent = 'New Match';
+        ['match-listing-id','match-realtor-id','match-status','match-est-value',
+         'match-commission-pct','match-ref-fee','match-ref-paid','match-payment-status',
+         'match-close-date','match-notes'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.value = el.tagName === 'SELECT' ? el.options[0]?.value || '' : '';
+        });
+        ['match-cb-accepted','match-cb-contact','match-cb-appt','match-cb-agreement',
+         'match-cb-contract','match-cb-closed'].forEach(id => {
+            const el = document.getElementById(id); if (el) el.checked = false;
+        });
+        document.getElementById('match-modal').style.display = 'flex';
+        document.getElementById('match-modal-overlay').style.display = 'block';
+    }
+
+    function openMatchEditModal(id) {
+        const m = matchesData.find(x => x.id === id);
+        if (!m) return;
+        editingMatchId = id;
+        document.getElementById('match-modal-title').textContent = 'Edit Match #' + id;
+        document.getElementById('match-listing-id').value = m.listing_id || '';
+        document.getElementById('match-realtor-id').value = m.realtor_id || '';
+        document.getElementById('match-status').value = m.status || 'pending';
+        document.getElementById('match-est-value').value = m.estimated_home_value || '';
+        document.getElementById('match-commission-pct').value = m.estimated_commission_pct != null ? (m.estimated_commission_pct * 100).toFixed(2) : '';
+        document.getElementById('match-ref-fee').value = m.referral_fee_expected || '';
+        document.getElementById('match-ref-paid').value = m.referral_fee_paid || '';
+        document.getElementById('match-payment-status').value = m.payment_status || 'pending';
+        document.getElementById('match-close-date').value = m.close_date ? m.close_date.slice(0,10) : '';
+        document.getElementById('match-notes').value = m.notes || '';
+        document.getElementById('match-cb-accepted').checked = !!m.realtor_accepted;
+        document.getElementById('match-cb-contact').checked = !!m.contact_made;
+        document.getElementById('match-cb-appt').checked = !!m.appointment_scheduled;
+        document.getElementById('match-cb-agreement').checked = !!m.listing_agreement_signed;
+        document.getElementById('match-cb-contract').checked = !!m.under_contract;
+        document.getElementById('match-cb-closed').checked = !!m.closed;
+        document.getElementById('match-modal').style.display = 'flex';
+        document.getElementById('match-modal-overlay').style.display = 'block';
+    }
+
+    function closeMatchModal() {
+        document.getElementById('match-modal').style.display = 'none';
+        document.getElementById('match-modal-overlay').style.display = 'none';
+    }
+
+    async function saveMatch() {
+        const pct = parseFloat(document.getElementById('match-commission-pct').value);
+        const body = {
+            status: document.getElementById('match-status').value,
+            realtor_accepted: document.getElementById('match-cb-accepted').checked,
+            contact_made: document.getElementById('match-cb-contact').checked,
+            appointment_scheduled: document.getElementById('match-cb-appt').checked,
+            listing_agreement_signed: document.getElementById('match-cb-agreement').checked,
+            under_contract: document.getElementById('match-cb-contract').checked,
+            closed: document.getElementById('match-cb-closed').checked,
+            estimated_home_value: parseFloat(document.getElementById('match-est-value').value) || null,
+            estimated_commission_pct: isNaN(pct) ? null : pct / 100,
+            referral_fee_expected: parseFloat(document.getElementById('match-ref-fee').value) || null,
+            referral_fee_paid: parseFloat(document.getElementById('match-ref-paid').value) || null,
+            payment_status: document.getElementById('match-payment-status').value,
+            close_date: document.getElementById('match-close-date').value || null,
+            notes: document.getElementById('match-notes').value || null,
+        };
+        try {
+            let res;
+            if (editingMatchId) {
+                res = await fetch(`/api/admin/matches/${editingMatchId}`, {
+                    method: 'PUT', credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+                });
+            } else {
+                body.listing_id = parseInt(document.getElementById('match-listing-id').value);
+                body.realtor_id = parseInt(document.getElementById('match-realtor-id').value);
+                if (!body.listing_id || !body.realtor_id) { showToast('Listing ID and Realtor ID required', 'error'); return; }
+                res = await fetch('/api/admin/matches', {
+                    method: 'POST', credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+                });
+            }
+            if (!res.ok) throw new Error();
+            closeMatchModal();
+            await loadMatches();
+            showToast(editingMatchId ? 'Match updated' : 'Match created', 'success');
+        } catch { showToast('Failed to save match', 'error'); }
+    }
+
+    async function deleteMatch(id, btn) {
+        if (!confirm('Delete this match?')) return;
+        btn.disabled = true;
+        try {
+            const res = await fetch(`/api/admin/matches/${id}`, { method: 'DELETE', credentials: 'include' });
+            if (!res.ok) throw new Error();
+            matchesData = matchesData.filter(m => m.id !== id);
+            renderMatches();
+            showToast('Match deleted', 'success');
+        } catch { showToast('Failed to delete match', 'error'); btn.disabled = false; }
+    }
+
+    // ── CRM: Prospects / Recruitment ──────────────────────────────────────────
+    let prospectsData = [], editingProspectId = null;
+
+    async function loadProspects() {
+        const status = document.getElementById('crm-prospect-status-filter').value;
+        const params = new URLSearchParams();
+        if (status) params.set('status', status);
+        try {
+            const res = await fetch(`/api/admin/prospects?${params}`, { credentials: 'include' });
+            prospectsData = await res.json();
+            renderProspects();
+        } catch { document.getElementById('crm-prospects-tbody').innerHTML = '<tr><td colspan="11" class="empty-state">Failed to load.</td></tr>'; }
+    }
+
+    function renderProspects() {
+        const tbody = document.getElementById('crm-prospects-tbody');
+        document.getElementById('crm-prospects-count').textContent = prospectsData.length + ' prospects';
+        if (!prospectsData.length) { tbody.innerHTML = '<tr><td colspan="11" class="empty-state">No prospects. Add one to start recruiting.</td></tr>'; return; }
+        tbody.innerHTML = prospectsData.map(p => {
+            const name = [p.first_name, p.last_name].filter(Boolean).join(' ') || '—';
+            return `<tr>
+                <td class="id-cell">#${p.id}</td>
+                <td class="name-cell">${escHtml(name)}</td>
+                <td>${escHtml(p.brokerage || '—')}</td>
+                <td><a href="mailto:${escHtml(p.email||'')}" style="color:var(--accent)">${escHtml(p.email||'—')}</a></td>
+                <td class="td-muted">${escHtml(p.phone || '—')}</td>
+                <td class="td-muted">${escHtml([p.city, p.state].filter(Boolean).join(', ') || '—')}</td>
+                <td class="td-muted">${escHtml(p.source || '—')}</td>
+                <td>${outreachBadge(p.outreach_status)}</td>
+                <td class="td-muted">${p.last_contact_date ? fmtDate(p.last_contact_date) : '—'}</td>
+                <td class="td-muted">${p.follow_up_date ? fmtDate(p.follow_up_date) : '—'}</td>
+                <td style="display:flex;gap:4px;">
+                    <button class="btn-action" onclick="openProspectModal(${p.id})" style="font-size:0.78rem;">Edit</button>
+                    <button class="btn-action btn-delete" onclick="deleteProspect(${p.id},this)" style="font-size:0.78rem;">✕</button>
+                </td>
+            </tr>`;
+        }).join('');
+    }
+
+    function openProspectModal(id) {
+        editingProspectId = id;
+        const p = id ? prospectsData.find(x => x.id === id) : {};
+        document.getElementById('prospect-modal-title').textContent = id ? 'Edit Prospect' : 'Add Prospect';
+        const fields = ['first_name','last_name','brokerage','email','phone','city','state','source','outreach_status','notes'];
+        fields.forEach(f => { const el = document.getElementById('prospect-' + f.replace('_','-')); if (el) el.value = p?.[f] || ''; });
+        document.getElementById('prospect-last-contact').value = p?.last_contact_date ? p.last_contact_date.slice(0,10) : '';
+        document.getElementById('prospect-follow-up').value = p?.follow_up_date ? p.follow_up_date.slice(0,10) : '';
+        document.getElementById('prospect-modal').style.display = 'flex';
+        document.getElementById('prospect-modal-overlay').style.display = 'block';
+    }
+
+    function closeProspectModal() {
+        document.getElementById('prospect-modal').style.display = 'none';
+        document.getElementById('prospect-modal-overlay').style.display = 'none';
+    }
+
+    async function saveProspect() {
+        const body = {
+            first_name: document.getElementById('prospect-first-name').value.trim(),
+            last_name: document.getElementById('prospect-last-name').value.trim(),
+            brokerage: document.getElementById('prospect-brokerage').value.trim(),
+            email: document.getElementById('prospect-email').value.trim(),
+            phone: document.getElementById('prospect-phone').value.trim(),
+            city: document.getElementById('prospect-city').value.trim(),
+            state: document.getElementById('prospect-state').value.trim(),
+            source: document.getElementById('prospect-source').value,
+            outreach_status: document.getElementById('prospect-outreach-status').value,
+            last_contact_date: document.getElementById('prospect-last-contact').value || null,
+            follow_up_date: document.getElementById('prospect-follow-up').value || null,
+            notes: document.getElementById('prospect-notes').value.trim(),
+        };
+        try {
+            const url = editingProspectId ? `/api/admin/prospects/${editingProspectId}` : '/api/admin/prospects';
+            const res = await fetch(url, {
+                method: editingProspectId ? 'PUT' : 'POST', credentials: 'include',
+                headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+            });
+            if (!res.ok) throw new Error();
+            closeProspectModal();
+            await loadProspects();
+            showToast(editingProspectId ? 'Prospect updated' : 'Prospect added', 'success');
+        } catch { showToast('Failed to save prospect', 'error'); }
+    }
+
+    async function deleteProspect(id, btn) {
+        if (!confirm('Delete this prospect?')) return;
+        btn.disabled = true;
+        try {
+            const res = await fetch(`/api/admin/prospects/${id}`, { method: 'DELETE', credentials: 'include' });
+            if (!res.ok) throw new Error();
+            prospectsData = prospectsData.filter(p => p.id !== id);
+            renderProspects();
+            showToast('Prospect deleted', 'success');
+        } catch { showToast('Failed to delete prospect', 'error'); btn.disabled = false; }
     }
 
     // ── Boot ──────────────────────────────────────────────────────────────────
