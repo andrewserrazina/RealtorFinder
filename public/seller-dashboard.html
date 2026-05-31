@@ -2299,7 +2299,8 @@
                     notif_listing_alerts: document.getElementById('np-listing-alerts').checked,
                     notif_engagement_reminders: document.getElementById('np-engagement').checked
                 };
-                await fetch('/api/me/notification-preferences', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify(body) });
+                const res = await fetch('/api/me/notification-preferences', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify(body) });
+                if (!res.ok) { console.error('Save notif prefs failed'); return; }
                 const saved = document.getElementById('notifPrefsSaved');
                 saved.style.display = 'block';
                 setTimeout(() => saved.style.display = 'none', 3000);

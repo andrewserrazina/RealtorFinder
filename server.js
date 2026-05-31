@@ -5062,7 +5062,8 @@ app.get('/s/:token', async (req, res) => {
         const l = rows[0];
         pool.query(`UPDATE listings SET share_views = COALESCE(share_views, 0) + 1 WHERE id = $1`, [l.id]).catch(() => {});
         const base = (process.env.FRONTEND_URL || 'https://realtorfinder.net').replace(/\/$/, '');
-        const title = `${l.address}${l.city ? ', ' + l.city : ''} — RealtorFinder`;
+        const he = s => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        const title = `${he(l.address)}${l.city ? ', ' + he(l.city) : ''} — RealtorFinder`;
         const priceStr = l.price ? '$' + Number(l.price).toLocaleString() : null;
         const desc = [priceStr, l.bedrooms ? l.bedrooms + ' bed' : null, l.bathrooms ? l.bathrooms + ' bath' : null, l.sqft ? Number(l.sqft).toLocaleString() + ' sqft' : null].filter(Boolean).join(' · ');
         const img = Array.isArray(l.image_urls) && l.image_urls[0] ? l.image_urls[0] : `${base}/og-default.png`;
@@ -5070,11 +5071,11 @@ app.get('/s/:token', async (req, res) => {
         const html = `<!DOCTYPE html><html lang="en"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${title}</title>
-<meta name="description" content="${desc}">
+<meta name="description" content="${he(desc)}">
 <meta property="og:title" content="${title}">
-<meta property="og:description" content="${desc}">
-<meta property="og:image" content="${img}">
-<meta property="og:url" content="${shareUrl}">
+<meta property="og:description" content="${he(desc)}">
+<meta property="og:image" content="${he(img)}">
+<meta property="og:url" content="${he(shareUrl)}">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700;900&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -5109,19 +5110,19 @@ body{font-family:'DM Sans',sans-serif;background:#f8fafc;color:#0A2540;min-heigh
   <a href="/login?tab=signup&type=seller" class="nav-cta">List My Home Free</a>
 </nav>
 ${Array.isArray(l.image_urls) && l.image_urls[0]
-    ? `<img class="hero-img" src="${l.image_urls[0]}" alt="${l.address}" loading="lazy">`
+    ? `<img class="hero-img" src="${he(l.image_urls[0])}" alt="${he(l.address)}" loading="lazy">`
     : `<div class="hero-img-placeholder">🏡</div>`}
 <div class="container">
-  <div class="address">${l.address || 'Property Listing'}</div>
-  <div class="location">${[l.city, l.state, l.zip].filter(Boolean).join(', ')}</div>
+  <div class="address">${he(l.address) || 'Property Listing'}</div>
+  <div class="location">${[l.city, l.state, l.zip].filter(Boolean).map(he).join(', ')}</div>
   ${l.price ? `<div class="price">$${Number(l.price).toLocaleString()}</div>` : ''}
   <div class="details">
-    ${l.bedrooms ? `<div class="detail"><span class="detail-val">${l.bedrooms}</span><span class="detail-lbl">Beds</span></div>` : ''}
-    ${l.bathrooms ? `<div class="detail"><span class="detail-val">${l.bathrooms}</span><span class="detail-lbl">Baths</span></div>` : ''}
+    ${l.bedrooms ? `<div class="detail"><span class="detail-val">${he(l.bedrooms)}</span><span class="detail-lbl">Beds</span></div>` : ''}
+    ${l.bathrooms ? `<div class="detail"><span class="detail-val">${he(l.bathrooms)}</span><span class="detail-lbl">Baths</span></div>` : ''}
     ${l.sqft ? `<div class="detail"><span class="detail-val">${Number(l.sqft).toLocaleString()}</span><span class="detail-lbl">Sq ft</span></div>` : ''}
-    ${l.property_type ? `<div class="detail"><span class="detail-val">${l.property_type}</span><span class="detail-lbl">Type</span></div>` : ''}
+    ${l.property_type ? `<div class="detail"><span class="detail-val">${he(l.property_type)}</span><span class="detail-lbl">Type</span></div>` : ''}
   </div>
-  ${l.description ? `<div class="desc">${l.description.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>` : ''}
+  ${l.description ? `<div class="desc">${he(l.description)}</div>` : ''}
   <div class="cta-card">
     <h2>Are you looking to sell your home?</h2>
     <p>Post your home for free on RealtorFinder and let top local realtors compete for your listing — no obligation.</p>

@@ -2511,7 +2511,8 @@
                     notif_listing_alerts: document.getElementById('rnp-listing-alerts').checked,
                     notif_engagement_reminders: document.getElementById('rnp-engagement').checked
                 };
-                await fetch('/api/me/notification-preferences', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify(body) });
+                const res = await fetch('/api/me/notification-preferences', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify(body) });
+                if (!res.ok) { console.error('Save notif prefs failed'); return; }
                 const saved = document.getElementById('rNotifPrefsSaved');
                 saved.style.display = 'block';
                 setTimeout(() => saved.style.display = 'none', 3000);
@@ -2548,7 +2549,7 @@
                 <div style="border:1px solid var(--border);border-radius:10px;padding:1rem 1.25rem;display:flex;align-items:flex-start;gap:1rem;">
                     <div style="flex:1;min-width:0;">
                         <div style="font-weight:600;color:var(--ink);margin-bottom:0.35rem;font-size:0.95rem;">${esc(t.name)}</div>
-                        <div style="color:#6b7280;font-size:0.85rem;white-space:pre-wrap;overflow:hidden;max-height:3.5em;text-overflow:ellipsis;">${esc(t.content.slice(0,160))}${t.content.length>160?'…':''}</div>
+                        <div style="color:#6b7280;font-size:0.85rem;white-space:pre-wrap;overflow:hidden;max-height:3.5em;text-overflow:ellipsis;">${esc(t.content).slice(0,160)}${t.content.length>160?'…':''}</div>
                     </div>
                     <div style="display:flex;gap:0.5rem;flex-shrink:0;">
                         <button onclick="editTemplate(${t.id})" style="background:white;border:1px solid var(--border);color:#374151;padding:0.4rem 0.75rem;border-radius:6px;cursor:pointer;font-size:0.8rem;font-family:inherit;">Edit</button>
@@ -2625,7 +2626,7 @@
                     list.innerHTML = _templates.map(t => `
                         <div onclick="applyTemplate(${t.id})" style="padding:0.65rem 0.75rem;cursor:pointer;border-radius:6px;font-size:0.875rem;color:#374151;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='none'">
                             <div style="font-weight:600;">${esc(t.name)}</div>
-                            <div style="color:#9ca3af;font-size:0.78rem;margin-top:2px;">${esc(t.content.slice(0,50))}…</div>
+                            <div style="color:#9ca3af;font-size:0.78rem;margin-top:2px;">${esc(t.content).slice(0,50)}…</div>
                         </div>
                     `).join('');
                 }
