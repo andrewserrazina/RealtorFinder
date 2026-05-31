@@ -168,28 +168,75 @@ function haversineMiles(lat1, lon1, lat2, lon2) {
 }
 
 // Fire-and-forget: email nearby approved realtors about a new listing
+const zipCoordCache = new Map();
+
 async function notifyNearbyRealtors(listing) {
     try {
-        if (!listing.latitude || !listing.longitude) return;
-        const { rows } = await pool.query(
-            `SELECT id, first_name, email, zip_code FROM users
-             WHERE user_type = 'realtor' AND is_approved = true AND is_active IS NOT FALSE
-               AND email IS NOT NULL AND zip_code IS NOT NULL
-               AND (email_alerts IS NULL OR email_alerts = true)`
-        );
         const RADIUS_MILES = 25;
         const MAX_EMAILS = 200;
         let sent = 0;
-        for (const realtor of rows) {
-            if (sent >= MAX_EMAILS) break;
-            const coords = await geocodeAddress(`${realtor.zip_code}, USA`);
-            if (!coords) continue;
-            const dist = haversineMiles(listing.latitude, listing.longitude, coords.latitude, coords.longitude);
-            if (dist <= RADIUS_MILES) {
-                await emailService.sendNewListingAlert(realtor, listing, dist);
+        const notifiedIds = new Set();
+
+        // Path 1: service_areas text match (no geocoding needed)
+        if (listing.city || listing.state) {
+            const cityPart = listing.city ? `%${listing.city}%` : null;
+            const statePart = listing.state ? `%${listing.state}%` : null;
+            let serviceAreaQuery;
+            let serviceAreaParams;
+            if (cityPart && statePart) {
+                serviceAreaQuery = `SELECT id, first_name, email, zip_code FROM users
+                     WHERE user_type = 'realtor' AND is_approved = true AND is_active IS NOT FALSE
+                       AND email IS NOT NULL
+                       AND (email_alerts IS NULL OR email_alerts = true)
+                       AND (service_areas ILIKE $1 OR service_areas ILIKE $2)`;
+                serviceAreaParams = [cityPart, statePart];
+            } else {
+                const pattern = cityPart || statePart;
+                serviceAreaQuery = `SELECT id, first_name, email, zip_code FROM users
+                     WHERE user_type = 'realtor' AND is_approved = true AND is_active IS NOT FALSE
+                       AND email IS NOT NULL
+                       AND (email_alerts IS NULL OR email_alerts = true)
+                       AND service_areas ILIKE $1`;
+                serviceAreaParams = [pattern];
+            }
+            const { rows: saRealtors } = await pool.query(serviceAreaQuery, serviceAreaParams);
+            for (const realtor of saRealtors) {
+                if (sent >= MAX_EMAILS) break;
+                if (notifiedIds.has(realtor.id)) continue;
+                await emailService.sendNewListingAlert(realtor, listing, 0);
+                sseNotify(realtor.id, { type: 'notification' });
+                notifiedIds.add(realtor.id);
                 sent++;
             }
         }
+
+        // Path 2: geocode + radius match for remaining realtors
+        if (sent < MAX_EMAILS && listing.latitude && listing.longitude) {
+            const { rows: allRealtors } = await pool.query(
+                `SELECT id, first_name, email, zip_code FROM users
+                 WHERE user_type = 'realtor' AND is_approved = true AND is_active IS NOT FALSE
+                   AND email IS NOT NULL AND zip_code IS NOT NULL
+                   AND (email_alerts IS NULL OR email_alerts = true)`
+            );
+            for (const realtor of allRealtors) {
+                if (sent >= MAX_EMAILS) break;
+                if (notifiedIds.has(realtor.id)) continue;
+                let coords = zipCoordCache.get(realtor.zip_code);
+                if (!coords) {
+                    coords = await geocodeAddress(`${realtor.zip_code}, USA`);
+                    if (coords) zipCoordCache.set(realtor.zip_code, coords);
+                }
+                if (!coords) continue;
+                const dist = haversineMiles(listing.latitude, listing.longitude, coords.latitude, coords.longitude);
+                if (dist <= RADIUS_MILES) {
+                    await emailService.sendNewListingAlert(realtor, listing, dist);
+                    sseNotify(realtor.id, { type: 'notification' });
+                    notifiedIds.add(realtor.id);
+                    sent++;
+                }
+            }
+        }
+
         if (sent > 0) console.log(`📬 Notified ${sent} realtors about listing ${listing.id}`);
     } catch (err) {
         console.error('notifyNearbyRealtors error:', err.message);
@@ -2460,7 +2507,7 @@ app.post('/api/webhook/stripe', express.raw({ type: 'application/json' }), async
     if (event.type === 'customer.subscription.deleted') {
         const sub = event.data.object;
         try {
-            await applyPlan(sub.customer, 'basic', null);
+            await applyPlan(sub.customer, 'free', null);
             // Notify user their subscription ended
             const { rows } = await pool.query(
                 `SELECT email, first_name FROM users WHERE stripe_customer_id=$1`, [sub.customer]
@@ -2486,8 +2533,25 @@ app.post('/api/webhook/stripe', express.raw({ type: 'application/json' }), async
                     .catch(e => console.error('Payment failed email error:', e.message));
             }
             console.log(`⚠️ Stripe: payment failed for ${invoice.customer}`);
+            // After 3rd failure: mark subscription as past_due and set is_active = false as grace period enforcement
+            const attempt = invoice.attempt_count || 1;
+            if (attempt >= 3) {
+                await pool.query(`UPDATE users SET is_active = false WHERE stripe_customer_id = $1`, [invoice.customer]);
+                console.log(`⚠️ Stripe: deactivated account after ${attempt} failed payments for ${invoice.customer}`);
+            }
         } catch (err) {
             console.error('Stripe payment_failed DB error:', err);
+        }
+    }
+
+    if (event.type === 'invoice.payment_succeeded') {
+        const invoice = event.data.object;
+        try {
+            // Re-activate if previously suspended
+            await pool.query(`UPDATE users SET is_active = true WHERE stripe_customer_id = $1 AND is_active = false`, [invoice.customer]);
+            console.log(`✅ Stripe: payment succeeded, re-activated account for ${invoice.customer}`);
+        } catch (err) {
+            console.error('Stripe payment_succeeded DB error:', err);
         }
     }
 
@@ -2912,7 +2976,7 @@ app.get('/sitemap-index.xml', async (req, res) => {
 app.get('/sitemap-static.xml', (req, res) => {
     const base = (process.env.FRONTEND_URL || 'https://realtorfinder.net').replace(/\/$/, '');
     const today = new Date().toISOString().split('T')[0];
-    const urls = ['/', '/sellers', '/realtors', '/pricing', '/about', '/buyers', '/locations', '/login', '/contact', '/faq'];
+    const urls = ['/', '/sellers', '/realtors', '/pricing', '/about', '/buyers', '/locations', '/login', '/contact', '/faq', '/find-agent'];
     const entries = urls.map(u => `  <url><loc>${base}${u}</loc><lastmod>${today}</lastmod><priority>${u === '/' ? '1.0' : '0.7'}</priority></url>`).join('\n');
     res.type('application/xml');
     res.send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${entries}\n</urlset>`);
@@ -4926,6 +4990,10 @@ app.get('/pricing', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'pricing.html'));
 });
 
+app.get('/find-agent', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'find-agent.html'));
+});
+
 app.get('/sellers', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'sellers.html'));
 });
@@ -4954,6 +5022,178 @@ app.get('/', (req, res) => {
 // Public realtor directory page
 app.get('/realtors/directory', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'realtor-directory.html'));
+});
+
+// SEO: Realtor city landing pages — /realtors/tampa-fl, /realtors/austin-tx, etc.
+app.get('/realtors/:citystate', async (req, res, next) => {
+    const slug = req.params.citystate;
+    // Must match pattern: word(s)-with-hyphens-XX (last 2 chars are state code)
+    const match = slug.match(/^(.+)-([a-z]{2})$/);
+    if (!match) return next();
+    const stateCode = match[2].toUpperCase();
+    const citySlug = match[1];
+    const cityName = citySlug.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+
+    try {
+        // Get realtors in this city/state
+        const { rows: realtors } = await pool.query(
+            `SELECT id, first_name, last_name, company_name, subscription_plan, license_verified,
+                    years_experience, bio, zip_code, profile_photo,
+                    (SELECT ROUND(AVG(rating)::numeric, 1) FROM reviews WHERE realtor_id = users.id) as avg_rating,
+                    (SELECT COUNT(*) FROM reviews WHERE realtor_id = users.id) as review_count,
+                    (SELECT COUNT(*) FROM proposals WHERE realtor_id = users.id AND status = 'accepted') as wins
+             FROM users
+             WHERE user_type = 'realtor'
+               AND is_approved = true
+               AND is_active IS NOT FALSE
+               AND (
+                   service_areas ILIKE $1
+                   OR zip_code IN (SELECT zip FROM zip_codes WHERE city ILIKE $2 AND state_code = $3 LIMIT 20)
+                   OR city ILIKE $2
+               )
+             ORDER BY
+                 CASE WHEN subscription_plan IN ('professional','firm') THEN 0 ELSE 1 END,
+                 wins DESC NULLS LAST,
+                 avg_rating DESC NULLS LAST
+             LIMIT 30`,
+            [`%${cityName}%`, cityName, stateCode]
+        );
+
+        // Get active listing count for this area
+        const { rows: listingCount } = await pool.query(
+            `SELECT COUNT(*) as cnt FROM listings WHERE status = 'active' AND deleted_at IS NULL AND (city ILIKE $1 OR state ILIKE $2)`,
+            [cityName, stateCode]
+        );
+        const activeListings = parseInt(listingCount[0]?.cnt || 0);
+
+        const realtorCards = realtors.map(r => {
+            const initials = ((r.first_name || '')[0] || '') + ((r.last_name || '')[0] || '');
+            const name = `${r.first_name || ''} ${r.last_name || ''}`.trim();
+            const isFeatured = ['professional', 'firm'].includes(r.subscription_plan);
+            const stars = r.avg_rating ? '★'.repeat(Math.round(parseFloat(r.avg_rating))) + '☆'.repeat(5 - Math.round(parseFloat(r.avg_rating))) : '';
+            return `
+            <a href="/realtor/${r.id}" class="agent-card">
+                <div class="agent-avatar">${r.profile_photo ? `<img src="${r.profile_photo}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : initials.toUpperCase()}</div>
+                <div class="agent-info">
+                    <div class="agent-name">${name}${isFeatured ? ' <span class="featured-badge">⭐ Featured</span>' : ''}</div>
+                    ${r.company_name ? `<div class="agent-co">${r.company_name}</div>` : ''}
+                    ${r.avg_rating && r.review_count > 0 ? `<div class="agent-rating"><span style="color:#F59E0B;">${stars}</span> ${parseFloat(r.avg_rating).toFixed(1)} (${r.review_count})</div>` : ''}
+                    ${r.years_experience ? `<div class="agent-meta">${r.years_experience} yrs experience${r.wins > 0 ? ` · ${r.wins} listings won` : ''}</div>` : (r.wins > 0 ? `<div class="agent-meta">${r.wins} listings won</div>` : '')}
+                    ${r.bio ? `<div class="agent-bio">${r.bio.slice(0, 100)}${r.bio.length > 100 ? '…' : ''}</div>` : ''}
+                </div>
+                <div class="agent-cta">View Profile →</div>
+            </a>`;
+        }).join('');
+
+        const emptyState = realtors.length === 0 ? `
+            <div style="text-align:center;padding:4rem 2rem;color:#6B7280;">
+                <div style="font-size:3rem;margin-bottom:1rem;">🏡</div>
+                <h3 style="font-size:1.4rem;font-weight:700;color:#0A2540;margin-bottom:0.5rem;">No agents listed yet in ${cityName}, ${stateCode}</h3>
+                <p style="margin-bottom:2rem;">Be the first to set up your profile in this market.</p>
+                <a href="/login?tab=signup&type=realtor" style="background:#FF6B35;color:white;padding:12px 28px;border-radius:8px;font-weight:600;text-decoration:none;font-size:0.95rem;">Join as a Realtor →</a>
+            </div>` : '';
+
+        res.send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Top Realtors in ${cityName}, ${stateCode} | RealtorFinder</title>
+<meta name="description" content="Find and compare top real estate agents in ${cityName}, ${stateCode}. Sellers list free, realtors compete for your listing on RealtorFinder.">
+<link rel="canonical" href="https://www.realtorfinder.net/realtors/${slug}">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@600;700;900&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-BRGVVNKT65"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-BRGVVNKT65');</script>
+<style>
+:root{--primary:#0A2540;--accent:#FF6B35;--soft-bg:#F8F6F3;--border:#E5E1DB;--muted:#6B7280;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'DM Sans',sans-serif;background:var(--soft-bg);color:var(--primary);}
+nav{background:var(--primary);padding:0 2rem;display:flex;align-items:center;justify-content:space-between;height:64px;position:sticky;top:0;z-index:100;}
+.nav-logo{font-family:'Crimson Pro',serif;font-size:1.6rem;font-weight:900;color:white;text-decoration:none;}
+.nav-logo span{color:var(--accent);}
+.nav-links{display:flex;gap:1.5rem;align-items:center;}
+.nav-links a{color:rgba(255,255,255,0.8);text-decoration:none;font-size:0.9rem;}
+.nav-links a:hover{color:white;}
+.nav-cta{background:var(--accent);color:white!important;padding:8px 18px;border-radius:8px;font-weight:600!important;}
+.hero{background:var(--primary);color:white;padding:4rem 2rem 3rem;text-align:center;}
+.hero-label{font-size:0.8rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--accent);margin-bottom:0.75rem;}
+.hero h1{font-family:'Crimson Pro',serif;font-size:clamp(2rem,4vw,3rem);font-weight:900;margin-bottom:1rem;line-height:1.1;}
+.hero p{color:rgba(255,255,255,0.7);font-size:1.05rem;max-width:520px;margin:0 auto 1.75rem;}
+.hero-stats{display:flex;gap:2rem;justify-content:center;flex-wrap:wrap;margin-top:1.5rem;}
+.hero-stat{text-align:center;}
+.hero-stat-val{font-family:'Crimson Pro',serif;font-size:2rem;font-weight:900;color:white;}
+.hero-stat-label{font-size:0.8rem;color:rgba(255,255,255,0.55);margin-top:0.1rem;}
+.content{max-width:900px;margin:0 auto;padding:3rem 2rem 5rem;}
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:1rem;}
+.section-header h2{font-family:'Crimson Pro',serif;font-size:1.75rem;font-weight:900;}
+.agent-card{display:grid;grid-template-columns:56px 1fr auto;gap:1.25rem;align-items:center;background:white;border:1px solid var(--border);border-radius:16px;padding:1.25rem 1.5rem;margin-bottom:1rem;text-decoration:none;color:var(--primary);transition:box-shadow 0.2s,transform 0.2s;}
+.agent-card:hover{box-shadow:0 4px 24px rgba(0,0,0,0.08);transform:translateY(-1px);}
+.agent-avatar{width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,var(--primary),#1a4a7a);display:flex;align-items:center;justify-content:center;font-family:'Crimson Pro',serif;font-size:1.3rem;font-weight:900;color:white;flex-shrink:0;overflow:hidden;}
+.agent-name{font-weight:700;font-size:1rem;margin-bottom:0.15rem;}
+.featured-badge{background:#FFF0EB;color:var(--accent);font-size:0.72rem;padding:2px 8px;border-radius:20px;font-weight:600;margin-left:6px;}
+.agent-co{font-size:0.85rem;color:var(--muted);}
+.agent-rating{font-size:0.85rem;color:var(--muted);margin-top:0.2rem;}
+.agent-meta{font-size:0.8rem;color:var(--muted);margin-top:0.15rem;}
+.agent-bio{font-size:0.85rem;color:#555;margin-top:0.3rem;line-height:1.5;}
+.agent-cta{font-size:0.85rem;font-weight:600;color:var(--accent);white-space:nowrap;padding-left:0.5rem;}
+.cta-box{background:var(--accent);color:white;border-radius:16px;padding:2.5rem;text-align:center;margin-top:3rem;}
+.cta-box h2{font-family:'Crimson Pro',serif;font-size:1.75rem;font-weight:900;margin-bottom:0.75rem;}
+.cta-box p{opacity:0.9;margin-bottom:1.5rem;}
+.cta-btn{background:white;color:var(--accent);padding:12px 28px;border-radius:8px;font-weight:700;text-decoration:none;display:inline-block;font-size:0.95rem;}
+.breadcrumb{font-size:0.85rem;color:rgba(255,255,255,0.55);margin-bottom:1.25rem;}
+.breadcrumb a{color:rgba(255,255,255,0.6);text-decoration:none;}
+.breadcrumb a:hover{color:white;}
+footer{background:var(--primary);color:rgba(255,255,255,0.5);text-align:center;padding:2rem;font-size:0.875rem;}
+footer a{color:rgba(255,255,255,0.6);text-decoration:none;margin:0 0.75rem;}
+footer a:hover{color:white;}
+@media(max-width:640px){.agent-card{grid-template-columns:48px 1fr;}.agent-cta{display:none;}.nav-links{display:none;}}
+</style>
+</head>
+<body>
+<nav>
+  <a href="/" class="nav-logo">Realtor<span>Finder</span></a>
+  <div class="nav-links">
+    <a href="/sellers">For Sellers</a>
+    <a href="/realtors">For Realtors</a>
+    <a href="/pricing">Pricing</a>
+    <a href="/login?tab=signup" class="nav-cta">Get Started</a>
+  </div>
+</nav>
+<div class="hero">
+  <div class="breadcrumb"><a href="/">Home</a> › <a href="/locations">Markets</a> › ${cityName}, ${stateCode}</div>
+  <div class="hero-label">Local Agents</div>
+  <h1>Top Realtors in ${cityName}, ${stateCode}</h1>
+  <p>Verified agents serving ${cityName} and surrounding areas. List your home free and let them compete for your listing.</p>
+  ${realtors.length > 0 || activeListings > 0 ? `
+  <div class="hero-stats">
+    ${realtors.length > 0 ? `<div class="hero-stat"><div class="hero-stat-val">${realtors.length}</div><div class="hero-stat-label">Active agents</div></div>` : ''}
+    ${activeListings > 0 ? `<div class="hero-stat"><div class="hero-stat-val">${activeListings}</div><div class="hero-stat-label">Active listings</div></div>` : ''}
+  </div>` : ''}
+</div>
+<div class="content">
+  ${realtors.length > 0 ? `
+  <div class="section-header">
+    <h2>Agents in ${cityName}, ${stateCode}</h2>
+    <a href="/login?tab=signup" style="background:var(--accent);color:white;padding:8px 18px;border-radius:8px;font-weight:600;text-decoration:none;font-size:0.9rem;">List My Home Free →</a>
+  </div>
+  ${realtorCards}` : emptyState}
+  <div class="cta-box">
+    <h2>Sell your home in ${cityName}</h2>
+    <p>Post your listing free and receive competing proposals from local agents. Compare commissions and credentials before you choose.</p>
+    <a href="/login?tab=signup" class="cta-btn">List My Home Free →</a>
+  </div>
+</div>
+<footer>
+  <p>&copy; 2026 RealtorFinder.net &nbsp;·&nbsp;
+    <a href="/">Home</a><a href="/sellers">For Sellers</a><a href="/realtors">For Realtors</a><a href="/pricing">Pricing</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a>
+  </p>
+</footer>
+</body>
+</html>`);
+    } catch(err) {
+        console.error('City realtor page error:', err.message);
+        next();
+    }
 });
 
 // Realtor landing page
@@ -5293,6 +5533,88 @@ async function runWeeklyDigestJob() {
 // Check every hour; actually sends only on Sundays
 runWeeklyDigestJob();
 setInterval(runWeeklyDigestJob, 60 * 60 * 1000).unref();
+
+// Seller engagement reminder job — nudges sellers who have unreviewed proposals 5+ days old
+async function runEngagementReminderJob() {
+    try {
+        const { rows } = await pool.query(
+            `SELECT DISTINCT l.id, l.address, l.city, l.state,
+                    u.email, u.first_name, u.id as seller_id,
+                    COUNT(p.id) AS proposal_count
+             FROM listings l
+             JOIN users u ON u.id = l.user_id
+             JOIN proposals p ON p.listing_id = l.id
+             WHERE l.status IN ('active','pending')
+               AND l.deleted_at IS NULL
+               AND p.status = 'pending'
+               AND p.created_at <= NOW() - INTERVAL '5 days'
+               AND NOT EXISTS (
+                   SELECT 1 FROM proposals p2
+                   WHERE p2.listing_id = l.id
+                     AND p2.status IN ('accepted','declined')
+               )
+               AND NOT EXISTS (
+                   SELECT 1 FROM notifications n
+                   WHERE n.user_id = u.id
+                     AND n.type = 'engagement_reminder'
+                     AND n.body LIKE '%' || l.address || '%'
+                     AND n.created_at >= NOW() - INTERVAL '7 days'
+               )
+             GROUP BY l.id, l.address, l.city, l.state, u.email, u.first_name, u.id`
+        );
+        for (const row of rows) {
+            emailService.sendProposalNudge && emailService.sendProposalNudge(
+                row.email, row.first_name, row.address, parseInt(row.proposal_count)
+            ).catch(() => {});
+            pool.query(
+                `INSERT INTO notifications (user_id, type, title, body, link)
+                 VALUES ($1, 'engagement_reminder', 'You have proposals waiting!', $2, '/dashboard/seller')`,
+                [row.seller_id, `${row.address} — ${row.proposal_count} proposal(s) waiting for review`]
+            ).catch(() => {});
+        }
+        if (rows.length > 0) console.log(`📬 Engagement: nudged ${rows.length} sellers`);
+    } catch(err) {
+        console.error('Engagement reminder job error:', err.message);
+    }
+}
+runEngagementReminderJob();
+setInterval(runEngagementReminderJob, 24 * 60 * 60 * 1000).unref();
+
+// Schema migration for review_request_sent
+pool.query(`ALTER TABLE proposals ADD COLUMN IF NOT EXISTS review_request_sent BOOLEAN DEFAULT FALSE`).catch(() => {});
+
+// Review request job — emails sellers to review their accepted realtor 3 days after acceptance
+async function runReviewRequestJob() {
+    try {
+        const { rows } = await pool.query(
+            `SELECT p.id, p.listing_id, p.realtor_id,
+                    l.address, l.city, l.state,
+                    u.email as seller_email, u.first_name as seller_first,
+                    r.first_name as realtor_first, r.last_name as realtor_last
+             FROM proposals p
+             JOIN listings l ON l.id = p.listing_id
+             JOIN users u ON u.id = l.user_id
+             JOIN users r ON r.id = p.realtor_id
+             WHERE p.status = 'accepted'
+               AND p.review_request_sent IS NOT TRUE
+               AND p.updated_at <= NOW() - INTERVAL '3 days'`
+        );
+        for (const row of rows) {
+            const addr = [row.address, row.city, row.state].filter(Boolean).join(', ');
+            const realtorName = `${row.realtor_first || ''} ${row.realtor_last || ''}`.trim();
+            await emailService.sendReviewRequestEmail(
+                row.seller_email, row.seller_first,
+                row.realtor_id, realtorName, addr
+            ).catch(() => {});
+            await pool.query(`UPDATE proposals SET review_request_sent = TRUE WHERE id = $1`, [row.id]);
+        }
+        if (rows.length > 0) console.log(`📧 Review requests: sent ${rows.length}`);
+    } catch(err) {
+        console.error('Review request job error:', err.message);
+    }
+}
+runReviewRequestJob();
+setInterval(runReviewRequestJob, 12 * 60 * 60 * 1000).unref(); // Every 12 hours
 
 // Run all schema migrations then start listening
 async function startServer() {
