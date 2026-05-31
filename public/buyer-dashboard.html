@@ -1242,7 +1242,7 @@
         // ─── API Calls ────────────────────────────────────────────────────────────
         async function loadBuyerRequest() {
             try {
-                const res = await fetch(`${API_BASE_URL}/buyer-requests/mine`, { credentials: 'include' });
+                const res = await fetch(`${API_BASE_URL}/buyer-requests`, { credentials: 'include' });
                 if (res.status === 404) return null;
                 if (!res.ok) { console.error('Failed to load buyer request:', res.status); return null; }
                 return await res.json();

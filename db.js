@@ -638,8 +638,7 @@ const db = {
                 (SELECT COUNT(*) FROM listings WHERE status = 'active' AND deleted_at IS NULL) as active_listings,
                 (SELECT COUNT(*) FROM offers) as total_offers,
                 (SELECT COUNT(*) FROM messages) as total_messages,
-                (SELECT COUNT(*) FROM waitlist) as total_waitlist,
-                (SELECT COUNT(*) FROM waitlist) as waitlist_count
+                (SELECT COUNT(*) FROM waitlist) as total_waitlist
         `);
         return result.rows[0];
     },
@@ -820,7 +819,7 @@ const db = {
 
     async getCitiesByState(stateCode) {
         const result = await pool.query(
-            `SELECT slug, name, county, median_price, price_trend, avg_dom
+            `SELECT slug, name, state_name, county, median_price, price_trend, avg_dom
              FROM city_pages WHERE state_code = $1 AND is_published = TRUE
              ORDER BY name ASC`,
             [stateCode.toUpperCase()]

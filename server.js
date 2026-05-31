@@ -3266,7 +3266,7 @@ app.post('/api/profile/premium-checkout', auth.requireAuth, async (req, res) => 
                 },
                 quantity: 1
             }],
-            metadata: { type: 'premium_profile', duration: req.body.duration, days: dur.days, realtor_id: req.session.userId },
+            metadata: { type: 'premium_profile', duration: req.body.duration, days: dur.days, user_id: req.session.userId },
             success_url: `${baseUrl}/dashboard/realtor?premium=success`,
             cancel_url: `${baseUrl}/dashboard/realtor`,
         });
@@ -5524,6 +5524,17 @@ app.get('/api/notifications/stream', auth.requireAuth, (req, res) => {
     });
 });
 
+// Mark all notifications as read (must be before /:id/read to avoid route shadowing)
+app.put('/api/notifications/read-all', auth.requireAuth, async (req, res) => {
+    try {
+        await pool.query(
+            `UPDATE notifications SET read_at = NOW() WHERE user_id = $1 AND read_at IS NULL`,
+            [req.session.userId]
+        );
+        res.json({ ok: true });
+    } catch (err) { res.status(500).json({ error: 'Failed to mark all read' }); }
+});
+
 // Mark one notification as read
 app.put('/api/notifications/:id/read', auth.requireAuth, async (req, res) => {
     try {
@@ -5533,17 +5544,6 @@ app.put('/api/notifications/:id/read', auth.requireAuth, async (req, res) => {
         );
         res.json({ ok: true });
     } catch (err) { res.status(500).json({ error: 'Failed to mark read' }); }
-});
-
-// Mark all notifications as read
-app.put('/api/notifications/read-all', auth.requireAuth, async (req, res) => {
-    try {
-        await pool.query(
-            `UPDATE notifications SET read_at = NOW() WHERE user_id = $1 AND read_at IS NULL`,
-            [req.session.userId]
-        );
-        res.json({ ok: true });
-    } catch (err) { res.status(500).json({ error: 'Failed to mark all read' }); }
 });
 
 // ===== SAVED SEARCHES =====
@@ -5625,8 +5625,8 @@ app.post('/api/admin/send-listing-alerts', requireAdmin, async (req, res) => {
             if (s.city) { conditions.push(`LOWER(l.city) = LOWER($${pi++})`); params.push(s.city); }
             if (s.zip) { conditions.push(`l.zip = $${pi++}`); params.push(s.zip); }
             if (s.type) { conditions.push(`l.property_type = $${pi++}`); params.push(s.type); }
-            if (s.min_price) { conditions.push(`l.price_numeric >= $${pi++}`); params.push(s.min_price); }
-            if (s.max_price) { conditions.push(`l.price_numeric <= $${pi++}`); params.push(s.max_price); }
+            if (s.min_price) { conditions.push(`l.price >= $${pi++}`); params.push(s.min_price); }
+            if (s.max_price) { conditions.push(`l.price <= $${pi++}`); params.push(s.max_price); }
             if (s.min_beds) { conditions.push(`l.bedrooms >= $${pi++}`); params.push(s.min_beds); }
             if (s.min_baths) { conditions.push(`l.bathrooms >= $${pi++}`); params.push(s.min_baths); }
             const { rows: matches } = await pool.query(
@@ -5957,7 +5957,14 @@ app.put('/api/deals/:id', auth.requireAuth, async (req, res) => {
         const id = parseInt(req.params.id);
         const { status, sale_price, close_date, notes, referral_fee_due, referral_fee_paid } = req.body;
         const isAdmin = req.user.user_type === 'admin';
-        const ownerCheck = isAdmin ? '' : `AND realtor_id = ${req.session.userId}`;
+        const params = [
+            status || null, sale_price ? parseFloat(sale_price) : null,
+            close_date || null, notes || null,
+            referral_fee_due ? parseFloat(referral_fee_due) : null,
+            referral_fee_paid !== undefined ? !!referral_fee_paid : null,
+            id
+        ];
+        const ownerClause = isAdmin ? '' : `AND realtor_id = $${params.push(req.session.userId)}`;
         const { rows } = await pool.query(
             `UPDATE deals SET
                 status = COALESCE($1, status),
@@ -5967,12 +5974,8 @@ app.put('/api/deals/:id', auth.requireAuth, async (req, res) => {
                 referral_fee_due = COALESCE($5, referral_fee_due),
                 referral_fee_paid = COALESCE($6, referral_fee_paid),
                 updated_at = NOW()
-             WHERE id = $7 ${ownerCheck} RETURNING *`,
-            [status || null, sale_price ? parseFloat(sale_price) : null,
-             close_date || null, notes || null,
-             referral_fee_due ? parseFloat(referral_fee_due) : null,
-             referral_fee_paid !== undefined ? !!referral_fee_paid : null,
-             id]
+             WHERE id = $7 ${ownerClause} RETURNING *`,
+            params
         );
         if (!rows.length) return res.status(404).json({ error: 'Deal not found' });
         if (status === 'closed' && rows[0]) {
@@ -6526,7 +6529,6 @@ app.get('/realtors/:citystate', async (req, res, next) => {
                AND (
                    service_areas ILIKE $1
                    OR zip_code IN (SELECT zip FROM zip_codes WHERE city ILIKE $2 AND state_code = $3 LIMIT 20)
-                   OR city ILIKE $2
                )
              ORDER BY
                  CASE WHEN subscription_plan IN ('professional','firm') THEN 0 ELSE 1 END,
@@ -6772,6 +6774,9 @@ app.use((err, req, res, next) => {
     });
 });
 
+// Shared sleep helper for staggering bulk email sends
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
 // Listing expiry job — runs every 24 hours
 async function runListingExpiryJob() {
     try {
@@ -6841,9 +6846,6 @@ _schemaMigrations.push(
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS re_engagement_sent_at TIMESTAMPTZ`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMPTZ`
 );
-
-// Shared sleep helper for staggering bulk email sends
-const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 // Drip email onboarding job — sends 3-step sequences to sellers, realtors, and buyers
 async function ensureUnsubscribeToken(userId) {
@@ -7070,49 +7072,47 @@ async function runEngagementReminderJob() {
 runEngagementReminderJob();
 setInterval(runEngagementReminderJob, 24 * 60 * 60 * 1000).unref();
 
-// Schema migrations for batch 3 features
-pool.query(`ALTER TABLE proposals ADD COLUMN IF NOT EXISTS review_request_sent BOOLEAN DEFAULT FALSE`).catch(() => {});
-pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMPTZ`).catch(() => {});
-pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS notif_new_proposal BOOLEAN NOT NULL DEFAULT TRUE`).catch(() => {});
-pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS notif_messages BOOLEAN NOT NULL DEFAULT TRUE`).catch(() => {});
-
-// Schema migrations for batch 4 features
-pool.query(`ALTER TABLE proposals ADD COLUMN IF NOT EXISTS attachments TEXT[] DEFAULT '{}'`).catch(() => {});
-pool.query(`CREATE TABLE IF NOT EXISTS realtor_showing_requests (
-    id SERIAL PRIMARY KEY,
-    listing_id INTEGER NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
-    realtor_id INTEGER NOT NULL REFERENCES users(id),
-    proposed_slots JSONB NOT NULL DEFAULT '[]',
-    message TEXT,
-    status TEXT NOT NULL DEFAULT 'pending',
-    confirmed_slot TEXT,
-    responded_at TIMESTAMPTZ,
-    created_at TIMESTAMPTZ DEFAULT NOW()
-)`).catch(() => {});
-pool.query(`CREATE TABLE IF NOT EXISTS deals (
-    id SERIAL PRIMARY KEY,
-    listing_id INTEGER NOT NULL REFERENCES listings(id),
-    realtor_id INTEGER NOT NULL REFERENCES users(id),
-    proposal_id INTEGER REFERENCES proposals(id),
-    status TEXT NOT NULL DEFAULT 'active',
-    sale_price NUMERIC(12,2),
-    close_date DATE,
-    notes TEXT,
-    referral_fee_due NUMERIC(10,2),
-    referral_fee_paid BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW()
-)`).catch(() => {});
-pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS notif_weekly_digest BOOLEAN NOT NULL DEFAULT TRUE`).catch(() => {});
-pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS notif_listing_alerts BOOLEAN NOT NULL DEFAULT TRUE`).catch(() => {});
-pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS notif_engagement_reminders BOOLEAN NOT NULL DEFAULT TRUE`).catch(() => {});
-pool.query(`CREATE TABLE IF NOT EXISTS proposal_templates (
-    id SERIAL PRIMARY KEY,
-    realtor_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    name TEXT NOT NULL,
-    content TEXT NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT NOW()
-)`).catch(() => {});
+_schemaMigrations.push(
+    `ALTER TABLE proposals ADD COLUMN IF NOT EXISTS review_request_sent BOOLEAN DEFAULT FALSE`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS notif_new_proposal BOOLEAN NOT NULL DEFAULT TRUE`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS notif_messages BOOLEAN NOT NULL DEFAULT TRUE`,
+    `ALTER TABLE proposals ADD COLUMN IF NOT EXISTS attachments TEXT[] DEFAULT '{}'`,
+    `CREATE TABLE IF NOT EXISTS realtor_showing_requests (
+        id SERIAL PRIMARY KEY,
+        listing_id INTEGER NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
+        realtor_id INTEGER NOT NULL REFERENCES users(id),
+        proposed_slots JSONB NOT NULL DEFAULT '[]',
+        message TEXT,
+        status TEXT NOT NULL DEFAULT 'pending',
+        confirmed_slot TEXT,
+        responded_at TIMESTAMPTZ,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+    )`,
+    `CREATE TABLE IF NOT EXISTS deals (
+        id SERIAL PRIMARY KEY,
+        listing_id INTEGER NOT NULL REFERENCES listings(id),
+        realtor_id INTEGER NOT NULL REFERENCES users(id),
+        proposal_id INTEGER REFERENCES proposals(id),
+        status TEXT NOT NULL DEFAULT 'active',
+        sale_price NUMERIC(12,2),
+        close_date DATE,
+        notes TEXT,
+        referral_fee_due NUMERIC(10,2),
+        referral_fee_paid BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+    )`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS notif_weekly_digest BOOLEAN NOT NULL DEFAULT TRUE`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS notif_listing_alerts BOOLEAN NOT NULL DEFAULT TRUE`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS notif_engagement_reminders BOOLEAN NOT NULL DEFAULT TRUE`,
+    `CREATE TABLE IF NOT EXISTS proposal_templates (
+        id SERIAL PRIMARY KEY,
+        realtor_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        name TEXT NOT NULL,
+        content TEXT NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+    )`
+);
 
 // Review request job — emails sellers to review their accepted realtor 3 days after acceptance
 async function runReviewRequestJob() {
@@ -7186,7 +7186,7 @@ async function runSellerDigestJob() {
                     COUNT(DISTINCT p.id) AS proposal_count,
                     COUNT(DISTINCT lp.id) AS lead_count
              FROM users u
-             JOIN listings l ON l.seller_id = u.id AND l.status = 'active'
+             JOIN listings l ON l.user_id = u.id AND l.status = 'active'
              LEFT JOIN proposals p ON p.listing_id = l.id AND p.created_at > NOW() - INTERVAL '7 days'
              LEFT JOIN lead_purchases lp ON lp.listing_id = l.id AND lp.created_at > NOW() - INTERVAL '7 days'
              WHERE u.user_type = 'seller' AND u.is_active = TRUE AND u.email_unsubscribed IS NOT TRUE
