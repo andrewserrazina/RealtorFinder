@@ -7,7 +7,7 @@ const auth = {
     async createUser(email, password, userType, firstName, lastName, zipCode) {
         try {
             // Hash password
-            const hashedPassword = await bcrypt.hash(password, 10);
+            const hashedPassword = await bcrypt.hash(password, 12);
             
             // Insert user
             const result = await pool.query(
