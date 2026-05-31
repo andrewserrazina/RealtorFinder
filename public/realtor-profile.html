@@ -620,7 +620,9 @@
                     </div>
                 `).join('')}
             ` : '<p style="color:var(--muted);font-size:0.9rem;">No reviews yet.</p>';
-            container.innerHTML = reviewsHtml + `
+            // Preserve the form section if already rendered (e.g. after submit)
+            const existingForm = document.getElementById('reviewFormSection');
+            const formHtml = existingForm ? existingForm.outerHTML : `
                 <div id="reviewFormSection" style="margin-top:1.5rem;padding-top:1.5rem;border-top:1px solid var(--border);">
                     <h3 style="font-size:1rem;font-weight:700;margin-bottom:1rem;">Leave a Review</h3>
                     <div style="display:flex;gap:0.5rem;margin-bottom:1rem;" id="starRating">
@@ -630,6 +632,7 @@
                     <div id="reviewError" style="display:none;color:#ef4444;font-size:0.85rem;margin-bottom:0.75rem;"></div>
                     <button onclick="submitReview()" style="background:var(--accent);color:white;border:none;border-radius:8px;padding:10px 20px;font-weight:700;cursor:pointer;">Submit Review</button>
                 </div>`;
+            container.innerHTML = reviewsHtml + formHtml;
         } catch {}
     }
 
@@ -656,7 +659,8 @@
             const d = await res.json();
             if (!res.ok) { errEl.textContent = d.error || 'Failed to submit review.'; errEl.style.display = 'block'; return; }
             document.getElementById('reviewFormSection').innerHTML = '<p style="color:#065f46;font-weight:600;">Thank you for your review!</p>';
-            loadReviews();
+            selectedRating = 0;
+            loadReviews(); // refresh list and rating badge only — form already replaced above
         } catch { errEl.textContent = 'Network error. Please try again.'; errEl.style.display = 'block'; }
     }
 
