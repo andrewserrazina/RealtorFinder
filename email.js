@@ -1181,6 +1181,62 @@ const emailService = {
             html: body,
         });
     },
+
+    async sendReEngagementEmail(toEmail, firstName, userType) {
+        const roleLabel = userType === 'realtor' ? 'realtor' : userType === 'seller' ? 'home seller' : 'buyer';
+        const ctaUrl = userType === 'realtor' ? `${BASE_URL}/dashboard/realtor` : userType === 'seller' ? `${BASE_URL}/dashboard/seller` : `${BASE_URL}/app`;
+        const ctaLabel = userType === 'realtor' ? 'View Your Dashboard' : userType === 'seller' ? 'Check Your Listings' : 'Browse Listings';
+        const body = `<div style="font-family:'DM Sans',Arial,sans-serif;max-width:560px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(10,37,64,0.10);">
+  <div style="background:#0A2540;padding:32px 40px 20px;">
+    <h1 style="color:#fff;font-size:1.5rem;margin:0;">We miss you, ${firstName}!</h1>
+    <p style="color:#A0AEC0;margin:8px 0 0;font-size:0.95rem;">Your RealtorFinder account is waiting</p>
+  </div>
+  <div style="padding:32px 40px;">
+    <p style="color:#2D3748;font-size:1rem;line-height:1.6;">It's been a while since you logged in as a ${roleLabel}. There may be new activity waiting for you — don't miss out!</p>
+    <div style="text-align:center;margin:32px 0;">
+      <a href="${ctaUrl}" style="background:#FF6B35;color:#fff;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:600;font-size:1rem;">${ctaLabel}</a>
+    </div>
+    <p style="color:#718096;font-size:0.9rem;">If you have questions or need help, reply to this email anytime.</p>
+  </div>
+  <div style="background:#F7FAFC;padding:16px 40px;text-align:center;">
+    <p style="color:#A0AEC0;font-size:0.8rem;margin:0;">© ${new Date().getFullYear()} RealtorFinder · <a href="${BASE_URL}/unsubscribe" style="color:#A0AEC0;">Unsubscribe</a></p>
+  </div>
+</div>`;
+        return await send({ to: toEmail, subject: `We miss you, ${firstName} — come back to RealtorFinder`, html: body });
+    },
+
+    async sendListingPerformanceDigest(toEmail, firstName, listingCount, proposalCount, leadCount) {
+        const body = `<div style="font-family:'DM Sans',Arial,sans-serif;max-width:560px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(10,37,64,0.10);">
+  <div style="background:#0A2540;padding:32px 40px 20px;">
+    <h1 style="color:#fff;font-size:1.5rem;margin:0;">Your Weekly Listing Summary</h1>
+    <p style="color:#A0AEC0;margin:8px 0 0;font-size:0.95rem;">Here's how your listings performed this week</p>
+  </div>
+  <div style="padding:32px 40px;">
+    <p style="color:#2D3748;font-size:1rem;">Hi ${firstName}, here's a quick look at your activity over the past 7 days:</p>
+    <table style="width:100%;border-collapse:collapse;margin:24px 0;">
+      <tr style="background:#F7FAFC;">
+        <td style="padding:14px 16px;color:#2D3748;font-weight:600;border-radius:8px 0 0 8px;">Active Listings</td>
+        <td style="padding:14px 16px;text-align:right;font-size:1.4rem;font-weight:700;color:#0A2540;border-radius:0 8px 8px 0;">${listingCount}</td>
+      </tr>
+      <tr>
+        <td style="padding:14px 16px;color:#2D3748;font-weight:600;">New Proposals</td>
+        <td style="padding:14px 16px;text-align:right;font-size:1.4rem;font-weight:700;color:#FF6B35;">${proposalCount}</td>
+      </tr>
+      <tr style="background:#F7FAFC;">
+        <td style="padding:14px 16px;color:#2D3748;font-weight:600;border-radius:8px 0 0 8px;">Realtor Leads</td>
+        <td style="padding:14px 16px;text-align:right;font-size:1.4rem;font-weight:700;color:#0A2540;border-radius:0 8px 8px 0;">${leadCount}</td>
+      </tr>
+    </table>
+    <div style="text-align:center;margin:24px 0;">
+      <a href="${BASE_URL}/dashboard/seller" style="background:#FF6B35;color:#fff;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:600;font-size:1rem;">View Your Dashboard</a>
+    </div>
+  </div>
+  <div style="background:#F7FAFC;padding:16px 40px;text-align:center;">
+    <p style="color:#A0AEC0;font-size:0.8rem;margin:0;">© ${new Date().getFullYear()} RealtorFinder · <a href="${BASE_URL}/unsubscribe" style="color:#A0AEC0;">Unsubscribe</a></p>
+  </div>
+</div>`;
+        return await send({ to: toEmail, subject: `Your weekly RealtorFinder summary, ${firstName}`, html: body });
+    },
 };
 
 module.exports = emailService;

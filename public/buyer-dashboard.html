@@ -2165,7 +2165,184 @@
                 loadSavedRealtors();
             } catch (err) { showToast(err.message || 'Failed to unsave', 'error'); }
         }
+
+        // ─── Mortgage Calculator ──────────────────────────────────────────────────
+        function calcMortgage() {
+            const homePrice = parseFloat(document.getElementById('calcHomePrice').value) || 0;
+            const downPct   = parseFloat(document.getElementById('calcDownPct').value)   || 0;
+            const rate      = parseFloat(document.getElementById('calcRate').value)       || 0;
+            const termYears = parseInt(document.getElementById('calcTerm').value)         || 30;
+
+            const downAmt  = homePrice * (downPct / 100);
+            const loanAmt  = homePrice - downAmt;
+            const n        = termYears * 12;
+            const r        = (rate / 100) / 12;
+
+            document.getElementById('calcDownAmt').textContent  = '$' + Math.round(downAmt).toLocaleString();
+            document.getElementById('calcLoanAmt').textContent  = '$' + Math.round(loanAmt).toLocaleString();
+
+            if (loanAmt <= 0 || rate <= 0 || n <= 0) {
+                ['calcMonthly','calcTotalInterest','calcTotalCost','calcPrincipalPct','calcInterestPct','calcEq5','calcEq10','calcEq15'].forEach(id => {
+                    document.getElementById(id).textContent = '—';
+                });
+                document.getElementById('calcBarPrincipal').style.width = '0%';
+                return;
+            }
+
+            // Monthly payment: M = P * r(1+r)^n / [(1+r)^n - 1]
+            const monthly    = loanAmt * (r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
+            const totalPaid  = monthly * n;
+            const totalInt   = totalPaid - loanAmt;
+
+            document.getElementById('calcMonthly').textContent      = '$' + Math.round(monthly).toLocaleString();
+            document.getElementById('calcTotalInterest').textContent = '$' + Math.round(totalInt).toLocaleString();
+            document.getElementById('calcTotalCost').textContent     = '$' + Math.round(totalPaid + downAmt).toLocaleString();
+
+            // Payment bar — principal portion of first payment vs interest portion of first payment
+            const firstInterest   = loanAmt * r;
+            const firstPrincipal  = monthly - firstInterest;
+            const principalPct    = Math.round((firstPrincipal / monthly) * 100);
+            const interestPct     = 100 - principalPct;
+            document.getElementById('calcBarPrincipal').style.width = principalPct + '%';
+            document.getElementById('calcPrincipalPct').textContent  = principalPct + '%';
+            document.getElementById('calcInterestPct').textContent   = interestPct + '%';
+
+            // Equity milestones — principal paid after Y years
+            function principalPaidAfterMonths(months) {
+                if (months >= n) return loanAmt;
+                // remaining balance after k payments
+                const balance = loanAmt * (Math.pow(1 + r, months) - 1) / (Math.pow(1 + r, n) - 1) * Math.pow(1 + r, n - months);
+                return loanAmt - balance;
+            }
+            [5, 10, 15].forEach(yr => {
+                const el = document.getElementById(`calcEq${yr}`);
+                if (!el) return;
+                const paid = principalPaidAfterMonths(yr * 12);
+                el.textContent = '$' + Math.round(paid).toLocaleString();
+            });
+        }
+
+        // ─── Listing Comparison ───────────────────────────────────────────────────
+        let listingCompareList = [];
+
+        function toggleListingCompare(id, checked, listingData) {
+            if (checked) {
+                if (listingCompareList.length >= 3) {
+                    showToast('Max 3 listings can be compared at once', 'error');
+                    // uncheck the box
+                    const cb = document.querySelector(`#browse-card-${id} input[type=checkbox]`);
+                    if (cb) cb.checked = false;
+                    return;
+                }
+                if (!listingCompareList.some(x => x.id === id)) {
+                    listingCompareList.push(typeof listingData === 'string' ? JSON.parse(listingData) : listingData);
+                }
+            } else {
+                listingCompareList = listingCompareList.filter(x => x.id !== id);
+            }
+            updateListingCompareBar();
+        }
+
+        function updateListingCompareBar() {
+            const bar = document.getElementById('listing-compare-bar');
+            if (!bar) return;
+            const n = listingCompareList.length;
+            if (n < 2) {
+                bar.classList.add('hidden');
+            } else {
+                bar.classList.remove('hidden');
+                const slotsEl = bar.querySelector('.listing-compare-slots');
+                slotsEl.innerHTML = listingCompareList.map(l =>
+                    `<div class="listing-compare-slot filled">
+                        <span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">$${Number(l.price).toLocaleString()} · ${esc2(l.city || '')}</span>
+                        <button class="remove-btn" onclick="toggleListingCompare(${l.id}, false); document.querySelector('#browse-card-${l.id} input[type=checkbox]') && (document.querySelector('#browse-card-${l.id} input[type=checkbox]').checked=false);" title="Remove">✕</button>
+                    </div>`
+                ).join('');
+                bar.querySelector('#lcCompareBtn').textContent = `Compare (${n})`;
+            }
+        }
+
+        async function openListingCompareModal() {
+            if (listingCompareList.length < 2) { showToast('Select at least 2 listings to compare', 'error'); return; }
+            const modal = document.getElementById('listing-compare-modal');
+            modal.classList.add('active');
+            const body = document.getElementById('lcCompareBody');
+            body.innerHTML = '<div style="text-align:center;padding:2rem;color:#888;">Loading comparison…</div>';
+
+            try {
+                const ids = listingCompareList.map(l => l.id).join(',');
+                const res = await fetch(`${API_BASE_URL}/listings/compare?ids=${ids}`, { credentials: 'include' });
+                if (!res.ok) throw new Error();
+                const listings = await res.json();
+                const colCount = listings.length + 1;
+
+                function daysSince(dateStr) {
+                    if (!dateStr) return '—';
+                    return Math.max(0, Math.floor((Date.now() - new Date(dateStr)) / 86400000)) + 'd';
+                }
+                function pricePerSqft(l) {
+                    if (!l.price || !l.sqft) return '—';
+                    return '$' + Math.round(l.price / l.sqft).toLocaleString() + '/sqft';
+                }
+
+                const rows = [
+                    { label: 'Price',           fn: l => '$' + Number(l.price).toLocaleString() },
+                    { label: 'Beds',            fn: l => l.bedrooms ?? '—' },
+                    { label: 'Baths',           fn: l => l.bathrooms ?? '—' },
+                    { label: 'Sq Ft',           fn: l => l.sqft ? Number(l.sqft).toLocaleString() : '—' },
+                    { label: 'Price / sqft',    fn: l => pricePerSqft(l) },
+                    { label: 'Type',            fn: l => esc2(l.property_type || '—') },
+                    { label: 'Days Listed',     fn: l => daysSince(l.created_at) },
+                    { label: 'Offers',          fn: l => l.offer_count != null ? l.offer_count : '—' },
+                    { label: 'Description',     fn: l => l.description ? `<span style="font-size:0.82rem;color:#555;">${esc2(l.description.slice(0,120))}${l.description.length > 120 ? '…' : ''}</span>` : '—' }
+                ];
+
+                body.innerHTML = `
+                    <div class="compare-table" style="grid-template-columns:repeat(${colCount},1fr);">
+                        <div class="compare-row" style="grid-template-columns:repeat(${colCount},1fr);">
+                            <div class="compare-cell label"></div>
+                            ${listings.map(l => `<div class="compare-cell header" style="font-size:0.85rem;">${esc2(l.address)}<br><span style="font-weight:400;font-size:0.78rem;">${esc2(l.city)}, ${esc2(l.state)}</span></div>`).join('')}
+                        </div>
+                        ${rows.map(row => `
+                            <div class="compare-row" style="grid-template-columns:repeat(${colCount},1fr);">
+                                <div class="compare-cell label">${row.label}</div>
+                                ${listings.map(l => `<div class="compare-cell">${row.fn(l)}</div>`).join('')}
+                            </div>
+                        `).join('')}
+                    </div>`;
+            } catch {
+                body.innerHTML = '<div style="color:#aaa;text-align:center;padding:2rem;">Could not load comparison data.</div>';
+            }
+        }
+
+        function closeListingCompareModal() {
+            document.getElementById('listing-compare-modal').classList.remove('active');
+        }
     </script>
+
+    <!-- Listing Compare Bar -->
+    <div id="listing-compare-bar" class="hidden">
+        <span class="compare-bar-label">Compare Listings</span>
+        <div class="listing-compare-slots"></div>
+        <button id="lcCompareBtn" class="btn btn-primary" onclick="openListingCompareModal()" style="white-space:nowrap;padding:0.6rem 1.25rem;font-size:0.9rem;">Compare (2)</button>
+        <button class="btn btn-outline" onclick="listingCompareList=[];updateListingCompareBar();document.querySelectorAll('.browse-card-compare input').forEach(cb=>cb.checked=false);" style="padding:0.6rem 1rem;font-size:0.9rem;">Clear</button>
+    </div>
+
+    <!-- Listing Compare Modal -->
+    <div id="listing-compare-modal" onclick="if(event.target===this)closeListingCompareModal()">
+        <div class="lc-modal-inner">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
+                <h2 style="font-family:'Crimson Pro',serif;font-size:2rem;">Compare Listings</h2>
+                <button onclick="closeListingCompareModal()" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:#aaa;">&times;</button>
+            </div>
+            <p style="color:#666;margin-bottom:0.5rem;">Side-by-side comparison of selected listings</p>
+            <div id="lcCompareBody"></div>
+            <div style="margin-top:1.5rem;display:flex;gap:1rem;">
+                <button class="btn btn-outline" onclick="listingCompareList=[];updateListingCompareBar();document.querySelectorAll('.browse-card-compare input').forEach(cb=>cb.checked=false);closeListingCompareModal();">Clear & Close</button>
+                <button class="btn btn-secondary" onclick="closeListingCompareModal()">Close</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Compare Modal -->
     <div id="compareModal" class="compare-modal" onclick="if(event.target===this)closeCompareModal()">
