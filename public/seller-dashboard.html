@@ -1517,6 +1517,7 @@
                 // Render listings
                 renderMyListings(listings);
                 renderRecentActivity(listings);
+                maybeShowSellerWizard(listings.length === 0);
             } catch (error) {
                 console.error('Error loading dashboard:', error);
             }
@@ -1960,6 +1961,44 @@
         });
 
         // Initialize
+        // ===== SELLER ONBOARDING WIZARD =====
+        let sellerWizardStep = 1;
+
+        function initSellerWizardDots() {
+            const dots = document.getElementById('sellerWizardDots');
+            if (!dots) return;
+            dots.innerHTML = [1,2].map(i =>
+                `<div style="width:${i===sellerWizardStep?24:8}px;height:8px;border-radius:4px;background:${i===sellerWizardStep?'#FF6B35':'#e5e7eb'};transition:all 0.3s;"></div>`
+            ).join('');
+        }
+
+        function sellerWizardNext() {
+            document.getElementById(`sellerWizardStep${sellerWizardStep}`).style.display = 'none';
+            sellerWizardStep++;
+            document.getElementById(`sellerWizardStep${sellerWizardStep}`).style.display = 'block';
+            initSellerWizardDots();
+        }
+
+        function closeSellerWizard() {
+            sessionStorage.setItem('seller_wizard_seen', '1');
+            document.getElementById('sellerWizard').style.display = 'none';
+        }
+
+        function closeSellerWizardAndCreate() {
+            closeSellerWizard();
+            document.getElementById('newListingModal')?.classList.add('active');
+        }
+
+        function maybeShowSellerWizard(hasListings) {
+            if (sessionStorage.getItem('seller_wizard_seen')) return;
+            if (hasListings) return;
+            sellerWizardStep = 1;
+            initSellerWizardDots();
+            document.getElementById('sellerWizardStep1').style.display = 'block';
+            document.getElementById('sellerWizardStep2').style.display = 'none';
+            document.getElementById('sellerWizard').style.display = 'flex';
+        }
+
         document.addEventListener('DOMContentLoaded', async () => {
             const user = await loadCurrentUser();
             if (!user || (!user.isApproved && !user.isAdmin)) return;
@@ -2387,6 +2426,54 @@
         }
     </script>
     <!-- Counter-offer modal -->
+    <!-- Seller Onboarding Wizard -->
+    <div id="sellerWizard" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:1010;align-items:center;justify-content:center;padding:1rem;">
+        <div style="background:white;border-radius:20px;width:520px;max-width:100%;max-height:90vh;overflow-y:auto;position:relative;padding:2.5rem 2rem 2rem;">
+            <button onclick="closeSellerWizard()" style="position:absolute;top:1rem;right:1rem;background:none;border:none;font-size:1.4rem;cursor:pointer;color:#9ca3af;line-height:1;">✕</button>
+
+            <!-- Step dots -->
+            <div style="display:flex;gap:6px;margin-bottom:2rem;" id="sellerWizardDots"></div>
+
+            <!-- Step 1: Welcome -->
+            <div id="sellerWizardStep1">
+                <div style="font-size:2.5rem;margin-bottom:1rem;">👋</div>
+                <h2 style="font-family:'Crimson Pro',Georgia,serif;font-size:1.8rem;font-weight:900;color:#0A2540;margin-bottom:0.75rem;">Welcome to RealtorFinder</h2>
+                <p style="color:#555;line-height:1.7;margin-bottom:1.5rem;">You're one step away from connecting with top local realtors who compete for your listing. Here's how it works:</p>
+                <div style="display:flex;flex-direction:column;gap:0.75rem;margin-bottom:2rem;">
+                    <div style="display:flex;align-items:flex-start;gap:0.75rem;padding:1rem;background:#f8f6f3;border-radius:10px;">
+                        <div style="width:32px;height:32px;border-radius:50%;background:#FF6B35;color:white;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.9rem;flex-shrink:0;">1</div>
+                        <div><div style="font-weight:600;margin-bottom:0.25rem;">Create your listing</div><div style="font-size:0.875rem;color:#666;">Add your property details, photos, and asking price — takes under 5 minutes.</div></div>
+                    </div>
+                    <div style="display:flex;align-items:flex-start;gap:0.75rem;padding:1rem;background:#f8f6f3;border-radius:10px;">
+                        <div style="width:32px;height:32px;border-radius:50%;background:#FF6B35;color:white;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.9rem;flex-shrink:0;">2</div>
+                        <div><div style="font-weight:600;margin-bottom:0.25rem;">Receive proposals</div><div style="font-size:0.875rem;color:#666;">Qualified realtors submit their commission rates and pitch — you compare side by side.</div></div>
+                    </div>
+                    <div style="display:flex;align-items:flex-start;gap:0.75rem;padding:1rem;background:#f8f6f3;border-radius:10px;">
+                        <div style="width:32px;height:32px;border-radius:50%;background:#FF6B35;color:white;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.9rem;flex-shrink:0;">3</div>
+                        <div><div style="font-weight:600;margin-bottom:0.25rem;">Choose your agent</div><div style="font-size:0.875rem;color:#666;">Accept the proposal you like most — or counter-offer to negotiate the commission.</div></div>
+                    </div>
+                </div>
+                <button onclick="sellerWizardNext()" style="background:#FF6B35;color:white;border:none;padding:0.9rem 2rem;border-radius:8px;font-weight:700;font-size:1rem;cursor:pointer;width:100%;font-family:inherit;">Get Started →</button>
+                <div style="text-align:center;margin-top:1rem;"><button onclick="closeSellerWizard()" style="background:none;border:none;color:#9ca3af;font-size:0.85rem;cursor:pointer;font-family:inherit;">Skip for now</button></div>
+            </div>
+
+            <!-- Step 2: Create Listing Tips -->
+            <div id="sellerWizardStep2" style="display:none;">
+                <div style="font-size:2rem;margin-bottom:0.75rem;">🏡</div>
+                <h2 style="font-family:'Crimson Pro',Georgia,serif;font-size:1.6rem;font-weight:900;color:#0A2540;margin-bottom:0.5rem;">Tips for a great listing</h2>
+                <p style="color:#555;font-size:0.95rem;margin-bottom:1.5rem;line-height:1.7;">Listings with complete information receive <strong>3× more proposals</strong> from realtors.</p>
+                <div style="display:flex;flex-direction:column;gap:0.6rem;margin-bottom:2rem;font-size:0.9rem;color:#374151;">
+                    <div style="display:flex;align-items:center;gap:0.6rem;padding:0.6rem 0;border-bottom:1px solid #f3f4f6;"><span style="color:#10b981;font-weight:700;">✓</span> Use a specific asking price, not a range</div>
+                    <div style="display:flex;align-items:center;gap:0.6rem;padding:0.6rem 0;border-bottom:1px solid #f3f4f6;"><span style="color:#10b981;font-weight:700;">✓</span> Upload at least 3 photos — listings with photos get 5× more views</div>
+                    <div style="display:flex;align-items:center;gap:0.6rem;padding:0.6rem 0;border-bottom:1px solid #f3f4f6;"><span style="color:#10b981;font-weight:700;">✓</span> Write a description that highlights unique features</div>
+                    <div style="display:flex;align-items:center;gap:0.6rem;padding:0.6rem 0;"><span style="color:#10b981;font-weight:700;">✓</span> Fill in accurate bedroom, bathroom, and sqft details</div>
+                </div>
+                <button onclick="closeSellerWizardAndCreate()" style="background:#FF6B35;color:white;border:none;padding:0.9rem 2rem;border-radius:8px;font-weight:700;font-size:1rem;cursor:pointer;width:100%;font-family:inherit;">Create My First Listing →</button>
+                <div style="text-align:center;margin-top:1rem;"><button onclick="closeSellerWizard()" style="background:none;border:none;color:#9ca3af;font-size:0.85rem;cursor:pointer;font-family:inherit;">I'll do this later</button></div>
+            </div>
+        </div>
+    </div>
+
     <div id="counterModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;">
         <div style="background:white;border-radius:16px;padding:2rem;width:100%;max-width:420px;margin:1rem;">
             <h3 style="font-family:'Crimson Pro',serif;font-size:1.5rem;margin-bottom:0.5rem;">Counter Proposal</h3>

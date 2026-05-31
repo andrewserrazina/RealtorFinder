@@ -2048,6 +2048,31 @@ app.post('/api/webhook/stripe', express.raw({ type: 'application/json' }), async
                     [plan, sess.customer, sess.subscription, userId]
                 );
                 console.log(`✅ Stripe: upgraded user ${userId} to ${plan}`);
+
+                // Credit referrer $25 on first subscription
+                const refRow = await pool.query(
+                    `SELECT referred_by FROM users WHERE id=$1 AND referred_by IS NOT NULL`, [userId]
+                );
+                if (refRow.rows.length) {
+                    const referrerId = refRow.rows[0].referred_by;
+                    await pool.query(
+                        `UPDATE users SET referral_credits_cents = referral_credits_cents + 2500 WHERE id=$1`,
+                        [referrerId]
+                    );
+                    // Apply as Stripe customer balance credit if referrer has a Stripe customer
+                    if (stripe) {
+                        const custRow = await pool.query(
+                            `SELECT stripe_customer_id FROM users WHERE id=$1 AND stripe_customer_id IS NOT NULL`, [referrerId]
+                        );
+                        if (custRow.rows.length) {
+                            await stripe.customers.createBalanceTransaction(custRow.rows[0].stripe_customer_id, {
+                                amount: -2500, currency: 'usd',
+                                description: 'Referral bonus — referred realtor subscribed'
+                            }).catch(e => console.error('Referral stripe credit error:', e.message));
+                        }
+                    }
+                    console.log(`✅ Stripe: credited $25 referral bonus to user ${referrerId}`);
+                }
             } catch (err) {
                 console.error('Stripe webhook DB error:', err);
             }
@@ -3072,18 +3097,20 @@ app.get('/api/referrals/my', auth.requireAuth, async (req, res) => {
             code = crypto.randomBytes(6).toString('hex');
             await pool.query(`UPDATE users SET referral_code = $1 WHERE id = $2`, [code, req.session.userId]);
         }
-        const [countRes, referredRes] = await Promise.all([
+        const [countRes, referredRes, creditsRes] = await Promise.all([
             pool.query(`SELECT COUNT(*) AS cnt FROM users WHERE referred_by = $1`, [req.session.userId]),
             pool.query(
                 `SELECT first_name, last_name, user_type, subscription_plan, created_at
                  FROM users WHERE referred_by = $1 ORDER BY created_at DESC LIMIT 50`,
                 [req.session.userId]
             ),
+            pool.query(`SELECT referral_credits_cents FROM users WHERE id = $1`, [req.session.userId]),
         ]);
         const referral_count = parseInt(countRes.rows[0].cnt);
         const tier = referral_count >= 10 ? 'ambassador' : referral_count >= 5 ? 'top-referrer' : referral_count >= 3 ? 'connector' : referral_count >= 1 ? 'rising-star' : null;
         const referral_url = `${req.protocol}://${req.get('host')}/join?ref=${code}`;
-        res.json({ referral_code: code, referral_url, referral_count, tier, referred_users: referredRes.rows });
+        const credits_cents = parseInt(creditsRes.rows[0]?.referral_credits_cents) || 0;
+        res.json({ referral_code: code, referral_url, referral_count, tier, referred_users: referredRes.rows, credits_cents });
     } catch (error) {
         console.error('GET /api/referrals/my error:', error);
         res.status(500).json({ error: 'Failed to fetch referral info' });
@@ -3167,6 +3194,45 @@ app.get('/api/realtors/:id/reviews', async (req, res) => {
         const avg = rows.length ? (rows.reduce((s, r) => s + r.rating, 0) / rows.length).toFixed(1) : null;
         res.json({ reviews: rows, avg, count: rows.length });
     } catch (err) { res.status(500).json({ error: 'Failed to fetch reviews' }); }
+});
+
+// Agent performance badges (computed from live data)
+app.get('/api/realtors/:id/badges', async (req, res) => {
+    try {
+        const realtorId = parseInt(req.params.id);
+        const [propRow, reviewRow, responseRow, profileRow] = await Promise.all([
+            pool.query(
+                `SELECT COUNT(*) AS total, SUM(CASE WHEN status='accepted' THEN 1 ELSE 0 END) AS accepted
+                 FROM proposals WHERE realtor_id=$1`, [realtorId]
+            ),
+            pool.query(
+                `SELECT AVG(rating) AS avg, COUNT(*) AS cnt FROM realtor_reviews WHERE realtor_id=$1`, [realtorId]
+            ),
+            pool.query(
+                `SELECT AVG(response_hours) AS avg FROM realtor_response_times WHERE realtor_id=$1`, [realtorId]
+            ),
+            pool.query(`SELECT years_experience FROM users WHERE id=$1`, [realtorId]),
+        ]);
+        const total = parseInt(propRow.rows[0].total) || 0;
+        const accepted = parseInt(propRow.rows[0].accepted) || 0;
+        const winRate = total >= 5 ? accepted / total : 0;
+        const avgRating = parseFloat(reviewRow.rows[0].avg) || 0;
+        const reviewCount = parseInt(reviewRow.rows[0].cnt) || 0;
+        const avgResponseHours = parseFloat(responseRow.rows[0].avg) || null;
+        const yearsExp = parseInt(profileRow.rows[0]?.years_experience) || 0;
+
+        const badges = [];
+        if (winRate >= 0.20 && total >= 5)
+            badges.push({ id: 'top_agent', label: 'Top Agent', icon: '🏆', color: '#f59e0b' });
+        if (avgResponseHours !== null && avgResponseHours < 4)
+            badges.push({ id: 'fast_responder', label: 'Fast Responder', icon: '⚡', color: '#0ea5e9' });
+        if (avgRating >= 4.5 && reviewCount >= 3)
+            badges.push({ id: 'five_star', label: '5-Star Agent', icon: '⭐', color: '#10b981' });
+        if (yearsExp >= 5)
+            badges.push({ id: 'experienced', label: `${yearsExp}+ Yrs Exp`, icon: '🎓', color: '#6366f1' });
+
+        res.json({ badges, winRate: Math.round(winRate * 100), totalProposals: total, avgRating, reviewCount });
+    } catch (err) { res.status(500).json({ error: 'Failed to fetch badges' }); }
 });
 
 app.get('/api/realtors/:id/response-time', async (req, res) => {
@@ -3871,7 +3937,7 @@ app.post('/api/messages', auth.requireAuth, async (req, res) => {
             INSERT INTO notifications (user_id, type, title, body, link)
             VALUES ($1, 'message', 'New Message', $2, '/dashboard/' || (SELECT user_type FROM users WHERE id=$1))
             ON CONFLICT DO NOTHING
-        `, [toUserId, `You have a new message`]).then(() => sseNotify(toUserId, { type: 'notification' })).catch(() => {});
+        `, [toUserId, `You have a new message`]).then(() => sseNotify(toUserId, { type: 'new_message', fromUserId: uid, listingId: listingId || null, messageId: newMsgId })).catch(() => {});
 
         // Fire-and-forget email notification
         (async () => {
@@ -4585,40 +4651,38 @@ app.use((err, req, res, next) => {
 // Listing expiry job — runs every 24 hours
 async function runListingExpiryJob() {
     try {
-        const now = new Date();
-        // Warn listings at day 87 (3 days before 90-day expiry)
-        const warnCutoff = new Date(now - 87 * 24 * 3600 * 1000);
+        // Warn listings 3 days before expiry (uses expires_at when set, else created_at + 90 days)
         const toWarn = await pool.query(
-            `SELECT l.id, l.address, l.city, l.state, l.created_at,
-                    u.email, u.first_name, u.last_name
+            `SELECT l.id, l.address, l.city, l.state, l.created_at, l.expires_at,
+                    u.email, u.first_name
              FROM listings l JOIN users u ON u.id = l.user_id
              WHERE l.status IN ('active','pending')
                AND l.deleted_at IS NULL
                AND l.expiry_warning_sent = FALSE
-               AND l.created_at <= $1
-               AND NOT EXISTS (SELECT 1 FROM offers WHERE listing_id = l.id AND status = 'accepted')`,
-            [warnCutoff]
+               AND COALESCE(l.expires_at, l.created_at + INTERVAL '90 days') <= NOW() + INTERVAL '3 days'
+               AND COALESCE(l.expires_at, l.created_at + INTERVAL '90 days') > NOW()
+               AND NOT EXISTS (SELECT 1 FROM offers WHERE listing_id = l.id AND status = 'accepted')`
         );
         for (const l of toWarn.rows) {
             await emailService.sendListingExpiryWarning(l.email, l.first_name, l).catch(() => {});
             await pool.query(`UPDATE listings SET expiry_warning_sent = TRUE WHERE id = $1`, [l.id]);
+            await sleep(300);
         }
 
-        // Archive listings at day 90
-        const archiveCutoff = new Date(now - 90 * 24 * 3600 * 1000);
+        // Archive listings past their expiry
         const toArchive = await pool.query(
-            `SELECT l.id, l.address, l.city, l.state, l.created_at,
-                    u.email, u.first_name, u.last_name
+            `SELECT l.id, l.address, l.city, l.state, l.created_at, l.expires_at,
+                    u.email, u.first_name
              FROM listings l JOIN users u ON u.id = l.user_id
              WHERE l.status IN ('active','pending')
                AND l.deleted_at IS NULL
-               AND l.created_at <= $1
-               AND NOT EXISTS (SELECT 1 FROM offers WHERE listing_id = l.id AND status = 'accepted')`,
-            [archiveCutoff]
+               AND COALESCE(l.expires_at, l.created_at + INTERVAL '90 days') <= NOW()
+               AND NOT EXISTS (SELECT 1 FROM offers WHERE listing_id = l.id AND status = 'accepted')`
         );
         for (const l of toArchive.rows) {
             await pool.query(`UPDATE listings SET status = 'expired' WHERE id = $1`, [l.id]);
             await emailService.sendListingExpired(l.email, l.first_name, l).catch(() => {});
+            await sleep(300);
         }
 
         if (toWarn.rows.length || toArchive.rows.length) {
@@ -4638,8 +4702,12 @@ _schemaMigrations.push(
     `ALTER TABLE lead_purchases ADD COLUMN IF NOT EXISTS listing_id INTEGER REFERENCES listings(id)`,
     `ALTER TABLE lead_purchases ADD COLUMN IF NOT EXISTS paid BOOLEAN NOT NULL DEFAULT FALSE`,
     `ALTER TABLE lead_purchases ALTER COLUMN buyer_request_id DROP NOT NULL`,
-    `DO $$ BEGIN ALTER TABLE lead_purchases ADD CONSTRAINT lead_purchases_realtor_listing UNIQUE(realtor_id, listing_id); EXCEPTION WHEN others THEN NULL; END $$`
+    `DO $$ BEGIN ALTER TABLE lead_purchases ADD CONSTRAINT lead_purchases_realtor_listing UNIQUE(realtor_id, listing_id); EXCEPTION WHEN others THEN NULL; END $$`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_credits_cents INTEGER NOT NULL DEFAULT 0`
 );
+
+// Shared sleep helper for staggering bulk email sends
+const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 // Drip email onboarding job — sends 3-step sequences to sellers, realtors, and buyers
 async function ensureUnsubscribeToken(userId) {
@@ -4655,9 +4723,11 @@ async function ensureUnsubscribeToken(userId) {
 
 async function runDripEmailJob() {
     try {
-        const baseWhere = `u.is_active IS NOT FALSE AND u.email_unsubscribed IS NOT TRUE`;
+        // Realtors only send after approval; sellers/buyers send based on signup date
+        const baseWhere = `u.is_active IS NOT FALSE AND u.email_unsubscribed IS NOT TRUE
+            AND (u.user_type != 'realtor' OR u.is_approved = TRUE)`;
 
-        // Step 1: send to users who signed up 1+ days ago and haven't received step 1
+        // Step 1: 1+ day after signup, no step 1 sent yet
         const { rows: step1Users } = await pool.query(`
             SELECT u.id, u.email, u.first_name, u.user_type, u.unsubscribe_token
             FROM users u
@@ -4674,9 +4744,10 @@ async function runDripEmailJob() {
                 else if (user.user_type === 'buyer') await emailService.sendBuyerDrip1(user.email, user.first_name, token);
                 await pool.query(`INSERT INTO drip_emails (user_id, sequence_step) VALUES ($1, 1) ON CONFLICT DO NOTHING`, [user.id]);
             } catch(e) { console.error('Drip step 1 error:', e.message); }
+            await sleep(300);
         }
 
-        // Step 2: 3+ days after signup, step 1 already sent
+        // Step 2: 3+ days after signup, step 1 sent
         const { rows: step2Users } = await pool.query(`
             SELECT u.id, u.email, u.first_name, u.user_type, u.unsubscribe_token
             FROM users u
@@ -4694,9 +4765,10 @@ async function runDripEmailJob() {
                 else if (user.user_type === 'buyer') await emailService.sendBuyerDrip2(user.email, user.first_name, token);
                 await pool.query(`INSERT INTO drip_emails (user_id, sequence_step) VALUES ($1, 2) ON CONFLICT DO NOTHING`, [user.id]);
             } catch(e) { console.error('Drip step 2 error:', e.message); }
+            await sleep(300);
         }
 
-        // Step 3: 7+ days after signup, step 2 already sent
+        // Step 3: 7+ days after signup, step 2 sent
         const { rows: step3Users } = await pool.query(`
             SELECT u.id, u.email, u.first_name, u.user_type, u.unsubscribe_token
             FROM users u
@@ -4714,9 +4786,11 @@ async function runDripEmailJob() {
                 else if (user.user_type === 'buyer') await emailService.sendBuyerDrip3(user.email, user.first_name, token);
                 await pool.query(`INSERT INTO drip_emails (user_id, sequence_step) VALUES ($1, 3) ON CONFLICT DO NOTHING`, [user.id]);
             } catch(e) { console.error('Drip step 3 error:', e.message); }
+            await sleep(300);
         }
 
-        console.log(`Drip job: sent ${step1Users.length + step2Users.length + step3Users.length} emails`);
+        const total = step1Users.length + step2Users.length + step3Users.length;
+        if (total) console.log(`Drip job: sent ${total} emails`);
     } catch(e) { console.error('Drip job error:', e.message); }
 }
 
@@ -4752,6 +4826,7 @@ async function runListingAlertJob() {
                 if (matches.length) {
                     await emailService.sendListingAlert(s.email, s.first_name, s.label || 'Your saved search', matches);
                     sent++;
+                    await sleep(300);
                 }
             } catch(e) { console.error('Listing alert error:', e.message); }
         }
@@ -4802,6 +4877,7 @@ async function runWeeklyDigestJob() {
                     proposalsWon: parseInt(winsRow.rows[0].cnt),
                     serviceAreas: (r.service_areas || '').split(',').slice(0,3).join(', ') || '—',
                 }, token);
+                await sleep(300);
             } catch(e) { console.error(`Weekly digest error for ${r.email}:`, e.message); }
         }
         console.log(`Weekly digest job: sent to ${realtors.length} realtors`);
