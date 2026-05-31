@@ -813,7 +813,7 @@
             <div class="tab" data-view="profile">My Profile</div>
             <div class="tab" data-view="buyer-requests">Buyer Requests <span id="buyerMatchBadge" style="display:none;background:var(--accent);color:white;border-radius:50%;width:16px;height:16px;font-size:0.65rem;font-weight:700;text-align:center;line-height:16px;margin-left:4px;vertical-align:middle;"></span></div>
             <div class="tab" data-view="showings">Showings</div>
-            <div class="tab" data-view="my-proposals">My Proposals</div>
+            <div class="tab" data-view="my-proposals">My Proposals <span class="counter-badge" style="display:none;background:#f59e0b;color:white;border-radius:50%;width:16px;height:16px;font-size:0.65rem;font-weight:700;text-align:center;line-height:16px;margin-left:4px;vertical-align:middle;"></span></div>
             <div class="tab" data-view="reviews">Reviews</div>
             <div class="tab" data-view="referrals">Referrals</div>
             <div class="tab" data-view="company">My Company</div>
@@ -1025,6 +1025,16 @@
             <div class="section-header">
                 <h2>My Proposals</h2>
                 <p style="color:#666;margin-top:4px;">All proposals you've submitted, with their current status</p>
+            </div>
+            <div id="pendingCountersBanner" style="display:none;background:#FEF9C3;border:1px solid #FDE047;border-radius:12px;padding:1.25rem 1.5rem;margin-top:1.5rem;margin-bottom:0.5rem;">
+                <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+                    <span style="font-size:1.25rem;">⚡</span>
+                    <div style="flex:1;">
+                        <div style="font-weight:700;color:#713F12;font-size:0.95rem;" id="pendingCountersTitle">Counter-offers need your response</div>
+                        <div style="color:#78350F;font-size:0.85rem;margin-top:0.2rem;">Sellers have countered your proposals. Respond before they expire.</div>
+                    </div>
+                    <button onclick="scrollToFirstCounter()" style="background:#F59E0B;color:white;border:none;padding:0.5rem 1.25rem;border-radius:6px;font-weight:600;cursor:pointer;font-size:0.85rem;white-space:nowrap;">View Counters ↓</button>
+                </div>
             </div>
             <div id="myProposalsList" style="margin-top:1.5rem;"></div>
         </section>
@@ -3556,6 +3566,24 @@
                 const res = await fetch('/api/proposals/my', { credentials: 'include' });
                 if (!res.ok) return;
                 mySubmittedProposals = await res.json();
+
+                // Show/hide pending counters banner
+                const pendingCounters = mySubmittedProposals.filter(p => p.counter_status === 'pending');
+                const banner = document.getElementById('pendingCountersBanner');
+                if (pendingCounters.length > 0) {
+                    banner.style.display = 'block';
+                    document.getElementById('pendingCountersTitle').textContent =
+                        `${pendingCounters.length} counter-offer${pendingCounters.length > 1 ? 's' : ''} need${pendingCounters.length === 1 ? 's' : ''} your response`;
+                } else {
+                    banner.style.display = 'none';
+                }
+                // Update tab badge
+                const tabBadge = document.querySelector('[data-view="my-proposals"] .counter-badge');
+                if (tabBadge) {
+                    if (pendingCounters.length > 0) { tabBadge.textContent = pendingCounters.length; tabBadge.style.display = 'inline-flex'; }
+                    else tabBadge.style.display = 'none';
+                }
+
                 const container = document.getElementById('myProposalsList');
                 if (!mySubmittedProposals.length) {
                     container.innerHTML = '<div style="text-align:center;padding:3rem;color:#666;"><div style="font-size:3rem;margin-bottom:1rem;">📋</div><h3>No proposals submitted yet</h3><p>Browse listings and submit proposals to get started.</p></div>';
@@ -3583,7 +3611,7 @@
                         counterHtml = `<div style="margin-top:0.75rem;"><span style="background:#F3F4F6;color:#6B7280;font-size:0.8rem;font-weight:700;padding:4px 10px;border-radius:20px;">Counter Declined</span></div>`;
                     }
 
-                    return `<div style="background:white;border-radius:12px;padding:1.5rem;margin-bottom:1rem;border:1px solid var(--border);display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;">
+                    return `<div ${p.counter_status === 'pending' ? 'data-has-counter="true"' : ''} style="background:white;border-radius:12px;padding:1.5rem;margin-bottom:1rem;border:1px solid var(--border);display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;">
                         <div style="flex:1;min-width:0;">
                             <div style="font-weight:700;font-size:1rem;margin-bottom:0.25rem;">${esc(addr)}</div>
                             <div style="color:#666;font-size:0.85rem;">Commission: <strong>${p.commission_pct}%</strong> · Timeline: ${esc(p.timeline || '—')}</div>
@@ -3597,6 +3625,11 @@
                     </div>`;
                 }).join('');
             } catch(e) { console.error('loadMyProposals error:', e); }
+        }
+
+        function scrollToFirstCounter() {
+            const el = document.querySelector('[data-has-counter="true"]');
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
 
         async function deleteProposal(proposalId) {

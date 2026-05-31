@@ -1097,6 +1097,30 @@ const emailService = {
         );
         return await send({ to: toEmail, subject: 'Your RealtorFinder subscription has ended', html: body });
     },
+
+    async sendProposalNudge(sellerEmail, sellerName, listingAddress, proposalCount) {
+        const plural = proposalCount !== 1;
+        const body = `
+<div style="font-family:'DM Sans',sans-serif;max-width:600px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;">
+  <div style="background:#0A2540;padding:2rem;text-align:center;">
+    <h1 style="font-family:serif;color:white;margin:0;font-size:1.6rem;">Proposals are waiting for you</h1>
+  </div>
+  <div style="padding:2rem;">
+    <p style="font-size:1rem;color:#444;">Hi ${sellerName},</p>
+    <p style="font-size:1rem;color:#444;margin:1rem 0;">You have <strong>${proposalCount} realtor proposal${plural ? 's' : ''}</strong> waiting on your listing at <strong>${listingAddress}</strong>.</p>
+    <p style="color:#666;">Don't leave agents waiting — the sooner you review, the faster you can get your home sold.</p>
+    <div style="text-align:center;margin:2rem 0;">
+      <a href="https://www.realtorfinder.net/dashboard/seller" style="background:#FF6B35;color:white;padding:14px 32px;border-radius:8px;font-weight:700;text-decoration:none;display:inline-block;font-size:1rem;">Review Proposals →</a>
+    </div>
+    <p style="font-size:0.85rem;color:#999;text-align:center;">You can compare commissions, read notes, and accept or counter any proposal directly in your dashboard.</p>
+  </div>
+</div>`;
+        return await send({
+            to: sellerEmail,
+            subject: `You have ${proposalCount} proposal${plural ? 's' : ''} waiting — ${listingAddress}`,
+            html: body,
+        });
+    },
 };
 
 module.exports = emailService;
