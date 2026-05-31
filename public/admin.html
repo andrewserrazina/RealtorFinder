@@ -1970,9 +1970,21 @@
                 <td style="text-align:center">${u.proposals_sent}</td>
                 <td style="text-align:center">${u.matches_count}</td>
                 <td class="td-muted">${fmtDate(u.created_at)}</td>
-                <td><button class="btn-action" onclick="openNotesModal('realtor',${u.id},${JSON.stringify(name)})" style="font-size:0.78rem;">📝 Notes</button></td>
+                <td style="white-space:nowrap;">
+                    <button class="btn-action" onclick="openNotesModal('realtor',${u.id},${JSON.stringify(name)})" style="font-size:0.78rem;">📝 Notes</button>
+                    ${u.subscription_plan && u.subscription_plan !== 'free' ? `<button class="btn-action" onclick="openAdminBillingPortal(${u.id})" style="font-size:0.78rem;margin-left:4px;">💳 Billing</button>` : ''}
+                </td>
             </tr>`;
         }).join('');
+    }
+
+    async function openAdminBillingPortal(userId) {
+        try {
+            const res = await fetch(`/api/admin/users/${userId}/billing-portal`, { method: 'POST', credentials: 'include' });
+            const d = await res.json();
+            if (!res.ok) { alert(d.error || 'Failed'); return; }
+            window.open(d.url, '_blank');
+        } catch { alert('Network error.'); }
     }
 
     // ── CRM: Homeowner Leads ──────────────────────────────────────────────────

@@ -359,7 +359,7 @@
     <a href="/" class="nav-logo">Realtor<span>Finder</span></a>
     <div class="nav-links">
         <a href="/realtors">For Realtors</a>
-        <a href="/">For Sellers</a>
+        <a href="/sellers">For Sellers</a>
         <a href="/about">About</a>
         <a href="/contact">Contact</a>
         <a href="/login?tab=signup&type=realtor" class="nav-cta">Create Account</a>
@@ -370,7 +370,7 @@
 </nav>
 <div class="mobile-menu" id="mobileMenu" role="navigation">
     <a href="/realtors" onclick="closeMobileMenu()">For Realtors</a>
-    <a href="/" onclick="closeMobileMenu()">For Sellers</a>
+    <a href="/sellers" onclick="closeMobileMenu()">For Sellers</a>
     <a href="/about" onclick="closeMobileMenu()">About</a>
     <a href="/contact" onclick="closeMobileMenu()">Contact</a>
     <a href="/login?tab=signup&type=realtor" class="nav-cta" onclick="closeMobileMenu()">Create Account</a>
@@ -453,6 +453,135 @@
             <button class="plan-btn plan-btn-outline" id="btn-firm" onclick="subscribe('firm')">Get Started</button>
         </div>
 
+    </div>
+</div>
+
+<div style="max-width:1100px;margin:0 auto 5rem;padding:0 2rem;">
+    <h2 style="font-family:'Crimson Pro',serif;font-size:2rem;font-weight:900;color:var(--primary);text-align:center;margin-bottom:0.5rem;">Full feature breakdown</h2>
+    <p style="text-align:center;color:var(--muted);margin-bottom:2.5rem;">Everything included in each plan at a glance</p>
+    <div style="overflow-x:auto;border-radius:16px;border:1px solid var(--border);background:white;box-shadow:0 4px 24px rgba(0,0,0,0.05);">
+        <table style="width:100%;border-collapse:collapse;min-width:620px;">
+            <thead>
+                <tr style="background:var(--primary);color:white;">
+                    <th style="padding:1rem 1.25rem;text-align:left;font-weight:600;font-size:0.9rem;width:35%;">Feature</th>
+                    <th style="padding:1rem;text-align:center;font-size:0.9rem;font-weight:600;">Free</th>
+                    <th style="padding:1rem;text-align:center;font-size:0.9rem;font-weight:600;">Basic<br><span style="font-weight:400;font-size:0.8rem;opacity:0.75;">$99/mo</span></th>
+                    <th style="padding:1rem;text-align:center;font-size:0.9rem;font-weight:600;background:#FF6B35;">Professional<br><span style="font-weight:400;font-size:0.8rem;opacity:0.85;">$249/mo</span></th>
+                    <th style="padding:1rem;text-align:center;font-size:0.9rem;font-weight:600;">Firm<br><span style="font-weight:400;font-size:0.8rem;opacity:0.75;">$499/loc/mo</span></th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr style="background:#f9f7f5;">
+                    <td colspan="5" style="padding:0.6rem 1.25rem;font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);">Lead Access</td>
+                </tr>
+                <tr style="border-bottom:1px solid var(--border);">
+                    <td style="padding:0.9rem 1.25rem;font-size:0.9rem;">Browse all active seller listings</td>
+                    <td style="text-align:center;">✅</td><td style="text-align:center;">✅</td><td style="text-align:center;background:#fff8f5;">✅</td><td style="text-align:center;">✅</td>
+                </tr>
+                <tr style="border-bottom:1px solid var(--border);">
+                    <td style="padding:0.9rem 1.25rem;font-size:0.9rem;">Proposals per month</td>
+                    <td style="text-align:center;font-size:0.85rem;color:var(--muted);">$15 each</td>
+                    <td style="text-align:center;font-size:0.85rem;font-weight:600;">10 included</td>
+                    <td style="text-align:center;background:#fff8f5;font-size:0.85rem;font-weight:600;color:var(--accent);">Unlimited</td>
+                    <td style="text-align:center;font-size:0.85rem;font-weight:600;color:var(--accent);">Unlimited</td>
+                </tr>
+                <tr style="border-bottom:1px solid var(--border);">
+                    <td style="padding:0.9rem 1.25rem;font-size:0.9rem;">Browse buyer requests</td>
+                    <td style="text-align:center;">✅</td><td style="text-align:center;">✅</td><td style="text-align:center;background:#fff8f5;">✅</td><td style="text-align:center;">✅</td>
+                </tr>
+                <tr style="border-bottom:1px solid var(--border);">
+                    <td style="padding:0.9rem 1.25rem;font-size:0.9rem;">Unlock buyer leads</td>
+                    <td style="text-align:center;font-size:0.85rem;color:var(--muted);">$9.99 each</td>
+                    <td style="text-align:center;font-size:0.85rem;font-weight:600;color:#16a34a;">Included</td>
+                    <td style="text-align:center;background:#fff8f5;font-size:0.85rem;font-weight:600;color:#16a34a;">Included</td>
+                    <td style="text-align:center;font-size:0.85rem;font-weight:600;color:#16a34a;">Included</td>
+                </tr>
+                <tr style="background:#f9f7f5;">
+                    <td colspan="5" style="padding:0.6rem 1.25rem;font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);">Alerts & Notifications</td>
+                </tr>
+                <tr style="border-bottom:1px solid var(--border);">
+                    <td style="padding:0.9rem 1.25rem;font-size:0.9rem;">New listing email alerts</td>
+                    <td style="text-align:center;color:var(--muted);">—</td><td style="text-align:center;">✅</td><td style="text-align:center;background:#fff8f5;">✅</td><td style="text-align:center;">✅</td>
+                </tr>
+                <tr style="border-bottom:1px solid var(--border);">
+                    <td style="padding:0.9rem 1.25rem;font-size:0.9rem;">Priority / early listing alerts</td>
+                    <td style="text-align:center;color:var(--muted);">—</td><td style="text-align:center;color:var(--muted);">—</td><td style="text-align:center;background:#fff8f5;">✅ Early</td><td style="text-align:center;">✅</td>
+                </tr>
+                <tr style="border-bottom:1px solid var(--border);">
+                    <td style="padding:0.9rem 1.25rem;font-size:0.9rem;">In-app real-time notifications</td>
+                    <td style="text-align:center;">✅</td><td style="text-align:center;">✅</td><td style="text-align:center;background:#fff8f5;">✅</td><td style="text-align:center;">✅</td>
+                </tr>
+                <tr style="background:#f9f7f5;">
+                    <td colspan="5" style="padding:0.6rem 1.25rem;font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);">Profile & Visibility</td>
+                </tr>
+                <tr style="border-bottom:1px solid var(--border);">
+                    <td style="padding:0.9rem 1.25rem;font-size:0.9rem;">Public agent profile page</td>
+                    <td style="text-align:center;">✅</td><td style="text-align:center;">✅</td><td style="text-align:center;background:#fff8f5;">✅</td><td style="text-align:center;">✅</td>
+                </tr>
+                <tr style="border-bottom:1px solid var(--border);">
+                    <td style="padding:0.9rem 1.25rem;font-size:0.9rem;">Featured Agent badge</td>
+                    <td style="text-align:center;color:var(--muted);">—</td><td style="text-align:center;color:var(--muted);">—</td><td style="text-align:center;background:#fff8f5;font-weight:600;">⭐ Yes</td><td style="text-align:center;font-weight:600;">⭐ Yes</td>
+                </tr>
+                <tr style="border-bottom:1px solid var(--border);">
+                    <td style="padding:0.9rem 1.25rem;font-size:0.9rem;">Profile photo & media upload</td>
+                    <td style="text-align:center;color:var(--muted);">—</td><td style="text-align:center;">✅</td><td style="text-align:center;background:#fff8f5;">✅</td><td style="text-align:center;">✅</td>
+                </tr>
+                <tr style="border-bottom:1px solid var(--border);">
+                    <td style="padding:0.9rem 1.25rem;font-size:0.9rem;">Performance stats & win rate</td>
+                    <td style="text-align:center;color:var(--muted);">—</td><td style="text-align:center;">✅</td><td style="text-align:center;background:#fff8f5;">✅</td><td style="text-align:center;">✅</td>
+                </tr>
+                <tr style="background:#f9f7f5;">
+                    <td colspan="5" style="padding:0.6rem 1.25rem;font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);">Tools & Analytics</td>
+                </tr>
+                <tr style="border-bottom:1px solid var(--border);">
+                    <td style="padding:0.9rem 1.25rem;font-size:0.9rem;">Proposal & pipeline dashboard</td>
+                    <td style="text-align:center;">✅</td><td style="text-align:center;">✅</td><td style="text-align:center;background:#fff8f5;">✅</td><td style="text-align:center;">✅</td>
+                </tr>
+                <tr style="border-bottom:1px solid var(--border);">
+                    <td style="padding:0.9rem 1.25rem;font-size:0.9rem;">In-platform messaging</td>
+                    <td style="text-align:center;">✅</td><td style="text-align:center;">✅</td><td style="text-align:center;background:#fff8f5;">✅</td><td style="text-align:center;">✅</td>
+                </tr>
+                <tr style="border-bottom:1px solid var(--border);">
+                    <td style="padding:0.9rem 1.25rem;font-size:0.9rem;">Advanced analytics & insights</td>
+                    <td style="text-align:center;color:var(--muted);">—</td><td style="text-align:center;color:var(--muted);">—</td><td style="text-align:center;background:#fff8f5;">✅</td><td style="text-align:center;">✅</td>
+                </tr>
+                <tr style="border-bottom:1px solid var(--border);">
+                    <td style="padding:0.9rem 1.25rem;font-size:0.9rem;">Showing schedule management</td>
+                    <td style="text-align:center;">✅</td><td style="text-align:center;">✅</td><td style="text-align:center;background:#fff8f5;">✅</td><td style="text-align:center;">✅</td>
+                </tr>
+                <tr style="background:#f9f7f5;">
+                    <td colspan="5" style="padding:0.6rem 1.25rem;font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);">Referral & Team</td>
+                </tr>
+                <tr style="border-bottom:1px solid var(--border);">
+                    <td style="padding:0.9rem 1.25rem;font-size:0.9rem;">Referral program ($25/referral)</td>
+                    <td style="text-align:center;">✅</td><td style="text-align:center;">✅</td><td style="text-align:center;background:#fff8f5;">✅</td><td style="text-align:center;">✅</td>
+                </tr>
+                <tr style="border-bottom:1px solid var(--border);">
+                    <td style="padding:0.9rem 1.25rem;font-size:0.9rem;">Agents per location</td>
+                    <td style="text-align:center;font-size:0.85rem;color:var(--muted);">1</td>
+                    <td style="text-align:center;font-size:0.85rem;">1</td>
+                    <td style="text-align:center;background:#fff8f5;font-size:0.85rem;">1</td>
+                    <td style="text-align:center;font-size:0.85rem;font-weight:600;color:var(--accent);">Unlimited</td>
+                </tr>
+                <tr style="border-bottom:1px solid var(--border);">
+                    <td style="padding:0.9rem 1.25rem;font-size:0.9rem;">Firm dashboard & team reporting</td>
+                    <td style="text-align:center;color:var(--muted);">—</td><td style="text-align:center;color:var(--muted);">—</td><td style="text-align:center;background:#fff8f5;color:var(--muted);">—</td><td style="text-align:center;font-weight:600;">✅</td>
+                </tr>
+                <tr>
+                    <td style="padding:0.9rem 1.25rem;font-size:0.9rem;">Dedicated account manager</td>
+                    <td style="text-align:center;color:var(--muted);">—</td><td style="text-align:center;color:var(--muted);">—</td><td style="text-align:center;background:#fff8f5;color:var(--muted);">—</td><td style="text-align:center;font-weight:600;">✅</td>
+                </tr>
+            </tbody>
+            <tfoot>
+                <tr style="background:#f9f7f5;border-top:2px solid var(--border);">
+                    <td style="padding:1rem 1.25rem;"></td>
+                    <td style="padding:1rem;text-align:center;"><a href="/login?tab=signup&type=realtor" style="font-size:0.85rem;font-weight:600;color:var(--primary);text-decoration:none;border:1px solid var(--border);padding:6px 16px;border-radius:6px;">Sign up free</a></td>
+                    <td style="padding:1rem;text-align:center;"><button onclick="subscribe('basic')" style="font-size:0.85rem;font-weight:600;color:var(--primary);background:none;border:1px solid var(--border);padding:6px 16px;border-radius:6px;cursor:pointer;">Get Basic</button></td>
+                    <td style="padding:1rem;text-align:center;background:#fff8f5;"><button onclick="subscribe('professional')" style="font-size:0.85rem;font-weight:700;color:white;background:var(--accent);border:none;padding:7px 16px;border-radius:6px;cursor:pointer;">Get Pro</button></td>
+                    <td style="padding:1rem;text-align:center;"><button onclick="subscribe('firm')" style="font-size:0.85rem;font-weight:600;color:var(--primary);background:none;border:1px solid var(--border);padding:6px 16px;border-radius:6px;cursor:pointer;">Get Firm</button></td>
+                </tr>
+            </tfoot>
+        </table>
     </div>
 </div>
 

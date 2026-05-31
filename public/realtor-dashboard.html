@@ -2660,6 +2660,7 @@
 
             const userPlan = currentUser ? (currentUser.subscription_plan || 'free') : 'free';
             const isPaidPlan = userPlan !== 'free';
+            const now = Date.now();
 
             container.innerHTML = requests.map(req => {
                 const firstName = req.first_name || req.firstName || 'Buyer';
@@ -2673,37 +2674,54 @@
                 const areas = req.target_areas || req.targetAreas || 'Not specified';
                 const propType = req.property_type || req.propertyType || 'Any';
                 const minBeds = req.min_bedrooms || req.minBedrooms || null;
+                const maxBeds = req.max_bedrooms || req.maxBedrooms || null;
+                const minBaths = req.min_bathrooms || req.minBathrooms || null;
                 const timeline = req.timeline || 'Not specified';
                 const notes = req.notes || req.additional_notes || '';
-                const truncatedNotes = notes.length > 120 ? notes.substring(0, 120) + '…' : notes;
+                const truncatedNotes = notes.length > 160 ? notes.substring(0, 160) + '…' : notes;
                 const alreadyResponded = respondedRequests.has(req.id);
+                const createdAt = req.created_at ? new Date(req.created_at) : null;
+                const ageMs = createdAt ? now - createdAt.getTime() : Infinity;
+                const isNew = ageMs < 48 * 60 * 60 * 1000;
+                const ageLabel = createdAt ? (ageMs < 3600000 ? 'Just now'
+                    : ageMs < 86400000 ? `${Math.floor(ageMs/3600000)}h ago`
+                    : `${Math.floor(ageMs/86400000)}d ago`) : '';
 
                 const isUnlocked = isPaidPlan || purchasedLeadIds.has(req.id);
                 const areasDisplay = isUnlocked
                     ? `<span>📍 ${areas}</span>`
-                    : `<span style="filter:blur(4px);user-select:none;" title="Unlock to see">📍 ████████████</span>`;
+                    : `<span style="filter:blur(5px);user-select:none;pointer-events:none;" title="Unlock to see full location">📍 ██████████</span>`;
+
+                const bedsStr = minBeds && maxBeds && minBeds !== maxBeds ? `${minBeds}–${maxBeds} beds`
+                    : minBeds ? `${minBeds}+ beds` : '';
+                const bathsStr = minBaths ? `${minBaths}+ baths` : '';
 
                 const actionBtn = alreadyResponded
-                    ? `<button class="btn btn-outline" disabled style="opacity:0.6;cursor:not-allowed;">Connected ✓</button>`
+                    ? `<button class="btn btn-outline" disabled style="opacity:0.6;cursor:not-allowed;min-width:130px;">Connected ✓</button>`
                     : isUnlocked
-                        ? `<button class="btn btn-primary" onclick="openConnectModal(${req.id}, '${firstName.replace(/'/g, "\\'")}')">Connect</button>`
-                        : `<button class="btn btn-primary" onclick="openLeadPayModal(${req.id})" style="background:#16a34a;border-color:#16a34a;">🔓 Unlock Lead — $9.99</button>`;
+                        ? `<button class="btn btn-primary" onclick="openConnectModal(${req.id}, '${firstName.replace(/'/g, "\\'")}')">Connect with ${firstName}</button>`
+                        : `<button class="btn btn-primary" onclick="openLeadPayModal(${req.id})" style="background:#16a34a;border-color:#16a34a;white-space:nowrap;">🔓 Unlock — $9.99</button>`;
 
                 return `
-                    <div class="bid-card">
-                        <div class="bid-info">
-                            <h3>${displayName}</h3>
+                    <div class="bid-card" style="gap:1.5rem;${alreadyResponded ? 'opacity:0.7;' : ''}">
+                        <div class="bid-info" style="flex:1;">
+                            <div style="display:flex;align-items:center;gap:0.6rem;flex-wrap:wrap;margin-bottom:0.35rem;">
+                                <h3 style="margin:0;">${displayName}</h3>
+                                ${isNew ? '<span style="background:#dcfce7;color:#15803d;font-size:0.72rem;font-weight:700;padding:2px 8px;border-radius:20px;">New</span>' : ''}
+                                ${ageLabel ? `<span style="color:#9ca3af;font-size:0.8rem;">${ageLabel}</span>` : ''}
+                            </div>
                             <div class="bid-price">${budgetStr}</div>
-                            <div class="bid-details">
+                            <div class="bid-details" style="margin-top:0.6rem;gap:0.6rem;">
                                 ${areasDisplay}
                                 <span>🏠 ${propType}</span>
-                                ${minBeds ? `<span>🛏️ ${minBeds}+ beds</span>` : ''}
+                                ${bedsStr ? `<span>🛏️ ${bedsStr}</span>` : ''}
+                                ${bathsStr ? `<span>🚿 ${bathsStr}</span>` : ''}
                                 <span>⏱️ ${timeline}</span>
                             </div>
-                            ${isUnlocked && truncatedNotes ? `<div style="margin-top:0.75rem;color:#555;font-size:0.9rem;">${truncatedNotes}</div>` : ''}
-                            ${!isUnlocked && !isPaidPlan ? `<div style="margin-top:0.75rem;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:0.5rem 0.75rem;font-size:0.85rem;color:#15803d;">Pro subscribers see all leads free. <a href="/pricing" style="color:#FF6B35;font-weight:600;">Upgrade →</a></div>` : ''}
+                            ${isUnlocked && truncatedNotes ? `<div style="margin-top:0.75rem;color:#555;font-size:0.9rem;line-height:1.55;background:#f9f7f5;border-radius:8px;padding:0.6rem 0.75rem;">"${truncatedNotes}"</div>` : ''}
+                            ${!isUnlocked && !isPaidPlan ? `<div style="margin-top:0.75rem;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:0.5rem 0.9rem;font-size:0.83rem;color:#15803d;">💡 Pro subscribers get all buyer leads included free. <a href="/pricing" style="color:#FF6B35;font-weight:600;">Upgrade →</a></div>` : ''}
                         </div>
-                        <div>${actionBtn}</div>
+                        <div style="display:flex;flex-direction:column;gap:0.5rem;align-items:flex-end;flex-shrink:0;">${actionBtn}</div>
                     </div>
                 `;
             }).join('');

@@ -2912,7 +2912,7 @@ app.get('/sitemap-index.xml', async (req, res) => {
 app.get('/sitemap-static.xml', (req, res) => {
     const base = (process.env.FRONTEND_URL || 'https://realtorfinder.net').replace(/\/$/, '');
     const today = new Date().toISOString().split('T')[0];
-    const urls = ['/', '/realtors', '/pricing', '/about', '/buyers', '/locations', '/login', '/contact', '/faq'];
+    const urls = ['/', '/sellers', '/realtors', '/pricing', '/about', '/buyers', '/locations', '/login', '/contact', '/faq'];
     const entries = urls.map(u => `  <url><loc>${base}${u}</loc><lastmod>${today}</lastmod><priority>${u === '/' ? '1.0' : '0.7'}</priority></url>`).join('\n');
     res.type('application/xml');
     res.send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${entries}\n</urlset>`);
@@ -3356,20 +3356,20 @@ app.put('/api/proposals/:id/accept', auth.requireAuth, async (req, res) => {
     try {
         if (req.user.user_type !== 'seller') return res.status(403).json({ error: 'Sellers only' });
         const proposalId = parseInt(req.params.id);
-        // Verify seller owns the listing
         const { rows: pRows } = await pool.query(
             `SELECT p.*, l.user_id as listing_owner_id, l.address, l.city, l.state,
-                    u.email as realtor_email, u.first_name as realtor_first, u.last_name as realtor_last
+                    u.email as realtor_email, u.first_name as realtor_first, u.last_name as realtor_last,
+                    s.email as seller_email, s.first_name as seller_first
              FROM proposals p
              JOIN listings l ON l.id = p.listing_id
              JOIN users u ON u.id = p.realtor_id
+             JOIN users s ON s.id = l.user_id
              WHERE p.id = $1`,
             [proposalId]
         );
         if (!pRows.length) return res.status(404).json({ error: 'Proposal not found' });
         const proposal = pRows[0];
         if (proposal.listing_owner_id !== req.session.userId) return res.status(403).json({ error: 'Forbidden' });
-        // Accept this proposal, decline all others — wrapped in a transaction to prevent race conditions
         const client = await pool.connect();
         try {
             await client.query('BEGIN');
@@ -3382,15 +3382,29 @@ app.put('/api/proposals/:id/accept', auth.requireAuth, async (req, res) => {
         } finally {
             client.release();
         }
-        // Fire-and-forget: email the winning realtor
-        (async () => {
-            try {
-                const addr = [proposal.address, proposal.city, proposal.state].filter(Boolean).join(', ');
-                const realtorName = `${proposal.realtor_first || ''} ${proposal.realtor_last || ''}`.trim();
-                await emailService.sendProposalAccepted(proposal.realtor_email, realtorName, addr);
-            } catch(e) { console.error('Proposal accepted email failed:', e.message); }
-        })();
-        res.json({ success: true });
+        const addr = [proposal.address, proposal.city, proposal.state].filter(Boolean).join(', ');
+        const realtorName = `${proposal.realtor_first || ''} ${proposal.realtor_last || ''}`.trim();
+        // SSE + notification for winning realtor
+        pool.query(
+            `INSERT INTO notifications (user_id, type, title, body, link)
+             VALUES ($1, 'proposal_accepted', 'Proposal Accepted! 🎉', $2, '/dashboard/realtor')`,
+            [proposal.realtor_id, `Your proposal on ${addr} was accepted! The seller is ready to move forward.`]
+        ).then(() => sseNotify(proposal.realtor_id, { type: 'notification' })).catch(() => {});
+        // Create CRM match record
+        pool.query(
+            `INSERT INTO lead_matches (listing_id, realtor_id, assigned_by, status, realtor_accepted)
+             VALUES ($1, $2, $3, 'active', true)`,
+            [proposal.listing_id, proposal.realtor_id, req.session.userId]
+        ).catch(e => console.error('CRM match creation failed:', e.message));
+        // Update listing CRM status
+        pool.query(
+            `UPDATE listings SET crm_status = 'assigned', crm_assigned_realtor_id = $1 WHERE id = $2`,
+            [proposal.realtor_id, proposal.listing_id]
+        ).catch(e => console.error('CRM lead update failed:', e.message));
+        // Email winning realtor
+        emailService.sendProposalAccepted(proposal.realtor_email, realtorName, addr)
+            .catch(e => console.error('Proposal accepted email failed:', e.message));
+        res.json({ success: true, realtor_id: proposal.realtor_id, realtor_name: realtorName });
     } catch (error) {
         console.error('PUT /api/proposals/:id/accept error:', error);
         res.status(500).json({ error: 'Failed to accept proposal' });
@@ -4693,6 +4707,32 @@ app.post('/api/billing/portal', auth.requireAuth, async (req, res) => {
     }
 });
 
+// ===== ADMIN BILLING PORTAL (open Stripe portal for any user) =====
+app.post('/api/admin/users/:id/billing-portal', auth.requireAuth, auth.requireAdmin, async (req, res) => {
+    try {
+        const targetId = parseInt(req.params.id);
+        const { rows } = await pool.query(
+            `SELECT stripe_customer_id FROM users WHERE id=$1
+             UNION
+             SELECT stripe_customer_id FROM companies WHERE owner_user_id=$1 AND stripe_customer_id IS NOT NULL
+             LIMIT 1`,
+            [targetId]
+        );
+        if (!rows.length || !rows[0].stripe_customer_id) {
+            return res.status(400).json({ error: 'No Stripe customer found for this user.' });
+        }
+        const base = process.env.FRONTEND_URL || 'https://www.realtorfinder.net';
+        const session = await stripe.billingPortal.sessions.create({
+            customer: rows[0].stripe_customer_id,
+            return_url: `${base}/admin`,
+        });
+        res.json({ url: session.url });
+    } catch (err) {
+        console.error('Admin billing portal error:', err);
+        res.status(500).json({ error: 'Failed to open billing portal' });
+    }
+});
+
 // ===== COMPANY ANALYTICS =====
 
 app.get('/api/company/analytics', auth.requireAuth, async (req, res) => {
@@ -4884,6 +4924,10 @@ app.get('/waitlist', (req, res) => {
 // Pricing page
 app.get('/pricing', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'pricing.html'));
+});
+
+app.get('/sellers', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'sellers.html'));
 });
 
 // Subscription success/cancel pages
