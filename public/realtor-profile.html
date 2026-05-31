@@ -256,22 +256,23 @@
     async function loadProfile() {
         await initSaveState();
         try {
-            const [profileRes, rtRes] = await Promise.all([
+            const [profileRes, rtRes, badgesRes] = await Promise.all([
                 fetch(`/api/realtors/${realtorId}/public`),
-                fetch(`/api/realtors/${realtorId}/response-time`)
+                fetch(`/api/realtors/${realtorId}/response-time`),
+                fetch(`/api/realtors/${realtorId}/badges`)
             ]);
             if (!profileRes.ok) { showNotFound(); return; }
             const r = await profileRes.json();
             const rt = rtRes.ok ? await rtRes.json() : { label: null };
-            renderProfile(r, rt);
-            // Update page title
+            const bd = badgesRes.ok ? await badgesRes.json() : {};
+            renderProfile(r, rt, bd);
             document.title = `${r.first_name} ${r.last_name} — RealtorFinder`;
         } catch {
             showNotFound();
         }
     }
 
-    function renderProfile(r, rt) {
+    function renderProfile(r, rt, bd = {}) {
         const initials = ((r.first_name || '')[0] || '') + ((r.last_name || '')[0] || '');
         const isFeatured = ['professional', 'firm'].includes(r.subscription_plan || r.company_plan);
         const hasLicense = r.license_number && r.license_number.trim();
@@ -284,6 +285,9 @@
         const statsHtml = [
             hasYears ? `<div class="stat"><div class="stat-value">${r.years_experience}</div><div class="stat-label">Years Experience</div></div>` : '',
             hasLicense ? `<div class="stat"><div class="stat-value" style="font-size:1rem;padding-top:0.3rem;">${r.license_number}</div><div class="stat-label">License #</div></div>` : '',
+            bd.winRate != null ? `<div class="stat"><div class="stat-value">${bd.winRate}%</div><div class="stat-label">Win Rate</div></div>` : '',
+            bd.totalProposals > 0 ? `<div class="stat"><div class="stat-value">${bd.totalProposals}</div><div class="stat-label">Proposals Sent</div></div>` : '',
+            bd.reviewCount > 0 ? `<div class="stat"><div class="stat-value">${bd.avgRating ? parseFloat(bd.avgRating).toFixed(1) : '—'}</div><div class="stat-label">Avg Rating</div></div>` : '',
         ].filter(Boolean).join('');
 
         const detailsHtml = [
@@ -301,6 +305,7 @@
                         <div class="badges">
                             ${isFeatured ? '<span class="badge badge-featured">⭐ Featured Agent</span>' : ''}
                             ${r.license_verified ? '<span class="badge badge-verified" style="background:#ECFDF5;color:#059669;">✓ Verified License</span>' : (hasLicense ? '<span class="badge badge-verified">✓ Licensed</span>' : '')}
+                            ${(bd.badges || []).map(b => `<span class="badge" style="background:#FFF7ED;color:#C2410C;">${b}</span>`).join('')}
                             ${serviceAreas.map(a => `<span class="badge badge-area">${esc(a)}</span>`).join('')}
                         </div>
                         <div id="profileRatingBadge" style="margin-top:0.5rem;display:flex;align-items:center;gap:0.5rem;"></div>
