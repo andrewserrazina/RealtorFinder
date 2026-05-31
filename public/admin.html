@@ -719,6 +719,25 @@
             </div>
 
             <div style="padding:0 28px 28px;">
+                <h3 style="font-size:1.1rem;font-weight:700;color:#0A2540;margin-bottom:16px;">Conversion Funnel (last 8 weeks)</h3>
+                <div id="funnel-loading" style="color:#6b7280;font-size:0.9rem;">Loading funnel data…</div>
+                <div id="funnel-table" style="display:none;overflow-x:auto;">
+                    <table style="width:100%;border-collapse:collapse;font-size:0.9rem;">
+                        <thead>
+                            <tr style="background:#f8fafc;border-bottom:2px solid #e5e7eb;">
+                                <th style="padding:0.6rem 1rem;text-align:left;color:#374151;font-weight:600;">Week</th>
+                                <th style="padding:0.6rem 1rem;text-align:right;color:#374151;font-weight:600;">Listings</th>
+                                <th style="padding:0.6rem 1rem;text-align:right;color:#374151;font-weight:600;">Proposals</th>
+                                <th style="padding:0.6rem 1rem;text-align:right;color:#374151;font-weight:600;">Accepted</th>
+                                <th style="padding:0.6rem 1rem;text-align:right;color:#374151;font-weight:600;">Conv. Rate</th>
+                            </tr>
+                        </thead>
+                        <tbody id="funnel-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div style="padding:0 28px 28px;">
                 <h3 style="font-size:1.1rem;font-weight:700;color:#0A2540;margin-bottom:16px;">CRM Overview</h3>
                 <div class="stats-grid" id="crm-stats-grid">
                     <div class="stat-card"><span class="stat-icon">🤝</span><span class="stat-value" id="cs-realtors">—</span><span class="stat-label">Total Realtors</span></div>
@@ -947,10 +966,10 @@
                 <table>
                     <thead><tr>
                         <th>ID</th><th>Name</th><th>Email</th><th>Zip</th><th>Status</th><th>Plan</th>
-                        <th>License</th><th>Service Areas</th><th>Proposals</th><th>Matches</th><th>Joined</th><th>Notes</th>
+                        <th>License</th><th>Service Areas</th><th>Proposals</th><th>Matches</th><th>Onboarding</th><th>Joined</th><th>Notes</th>
                     </tr></thead>
                     <tbody id="crm-realtors-tbody">
-                        <tr><td colspan="11" class="empty-state">Loading…</td></tr>
+                        <tr><td colspan="12" class="empty-state">Loading…</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -1257,6 +1276,7 @@
 
             loadStats();
             loadCrmStats();
+            loadFunnelAnalytics();
             loadUsers();
             loadListings();
             loadLeads();
@@ -1313,7 +1333,7 @@
         document.getElementById('tab-' + name).classList.add('active');
         if (name === 'reviews') loadAdminReviews();
         if (name === 'license-queue') loadLicenseQueue();
-        if (name === 'stats') loadCrmStats();
+        if (name === 'stats') { loadCrmStats(); loadFunnelAnalytics(); }
         if (name === 'crm-realtors') loadCrmRealtors();
         if (name === 'crm-homeowner-leads') { loadCrmLeads(); loadApprovedRealtorsList(); }
         if (name === 'crm-matches') loadMatches();
@@ -1819,6 +1839,29 @@
         }
     }
 
+    // ── Funnel Analytics ──────────────────────────────────────────────────────
+    async function loadFunnelAnalytics() {
+        try {
+            const res = await fetch('/api/admin/analytics/funnel', { credentials: 'include' });
+            if (!res.ok) return;
+            const rows = await res.json();
+            const tbody = document.getElementById('funnel-tbody');
+            tbody.innerHTML = rows.map(r => `
+                <tr style="border-bottom:1px solid #f3f4f6;">
+                    <td style="padding:0.55rem 1rem;color:#374151;">${r.week}</td>
+                    <td style="padding:0.55rem 1rem;text-align:right;font-weight:600;">${r.listings_posted}</td>
+                    <td style="padding:0.55rem 1rem;text-align:right;">${r.proposals_submitted}</td>
+                    <td style="padding:0.55rem 1rem;text-align:right;">${r.proposals_accepted}</td>
+                    <td style="padding:0.55rem 1rem;text-align:right;">
+                        <span style="background:${r.conversion_rate >= 50 ? '#dcfce7' : r.conversion_rate >= 20 ? '#fef9c3' : '#fee2e2'};color:${r.conversion_rate >= 50 ? '#166534' : r.conversion_rate >= 20 ? '#854d0e' : '#991b1b'};padding:2px 8px;border-radius:10px;font-size:0.8rem;font-weight:600;">${r.conversion_rate}%</span>
+                    </td>
+                </tr>
+            `).join('');
+            document.getElementById('funnel-loading').style.display = 'none';
+            document.getElementById('funnel-table').style.display = 'block';
+        } catch (e) { console.error('Funnel error', e); }
+    }
+
     // ── CRM Stats ─────────────────────────────────────────────────────────────
     async function loadCrmStats() {
         try {
@@ -1969,6 +2012,9 @@
                 <td style="max-width:140px;font-size:0.8rem;white-space:normal;">${escHtml(serviceAreas)}</td>
                 <td style="text-align:center">${u.proposals_sent}</td>
                 <td style="text-align:center">${u.matches_count}</td>
+                <td style="text-align:center">
+                    <span title="Photo · Bio · License · Areas · Proposal" style="background:${u.onboarding_score>=4?'#dcfce7':u.onboarding_score>=2?'#fef9c3':'#fee2e2'};color:${u.onboarding_score>=4?'#166534':u.onboarding_score>=2?'#854d0e':'#991b1b'};padding:2px 8px;border-radius:10px;font-size:0.78rem;font-weight:700;">${u.onboarding_score}/5</span>
+                </td>
                 <td class="td-muted">${fmtDate(u.created_at)}</td>
                 <td style="white-space:nowrap;">
                     <button class="btn-action" onclick="openNotesModal('realtor',${u.id},${JSON.stringify(name)})" style="font-size:0.78rem;">📝 Notes</button>

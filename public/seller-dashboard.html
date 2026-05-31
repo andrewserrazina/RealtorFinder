@@ -1004,6 +1004,22 @@
                 </div>
 
                 <div style="max-width:500px;">
+                    <!-- Notification Preferences -->
+                    <div style="background:white;border-radius:12px;border:1px solid #e1e8ed;padding:1.75rem;margin-bottom:1.5rem;">
+                        <h3 style="font-family:'Crimson Pro',serif;font-size:1.4rem;font-weight:700;margin-bottom:0.5rem;color:#0a2540;">Email Notifications</h3>
+                        <p style="color:#6b7280;font-size:0.9rem;margin-bottom:1.25rem;">Choose which emails you receive from RealtorFinder.</p>
+                        <div id="notifPrefsLoading" style="color:#9ca3af;font-size:0.9rem;">Loading…</div>
+                        <div id="notifPrefsForm" style="display:none;display:flex;flex-direction:column;gap:0.75rem;">
+                            <label style="display:flex;align-items:center;gap:0.75rem;cursor:pointer;"><input type="checkbox" id="np-new-proposal" style="width:16px;height:16px;accent-color:#ff6b35;"> <span>New proposals on my listings</span></label>
+                            <label style="display:flex;align-items:center;gap:0.75rem;cursor:pointer;"><input type="checkbox" id="np-messages" style="width:16px;height:16px;accent-color:#ff6b35;"> <span>Messages from realtors</span></label>
+                            <label style="display:flex;align-items:center;gap:0.75rem;cursor:pointer;"><input type="checkbox" id="np-weekly-digest" style="width:16px;height:16px;accent-color:#ff6b35;"> <span>Weekly activity digest</span></label>
+                            <label style="display:flex;align-items:center;gap:0.75rem;cursor:pointer;"><input type="checkbox" id="np-listing-alerts" style="width:16px;height:16px;accent-color:#ff6b35;"> <span>Listing status alerts</span></label>
+                            <label style="display:flex;align-items:center;gap:0.75rem;cursor:pointer;"><input type="checkbox" id="np-engagement" style="width:16px;height:16px;accent-color:#ff6b35;"> <span>Re-engagement reminders</span></label>
+                            <div id="notifPrefsSaved" style="display:none;color:#059669;font-size:0.85rem;">✓ Preferences saved</div>
+                            <button onclick="saveNotifPrefs()" style="background:#ff6b35;color:white;border:none;padding:0.65rem 1.5rem;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.9rem;align-self:flex-start;font-family:inherit;">Save Preferences</button>
+                        </div>
+                    </div>
+
                     <div style="background:white;border-radius:12px;border:1px solid #e1e8ed;padding:1.75rem;margin-bottom:1.5rem;">
                         <h3 style="font-family:'Crimson Pro',serif;font-size:1.4rem;font-weight:700;margin-bottom:1.25rem;color:#0a2540;">Change Password</h3>
                         <div style="display:flex;flex-direction:column;gap:0.75rem;">
@@ -1327,6 +1343,7 @@
                 if (view === 'offers') loadOffers();
                 if (view === 'messages') loadConversations();
                 if (view === 'showings') loadSellerShowings();
+                if (view === 'settings') loadNotifPrefs();
             });
         });
 
@@ -2257,6 +2274,37 @@
         }
 
         function escSafe(str) { return esc(str); }
+
+        async function loadNotifPrefs() {
+            try {
+                const res = await fetch('/api/me/notification-preferences', { credentials: 'include' });
+                if (!res.ok) return;
+                const d = await res.json();
+                document.getElementById('np-new-proposal').checked = d.notif_new_proposal !== false;
+                document.getElementById('np-messages').checked = d.notif_messages !== false;
+                document.getElementById('np-weekly-digest').checked = d.notif_weekly_digest !== false;
+                document.getElementById('np-listing-alerts').checked = d.notif_listing_alerts !== false;
+                document.getElementById('np-engagement').checked = d.notif_engagement_reminders !== false;
+                document.getElementById('notifPrefsLoading').style.display = 'none';
+                document.getElementById('notifPrefsForm').style.display = 'flex';
+            } catch (e) { console.error('Notif prefs load error', e); }
+        }
+
+        async function saveNotifPrefs() {
+            try {
+                const body = {
+                    notif_new_proposal: document.getElementById('np-new-proposal').checked,
+                    notif_messages: document.getElementById('np-messages').checked,
+                    notif_weekly_digest: document.getElementById('np-weekly-digest').checked,
+                    notif_listing_alerts: document.getElementById('np-listing-alerts').checked,
+                    notif_engagement_reminders: document.getElementById('np-engagement').checked
+                };
+                await fetch('/api/me/notification-preferences', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify(body) });
+                const saved = document.getElementById('notifPrefsSaved');
+                saved.style.display = 'block';
+                setTimeout(() => saved.style.display = 'none', 3000);
+            } catch (e) { console.error('Save notif prefs error', e); }
+        }
 
         async function changePassword() {
             const current = document.getElementById('currentPassword').value;
