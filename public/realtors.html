@@ -646,8 +646,8 @@
 
         .pricing-grid {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 2.5rem;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.75rem;
             margin-top: 4rem;
         }
 
@@ -965,6 +965,14 @@
             opacity: 0.6;
         }
 
+        @media (max-width: 1200px) {
+            .pricing-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .pricing-card.featured {
+                transform: scale(1);
+            }
+        }
         @media (max-width: 1024px) {
             .hero-container {
                 grid-template-columns: 1fr;
@@ -1513,54 +1521,77 @@
             </div>
 
             <div class="pricing-grid">
+
+                <!-- FREE -->
                 <div class="pricing-card">
                     <div class="plan-name">Free</div>
                     <div class="plan-price">$0<span>/month</span></div>
-                    <div class="plan-description">Start immediately — pay only when you bid</div>
+                    <div class="plan-description">Browse listings and pay only for the leads you want — no subscription required</div>
                     <ul class="plan-features">
-                        <li>Free to join &amp; browse all listings</li>
-                        <li>Pay per proposal (no subscription)</li>
-                        <li>Basic profile page</li>
-                        <li>Email notifications</li>
-                        <li>Performance dashboard</li>
-                        <li>No commitment, no credit card</li>
+                        <li>Browse all active seller listings</li>
+                        <li>$15 per proposal submitted</li>
+                        <li>Basic public agent profile</li>
+                        <li>In-app &amp; email notifications</li>
+                        <li>Proposal &amp; pipeline dashboard</li>
+                        <li>No credit card to sign up</li>
                     </ul>
                     <a href="/login?tab=signup&type=realtor" class="plan-button secondary" style="text-align:center;display:block;text-decoration:none;">Join Free</a>
                 </div>
 
-                <div class="pricing-card featured">
-                    <div class="plan-name">Professional</div>
-                    <div class="plan-price">$249<span>/month</span></div>
-                    <div class="plan-description">For agents serious about winning listings</div>
+                <!-- BASIC -->
+                <div class="pricing-card">
+                    <div class="plan-name">Basic</div>
+                    <div class="plan-price">$99<span>/month</span></div>
+                    <div class="plan-description">For agents getting consistent deal flow without paying per lead</div>
                     <ul class="plan-features">
-                        <li>Unlimited bids</li>
-                        <li>Priority listing alerts</li>
-                        <li>Enhanced profile with media</li>
-                        <li>Advanced analytics</li>
-                        <li>Automated bid templates</li>
-                        <li>Featured agent badge</li>
-                        <li>Early access to new listings</li>
-                        <li>1 agent per location</li>
+                        <li>10 proposals included per month</li>
+                        <li>Buyer leads included</li>
+                        <li>New listing email alerts</li>
+                        <li>Profile photo &amp; media upload</li>
+                        <li>Performance stats &amp; win rate</li>
+                        <li>Referral program ($25/referral)</li>
                     </ul>
-                    <a href="/login?tab=signup&type=realtor" class="plan-button primary" style="text-align:center;display:block;text-decoration:none;">Get Started</a>
+                    <a href="/login?tab=signup&type=realtor" class="plan-button secondary" style="text-align:center;display:block;text-decoration:none;">Get Basic</a>
                 </div>
 
+                <!-- PROFESSIONAL -->
+                <div class="pricing-card featured">
+                    <div style="position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:var(--accent);color:white;font-size:0.72rem;font-weight:700;padding:0.3rem 1rem;border-radius:20px;white-space:nowrap;letter-spacing:0.05em;text-transform:uppercase;">Most Popular</div>
+                    <div class="plan-name">Professional</div>
+                    <div class="plan-price">$249<span>/month</span></div>
+                    <div class="plan-description">For agents serious about winning listings at scale</div>
+                    <ul class="plan-features">
+                        <li>Unlimited proposals per month</li>
+                        <li>Priority &amp; early listing alerts</li>
+                        <li>Featured Agent badge on profile</li>
+                        <li>Advanced analytics &amp; insights</li>
+                        <li>Automated bid templates</li>
+                        <li>Buyer leads included</li>
+                    </ul>
+                    <a href="/login?tab=signup&type=realtor" class="plan-button primary" style="text-align:center;display:block;text-decoration:none;">Get Professional</a>
+                </div>
+
+                <!-- FIRM -->
                 <div class="pricing-card">
                     <div class="plan-name">Firm</div>
-                    <div class="plan-price">$499<span>/location/mo</span></div>
-                    <div class="plan-description">For brokerages &amp; firms with multiple agents at one location</div>
+                    <div class="plan-price">$499<span>/loc/mo</span></div>
+                    <div class="plan-description">For brokerages &amp; teams with multiple agents at one or more locations</div>
                     <ul class="plan-features">
                         <li>Unlimited agents per location</li>
-                        <li>Unlimited bids per agent</li>
-                        <li>Add locations at $499/mo each</li>
+                        <li>Unlimited proposals per agent</li>
                         <li>Firm dashboard &amp; team reporting</li>
-                        <li>Bulk bid submission</li>
-                        <li>Priority support</li>
+                        <li>Bulk bid submission tools</li>
                         <li>Custom branding options</li>
                         <li>Dedicated account manager</li>
                     </ul>
-                    <a href="/login?tab=signup&type=realtor" class="plan-button secondary" style="text-align:center;display:block;text-decoration:none;">Get Started</a>
+                    <a href="/login?tab=signup&type=realtor" class="plan-button secondary" style="text-align:center;display:block;text-decoration:none;">Get Firm</a>
                 </div>
+
+            </div>
+
+            <div style="text-align:center;margin-top:2.5rem;">
+                <p style="color:var(--muted);font-size:0.95rem;margin-bottom:0.75rem;">Need a full feature breakdown or have questions about which plan is right for you?</p>
+                <a href="/pricing" style="display:inline-flex;align-items:center;gap:0.4rem;color:var(--accent);font-weight:600;font-size:0.95rem;text-decoration:none;border:2px solid var(--accent);padding:0.6rem 1.5rem;border-radius:8px;transition:all 0.2s;" onmouseover="this.style.background='var(--accent)';this.style.color='white';" onmouseout="this.style.background='transparent';this.style.color='var(--accent)';">View Full Pricing Details →</a>
             </div>
         </div>
     </section>
