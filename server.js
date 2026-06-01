@@ -4454,7 +4454,7 @@ app.get('/api/reviews/:realtorId', async (req, res) => {
 
 app.get('/api/referrals/my', auth.requireAuth, async (req, res) => {
     try {
-        if (req.user.user_type !== 'realtor') return res.status(403).json({ error: 'Realtors only' });
+        if (!['realtor', 'seller', 'buyer'].includes(req.user.user_type)) return res.status(403).json({ error: 'Account required' });
         // Generate referral code if missing
         let { rows } = await pool.query(`SELECT referral_code FROM users WHERE id = $1`, [req.session.userId]);
         let code = rows[0]?.referral_code;

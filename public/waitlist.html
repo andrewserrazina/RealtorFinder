@@ -30,7 +30,7 @@
         (function(c,l,a,r,i,t,y){
             c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
             t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
-            y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+            y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,s);
         })(window, document, "clarity", "script", "wxvaz0g7tq");
     </script>
     <style>
@@ -40,6 +40,7 @@
             --soft-bg: #F8F6F3;
             --text: #1A1A1A;
             --border: #E5E1DB;
+            --muted: #6B7280;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -51,9 +52,8 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
-            padding: 2rem;
-            text-align: center;
+            justify-content: flex-start;
+            padding: 2rem 1rem 4rem;
         }
 
         .logo {
@@ -61,48 +61,50 @@
             font-size: 1.8rem;
             font-weight: 900;
             color: var(--primary);
-            margin-bottom: 3rem;
+            margin-bottom: 2.5rem;
             text-decoration: none;
             display: inline-block;
         }
-
         .logo span { color: var(--accent); }
 
         .card {
             background: white;
             border-radius: 24px;
-            padding: 4rem 3rem;
-            max-width: 540px;
+            padding: 3rem 2.5rem;
+            max-width: 560px;
             width: 100%;
             box-shadow: 0 20px 60px rgba(0,0,0,0.08);
+            margin-bottom: 1.5rem;
         }
 
         .checkmark {
-            width: 72px;
-            height: 72px;
+            width: 64px;
+            height: 64px;
             background: linear-gradient(135deg, #10B981, #059669);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 0 auto 2rem;
-            font-size: 2rem;
+            margin: 0 auto 1.75rem;
+            font-size: 1.8rem;
         }
 
         h1 {
             font-family: 'Crimson Pro', serif;
-            font-size: 2.4rem;
+            font-size: 2.2rem;
             font-weight: 900;
             color: var(--primary);
-            margin-bottom: 1rem;
+            margin-bottom: 0.75rem;
             line-height: 1.15;
+            text-align: center;
         }
 
         .subtitle {
-            font-size: 1.1rem;
+            font-size: 1rem;
             color: #555;
             line-height: 1.6;
             margin-bottom: 2rem;
+            text-align: center;
         }
 
         .highlight {
@@ -110,97 +112,177 @@
             border: 1px solid #FFD8C9;
             border-radius: 12px;
             padding: 1.25rem 1.5rem;
-            margin-bottom: 2.5rem;
-            text-align: left;
+            margin-bottom: 2rem;
         }
+        .highlight p { font-size: 0.92rem; color: #7A3A1E; line-height: 1.6; }
+        .highlight strong { color: var(--accent); }
 
-        .highlight p {
-            font-size: 0.95rem;
-            color: #7A3A1E;
-            line-height: 1.6;
-        }
-
-        .highlight strong {
-            color: var(--accent);
-        }
-
-        .steps {
-            text-align: left;
-            margin-bottom: 2.5rem;
-        }
-
-        .step {
-            display: flex;
-            align-items: flex-start;
-            gap: 1rem;
-            margin-bottom: 1rem;
-        }
-
+        .steps { margin-bottom: 2rem; }
+        .step { display: flex; align-items: flex-start; gap: 1rem; margin-bottom: 0.9rem; }
         .step-num {
-            width: 28px;
-            height: 28px;
-            background: var(--primary);
-            color: white;
-            border-radius: 50%;
+            width: 26px; height: 26px;
+            background: var(--primary); color: white;
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-size: 0.78rem; font-weight: 600; flex-shrink: 0; margin-top: 2px;
+        }
+        .step-text { font-size: 0.92rem; color: #444; line-height: 1.5; }
+
+        .btn-group { display: flex; gap: 1rem; flex-wrap: wrap; }
+        .btn {
+            flex: 1; padding: 0.85rem 1.5rem; border-radius: 10px;
+            font-family: 'DM Sans', sans-serif; font-weight: 600; font-size: 0.92rem;
+            text-decoration: none; text-align: center; cursor: pointer;
+            transition: all 0.2s; border: none;
+        }
+        .btn-primary { background: var(--accent); color: white; }
+        .btn-primary:hover { background: #e55a2b; transform: translateY(-1px); }
+        .btn-secondary { background: var(--soft-bg); color: var(--primary); border: 1px solid var(--border); }
+        .btn-secondary:hover { background: var(--border); }
+
+        /* Referral card */
+        .referral-card {
+            background: white;
+            border-radius: 24px;
+            padding: 2.5rem;
+            max-width: 560px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.08);
+        }
+
+        .referral-heading {
             display: flex;
             align-items: center;
-            justify-content: center;
-            font-size: 0.8rem;
-            font-weight: 600;
-            flex-shrink: 0;
-            margin-top: 2px;
+            gap: 0.75rem;
+            margin-bottom: 0.5rem;
         }
-
-        .step-text {
-            font-size: 0.95rem;
-            color: #444;
+        .referral-heading h2 {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.5rem;
+            font-weight: 900;
+            color: var(--primary);
+        }
+        .referral-badge {
+            background: #FFF0EB;
+            color: var(--accent);
+            font-size: 0.72rem;
+            font-weight: 700;
+            padding: 3px 10px;
+            border-radius: 20px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .referral-sub {
+            font-size: 0.9rem;
+            color: var(--muted);
+            margin-bottom: 1.75rem;
             line-height: 1.5;
         }
 
-        .btn-group {
-            display: flex;
+        .referral-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
             gap: 1rem;
-            flex-wrap: wrap;
+            margin-bottom: 1.75rem;
         }
-
-        .btn {
-            flex: 1;
-            padding: 0.875rem 1.5rem;
-            border-radius: 10px;
-            font-family: 'DM Sans', sans-serif;
-            font-weight: 600;
-            font-size: 0.95rem;
-            text-decoration: none;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.2s;
-            border: none;
-        }
-
-        .btn-primary {
-            background: var(--accent);
-            color: white;
-        }
-
-        .btn-primary:hover {
-            background: #e55a2b;
-            transform: translateY(-1px);
-        }
-
-        .btn-secondary {
+        .ref-stat {
             background: var(--soft-bg);
+            border-radius: 12px;
+            padding: 1rem 1.25rem;
+            text-align: center;
+        }
+        .ref-stat-val {
+            font-family: 'Crimson Pro', serif;
+            font-size: 2rem;
+            font-weight: 900;
             color: var(--primary);
-            border: 1px solid var(--border);
+            line-height: 1;
+        }
+        .ref-stat-label {
+            font-size: 0.78rem;
+            color: var(--muted);
+            margin-top: 0.25rem;
         }
 
-        .btn-secondary:hover {
-            background: var(--border);
+        .referral-link-box {
+            background: var(--soft-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 0.85rem 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
         }
+        .referral-link-box span {
+            flex: 1;
+            font-size: 0.85rem;
+            color: var(--primary);
+            font-weight: 500;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .copy-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 0.45rem 1rem;
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: background 0.15s;
+        }
+        .copy-btn:hover { background: #1a3a5c; }
+        .copy-btn.copied { background: #059669; }
+
+        .referral-code-row {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1.25rem;
+        }
+        .referral-code-label { font-size: 0.82rem; color: var(--muted); }
+        .referral-code-val {
+            font-family: monospace;
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--primary);
+            letter-spacing: 0.1em;
+            background: var(--soft-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 4px 12px;
+        }
+        .copy-code-btn {
+            background: none;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 4px 10px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: var(--muted);
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .copy-code-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+        .referral-perk {
+            background: linear-gradient(135deg, #0A2540, #1a3a5c);
+            border-radius: 12px;
+            padding: 1rem 1.25rem;
+            color: white;
+            font-size: 0.88rem;
+            line-height: 1.5;
+        }
+        .referral-perk strong { color: #F59E0B; }
 
         @media (max-width: 480px) {
-            .card { padding: 3rem 1.5rem; }
-            h1 { font-size: 2rem; }
+            .card, .referral-card { padding: 2rem 1.25rem; }
+            h1 { font-size: 1.9rem; }
             .btn-group { flex-direction: column; }
+            .referral-stats { grid-template-columns: 1fr; }
         }
     </style>
     <link rel="manifest" href="/manifest.json">
@@ -219,6 +301,7 @@
 <body>
     <a href="/" class="logo">Realtor<span>Finder</span></a>
 
+    <!-- Status card -->
     <div class="card">
         <div class="checkmark">✓</div>
         <h1 id="waitlistHeading">You're on the List!</h1>
@@ -249,32 +332,106 @@
         </div>
     </div>
 
+    <!-- Referral card -->
+    <div class="referral-card" id="referralCard" style="display:none;">
+        <div class="referral-heading">
+            <h2>Refer a Colleague</h2>
+            <span class="referral-badge">Earn $25</span>
+        </div>
+        <p class="referral-sub">Share your link while you wait — every agent you refer who subscribes earns you $25 in account credits, applied automatically.</p>
+
+        <div class="referral-stats">
+            <div class="ref-stat">
+                <div class="ref-stat-val" id="refCount">—</div>
+                <div class="ref-stat-label">Referrals signed up</div>
+            </div>
+            <div class="ref-stat">
+                <div class="ref-stat-val" id="refCredits">—</div>
+                <div class="ref-stat-label">Credits earned</div>
+            </div>
+        </div>
+
+        <div style="margin-bottom:0.5rem;">
+            <div style="font-size:0.78rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.5rem;">Your Referral Link</div>
+            <div class="referral-link-box">
+                <span id="refUrl">Loading…</span>
+                <button class="copy-btn" id="copyLinkBtn" onclick="copyLink()">Copy</button>
+            </div>
+        </div>
+
+        <div class="referral-code-row">
+            <span class="referral-code-label">Code:</span>
+            <span class="referral-code-val" id="refCode">—</span>
+            <button class="copy-code-btn" onclick="copyCode()">Copy code</button>
+        </div>
+
+        <div class="referral-perk" id="referralPerk">
+            <strong>🏅 Founding Realtor bonus:</strong> Refer colleagues while on the waitlist and move up the approval queue. Agents with referrals get prioritized review.
+        </div>
+    </div>
+
     <script>
-        // Customize for realtor signups
         const urlType = new URLSearchParams(window.location.search).get('type');
+
+        // Customize for realtor signups
         if (urlType === 'realtor') {
             document.getElementById('waitlistHeading').textContent = "You're In — Founding Spot Reserved!";
             document.getElementById('waitlistSubtitle').textContent = "Your Founding Realtor account is under review. We approve agents personally to maintain quality — expect your access within 24 hours.";
-            document.getElementById('waitlistHighlight').innerHTML = `<p><strong>Your founding spot is held.</strong> Once approved, you'll have permanent Founding Realtor status — rate locked, badge displayed, and priority listing alerts. We'll email you the moment you're in.</p>`;
+            document.getElementById('waitlistHighlight').innerHTML = `<p><strong>Your founding spot is held.</strong> Once approved, you'll have permanent Founding Realtor status — rate locked, badge displayed, priority alerts, and 2 free months of Professional at launch. We'll email you the moment you're in.</p>`;
             document.getElementById('waitlistSteps').innerHTML = `
                 <div class="step"><div class="step-num">1</div><div class="step-text"><strong>Verify your email</strong> — click the link we just sent you.</div></div>
                 <div class="step"><div class="step-num">2</div><div class="step-text"><strong>We review your application</strong> — typically within 24 hours, often same day.</div></div>
-                <div class="step"><div class="step-num">3</div><div class="step-text"><strong>Start browsing listings</strong> — submit your first proposal and win your next client.</div></div>`;
+                <div class="step"><div class="step-num">3</div><div class="step-text"><strong>Start winning listings</strong> — submit proposals and grow your client base.</div></div>`;
             document.getElementById('waitlistHomeBtn').href = '/realtors';
             document.getElementById('waitlistHomeBtn').textContent = 'Back to Realtors Page';
 
-            // Fire pixel CompleteRegistration for realtor
             if (typeof fbq !== 'undefined') fbq('track', 'CompleteRegistration', { content_name: 'realtor', status: 'pending_approval' });
         } else {
             document.getElementById('waitlistHomeBtn').href = '/';
             document.getElementById('waitlistHomeBtn').textContent = 'Back to Home';
+            // Sellers don't get the referral perk copy
+            document.getElementById('referralPerk').innerHTML = `<strong>💸 Share with other homeowners</strong> — every person you refer who signs up earns you $25 in credits when they connect with an agent.`;
             if (typeof fbq !== 'undefined') fbq('track', 'CompleteRegistration', { content_name: 'seller', status: 'pending_approval' });
         }
 
-        async function logout() {
+        // Load referral data
+        async function loadReferral() {
             try {
-                await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+                const res = await fetch('/api/referrals/my', { credentials: 'include' });
+                if (!res.ok) return;
+                const data = await res.json();
+
+                document.getElementById('refUrl').textContent = data.referral_url;
+                document.getElementById('refCode').textContent = data.referral_code;
+                document.getElementById('refCount').textContent = data.referral_count ?? 0;
+                const credits = (data.credits_cents || 0) / 100;
+                document.getElementById('refCredits').textContent = credits > 0 ? `$${credits.toFixed(0)}` : '$0';
+                document.getElementById('referralCard').style.display = 'block';
             } catch (_) {}
+        }
+        loadReferral();
+
+        function copyLink() {
+            const url = document.getElementById('refUrl').textContent;
+            navigator.clipboard.writeText(url).then(() => {
+                const btn = document.getElementById('copyLinkBtn');
+                btn.textContent = 'Copied!';
+                btn.classList.add('copied');
+                setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+            });
+        }
+
+        function copyCode() {
+            const code = document.getElementById('refCode').textContent;
+            navigator.clipboard.writeText(code).then(() => {
+                const btn = event.target;
+                btn.textContent = 'Copied!';
+                setTimeout(() => { btn.textContent = 'Copy code'; }, 2000);
+            });
+        }
+
+        async function logout() {
+            try { await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }); } catch (_) {}
             window.location.href = '/';
         }
     </script>
