@@ -1788,20 +1788,38 @@ app.put('/api/admin/users/:id/reactivate', requireAdmin, async (req, res) => {
 });
 
 app.put('/api/admin/users/:id/approve', requireAdmin, async (req, res) => {
+    const client = await pool.connect();
     try {
-        const { rows } = await pool.query(
-            `UPDATE users SET is_approved = true, subscription_plan = COALESCE(subscription_plan, 'free')
-             WHERE id = $1 RETURNING id, email, first_name, user_type, is_approved, subscription_plan`,
-            [parseInt(req.params.id)]
+        await client.query('BEGIN');
+
+        // Count already-approved realtors to determine founding status (first 100)
+        const { rows: countRows } = await client.query(
+            `SELECT COUNT(*) AS cnt FROM users WHERE user_type = 'realtor' AND is_approved = true AND is_active IS NOT FALSE`
         );
-        if (!rows.length) return res.status(404).json({ error: 'User not found' });
+        const approvedCount = parseInt(countRows[0].cnt) || 0;
+        const isFounding = approvedCount < 100;
+
+        const { rows } = await client.query(
+            `UPDATE users SET is_approved = true,
+                subscription_plan = COALESCE(subscription_plan, 'free'),
+                is_founding_member = CASE WHEN $2 THEN TRUE ELSE is_founding_member END
+             WHERE id = $1
+             RETURNING id, email, first_name, user_type, is_approved, subscription_plan, is_founding_member`,
+            [parseInt(req.params.id), isFounding]
+        );
+        if (!rows.length) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'User not found' }); }
+        await client.query('COMMIT');
+
         const u = rows[0];
         emailService.sendAccountApprovedEmail(u.email, u.first_name, u.user_type)
             .catch(err => console.error('Approval email failed:', err.message));
         res.json({ success: true, user: u });
     } catch (error) {
+        await client.query('ROLLBACK').catch(() => {});
         console.error('Admin approve error:', error);
         res.status(500).json({ error: 'Failed to approve user' });
+    } finally {
+        client.release();
     }
 });
 
@@ -2846,6 +2864,27 @@ app.post('/api/webhook/stripe', express.raw({ type: 'application/json' }), async
                 await client.query('COMMIT');
                 console.log(`✅ Stripe: upgraded user ${userId} to ${plan}`);
 
+                // Apply founding member 2-month Professional credit (outside transaction — non-critical)
+                if (sess.subscription) {
+                    const { rows: foundingRows } = await pool.query(
+                        `SELECT is_founding_member, founding_credit_applied FROM users WHERE id = $1`, [userId]
+                    );
+                    if (foundingRows[0]?.is_founding_member && !foundingRows[0]?.founding_credit_applied) {
+                        try {
+                            await stripe.subscriptions.update(sess.subscription, {
+                                trial_end: Math.floor(Date.now() / 1000) + (60 * 24 * 60 * 60), // 60 days
+                                proration_behavior: 'none',
+                            });
+                            await pool.query(
+                                `UPDATE users SET founding_credit_applied = TRUE WHERE id = $1`, [userId]
+                            );
+                            console.log(`🏅 Stripe: applied 60-day founding credit to user ${userId}`);
+                        } catch (e) {
+                            console.error('Founding credit Stripe error:', e.message);
+                        }
+                    }
+                }
+
                 // Credit referrer $25 on first subscription (outside transaction — non-critical)
                 const refRow = await pool.query(
                     `SELECT referred_by FROM users WHERE id=$1 AND referred_by IS NOT NULL`, [userId]
@@ -3009,6 +3048,60 @@ app.get('/api/admin/revenue', requireAdmin, async (req, res) => {
     } catch (err) {
         console.error('Revenue analytics error:', err);
         res.status(500).json({ error: 'Failed to fetch revenue data' });
+    }
+});
+
+// Apply founding member 2-month Professional trial credit at launch
+// Safe to re-run — only applies to founding members who haven't received the credit yet
+app.post('/api/admin/apply-founding-credits', requireAdmin, async (req, res) => {
+    try {
+        // Find all founding members who subscribed but haven't had the credit applied
+        const { rows } = await pool.query(
+            `SELECT id, email, first_name, stripe_customer_id,
+                    (SELECT stripe_subscription_id FROM companies WHERE owner_user_id = users.id LIMIT 1) AS stripe_subscription_id
+             FROM users
+             WHERE is_founding_member = TRUE
+               AND founding_credit_applied = FALSE
+               AND is_approved = TRUE
+               AND subscription_plan IS NOT NULL
+               AND subscription_plan != 'free'`
+        );
+
+        let applied = 0, skipped = 0, errors = 0;
+        for (const user of rows) {
+            try {
+                if (stripe && user.stripe_subscription_id) {
+                    await stripe.subscriptions.update(user.stripe_subscription_id, {
+                        trial_end: Math.floor(Date.now() / 1000) + (60 * 24 * 60 * 60),
+                        proration_behavior: 'none',
+                    });
+                }
+                await pool.query(`UPDATE users SET founding_credit_applied = TRUE WHERE id = $1`, [user.id]);
+                applied++;
+            } catch (e) {
+                console.error(`Founding credit failed for user ${user.id}:`, e.message);
+                errors++;
+            }
+        }
+
+        // Also mark founding members on free/no plan — credit applies when they subscribe
+        const { rowCount: marked } = await pool.query(
+            `UPDATE users SET is_founding_member = TRUE
+             WHERE user_type = 'realtor'
+               AND is_approved = TRUE
+               AND is_active IS NOT FALSE
+               AND id IN (
+                   SELECT id FROM users
+                   WHERE user_type = 'realtor' AND is_approved = TRUE AND is_active IS NOT FALSE
+                   ORDER BY created_at ASC LIMIT 100
+               )
+               AND is_founding_member = FALSE`
+        );
+
+        res.json({ ok: true, applied, skipped, errors, newly_marked: marked });
+    } catch (err) {
+        console.error('Apply founding credits error:', err);
+        res.status(500).json({ error: 'Failed to apply founding credits' });
     }
 });
 
@@ -6838,6 +6931,8 @@ _schemaMigrations.push(
 
 _schemaMigrations.push(
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS lead_credits INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS is_founding_member BOOLEAN DEFAULT FALSE`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS founding_credit_applied BOOLEAN DEFAULT FALSE`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS is_premium_profile BOOLEAN DEFAULT FALSE`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS premium_profile_expires TIMESTAMPTZ`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_banner_url TEXT`,
