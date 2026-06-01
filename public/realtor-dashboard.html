@@ -1768,15 +1768,15 @@
         <div style="background:white;border-radius:20px;width:760px;max-width:100%;max-height:90vh;overflow-y:auto;position:relative;padding:2.5rem 2rem 2rem;">
             <button onclick="dismissUpgradePrompt()" style="position:absolute;top:1rem;right:1rem;background:none;border:none;font-size:1.4rem;cursor:pointer;color:#9ca3af;line-height:1;">✕</button>
             <div style="text-align:center;margin-bottom:2rem;">
-                <div style="display:inline-block;background:#FFF0EB;color:#FF6B35;font-weight:700;font-size:0.8rem;padding:0.35rem 1rem;border-radius:20px;letter-spacing:0.05em;text-transform:uppercase;margin-bottom:1rem;">You're on the Free Plan</div>
-                <h2 style="font-family:'Crimson Pro',serif;font-size:2rem;font-weight:900;color:#0A2540;margin-bottom:0.5rem;">Unlock more with a subscription</h2>
-                <p style="color:#6B7280;font-size:0.95rem;">Upgrade to submit unlimited proposals without paying per lead.</p>
+                <div style="display:inline-block;background:#d1fae5;color:#065f46;font-weight:700;font-size:0.8rem;padding:0.35rem 1rem;border-radius:20px;letter-spacing:0.05em;text-transform:uppercase;margin-bottom:1rem;">30-Day Free Trial</div>
+                <h2 style="font-family:'Crimson Pro',serif;font-size:2rem;font-weight:900;color:#0A2540;margin-bottom:0.5rem;">Start winning listings today</h2>
+                <p style="color:#6B7280;font-size:0.95rem;">Pick a plan and get full access free for 30 days — no credit card required.</p>
             </div>
             <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.5rem;" id="upgradePlanGrid">
                 <!-- plan cards injected by JS -->
             </div>
             <div style="text-align:center;">
-                <button onclick="dismissUpgradePrompt()" style="background:none;border:none;color:#9ca3af;font-size:0.9rem;cursor:pointer;font-family:inherit;">Continue with Free — $15 per lead</button>
+                <button onclick="dismissUpgradePrompt()" style="background:none;border:none;color:#9ca3af;font-size:0.9rem;cursor:pointer;font-family:inherit;">Remind me later</button>
             </div>
         </div>
     </div>
@@ -2268,7 +2268,7 @@
                             <span>📏 ${listing.sqft.toLocaleString()} sqft</span>
                         </div>
                         <div class="listing-description">${listing.description}</div>
-                        ${isFreePlan && !hasPaidLead && !alreadyProposed ? `<div style="font-size:0.78rem;color:#6b7280;margin-bottom:0.5rem;">Free plan: $15 per lead · <a href="/pricing" style="color:var(--accent);">Upgrade →</a></div>` : ''}
+                        ${isFreePlan && !hasPaidLead && !alreadyProposed ? `<div style="font-size:0.78rem;color:#6b7280;margin-bottom:0.5rem;">Start your free trial to submit proposals · <a href="/pricing" style="color:var(--accent);">See plans →</a></div>` : ''}
                         ${actionBtn}
                     </div>
                 </div>
@@ -2832,10 +2832,10 @@
                         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.75rem;margin-bottom:1.25rem;">
                             <div>
                                 <h3 style="font-family:'Crimson Pro',serif;font-size:1.3rem;font-weight:700;margin-bottom:0.25rem;color:var(--ink);">Subscription</h3>
-                                <span style="background:#f3f4f6;color:#374151;font-weight:600;font-size:0.82rem;padding:0.3rem 0.85rem;border-radius:20px;">Free Plan — $15 per lead</span>
+                                <span style="background:#d1fae5;color:#065f46;font-weight:600;font-size:0.82rem;padding:0.3rem 0.85rem;border-radius:20px;">30-Day Free Trial Available</span>
                             </div>
                         </div>
-                        <p style="font-size:0.9rem;color:#555;margin-bottom:1.5rem;">Upgrade to submit unlimited proposals without paying per lead.</p>
+                        <p style="font-size:0.9rem;color:#555;margin-bottom:1.5rem;">Start your free 30-day trial to submit proposals and connect with sellers. No credit card required.</p>
                         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1rem;">${planCards}</div>
                     </div>`;
             }

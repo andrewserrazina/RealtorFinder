@@ -1801,7 +1801,6 @@ app.put('/api/admin/users/:id/approve', requireAdmin, async (req, res) => {
 
         const { rows } = await client.query(
             `UPDATE users SET is_approved = true,
-                subscription_plan = COALESCE(subscription_plan, 'free'),
                 is_founding_member = CASE WHEN $2 THEN TRUE ELSE is_founding_member END
              WHERE id = $1
              RETURNING id, email, first_name, user_type, is_approved, subscription_plan, is_founding_member`,
@@ -5013,19 +5012,7 @@ app.get('/api/saved-realtors', auth.requireAuth, async (req, res) => {
     }
 });
 
-// ===== REALTOR REVIEWS TABLE INIT =====
-pool.query(`
-    CREATE TABLE IF NOT EXISTS realtor_reviews (
-        id SERIAL PRIMARY KEY,
-        realtor_id INTEGER REFERENCES users(id),
-        seller_id INTEGER REFERENCES users(id),
-        listing_id INTEGER REFERENCES listings(id),
-        rating INTEGER NOT NULL CHECK(rating BETWEEN 1 AND 5),
-        body TEXT,
-        created_at TIMESTAMPTZ DEFAULT NOW(),
-        UNIQUE(seller_id, listing_id)
-    )
-`).catch(err => console.error('realtor_reviews table init error:', err.message));
+// realtor_reviews moved to _schemaMigrations below
 
 // ===== BATCH 6: LEADERBOARD =====
 
@@ -5639,23 +5626,9 @@ app.put('/api/notifications/:id/read', auth.requireAuth, async (req, res) => {
     } catch (err) { res.status(500).json({ error: 'Failed to mark read' }); }
 });
 
-// ===== SAVED SEARCHES =====
+// saved_searches moved to _schemaMigrations below
 
-pool.query(`
-    CREATE TABLE IF NOT EXISTS saved_searches (
-        id SERIAL PRIMARY KEY,
-        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-        label TEXT,
-        city TEXT,
-        zip TEXT,
-        type TEXT,
-        min_price INTEGER,
-        max_price INTEGER,
-        min_beds INTEGER,
-        min_baths NUMERIC,
-        created_at TIMESTAMPTZ DEFAULT NOW()
-    )
-`).catch(err => console.error('saved_searches table init error:', err.message));
+// ===== SAVED SEARCHES =====
 
 app.post('/api/saved-searches', auth.requireAuth, async (req, res) => {
     try {
@@ -6930,6 +6903,29 @@ _schemaMigrations.push(
 );
 
 _schemaMigrations.push(
+    `CREATE TABLE IF NOT EXISTS realtor_reviews (
+        id SERIAL PRIMARY KEY,
+        realtor_id INTEGER REFERENCES users(id),
+        seller_id INTEGER REFERENCES users(id),
+        listing_id INTEGER REFERENCES listings(id),
+        rating INTEGER NOT NULL CHECK(rating BETWEEN 1 AND 5),
+        body TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE(seller_id, listing_id)
+    )`,
+    `CREATE TABLE IF NOT EXISTS saved_searches (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        label TEXT,
+        city TEXT,
+        zip TEXT,
+        type TEXT,
+        min_price INTEGER,
+        max_price INTEGER,
+        min_beds INTEGER,
+        min_baths NUMERIC,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+    )`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS lead_credits INTEGER NOT NULL DEFAULT 0`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS is_founding_member BOOLEAN DEFAULT FALSE`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS founding_credit_applied BOOLEAN DEFAULT FALSE`,
