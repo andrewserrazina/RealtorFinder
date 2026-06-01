@@ -646,8 +646,8 @@
 
         .pricing-grid {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 1.75rem;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2rem;
             margin-top: 4rem;
         }
 
@@ -965,14 +965,6 @@
             opacity: 0.6;
         }
 
-        @media (max-width: 1200px) {
-            .pricing-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-            .pricing-card.featured {
-                transform: scale(1);
-            }
-        }
         @media (max-width: 1024px) {
             .hero-container {
                 grid-template-columns: 1fr;
@@ -1522,27 +1514,12 @@
 
             <div class="pricing-grid">
 
-                <!-- FREE -->
-                <div class="pricing-card">
-                    <div class="plan-name">Free</div>
-                    <div class="plan-price">$0<span>/month</span></div>
-                    <div class="plan-description">Browse listings and pay only for the leads you want — no subscription required</div>
-                    <ul class="plan-features">
-                        <li>Browse all active seller listings</li>
-                        <li>$15 per proposal submitted</li>
-                        <li>Basic public agent profile</li>
-                        <li>In-app &amp; email notifications</li>
-                        <li>Proposal &amp; pipeline dashboard</li>
-                        <li>No credit card to sign up</li>
-                    </ul>
-                    <a href="/login?tab=signup&type=realtor" class="plan-button secondary" style="text-align:center;display:block;text-decoration:none;">Join Free</a>
-                </div>
-
                 <!-- BASIC -->
                 <div class="pricing-card">
+                    <div style="position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:#16a34a;color:white;font-size:0.72rem;font-weight:700;padding:0.3rem 1rem;border-radius:20px;white-space:nowrap;letter-spacing:0.05em;text-transform:uppercase;">30-Day Free Trial</div>
                     <div class="plan-name">Basic</div>
                     <div class="plan-price">$99<span>/month</span></div>
-                    <div class="plan-description">For agents getting consistent deal flow without paying per lead</div>
+                    <div class="plan-description">Try free for 30 days — no credit card required. For agents building consistent deal flow.</div>
                     <ul class="plan-features">
                         <li>10 proposals included per month</li>
                         <li>Buyer leads included</li>
@@ -1551,7 +1528,7 @@
                         <li>Performance stats &amp; win rate</li>
                         <li>Referral program ($25/referral)</li>
                     </ul>
-                    <a href="/login?tab=signup&type=realtor" class="plan-button secondary" style="text-align:center;display:block;text-decoration:none;">Get Basic</a>
+                    <a href="/login?tab=signup&type=realtor" class="plan-button secondary" style="text-align:center;display:block;text-decoration:none;">Start Free Trial</a>
                 </div>
 
                 <!-- PROFESSIONAL -->
