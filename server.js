@@ -5333,6 +5333,28 @@ const _schemaMigrations = [
         sent_at TIMESTAMPTZ DEFAULT NOW(),
         UNIQUE(user_id, sequence_step)
     )`,
+    `CREATE TABLE IF NOT EXISTS buyer_requests (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        first_name VARCHAR(255),
+        last_name VARCHAR(255),
+        email VARCHAR(255),
+        phone VARCHAR(50),
+        budget_min NUMERIC(12,2),
+        budget_max NUMERIC(12,2),
+        target_areas TEXT,
+        property_type VARCHAR(50),
+        bedrooms_min INTEGER,
+        timeline TEXT,
+        additional_notes TEXT,
+        zip_code VARCHAR(20),
+        latitude NUMERIC(10,7),
+        longitude NUMERIC(10,7),
+        status VARCHAR(30) DEFAULT 'active',
+        deleted_at TIMESTAMPTZ,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+    )`,
     `CREATE TABLE IF NOT EXISTS buyer_request_responses (
         id SERIAL PRIMARY KEY,
         buyer_request_id INTEGER NOT NULL REFERENCES buyer_requests(id) ON DELETE CASCADE,
