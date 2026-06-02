@@ -116,7 +116,7 @@ app.use(session({
     cookie: {
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
         httpOnly: true,
-        secure: true,
+        secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax'
     }
 }));
@@ -5222,7 +5222,62 @@ app.post('/api/proposals/:id/followup', auth.requireAuth, async (req, res) => {
 
 // ALTER TABLE migrations run at startup — collected here so they await before listen
 const _schemaMigrations = [
-    // Base tables — must come first so subsequent ALTER TABLE statements succeed on a fresh DB
+    // Base tables — must come first so all ALTER TABLE and FK references succeed on a fresh DB
+    `CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        email VARCHAR(255) UNIQUE NOT NULL,
+        password_hash VARCHAR(255),
+        user_type VARCHAR(20) CHECK (user_type IN ('seller','realtor','buyer')),
+        first_name VARCHAR(255),
+        last_name VARCHAR(255),
+        zip_code VARCHAR(20),
+        phone VARCHAR(50),
+        bio TEXT,
+        license_number VARCHAR(100),
+        brokerage VARCHAR(255),
+        years_experience INTEGER,
+        service_areas TEXT,
+        profile_photo TEXT,
+        subscription_plan VARCHAR(50),
+        subscription_id TEXT,
+        company_id INTEGER,
+        email_verified BOOLEAN DEFAULT FALSE,
+        verification_token TEXT,
+        verification_token_expires TIMESTAMPTZ,
+        is_admin BOOLEAN DEFAULT FALSE,
+        is_active BOOLEAN DEFAULT TRUE,
+        is_approved BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+    )`,
+    `CREATE TABLE IF NOT EXISTS waitlist (
+        id SERIAL PRIMARY KEY,
+        email VARCHAR(255) UNIQUE NOT NULL,
+        user_type VARCHAR(20) NOT NULL CHECK (user_type IN ('seller','realtor','buyer')),
+        created_at TIMESTAMPTZ DEFAULT NOW()
+    )`,
+    `CREATE TABLE IF NOT EXISTS companies (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        owner_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        plan VARCHAR(50) DEFAULT 'basic',
+        stripe_customer_id TEXT UNIQUE,
+        stripe_subscription_id TEXT,
+        is_active BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+    )`,
+    `CREATE TABLE IF NOT EXISTS password_reset_tokens (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        token TEXT UNIQUE NOT NULL,
+        expires_at TIMESTAMPTZ NOT NULL,
+        used BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+    )`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS company_id INTEGER`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS company_name VARCHAR(255)`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS company_role VARCHAR(50)`,
     `CREATE TABLE IF NOT EXISTS listings (
         id SERIAL PRIMARY KEY,
         user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
@@ -5303,6 +5358,7 @@ const _schemaMigrations = [
         timeline TEXT,
         status TEXT NOT NULL DEFAULT 'pending',
         created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW(),
         UNIQUE(listing_id, realtor_id)
     )`,
     `CREATE TABLE IF NOT EXISTS reviews (
@@ -5332,6 +5388,28 @@ const _schemaMigrations = [
         sequence_step INTEGER NOT NULL DEFAULT 1,
         sent_at TIMESTAMPTZ DEFAULT NOW(),
         UNIQUE(user_id, sequence_step)
+    )`,
+    `CREATE TABLE IF NOT EXISTS buyer_requests (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        first_name VARCHAR(255),
+        last_name VARCHAR(255),
+        email VARCHAR(255),
+        phone VARCHAR(50),
+        budget_min NUMERIC(12,2),
+        budget_max NUMERIC(12,2),
+        target_areas TEXT,
+        property_type VARCHAR(50),
+        bedrooms_min INTEGER,
+        timeline TEXT,
+        additional_notes TEXT,
+        zip_code VARCHAR(20),
+        latitude NUMERIC(10,7),
+        longitude NUMERIC(10,7),
+        status VARCHAR(30) DEFAULT 'active',
+        deleted_at TIMESTAMPTZ,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
     )`,
     `CREATE TABLE IF NOT EXISTS buyer_request_responses (
         id SERIAL PRIMARY KEY,
@@ -6946,9 +7024,6 @@ async function runListingExpiryJob() {
         console.error('Listing expiry job error:', err.message);
     }
 }
-runListingExpiryJob();
-setInterval(runListingExpiryJob, 24 * 60 * 60 * 1000).unref();
-
 _schemaMigrations.push(
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS email_unsubscribed BOOLEAN DEFAULT FALSE`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS unsubscribe_token TEXT UNIQUE`,
@@ -7083,8 +7158,6 @@ async function runDripEmailJob() {
 }
 
 // Run every 6 hours
-runDripEmailJob();
-setInterval(runDripEmailJob, 6 * 60 * 60 * 1000).unref();
 
 async function runListingAlertJob() {
     try {
@@ -7121,8 +7194,6 @@ async function runListingAlertJob() {
         if (sent) console.log(`Listing alert job: sent ${sent} emails`);
     } catch(e) { console.error('Listing alert job error:', e.message); }
 }
-runListingAlertJob();
-setInterval(runListingAlertJob, 24 * 60 * 60 * 1000).unref();
 
 async function runWeeklyDigestJob() {
     const now = new Date();
@@ -7173,8 +7244,6 @@ async function runWeeklyDigestJob() {
     } catch(e) { console.error('Weekly digest job error:', e.message); }
 }
 // Check every hour; actually sends only on Sundays
-runWeeklyDigestJob();
-setInterval(runWeeklyDigestJob, 60 * 60 * 1000).unref();
 
 // Seller engagement reminder job — nudges sellers who have unreviewed proposals 5+ days old
 async function runEngagementReminderJob() {
@@ -7219,9 +7288,6 @@ async function runEngagementReminderJob() {
         console.error('Engagement reminder job error:', err.message);
     }
 }
-runEngagementReminderJob();
-setInterval(runEngagementReminderJob, 24 * 60 * 60 * 1000).unref();
-
 _schemaMigrations.push(
     `ALTER TABLE proposals ADD COLUMN IF NOT EXISTS review_request_sent BOOLEAN DEFAULT FALSE`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS notif_new_proposal BOOLEAN NOT NULL DEFAULT TRUE`,
@@ -7301,8 +7367,6 @@ async function runReviewRequestJob() {
         console.error('Review request job error:', err.message);
     }
 }
-runReviewRequestJob();
-setInterval(runReviewRequestJob, 12 * 60 * 60 * 1000).unref(); // Every 12 hours
 
 // Re-engagement job — emails realtors/sellers inactive for 14+ days
 async function runReEngagementJob() {
@@ -7328,8 +7392,6 @@ async function runReEngagementJob() {
         console.error('Re-engagement job error:', err.message);
     }
 }
-runReEngagementJob();
-setInterval(runReEngagementJob, 24 * 60 * 60 * 1000).unref();
 
 // Seller performance digest job — weekly summary for sellers with active listings
 async function runSellerDigestJob() {
@@ -7366,9 +7428,6 @@ async function runSellerDigestJob() {
         console.error('Seller digest job error:', err.message);
     }
 }
-runSellerDigestJob();
-setInterval(runSellerDigestJob, 24 * 60 * 60 * 1000).unref();
-
 // Run all schema migrations then start listening
 async function startServer() {
     for (const sql of _schemaMigrations) {
@@ -7391,6 +7450,24 @@ async function startServer() {
         console.log(`   /dashboard/seller → Seller dashboard`);
         console.log(`   /dashboard/realtor → Realtor dashboard`);
         console.log(`   /app → Main application (legacy)`);
+
+        // Schedule background jobs — run after migrations so tables exist
+        runListingExpiryJob();
+        setInterval(runListingExpiryJob, 24 * 60 * 60 * 1000).unref();
+        runDripEmailJob();
+        setInterval(runDripEmailJob, 6 * 60 * 60 * 1000).unref();
+        runListingAlertJob();
+        setInterval(runListingAlertJob, 24 * 60 * 60 * 1000).unref();
+        runWeeklyDigestJob();
+        setInterval(runWeeklyDigestJob, 60 * 60 * 1000).unref();
+        runEngagementReminderJob();
+        setInterval(runEngagementReminderJob, 24 * 60 * 60 * 1000).unref();
+        runReviewRequestJob();
+        setInterval(runReviewRequestJob, 12 * 60 * 60 * 1000).unref();
+        runReEngagementJob();
+        setInterval(runReEngagementJob, 24 * 60 * 60 * 1000).unref();
+        runSellerDigestJob();
+        setInterval(runSellerDigestJob, 24 * 60 * 60 * 1000).unref();
     });
 }
 startServer().catch(err => {
