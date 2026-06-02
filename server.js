@@ -116,7 +116,7 @@ app.use(session({
     cookie: {
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
         httpOnly: true,
-        secure: true,
+        secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax'
     }
 }));
@@ -5222,7 +5222,40 @@ app.post('/api/proposals/:id/followup', auth.requireAuth, async (req, res) => {
 
 // ALTER TABLE migrations run at startup — collected here so they await before listen
 const _schemaMigrations = [
-    // Base tables — must come first so subsequent ALTER TABLE statements succeed on a fresh DB
+    // Base tables — must come first so all ALTER TABLE and FK references succeed on a fresh DB
+    `CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        email VARCHAR(255) UNIQUE NOT NULL,
+        password_hash VARCHAR(255),
+        user_type VARCHAR(20) CHECK (user_type IN ('seller','realtor','buyer')),
+        first_name VARCHAR(255),
+        last_name VARCHAR(255),
+        zip_code VARCHAR(20),
+        phone VARCHAR(50),
+        bio TEXT,
+        license_number VARCHAR(100),
+        brokerage VARCHAR(255),
+        years_experience INTEGER,
+        service_areas TEXT,
+        profile_photo TEXT,
+        subscription_plan VARCHAR(50),
+        subscription_id TEXT,
+        company_id INTEGER,
+        email_verified BOOLEAN DEFAULT FALSE,
+        verification_token TEXT,
+        verification_token_expires TIMESTAMPTZ,
+        is_admin BOOLEAN DEFAULT FALSE,
+        is_active BOOLEAN DEFAULT TRUE,
+        is_approved BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+    )`,
+    `CREATE TABLE IF NOT EXISTS waitlist (
+        id SERIAL PRIMARY KEY,
+        email VARCHAR(255) UNIQUE NOT NULL,
+        user_type VARCHAR(20) NOT NULL CHECK (user_type IN ('seller','realtor','buyer')),
+        created_at TIMESTAMPTZ DEFAULT NOW()
+    )`,
     `CREATE TABLE IF NOT EXISTS listings (
         id SERIAL PRIMARY KEY,
         user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
