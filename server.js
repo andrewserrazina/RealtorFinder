@@ -2536,27 +2536,27 @@ app.get('/api/admin/crm/realtors-list', requireAdmin, async (req, res) => {
 // Waitlist signup endpoint
 app.post('/api/waitlist', waitlistLimiter, async (req, res) => {
     try {
-        const { email, type } = req.body; // type = 'seller' or 'realtor'
-        
+        const { email, type } = req.body; // type = 'seller', 'realtor', or 'buyer'
+
         if (!email || !email.includes('@')) {
             return res.status(400).json({ error: 'Valid email required' });
         }
-        
-        const normalizedType = ['seller', 'realtor'].includes(type) ? type : 'seller';
 
-        // Save to database
+        const normalizedType = ['seller', 'realtor', 'buyer'].includes(type) ? type : 'seller';
+
+        // Save to database — use xmax to detect insert vs update
         const result = await pool.query(
-            'INSERT INTO waitlist (email, user_type) VALUES ($1, $2) ON CONFLICT (email) DO UPDATE SET user_type = $2 RETURNING *',
+            'INSERT INTO waitlist (email, user_type) VALUES ($1, $2) ON CONFLICT (email) DO UPDATE SET user_type = $2 RETURNING *, (xmax = 0) AS is_insert',
             [email.trim().toLowerCase(), normalizedType]
         );
-        
+
         // Log the signup
-        console.log(`📧 Waitlist signup: ${email} (${type})`);
-        
+        console.log(`📧 Waitlist signup: ${email} (${normalizedType})`);
+
         // Send confirmation email for both new and existing signups
         let emailSent = false;
         let emailErrorMessage = null;
-        const isNewSignup = result.rows.length > 0;
+        const isNewSignup = result.rows[0]?.is_insert === true;
 
         try {
             console.log('📤 Attempting to send email via emailService...');
@@ -7196,6 +7196,13 @@ _schemaMigrations.push(
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS notif_weekly_digest BOOLEAN NOT NULL DEFAULT TRUE`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS notif_listing_alerts BOOLEAN NOT NULL DEFAULT TRUE`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS notif_engagement_reminders BOOLEAN NOT NULL DEFAULT TRUE`,
+    // Expand waitlist user_type to include 'buyer'
+    `DO $$ BEGIN
+        IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'waitlist_user_type_check') THEN
+            ALTER TABLE waitlist DROP CONSTRAINT waitlist_user_type_check;
+            ALTER TABLE waitlist ADD CONSTRAINT waitlist_user_type_check CHECK (user_type IN ('seller','realtor','buyer'));
+        END IF;
+     END $$`,
     `CREATE TABLE IF NOT EXISTS proposal_templates (
         id SERIAL PRIMARY KEY,
         realtor_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
