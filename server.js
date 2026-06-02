@@ -725,6 +725,7 @@ app.post('/api/auth/login', async (req, res) => {
         req.session.lastName = user.lastName;
         req.session.zipCode = user.zipCode;
         req.session.isApproved = user.isApproved || false;
+        req.session.emailVerified = user.emailVerified || false;
 
         console.log('💾 Attempting to save session...');
 
@@ -748,7 +749,8 @@ app.post('/api/auth/login', async (req, res) => {
                 firstName: user.firstName,
                 lastName: user.lastName,
                 zipCode: user.zipCode,
-                isApproved: user.isApproved || false
+                isApproved: user.isApproved || false,
+                emailVerified: user.emailVerified || false
             });
         });
     } catch (error) {
@@ -1683,6 +1685,22 @@ function requireAdmin(req, res, next) {
     if (!req.user.is_admin) return res.status(403).json({ error: 'Admin access required' });
     next();
 }
+
+// Bootstrap: grant admin to the calling user only when no admin exists yet
+app.post('/api/admin/claim-admin', auth.requireAuth, async (req, res) => {
+    try {
+        const { rows } = await pool.query(`SELECT id FROM users WHERE is_admin = TRUE LIMIT 1`);
+        if (rows.length > 0) {
+            return res.status(403).json({ error: 'An admin already exists' });
+        }
+        await pool.query(`UPDATE users SET is_admin = TRUE WHERE id = $1`, [req.session.userId]);
+        req.session.isAdmin = true;
+        res.json({ success: true, message: 'Admin access granted' });
+    } catch (err) {
+        console.error('claim-admin error:', err);
+        res.status(500).json({ error: 'Failed to claim admin' });
+    }
+});
 
 app.get('/api/admin/stats', requireAdmin, async (req, res) => {
     try {
@@ -2934,7 +2952,7 @@ app.post('/api/webhook/stripe', express.raw({ type: 'application/json' }), async
     if (event.type === 'customer.subscription.deleted') {
         const sub = event.data.object;
         try {
-            await applyPlan(sub.customer, 'free', null);
+            await applyPlan(sub.customer, null, null);
             // Notify user their subscription ended
             const { rows } = await pool.query(
                 `SELECT email, first_name FROM users WHERE stripe_customer_id=$1`, [sub.customer]
@@ -5204,6 +5222,47 @@ app.post('/api/proposals/:id/followup', auth.requireAuth, async (req, res) => {
 
 // ALTER TABLE migrations run at startup — collected here so they await before listen
 const _schemaMigrations = [
+    // Base tables — must come first so subsequent ALTER TABLE statements succeed on a fresh DB
+    `CREATE TABLE IF NOT EXISTS listings (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        address TEXT NOT NULL,
+        city VARCHAR(100),
+        state VARCHAR(50),
+        zip VARCHAR(20),
+        price NUMERIC(12,2),
+        property_type VARCHAR(50),
+        bedrooms INTEGER,
+        bathrooms DECIMAL(3,1),
+        sqft INTEGER,
+        description TEXT,
+        owner_name VARCHAR(255),
+        owner_email VARCHAR(255),
+        owner_phone VARCHAR(50),
+        status VARCHAR(30) DEFAULT 'active',
+        image_urls TEXT[],
+        view_count INTEGER DEFAULT 0,
+        latitude NUMERIC(10,7),
+        longitude NUMERIC(10,7),
+        zestimate NUMERIC(12,2),
+        deleted_at TIMESTAMPTZ,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+    )`,
+    `CREATE TABLE IF NOT EXISTS offers (
+        id SERIAL PRIMARY KEY,
+        listing_id INTEGER REFERENCES listings(id) ON DELETE CASCADE,
+        user_id INTEGER REFERENCES users(id),
+        realtor_name VARCHAR(255),
+        brokerage VARCHAR(255),
+        realtor_email VARCHAR(255),
+        realtor_phone VARCHAR(50),
+        commission DECIMAL(5,2),
+        offer_details TEXT,
+        status VARCHAR(30) DEFAULT 'pending',
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+    )`,
     // Core column additions
     `ALTER TABLE listings ADD COLUMN IF NOT EXISTS expiry_warning_sent BOOLEAN DEFAULT FALSE`,
     `ALTER TABLE listings ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ`,
