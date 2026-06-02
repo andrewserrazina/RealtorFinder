@@ -1158,8 +1158,8 @@ const emailService = {
     async sendSubscriptionCancelled(toEmail, firstName) {
         const body = emailWrap('#0A2540',
             h1('Subscription Ended') +
-            p(`Hi ${firstName}, your RealtorFinder subscription has been cancelled and your account has been moved to the Basic plan.`) +
-            p('You can resubscribe at any time to restore full access to all listings and features.') +
+            p(`Hi ${firstName}, your RealtorFinder subscription has ended and your access to premium features has been paused.`) +
+            p('You can resubscribe at any time to restore full access to all listings, buyer requests, and realtor tools.') +
             btn('https://www.realtorfinder.net/pricing', 'Resubscribe')
         );
         return await send({ to: toEmail, subject: 'Your RealtorFinder subscription has ended', html: body });
