@@ -808,6 +808,16 @@ app.get('/api/auth/verify-email', async (req, res) => {
 // Resend verification email
 app.post('/api/auth/resend-verification', auth.requireAuth, async (req, res) => {
     try {
+        // Per-user rate limit: max 3 resends per hour (mirrors forgot-password limit)
+        const { rows: recent } = await pool.query(
+            `SELECT COUNT(*) AS cnt FROM verification_resend_log WHERE user_id=$1 AND created_at > NOW() - INTERVAL '1 hour'`,
+            [req.session.userId]
+        );
+        if (parseInt(recent[0].cnt) >= 3) {
+            return res.status(429).json({ error: 'Too many resend requests. Please wait before trying again.' });
+        }
+        await pool.query(`INSERT INTO verification_resend_log (user_id) VALUES ($1)`, [req.session.userId]);
+
         const token = crypto.randomBytes(32).toString('hex');
         const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000);
         await db.setVerificationToken(req.session.userId, token, expiresAt);
@@ -1809,6 +1819,8 @@ app.put('/api/admin/users/:id/approve', requireAdmin, async (req, res) => {
     const client = await pool.connect();
     try {
         await client.query('BEGIN');
+        // Advisory lock prevents two concurrent approvals from both counting < 100
+        await client.query(`SELECT pg_advisory_xact_lock(1001)`);
 
         // Count already-approved realtors to determine founding status (first 100)
         const { rows: countRows } = await client.query(
@@ -2066,34 +2078,7 @@ app.delete('/api/admin/reviews/:id', requireAdmin, async (req, res) => {
 
 // ===== ADMIN IMPERSONATION =====
 
-app.post('/api/admin/impersonate/:userId', requireAdmin, impersonateLimiter, async (req, res) => {
-    try {
-        const adminId = req.session.userId;
-        const targetId = parseInt(req.params.userId);
-        const { rows } = await pool.query(
-            `SELECT id, first_name, last_name, user_type FROM users WHERE id = $1`,
-            [targetId]
-        );
-        if (!rows.length) return res.status(404).json({ error: 'User not found' });
-        const target = rows[0];
-        // Audit log every impersonation
-        console.log(`[AUDIT] Admin ${adminId} impersonating user ${targetId} (${target.first_name} ${target.last_name}) from IP ${req.ip} at ${new Date().toISOString()}`);
-        await pool.query(
-            `INSERT INTO admin_audit_log (admin_id, action, target_user_id, ip_address) VALUES ($1, 'impersonate_start', $2, $3)`,
-            [adminId, targetId, req.ip]
-        ).catch(err => console.error('Audit log insert failed:', err.message));
-        req.session.impersonating = adminId;
-        req.session.userId = targetId;
-        req.session.userType = target.user_type;
-        req.session.firstName = target.first_name;
-        req.session.lastName = target.last_name;
-        res.json({ ok: true, userType: target.user_type });
-    } catch (err) {
-        console.error('Impersonate error:', err);
-        res.status(500).json({ error: 'Failed to impersonate user' });
-    }
-});
-
+// /end and /status must be defined BEFORE /:userId or Express swallows them
 app.post('/api/admin/impersonate/end', auth.requireAuth, async (req, res) => {
     try {
         if (!req.session.impersonating) return res.status(400).json({ error: 'Not in impersonation mode' });
@@ -2132,6 +2117,33 @@ app.get('/api/admin/impersonate/status', auth.requireAuth, async (req, res) => {
         res.json({ impersonating: true, originalName: name });
     } catch (err) {
         res.json({ impersonating: false, originalName: '' });
+    }
+});
+
+app.post('/api/admin/impersonate/:userId', requireAdmin, impersonateLimiter, async (req, res) => {
+    try {
+        const adminId = req.session.userId;
+        const targetId = parseInt(req.params.userId);
+        const { rows } = await pool.query(
+            `SELECT id, first_name, last_name, user_type FROM users WHERE id = $1`,
+            [targetId]
+        );
+        if (!rows.length) return res.status(404).json({ error: 'User not found' });
+        const target = rows[0];
+        console.log(`[AUDIT] Admin ${adminId} impersonating user ${targetId} (${target.first_name} ${target.last_name}) from IP ${req.ip} at ${new Date().toISOString()}`);
+        await pool.query(
+            `INSERT INTO admin_audit_log (admin_id, action, target_user_id, ip_address) VALUES ($1, 'impersonate_start', $2, $3)`,
+            [adminId, targetId, req.ip]
+        ).catch(err => console.error('Audit log insert failed:', err.message));
+        req.session.impersonating = adminId;
+        req.session.userId = targetId;
+        req.session.userType = target.user_type;
+        req.session.firstName = target.first_name;
+        req.session.lastName = target.last_name;
+        res.json({ ok: true, userType: target.user_type });
+    } catch (err) {
+        console.error('Impersonate error:', err);
+        res.status(500).json({ error: 'Failed to impersonate user' });
     }
 });
 
@@ -2902,12 +2914,15 @@ app.post('/api/webhook/stripe', express.raw({ type: 'application/json' }), async
                     }
                 }
 
-                // Credit referrer $25 on first subscription (outside transaction — non-critical)
+                // Credit referrer $25 on first subscription — guard with referral_credit_paid to survive webhook retries
                 const refRow = await pool.query(
-                    `SELECT referred_by FROM users WHERE id=$1 AND referred_by IS NOT NULL`, [userId]
+                    `SELECT referred_by FROM users WHERE id=$1 AND referred_by IS NOT NULL AND referral_credit_paid IS NOT TRUE`,
+                    [userId]
                 );
                 if (refRow.rows.length) {
                     const referrerId = refRow.rows[0].referred_by;
+                    // Mark paid first so concurrent retries see it immediately
+                    await pool.query(`UPDATE users SET referral_credit_paid = TRUE WHERE id=$1`, [userId]);
                     await pool.query(
                         `UPDATE users SET referral_credits_cents = referral_credits_cents + 2500 WHERE id=$1`,
                         [referrerId]
@@ -3169,17 +3184,18 @@ app.post('/api/admin/campaign', requireAdmin, async (req, res) => {
         if (segment === 'realtors') conditions.push(`u.user_type = 'realtor'`);
         else if (segment === 'sellers') conditions.push(`u.user_type = 'seller'`);
         else if (segment === 'buyers') conditions.push(`u.user_type = 'buyer'`);
+        const queryParams = [];
         if (plan_filter && segment === 'realtors') {
-            conditions.push(`COALESCE(u.subscription_plan, 'free') = '${plan_filter.replace(/[^a-z]/g, '')}'`);
+            queryParams.push(plan_filter.replace(/[^a-z]/g, ''));
+            conditions.push(`COALESCE(u.subscription_plan, 'free') = $${queryParams.length}`);
         }
 
         const { rows: users } = await pool.query(
             `SELECT u.id, u.email, u.first_name FROM users u WHERE ${conditions.join(' AND ')} LIMIT 5000`,
-            []
+            queryParams
         );
 
         const sent = [];
-        const sleep = ms => new Promise(r => setTimeout(r, ms));
         for (const user of users) {
             try {
                 await emailService.sendCampaignEmail(user.email, user.first_name, subject, message, cta_label, cta_url);
@@ -4523,7 +4539,8 @@ app.get('/api/referrals/leaderboard', async (req, res) => {
 app.get('/join', (req, res) => {
     const ref = req.query.ref;
     if (ref) {
-        res.setHeader('Set-Cookie', `ref_code=${ref}; Path=/; Max-Age=${7 * 24 * 3600}; SameSite=Lax`);
+        // Use res.cookie() so Express sanitizes the value and prevents header injection
+        res.cookie('ref_code', ref, { path: '/', maxAge: 7 * 24 * 3600 * 1000, sameSite: 'lax', httpOnly: false });
     }
     res.redirect('/login?tab=signup');
 });
@@ -5466,6 +5483,12 @@ const _schemaMigrations = [
     `CREATE INDEX IF NOT EXISTS idx_profile_views_realtor ON profile_views(realtor_id, viewed_at DESC)`,
     `CREATE INDEX IF NOT EXISTS idx_showings_listing ON showings(listing_id)`,
     `CREATE INDEX IF NOT EXISTS idx_drip_emails_user ON drip_emails(user_id, sequence_step)`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_credit_paid BOOLEAN DEFAULT FALSE`,
+    `CREATE TABLE IF NOT EXISTS verification_resend_log (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+    )`,
     // Counter-offer columns on proposals
     `ALTER TABLE proposals ADD COLUMN IF NOT EXISTS counter_commission NUMERIC(5,2)`,
     `ALTER TABLE proposals ADD COLUMN IF NOT EXISTS counter_message TEXT`,
