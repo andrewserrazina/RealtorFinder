@@ -303,8 +303,8 @@
         <a href="/sellers">For Sellers</a>
         <a href="/realtors">For Realtors</a>
         <a href="/pricing">Pricing</a>
-        <a href="/about">About</a>
-        <a href="/login?tab=signup" class="nav-cta">Get Started Free</a>
+        <a href="/contact">Contact</a>
+        <a href="/login?tab=signup&type=seller" class="nav-cta">Get Started Free</a>
     </div>
     <button class="nav-hamburger" id="navHamburger" aria-label="Open menu" aria-expanded="false">
         <span></span><span></span><span></span>
@@ -314,8 +314,8 @@
     <a href="/sellers" onclick="closeMobileMenu()">For Sellers</a>
     <a href="/realtors" onclick="closeMobileMenu()">For Realtors</a>
     <a href="/pricing" onclick="closeMobileMenu()">Pricing</a>
-    <a href="/about" onclick="closeMobileMenu()">About</a>
-    <a href="/login?tab=signup" class="nav-cta" onclick="closeMobileMenu()">Get Started Free</a>
+    <a href="/contact" onclick="closeMobileMenu()">Contact</a>
+    <a href="/login?tab=signup&type=seller" class="nav-cta" onclick="closeMobileMenu()">Get Started Free</a>
 </div>
 
 <div class="hero">
@@ -479,6 +479,11 @@
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         document.getElementById('tab-' + tab).classList.add('visible');
         document.querySelector('[data-tab="' + tab + '"]').classList.add('active');
+        // Update nav CTA to match active tab's signup type
+        const type = tab === 'realtors' ? 'realtor' : 'seller';
+        document.querySelectorAll('a.nav-cta').forEach(a => {
+            a.href = '/login?tab=signup&type=' + type;
+        });
         // Close all open items when switching tabs
         document.querySelectorAll('.faq-item.open').forEach(item => {
             item.classList.remove('open');
@@ -486,6 +491,12 @@
         });
         gtag('event', 'faq_tab_switch', { tab });
     }
+    // Set correct initial CTA (default tab is sellers)
+    document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('a.nav-cta').forEach(a => {
+            a.href = '/login?tab=signup&type=seller';
+        });
+    });
 
     // Accordion toggle
     function toggleFaq(btn) {
