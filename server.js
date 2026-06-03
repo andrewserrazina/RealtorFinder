@@ -143,7 +143,7 @@ app.use(auth.attachUser);
 app.use('/api', (req, res, next) => {
     if (!req.user || !req.user.id) return next(); // unauthenticated — let route handle it
     // These paths work regardless of approval status
-    const exempt = ['/auth/', '/webhook/', '/admin/'];
+    const exempt = ['/auth/', '/webhook/', '/admin/', '/referrals/'];
     // Public read-only endpoints accessible regardless of approval status
     const publicGet = ['/realtors/founding-count', '/realtors/search', '/realtors/leaderboard', '/listings'];
     if (exempt.some(p => req.path.startsWith(p))) return next();
@@ -4078,7 +4078,7 @@ app.get('/api/listings/:id/public', async (req, res) => {
 app.get('/api/realtors/founding-count', async (req, res) => {
     try {
         const { rows } = await pool.query(
-            `SELECT COUNT(*) AS count FROM users WHERE user_type = 'realtor' AND is_approved = TRUE AND is_active IS NOT FALSE`
+            `SELECT COUNT(*) AS count FROM users WHERE user_type = 'realtor' AND is_active IS NOT FALSE`
         );
         const claimed = Math.min(parseInt(rows[0].count) || 0, 100);
         res.json({ claimed, total: 100, remaining: Math.max(100 - claimed, 0) });
