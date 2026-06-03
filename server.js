@@ -991,6 +991,7 @@ app.get('/api/listings/:id', async (req, res) => {
 app.post('/api/listings', auth.requireAuth, async (req, res) => {
     try {
         if (!req.session.emailVerified && !req.user.email_verified) return res.status(403).json({ error: 'Please verify your email address before creating a listing. Check your inbox for a verification link.' });
+        if (req.user.user_type !== 'seller') return res.status(403).json({ error: 'Only seller accounts can create listings' });
         const { address, price, type, bedrooms, bathrooms, sqft, description, ownerName, ownerEmail, ownerPhone, zestimate, owner_attested } = req.body;
         
         // Parse address into components (basic parsing - could be enhanced with address validation API)
@@ -1091,9 +1092,10 @@ app.put('/api/listings/:id', auth.requireAuth, async (req, res) => {
 // Submit offer for a listing (requires authentication)
 app.post('/api/listings/:id/offers', auth.requireAuth, async (req, res) => {
     try {
+        if (!req.session.emailVerified && !req.user.email_verified) return res.status(403).json({ error: 'Please verify your email address first. Check your inbox for a verification link.' });
         const listingId = parseInt(req.params.id);
         const listing = await db.getListingById(listingId);
-        
+
         if (!listing) {
             return res.status(404).json({ error: 'Listing not found' });
         }
@@ -1358,9 +1360,14 @@ app.put('/api/listings/:id/images', auth.requireAuth, async (req, res) => {
 });
 
 // Upload images for a listing
-app.post('/api/listings/:id/images', uploadLimiter, upload.array('images', 10), async (req, res) => {
+app.post('/api/listings/:id/images', auth.requireAuth, uploadLimiter, upload.array('images', 10), async (req, res) => {
     try {
-        const listingId = req.params.id;
+        const listingId = parseInt(req.params.id);
+        // Verify the caller owns this listing
+        const ownerCheck = await pool.query(`SELECT user_id FROM listings WHERE id=$1 AND deleted_at IS NULL`, [listingId]);
+        if (!ownerCheck.rows.length) return res.status(404).json({ error: 'Listing not found' });
+        if (ownerCheck.rows[0].user_id !== req.session.userId) return res.status(403).json({ error: 'Forbidden' });
+
         const imageUrls = [];
 
         if (!req.files || req.files.length === 0) {
@@ -4160,7 +4167,7 @@ app.post('/api/proposals', auth.requireAuth, async (req, res) => {
         (async () => {
             try {
                 const sellerRes = await pool.query(
-                    `SELECT u.email, u.first_name, u.last_name, l.address, l.city, l.state
+                    `SELECT u.id AS seller_id, u.email, u.first_name, u.last_name, l.address, l.city, l.state
                      FROM listings l JOIN users u ON u.id = l.user_id
                      WHERE l.id = $1`,
                     [listing_id]
@@ -4170,6 +4177,12 @@ app.post('/api/proposals', auth.requireAuth, async (req, res) => {
                 const addr = [s.address, s.city, s.state].filter(Boolean).join(', ');
                 const realtorName = `${req.user.first_name || ''} ${req.user.last_name || ''}`.trim();
                 await emailService.sendProposalNotification(s.email, s.first_name, addr, realtorName, pct);
+                // In-app notification + SSE push (mirrors legacy offers system)
+                pool.query(
+                    `INSERT INTO notifications (user_id, type, title, body, link)
+                     VALUES ($1, 'proposal', 'New Realtor Proposal', $2, '/dashboard/seller')`,
+                    [s.seller_id, `${realtorName} submitted a proposal on ${addr} — ${pct}% commission`]
+                ).then(() => sseNotify(s.seller_id, { type: 'notification' })).catch(() => {});
             } catch(e) { console.error('Proposal notification failed:', e.message); }
         })();
         res.status(201).json(proposal);
@@ -4448,6 +4461,7 @@ app.put('/api/proposals/:id/accept', auth.requireAuth, async (req, res) => {
 
 app.post('/api/reviews', auth.requireAuth, async (req, res) => {
     try {
+        if (!req.session.emailVerified && !req.user.email_verified) return res.status(403).json({ error: 'Please verify your email address first. Check your inbox for a verification link.' });
         const { realtor_id, listing_id, rating, comment } = req.body;
         if (!realtor_id || !rating) return res.status(400).json({ error: 'realtor_id and rating required' });
         if (rating < 1 || rating > 5) return res.status(400).json({ error: 'Rating must be 1–5' });
@@ -4775,6 +4789,7 @@ const VALID_TIMES = ['9:00 AM','10:00 AM','11:00 AM','12:00 PM','1:00 PM','2:00 
 // Request a showing
 app.post('/api/showings', auth.requireAuth, async (req, res) => {
     try {
+        if (!req.session.emailVerified && !req.user.email_verified) return res.status(403).json({ error: 'Please verify your email address first. Check your inbox for a verification link.' });
         const { listing_id, requested_date, requested_time, message } = req.body;
         if (!listing_id || !requested_date || !requested_time) {
             return res.status(400).json({ error: 'listing_id, requested_date, and requested_time are required' });
@@ -5656,6 +5671,7 @@ app.get('/api/messages/thread', auth.requireAuth, async (req, res) => {
 // Send a message
 app.post('/api/messages', auth.requireAuth, async (req, res) => {
     try {
+        if (!req.session.emailVerified && !req.user.email_verified) return res.status(403).json({ error: 'Please verify your email address first. Check your inbox for a verification link.' });
         const uid = req.session.userId;
         const { toUserId, listingId, body } = req.body;
         if (!toUserId || !body || !body.trim()) return res.status(400).json({ error: 'toUserId and body required' });
@@ -6059,6 +6075,7 @@ app.get('/api/listings/:id/analytics', auth.requireAuth, async (req, res) => {
 
 app.post('/api/realtor-showings', auth.requireAuth, async (req, res) => {
     try {
+        if (!req.session.emailVerified && !req.user.email_verified) return res.status(403).json({ error: 'Please verify your email address first. Check your inbox for a verification link.' });
         if (req.user.user_type !== 'realtor') return res.status(403).json({ error: 'Realtors only' });
         const { listing_id, proposed_slots, message } = req.body;
         if (!listing_id || !Array.isArray(proposed_slots) || !proposed_slots.length) {
@@ -6964,6 +6981,9 @@ app.get('/terms', (req, res) => {
 });
 app.get('/cookies', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'cookies.html'));
+});
+app.get('/fair-housing', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'fair-housing.html'));
 });
 app.get('/features', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'features.html'));
