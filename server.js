@@ -141,7 +141,10 @@ app.use('/api', (req, res, next) => {
     if (!req.user || !req.user.id) return next(); // unauthenticated — let route handle it
     // These paths work regardless of approval status
     const exempt = ['/auth/', '/webhook/', '/admin/'];
+    // Public read-only endpoints accessible regardless of approval status
+    const publicGet = ['/realtors/founding-count', '/realtors/search', '/realtors/leaderboard', '/listings'];
     if (exempt.some(p => req.path.startsWith(p))) return next();
+    if (req.method === 'GET' && publicGet.some(p => req.path.startsWith(p))) return next();
     if (req.user.is_active === false) {
         return res.status(403).json({ error: 'account_deactivated', message: 'Your account has been deactivated. Please contact support.' });
     }
