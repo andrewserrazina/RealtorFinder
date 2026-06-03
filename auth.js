@@ -106,7 +106,8 @@ const auth = {
             if (!req.session || !req.session.userId) {
                 return res.status(401).json({ error: 'Authentication required' });
             }
-            if (req.session.userType !== userType) {
+            const type = req.user ? req.user.user_type : req.session.userType;
+            if (type !== userType) {
                 return res.status(403).json({ error: 'Unauthorized user type' });
             }
             next();
@@ -126,7 +127,7 @@ const auth = {
                     last_name: req.session.lastName,
                     zip_code: req.session.zipCode,
                     email_verified: req.session.emailVerified || false,
-                    is_admin: false
+                    is_admin: req.session.isAdmin || false
                 };
             } catch (error) {
                 console.error('Error attaching user:', error);
@@ -137,7 +138,7 @@ const auth = {
                     last_name: req.session.lastName,
                     zip_code: req.session.zipCode,
                     email_verified: req.session.emailVerified || false,
-                    is_admin: false
+                    is_admin: req.session.isAdmin || false
                 };
             }
         }

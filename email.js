@@ -414,7 +414,7 @@ const emailService = {
     },
 
     async sendContactEmail({ name, email, subject, message }) {
-        const to = process.env.SENDGRID_FROM_EMAIL || 'hello@realtorfinder.net';
+        const to = process.env.CONTACT_EMAIL || 'info@realtorfinder.net';
         const body = `
             ${h1('New Contact Form Submission')}
             ${infoBox([

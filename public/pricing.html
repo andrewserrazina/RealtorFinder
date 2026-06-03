@@ -32,7 +32,7 @@
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@600;700;900&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         :root {
             --primary: #0A2540;
@@ -46,43 +46,57 @@
         body { font-family: 'DM Sans', sans-serif; background: var(--soft-bg); color: var(--text); }
 
         /* Nav */
-        nav {
-            background: var(--primary);
-            padding: 0 2rem;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            height: 64px;
-            position: sticky;
-            top: 0;
-            z-index: 100;
+        @keyframes slideDown {
+            from { transform: translateY(-100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
         }
-        .nav-logo {
-            font-family: 'Crimson Pro', serif;
-            font-size: 1.6rem;
+        nav {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            background: var(--soft-bg);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border);
+            z-index: 1000;
+            animation: slideDown 0.6s ease-out;
+        }
+        .nav-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1.25rem 3rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .logo {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.8rem;
             font-weight: 900;
-            color: white;
+            color: var(--primary);
+            letter-spacing: -0.5px;
             text-decoration: none;
         }
-        .nav-logo span { color: var(--accent); }
-        .nav-links { display: flex; gap: 2rem; align-items: center; }
-        .nav-links a { color: rgba(255,255,255,0.8); text-decoration: none; font-size: 0.95rem; font-weight: 500; }
-        .nav-links a:hover { color: white; }
+        .logo span { color: var(--accent); }
+        .nav-links { display: flex; gap: 2.5rem; align-items: center; }
+        .nav-links a { text-decoration: none; color: var(--text); font-weight: 500; font-size: 0.95rem; transition: color 0.3s; position: relative; }
+        .nav-links a::after { content: ''; position: absolute; bottom: -5px; left: 0; width: 0; height: 2px; background: var(--accent); transition: width 0.3s; }
+        .nav-links a:hover::after { width: 100%; }
         .nav-cta {
             background: var(--accent);
             color: white !important;
-            padding: 0.5rem 1.25rem;
-            border-radius: 8px;
-            font-weight: 600 !important;
+            padding: 0.75rem 1.75rem;
+            border-radius: 50px;
+            transition: all 0.3s;
         }
-        .nav-cta:hover { background: #e55a2b; }
+        .nav-cta::after { display: none !important; }
+        .nav-cta:hover { background: var(--primary); transform: translateY(-2px); box-shadow: 0 10px 30px rgba(10,37,64,0.3); }
 
         /* Hero */
         .hero {
             text-align: center;
             padding: 5rem 2rem 3rem;
             max-width: 700px;
-            margin: 0 auto;
+            margin: 90px auto 0;
         }
         .hero-eyebrow {
             display: inline-block;
@@ -297,42 +311,43 @@
             display: block;
             width: 24px;
             height: 2px;
-            background: white;
+            background: var(--primary);
             border-radius: 2px;
             transition: all 0.2s;
         }
         .mobile-menu {
             display: none;
-            background: var(--primary);
+            background: var(--soft-bg);
             width: 100%;
-            position: absolute;
-            top: 64px;
+            position: fixed;
+            top: 73px;
             left: 0;
-            z-index: 99;
-            border-top: 1px solid rgba(255,255,255,0.1);
+            z-index: 999;
+            border-top: 1px solid var(--border);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.08);
         }
         .mobile-menu.open { display: block; }
         .mobile-menu a {
             display: block;
-            color: rgba(255,255,255,0.85);
+            color: var(--text);
             text-decoration: none;
             font-size: 1rem;
             font-weight: 500;
             padding: 1rem 2rem;
-            border-bottom: 1px solid rgba(255,255,255,0.08);
+            border-bottom: 1px solid var(--border);
         }
-        .mobile-menu a:hover { color: white; background: rgba(255,255,255,0.05); }
+        .mobile-menu a:hover { color: var(--accent); background: rgba(255,107,53,0.04); }
         .mobile-menu .nav-cta {
             margin: 1rem 2rem;
             display: block;
             text-align: center;
-            border-radius: 8px;
+            border-radius: 50px;
             background: var(--accent);
             color: white !important;
             font-weight: 600 !important;
             border-bottom: none;
         }
-        .mobile-menu .nav-cta:hover { background: #e55a2b; }
+        .mobile-menu .nav-cta:hover { background: var(--primary); }
 
         @media (max-width: 1100px) {
             .pricing-grid { grid-template-columns: repeat(2, 1fr); }
@@ -356,23 +371,27 @@
 <body>
 
 <nav>
-    <a href="/" class="nav-logo">Realtor<span>Finder</span></a>
-    <div class="nav-links">
-        <a href="/realtors">For Realtors</a>
-        <a href="/sellers">For Sellers</a>
-        <a href="/about">About</a>
-        <a href="/contact">Contact</a>
-        <a href="/login?tab=signup&type=realtor" class="nav-cta">Create Account</a>
+    <div class="nav-container">
+        <a href="/realtors" class="logo">Realtor<span>Finder</span></a>
+        <div class="nav-links">
+            <a href="/realtors#benefits">How It Works</a>
+            <a href="/realtors#founding" style="color:#F59E0B;font-weight:600;">🏅 Founding Members</a>
+            <a href="/realtors#referral-program">Referrals</a>
+            <a href="/pricing">Pricing</a>
+            <a href="/about">About</a>
+            <a href="/login?tab=signup&type=realtor" class="nav-cta">Create Account</a>
+        </div>
+        <button class="nav-hamburger" id="navHamburger" aria-label="Open menu" aria-expanded="false">
+            <span></span><span></span><span></span>
+        </button>
     </div>
-    <button class="nav-hamburger" id="navHamburger" aria-label="Open menu" aria-expanded="false">
-        <span></span><span></span><span></span>
-    </button>
 </nav>
 <div class="mobile-menu" id="mobileMenu" role="navigation">
-    <a href="/realtors" onclick="closeMobileMenu()">For Realtors</a>
-    <a href="/sellers" onclick="closeMobileMenu()">For Sellers</a>
+    <a href="/realtors#benefits" onclick="closeMobileMenu()">How It Works</a>
+    <a href="/realtors#founding" onclick="closeMobileMenu()" style="color:#F59E0B;font-weight:600;">🏅 Founding Members</a>
+    <a href="/realtors#referral-program" onclick="closeMobileMenu()">Referrals</a>
+    <a href="/pricing" onclick="closeMobileMenu()">Pricing</a>
     <a href="/about" onclick="closeMobileMenu()">About</a>
-    <a href="/contact" onclick="closeMobileMenu()">Contact</a>
     <a href="/login?tab=signup&type=realtor" class="nav-cta" onclick="closeMobileMenu()">Create Account</a>
 </div>
 
