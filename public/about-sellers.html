@@ -3,16 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>About — RealtorFinder</title>
-    <meta name="description" content="RealtorFinder flips the traditional real estate model. Sellers list their homes, realtors compete for the listing — you choose the best fit.">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="RealtorFinder">
+    <title>About — RealtorFinder for Home Sellers</title>
+    <meta name="description" content="RealtorFinder lets home sellers list their property and receive competing proposals from licensed realtors. Free for sellers, always.">
     <meta property="og:type" content="website">
-    <meta property="og:url" content="https://realtorfinder.net/about">
-    <meta property="og:title" content="About — RealtorFinder">
-    <meta property="og:description" content="RealtorFinder flips the traditional real estate model. Sellers list their homes, realtors compete for the listing — you choose the best fit.">
+    <meta property="og:url" content="https://realtorfinder.net/about-sellers">
+    <meta property="og:title" content="About — RealtorFinder for Home Sellers">
+    <meta property="og:description" content="RealtorFinder lets home sellers list their property and receive competing proposals from licensed realtors. Free for sellers, always.">
     <meta property="og:image" content="https://realtorfinder.net/og-default.png">
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="About — RealtorFinder">
-    <meta name="twitter:description" content="RealtorFinder flips the traditional real estate model. Sellers list their homes, realtors compete for the listing — you choose the best fit.">
+    <meta name="twitter:title" content="About — RealtorFinder for Home Sellers">
+    <meta name="twitter:description" content="RealtorFinder lets home sellers list their property and receive competing proposals from licensed realtors. Free for sellers, always.">
     <meta name="twitter:image" content="https://realtorfinder.net/og-default.png">
     <!-- Google Analytics 4 -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-BRGVVNKT65"></script>
@@ -32,7 +36,7 @@
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Crimson+Pro:wght@600;700;900&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         :root {
             --primary: #0A2540;
@@ -76,6 +80,58 @@
         .nav-cta { background: var(--accent); color: white !important; padding: 0.75rem 1.75rem; border-radius: 50px; transition: all 0.3s; }
         .nav-cta::after { display: none !important; }
         .nav-cta:hover { background: var(--primary); transform: translateY(-2px); box-shadow: 0 10px 30px rgba(10,37,64,0.3); }
+
+        /* Hamburger */
+        .nav-hamburger {
+            display: none;
+            flex-direction: column;
+            gap: 5px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 4px;
+        }
+        .nav-hamburger span {
+            display: block;
+            width: 24px;
+            height: 2px;
+            background: var(--primary);
+            border-radius: 2px;
+            transition: all 0.2s;
+        }
+        .mobile-menu {
+            display: none;
+            background: var(--soft-bg);
+            width: 100%;
+            position: fixed;
+            top: 73px;
+            left: 0;
+            z-index: 999;
+            border-top: 1px solid var(--border);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+        }
+        .mobile-menu.open { display: block; }
+        .mobile-menu a {
+            display: block;
+            color: var(--text);
+            text-decoration: none;
+            font-size: 1rem;
+            font-weight: 500;
+            padding: 1rem 2rem;
+            border-bottom: 1px solid var(--border);
+        }
+        .mobile-menu a:hover { color: var(--accent); background: rgba(255,107,53,0.04); }
+        .mobile-menu .nav-cta {
+            margin: 1rem 2rem;
+            display: block;
+            text-align: center;
+            border-radius: 50px;
+            background: var(--accent);
+            color: white !important;
+            font-weight: 600 !important;
+            border-bottom: none;
+        }
+        .mobile-menu .nav-cta:hover { background: var(--primary); }
 
         /* Hero */
         .hero {
@@ -200,7 +256,7 @@
             width: 48px;
             height: 48px;
             border-radius: 50%;
-            background: var(--primary);
+            background: var(--accent);
             color: white;
             font-family: 'Playfair Display', serif;
             font-size: 1.4rem;
@@ -318,58 +374,6 @@
         footer a { color: rgba(255,255,255,0.5); text-decoration: none; }
         footer a:hover { color: white; }
 
-        /* Hamburger */
-        .nav-hamburger {
-            display: none;
-            flex-direction: column;
-            gap: 5px;
-            background: none;
-            border: none;
-            cursor: pointer;
-            padding: 4px;
-        }
-        .nav-hamburger span {
-            display: block;
-            width: 24px;
-            height: 2px;
-            background: var(--primary);
-            border-radius: 2px;
-            transition: all 0.2s;
-        }
-        .mobile-menu {
-            display: none;
-            background: var(--soft-bg);
-            width: 100%;
-            position: fixed;
-            top: 73px;
-            left: 0;
-            z-index: 999;
-            border-top: 1px solid var(--border);
-            box-shadow: 0 8px 24px rgba(0,0,0,0.08);
-        }
-        .mobile-menu.open { display: block; }
-        .mobile-menu a {
-            display: block;
-            color: var(--text);
-            text-decoration: none;
-            font-size: 1rem;
-            font-weight: 500;
-            padding: 1rem 2rem;
-            border-bottom: 1px solid var(--border);
-        }
-        .mobile-menu a:hover { color: var(--accent); background: rgba(255,107,53,0.04); }
-        .mobile-menu .nav-cta {
-            margin: 1rem 2rem;
-            display: block;
-            text-align: center;
-            border-radius: 50px;
-            background: var(--accent);
-            color: white !important;
-            font-weight: 600 !important;
-            border-bottom: none;
-        }
-        .mobile-menu .nav-cta:hover { background: var(--primary); }
-
         @media (max-width: 700px) {
             .hero h1 { font-size: 2.4rem; }
             .split { grid-template-columns: 1fr; }
@@ -378,27 +382,23 @@
             .stats-inner { grid-template-columns: 1fr; gap: 1.5rem; }
             .nav-links { display: none; }
             .nav-hamburger { display: flex; }
+            .nav-container { padding: 1rem 1.5rem; }
         }
     </style>
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#0A2540">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="RealtorFinder">
 </head>
 <body>
 
 <nav>
     <div class="nav-container">
-        <a href="/realtors" class="logo">Realtor<span>Finder</span></a>
+        <a href="/" class="logo">Realtor<span>Finder</span></a>
         <div class="nav-links">
-            <a href="/realtors#benefits">How It Works</a>
-            <a href="/realtors#founding" style="color:#F59E0B;font-weight:600;">🏅 Founding Members</a>
-            <a href="/realtors#referral-program">Referrals</a>
-            <a href="/pricing">Pricing</a>
-            <a href="/about">About</a>
+            <a href="/#how-it-works">Why Us</a>
+            <a href="/#features">How It Works</a>
+            <a href="/about-sellers">About</a>
             <a href="/contact">Contact</a>
-            <a href="/login?tab=signup&type=realtor" class="nav-cta">Create Account</a>
+            <a href="/login?tab=signup&type=seller" class="nav-cta">List Your Home Free</a>
         </div>
         <button class="nav-hamburger" id="navHamburger" aria-label="Open menu" aria-expanded="false">
             <span></span><span></span><span></span>
@@ -406,49 +406,48 @@
     </div>
 </nav>
 <div class="mobile-menu" id="mobileMenu" role="navigation">
-    <a href="/realtors#benefits" onclick="closeMobileMenu()">How It Works</a>
-    <a href="/realtors#founding" onclick="closeMobileMenu()" style="color:#F59E0B;font-weight:600;">🏅 Founding Members</a>
-    <a href="/realtors#referral-program" onclick="closeMobileMenu()">Referrals</a>
-    <a href="/pricing" onclick="closeMobileMenu()">Pricing</a>
-    <a href="/about" onclick="closeMobileMenu()">About</a>
-    <a href="/login?tab=signup&type=realtor" class="nav-cta" onclick="closeMobileMenu()">Create Account</a>
+    <a href="/#how-it-works" onclick="closeMobileMenu()">Why Us</a>
+    <a href="/#features" onclick="closeMobileMenu()">How It Works</a>
+    <a href="/about-sellers" onclick="closeMobileMenu()">About</a>
+    <a href="/contact" onclick="closeMobileMenu()">Contact</a>
+    <a href="/login?tab=signup&type=seller" class="nav-cta" onclick="closeMobileMenu()">List Your Home Free</a>
 </div>
 
 <!-- Hero -->
 <section class="hero">
-    <div class="hero-eyebrow">For Realtors</div>
-    <h1>Stop chasing leads.<br><span>Let motivated sellers find you.</span></h1>
-    <p>RealtorFinder is the first marketplace where home sellers post their listings and qualified realtors compete for the business — on merit, not cold calls.</p>
+    <div class="hero-eyebrow">For Home Sellers</div>
+    <h1>Your home. Your choice.<br><span>You pick the agent.</span></h1>
+    <p>List your home once and let qualified, licensed realtors compete for your business. Compare proposals, pick your fit — completely free.</p>
 </section>
 
-<!-- The Opportunity -->
+<!-- The Problem -->
 <div class="section">
-    <div class="eyebrow">The Problem We Solved</div>
-    <h2 class="section-heading">The old way of getting listings is broken</h2>
+    <div class="eyebrow">Why We Built This</div>
+    <h2 class="section-heading">The traditional model puts sellers last</h2>
     <div class="section-body">
-        <p>Most realtors spend 60–70% of their time on prospecting — cold calling, door knocking, buying expensive leads — just to land listings that may never convert. It's expensive, demoralizing, and inefficient.</p>
-        <p>RealtorFinder flips the model. Instead of chasing sellers, you browse a live feed of motivated homeowners who are actively seeking representation right now. You pitch them. They choose you. No gatekeepers.</p>
+        <p>In the traditional real estate process, sellers are passive. You wait for an agent to knock on your door, rely on whoever your neighbor used, and often sign with the first person who calls — with no real way to compare your options.</p>
+        <p>RealtorFinder flips the model. You post your home. Qualified realtors in your area submit competing proposals — their commission rate, marketing plan, and track record. You compare and choose. No pressure, no obligation.</p>
     </div>
 
     <div class="split">
         <div class="split-card problem">
             <h3>The old way</h3>
             <ul>
-                <li>Cold call strangers hoping they're thinking of selling</li>
-                <li>Pay for lead lists that go cold immediately</li>
-                <li>Compete based on who you know, not what you offer</li>
-                <li>Spend thousands on marketing with no guaranteed ROI</li>
-                <li>Settle for any listing just to keep the pipeline full</li>
+                <li>Cold-called by agents you didn't ask to hear from</li>
+                <li>No easy way to compare agents side by side</li>
+                <li>Commission rates feel fixed and non-negotiable</li>
+                <li>Settle for whoever is most persistent</li>
+                <li>Sign a contract before you know if it's a good fit</li>
             </ul>
         </div>
         <div class="split-card solution">
             <h3>The RealtorFinder way</h3>
             <ul>
-                <li>Browse real listings from sellers actively seeking agents</li>
-                <li>Submit proposals only on listings you want to win</li>
-                <li>Compete on your track record, rate, and strategy</li>
-                <li>Flat monthly fee — no commission splits, ever</li>
-                <li>Build a pipeline of quality listings, not cold maybes</li>
+                <li>List your home on your terms — takes 5 minutes</li>
+                <li>Receive proposals from multiple qualified agents</li>
+                <li>Compare commission rates, plans, and experience</li>
+                <li>Choose the agent who's the right fit for you</li>
+                <li>Free for sellers — no hidden fees, ever</li>
             </ul>
         </div>
     </div>
@@ -458,51 +457,51 @@
 <div style="background: white; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);">
     <div class="section">
         <div class="eyebrow">How It Works</div>
-        <h2 class="section-heading">From sign-up to signed listing in days</h2>
+        <h2 class="section-heading">Simple, transparent, and free for sellers</h2>
         <div class="steps">
             <div class="step">
                 <div class="step-num">1</div>
-                <h4>Browse active listings</h4>
-                <p>See every seller listing in your market — address, price range, property details, and how many realtors have already submitted proposals.</p>
+                <h4>List your home</h4>
+                <p>Create a free listing in minutes — add your address, price range, and a few details. No agent needed to get started.</p>
             </div>
             <div class="step">
                 <div class="step-num">2</div>
-                <h4>Submit your proposal</h4>
-                <p>Send a personalized pitch — your commission rate, marketing approach, sales history, and why you're the right fit for this seller.</p>
+                <h4>Receive proposals</h4>
+                <p>Licensed realtors in your area review your listing and send personalized proposals — their commission rate, marketing plan, and why they're the right fit.</p>
             </div>
             <div class="step">
                 <div class="step-num">3</div>
-                <h4>Win the listing</h4>
-                <p>Sellers review every proposal and choose the agent who best fits their needs. The best pitch wins — not the first cold call.</p>
+                <h4>Choose your agent</h4>
+                <p>Review every proposal at your own pace. Ask questions, compare, and pick the agent you trust most. No pressure, no obligation to respond.</p>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Why realtors choose us -->
+<!-- What we believe -->
 <div class="section">
-    <div class="eyebrow">Why Realtors Join</div>
-    <h2 class="section-heading">Built around how great agents actually work</h2>
+    <div class="eyebrow">What We Stand For</div>
+    <h2 class="section-heading">Sellers deserve better</h2>
     <div class="values-grid">
         <div class="value-card">
-            <div class="value-icon">🎯</div>
-            <h4>Only motivated sellers</h4>
-            <p>Every listing on RealtorFinder was created by a homeowner who is actively seeking a realtor. No tire-kickers, no cold leads.</p>
+            <div class="value-icon">🆓</div>
+            <h4>Always free for sellers</h4>
+            <p>We charge realtors a subscription fee to access listings. You never pay a cent to list your home or receive proposals.</p>
         </div>
         <div class="value-card">
-            <div class="value-icon">💰</div>
-            <h4>No commission splits</h4>
-            <p>Flat monthly subscription. You keep 100% of your commission on every listing you win — we never take a cut.</p>
+            <div class="value-icon">⚖️</div>
+            <h4>Full transparency</h4>
+            <p>Every proposal includes the agent's commission rate, sales history, and marketing approach — all visible before you decide.</p>
         </div>
         <div class="value-card">
-            <div class="value-icon">🏆</div>
-            <h4>Win on merit</h4>
-            <p>Your proposal, track record, and pitch speak for themselves. Compete based on what you offer — not who referred you.</p>
+            <div class="value-icon">🔒</div>
+            <h4>You're in control</h4>
+            <p>No pressure tactics, no cold calls, no obligation. You set the terms, you review proposals, and you choose when you're ready.</p>
         </div>
         <div class="value-card">
-            <div class="value-icon">📍</div>
-            <h4>832 markets covered</h4>
-            <p>Active listings across 832 markets nationwide. Set your service area and only see listings relevant to your territory.</p>
+            <div class="value-icon">🤝</div>
+            <h4>Better agents, better outcomes</h4>
+            <p>Agents who compete on merit work harder to win your listing — and harder to sell it. You get representation that's actually earned.</p>
         </div>
     </div>
 </div>
@@ -511,32 +510,32 @@
 <div class="stats-bar">
     <div class="stats-inner">
         <div>
-            <div class="stat-num">832</div>
-            <div class="stat-desc">Markets with active listings</div>
+            <div class="stat-num">Free</div>
+            <div class="stat-desc">For home sellers — always</div>
         </div>
         <div>
-            <div class="stat-num">$99</div>
-            <div class="stat-desc">Starting price per month</div>
+            <div class="stat-num">5 min</div>
+            <div class="stat-desc">To create your listing</div>
         </div>
         <div>
-            <div class="stat-num">0%</div>
-            <div class="stat-desc">Commission splits — ever</div>
+            <div class="stat-num">0</div>
+            <div class="stat-desc">Cold calls you'll have to take</div>
         </div>
     </div>
 </div>
 
 <!-- CTA -->
 <div class="cta-section">
-    <h2>Ready to start winning listings?</h2>
-    <p>Join during the Founding Member period and lock in the lowest rate we'll ever offer. 100 spots available.</p>
+    <h2>Ready to find your agent?</h2>
+    <p>List your home for free and let qualified realtors come to you. Takes less than 5 minutes.</p>
     <div class="cta-buttons">
-        <a href="/login?tab=signup&type=realtor" class="btn-primary">Claim Your Spot Free</a>
-        <a href="/pricing" class="btn-secondary">View Pricing →</a>
+        <a href="/login?tab=signup&type=seller" class="btn-primary">List Your Home Free</a>
+        <a href="/realtors" class="btn-secondary">I'm a Realtor →</a>
     </div>
 </div>
 
 <footer>
-    <p>© 2025 RealtorFinder &nbsp;·&nbsp; <a href="/privacy">Privacy</a> &nbsp;·&nbsp; <a href="/terms">Terms</a> &nbsp;·&nbsp; <a href="/cookies">Cookies</a> &nbsp;·&nbsp; <a href="/about">About</a> &nbsp;·&nbsp; <a href="/contact">Contact</a></p>
+    <p>© 2025 RealtorFinder &nbsp;·&nbsp; <a href="/privacy">Privacy</a> &nbsp;·&nbsp; <a href="/terms">Terms</a> &nbsp;·&nbsp; <a href="/cookies">Cookies</a> &nbsp;·&nbsp; <a href="/about-sellers">About</a> &nbsp;·&nbsp; <a href="/contact">Contact</a></p>
 </footer>
 
 <script>
@@ -553,10 +552,10 @@
         hamburger.setAttribute('aria-expanded', 'false');
     }
 </script>
-    <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
-      }
-    </script>
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
+  }
+</script>
 </body>
 </html>
