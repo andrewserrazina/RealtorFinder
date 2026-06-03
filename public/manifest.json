@@ -1,7 +1,7 @@
 {
   "name": "RealtorFinder",
   "short_name": "RealtorFinder",
-  "description": "Find and connect with New England realtors",
+  "description": "Find and connect with licensed realtors nationwide",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0A2540",
