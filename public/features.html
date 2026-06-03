@@ -809,14 +809,21 @@
     // Audience tab switching
     const tabs = document.querySelectorAll('.audience-tab');
     const panels = document.querySelectorAll('.feature-panel');
+    function updateNavCta(panel) {
+        const type = panel === 'realtors' ? 'realtor' : panel === 'buyers' ? 'buyer' : 'seller';
+        document.querySelectorAll('a.nav-cta').forEach(a => { a.href = '/login?tab=signup&type=' + type; });
+    }
     tabs.forEach(tab => {
         tab.addEventListener('click', () => {
             tabs.forEach(t => t.classList.remove('active'));
             panels.forEach(p => p.classList.remove('active'));
             tab.classList.add('active');
             document.getElementById('panel-' + tab.dataset.panel).classList.add('active');
+            updateNavCta(tab.dataset.panel);
         });
     });
+    // Set correct initial CTA (default panel is sellers)
+    updateNavCta('sellers');
 
     // Mobile nav
     const hamburger = document.getElementById('navHamburger');
