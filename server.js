@@ -87,12 +87,15 @@ const uploadLimiter = rateLimit({
 // Middleware
 const allowedOrigins = (() => {
     const base = process.env.FRONTEND_URL || 'http://localhost:3000';
-    const origins = new Set([base, 'http://localhost:3000']);
+    const origins = new Set([base]);
+    // Include localhost only in non-production environments
+    if (process.env.NODE_ENV !== 'production') origins.add('http://localhost:3000');
     // Always allow both the www and realtors subdomains
     try {
         const url = new URL(base);
-        origins.add(`${url.protocol}//www.${url.hostname.replace(/^www\./, '')}`);
-        origins.add(`${url.protocol}//realtors.${url.hostname.replace(/^www\./, '')}`);
+        const root = url.hostname.replace(/^www\./, '');
+        origins.add(`${url.protocol}//www.${root}`);
+        origins.add(`${url.protocol}//realtors.${root}`);
     } catch (_) {}
     return [...origins];
 })();
@@ -201,6 +204,9 @@ function haversineMiles(lat1, lon1, lat2, lon2) {
     const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLon/2)**2;
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
+
+// HTML-escape helper used in all server-rendered pages to prevent XSS
+const he = s => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#x27;');
 
 // Fire-and-forget: email nearby approved realtors about a new listing
 const zipCoordCache = new Map();
@@ -974,6 +980,111 @@ app.get('/api/listings', async (req, res) => {
     } catch (error) {
         console.error('Error fetching listings:', error);
         res.status(500).json({ error: 'Failed to fetch listings' });
+    }
+});
+
+// Literal routes MUST be registered before /:id or Express treats them as id values
+
+// Compare up to 3 listings side-by-side
+app.get('/api/listings/compare', async (req, res) => {
+    try {
+        const ids = (req.query.ids || '').split(',').map(Number).filter(Boolean).slice(0, 3);
+        if (!ids.length) return res.status(400).json({ error: 'ids required (comma-separated, max 3)' });
+        const { rows } = await pool.query(
+            `SELECT id, address, city, state, zip, price, property_type, bedrooms, bathrooms, sqft,
+                    description, image_urls, created_at, status,
+                    COALESCE(view_count, 0) AS view_count,
+                    (SELECT COUNT(*) FROM offers WHERE listing_id = l.id) AS offer_count
+             FROM listings l WHERE id = ANY($1::int[]) AND deleted_at IS NULL`,
+            [ids]
+        );
+        res.json(rows);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to load listings' });
+    }
+});
+
+// Search listings with filters
+app.get('/api/listings/search', async (req, res) => {
+    try {
+        const page  = Math.max(1, parseInt(req.query.page)  || 1);
+        const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 12));
+        const offset = (page - 1) * limit;
+        const { city, state, type, minPrice, maxPrice, minBedrooms } = req.query;
+
+        const conditions = [`l.status = 'active'`, `l.deleted_at IS NULL`];
+        const params = [];
+
+        if (city) {
+            params.push(`%${city}%`);
+            conditions.push(`(l.city ILIKE $${params.length} OR l.zip ILIKE $${params.length} OR l.address ILIKE $${params.length})`);
+        }
+        if (state) {
+            params.push(state);
+            conditions.push(`l.state ILIKE $${params.length}`);
+        }
+        if (type && type !== 'Any') {
+            params.push(type);
+            conditions.push(`l.property_type = $${params.length}`);
+        }
+        if (minPrice) {
+            params.push(parseInt(minPrice));
+            conditions.push(`l.price >= $${params.length}`);
+        }
+        if (maxPrice) {
+            params.push(parseInt(maxPrice));
+            conditions.push(`l.price <= $${params.length}`);
+        }
+        if (minBedrooms) {
+            params.push(parseInt(minBedrooms));
+            conditions.push(`l.bedrooms >= $${params.length}`);
+        }
+
+        const where = conditions.join(' AND ');
+        const countResult = await pool.query(`SELECT COUNT(*) AS total FROM listings l WHERE ${where}`, params);
+        const total = parseInt(countResult.rows[0].total) || 0;
+
+        params.push(limit);
+        params.push(offset);
+        const { rows } = await pool.query(
+            `SELECT l.id, l.address, l.city, l.state, l.zip, l.price,
+                    l.property_type AS type, l.bedrooms, l.bathrooms, l.sqft,
+                    l.image_urls, l.share_token, l.created_at,
+                    u.first_name AS owner_first, u.last_name AS owner_last
+             FROM listings l
+             JOIN users u ON u.id = l.user_id
+             WHERE ${where}
+             ORDER BY l.created_at DESC
+             LIMIT $${params.length - 1} OFFSET $${params.length}`,
+            params
+        );
+        res.json({ listings: rows, total, page, pages: Math.ceil(total / limit) });
+    } catch (err) {
+        console.error('Listing search error:', err);
+        res.status(500).json({ error: 'Failed to search listings' });
+    }
+});
+
+// Public listing by share token
+app.get('/api/listings/share/:token', async (req, res) => {
+    try {
+        const { rows } = await pool.query(
+            `SELECT l.id, l.address, l.city, l.state, l.zip, l.price, l.zestimate,
+                    l.property_type AS type, l.bedrooms, l.bathrooms, l.sqft,
+                    l.description, l.image_urls, l.status, l.share_token,
+                    l.created_at, l.latitude, l.longitude,
+                    u.id AS seller_id, u.first_name AS owner_first, u.last_name AS owner_last
+             FROM listings l
+             JOIN users u ON u.id = l.user_id
+             WHERE l.share_token = $1 AND l.status != 'inactive' AND l.deleted_at IS NULL`,
+            [req.params.token]
+        );
+        if (!rows.length) return res.status(404).json({ error: 'Listing not found' });
+        pool.query(`UPDATE listings SET share_views = COALESCE(share_views,0)+1 WHERE share_token=$1`, [req.params.token]).catch(() => {});
+        res.json(rows[0]);
+    } catch (err) {
+        console.error('Share listing error:', err);
+        res.status(500).json({ error: 'Failed to load listing' });
     }
 });
 
@@ -3967,7 +4078,7 @@ app.get('/api/listings/:id/public', async (req, res) => {
 app.get('/api/realtors/founding-count', async (req, res) => {
     try {
         const { rows } = await pool.query(
-            `SELECT COUNT(*) AS count FROM users WHERE user_type = 'realtor' AND is_active IS NOT FALSE`
+            `SELECT COUNT(*) AS count FROM users WHERE user_type = 'realtor' AND is_approved = TRUE AND is_active IS NOT FALSE`
         );
         const claimed = Math.min(parseInt(rows[0].count) || 0, 100);
         res.json({ claimed, total: 100, remaining: Math.max(100 - claimed, 0) });
@@ -4896,9 +5007,12 @@ app.get('/api/showings/my', auth.requireAuth, async (req, res) => {
 app.put('/api/showings/:id/confirm', auth.requireAuth, async (req, res) => {
     try {
         const showingId = parseInt(req.params.id);
+        // Only the seller who owns the listing may confirm
         const { rows } = await pool.query(
             `UPDATE showings SET status = 'confirmed', confirmed_by = $1, confirmed_at = NOW()
-             WHERE id = $2 RETURNING *`,
+             WHERE id = $2
+               AND listing_id IN (SELECT id FROM listings WHERE user_id = $1)
+             RETURNING *`,
             [req.session.userId, showingId]
         );
         if (!rows.length) return res.status(404).json({ error: 'Showing not found' });
@@ -4928,9 +5042,13 @@ app.put('/api/showings/:id/confirm', auth.requireAuth, async (req, res) => {
 app.put('/api/showings/:id/cancel', auth.requireAuth, async (req, res) => {
     try {
         const showingId = parseInt(req.params.id);
+        // Caller must be the buyer who requested OR the seller who owns the listing
         const { rows } = await pool.query(
-            `UPDATE showings SET status = 'cancelled' WHERE id = $1 RETURNING *`,
-            [showingId]
+            `UPDATE showings SET status = 'cancelled'
+             WHERE id = $1
+               AND (buyer_id = $2 OR listing_id IN (SELECT id FROM listings WHERE user_id = $2))
+             RETURNING *`,
+            [showingId, req.session.userId]
         );
         if (!rows.length) return res.status(404).json({ error: 'Showing not found' });
         const showing = rows[0];
@@ -6538,7 +6656,7 @@ app.get('/s/:token', async (req, res) => {
         const l = rows[0];
         pool.query(`UPDATE listings SET share_views = COALESCE(share_views, 0) + 1 WHERE id = $1`, [l.id]).catch(() => {});
         const base = (process.env.FRONTEND_URL || 'https://realtorfinder.net').replace(/\/$/, '');
-        const he = s => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        // he() is defined at module scope
         const title = `${he(l.address)}${l.city ? ', ' + he(l.city) : ''} — RealtorFinder`;
         const priceStr = l.price ? '$' + Number(l.price).toLocaleString() : null;
         const desc = [priceStr, l.bedrooms ? l.bedrooms + ' bed' : null, l.bathrooms ? l.bathrooms + ' bath' : null, l.sqft ? Number(l.sqft).toLocaleString() + ' sqft' : null].filter(Boolean).join(' · ');
@@ -6718,8 +6836,16 @@ app.get('/dashboard/company', (req, res) => {
 });
 
 // Login page
-app.get('/login', (req, res) => {
+app.get('/login', async (req, res) => {
     if (req.session && req.session.userId) {
+        // Re-check approval from DB — session value goes stale if admin approves while user is logged in
+        try {
+            const { rows } = await pool.query(`SELECT is_approved, user_type FROM users WHERE id = $1`, [req.session.userId]);
+            if (rows.length) {
+                req.session.isApproved = rows[0].is_approved;
+                req.session.userType = rows[0].user_type;
+            }
+        } catch (_) {}
         if (!req.session.isApproved) return res.redirect('/waitlist');
         const dashMap2 = { seller: '/dashboard/seller', realtor: '/dashboard/realtor', buyer: '/dashboard/buyer' };
         const dashboardPath = dashMap2[req.session.userType] || '/dashboard/seller';
@@ -6759,7 +6885,7 @@ app.get('/', (req, res) => {
     }
     if (!req.cookies || !req.cookies.ab_variant) {
         const variant = Math.random() < 0.5 ? 'a' : 'b';
-        res.cookie('ab_variant', variant, { maxAge: 30 * 24 * 60 * 60 * 1000, httpOnly: false });
+        res.cookie('ab_variant', variant, { maxAge: 30 * 24 * 60 * 60 * 1000, httpOnly: false, secure: process.env.NODE_ENV === 'production', sameSite: 'lax' });
     }
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.setHeader('Pragma', 'no-cache');
@@ -6787,8 +6913,8 @@ app.get('/realtors/:citystate', async (req, res, next) => {
         const { rows: realtors } = await pool.query(
             `SELECT id, first_name, last_name, company_name, subscription_plan, license_verified,
                     years_experience, bio, zip_code, profile_photo,
-                    (SELECT ROUND(AVG(rating)::numeric, 1) FROM reviews WHERE realtor_id = users.id) as avg_rating,
-                    (SELECT COUNT(*) FROM reviews WHERE realtor_id = users.id) as review_count,
+                    (SELECT ROUND(AVG(rating)::numeric, 1) FROM realtor_reviews WHERE realtor_id = users.id) as avg_rating,
+                    (SELECT COUNT(*) FROM realtor_reviews WHERE realtor_id = users.id) as review_count,
                     (SELECT COUNT(*) FROM proposals WHERE realtor_id = users.id AND status = 'accepted') as wins
              FROM users
              WHERE user_type = 'realtor'
@@ -6815,18 +6941,19 @@ app.get('/realtors/:citystate', async (req, res, next) => {
 
         const realtorCards = realtors.map(r => {
             const initials = ((r.first_name || '')[0] || '') + ((r.last_name || '')[0] || '');
-            const name = `${r.first_name || ''} ${r.last_name || ''}`.trim();
+            const name = he(`${r.first_name || ''} ${r.last_name || ''}`.trim());
             const isFeatured = ['professional', 'firm'].includes(r.subscription_plan);
             const stars = r.avg_rating ? '★'.repeat(Math.round(parseFloat(r.avg_rating))) + '☆'.repeat(5 - Math.round(parseFloat(r.avg_rating))) : '';
+            const bioText = r.bio ? he(r.bio.slice(0, 100)) + (r.bio.length > 100 ? '…' : '') : '';
             return `
             <a href="/realtor/${r.id}" class="agent-card">
-                <div class="agent-avatar">${r.profile_photo ? `<img src="${r.profile_photo}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : initials.toUpperCase()}</div>
+                <div class="agent-avatar">${r.profile_photo ? `<img src="${he(r.profile_photo)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : he(initials.toUpperCase())}</div>
                 <div class="agent-info">
                     <div class="agent-name">${name}${isFeatured ? ' <span class="featured-badge">⭐ Featured</span>' : ''}</div>
-                    ${r.company_name ? `<div class="agent-co">${r.company_name}</div>` : ''}
+                    ${r.company_name ? `<div class="agent-co">${he(r.company_name)}</div>` : ''}
                     ${r.avg_rating && r.review_count > 0 ? `<div class="agent-rating"><span style="color:#F59E0B;">${stars}</span> ${parseFloat(r.avg_rating).toFixed(1)} (${r.review_count})</div>` : ''}
-                    ${r.years_experience ? `<div class="agent-meta">${r.years_experience} yrs experience${r.wins > 0 ? ` · ${r.wins} listings won` : ''}</div>` : (r.wins > 0 ? `<div class="agent-meta">${r.wins} listings won</div>` : '')}
-                    ${r.bio ? `<div class="agent-bio">${r.bio.slice(0, 100)}${r.bio.length > 100 ? '…' : ''}</div>` : ''}
+                    ${r.years_experience ? `<div class="agent-meta">${he(r.years_experience)} yrs experience${r.wins > 0 ? ` · ${r.wins} listings won` : ''}</div>` : (r.wins > 0 ? `<div class="agent-meta">${r.wins} listings won</div>` : '')}
+                    ${r.bio ? `<div class="agent-bio">${bioText}</div>` : ''}
                 </div>
                 <div class="agent-cta">View Profile →</div>
             </a>`;
@@ -7406,6 +7533,87 @@ _schemaMigrations.push(
         realtor_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         name TEXT NOT NULL,
         content TEXT NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+    )`
+);
+
+// Missing tables discovered during audit — add here so existing DBs are patched automatically
+_schemaMigrations.push(
+    `CREATE TABLE IF NOT EXISTS saved_listings (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        listing_id INTEGER NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE(user_id, listing_id)
+    )`,
+    `CREATE TABLE IF NOT EXISTS zip_codes (
+        zip VARCHAR(10) PRIMARY KEY,
+        city VARCHAR(100),
+        state_code VARCHAR(2),
+        latitude NUMERIC(9,6),
+        longitude NUMERIC(9,6)
+    )`,
+    `CREATE TABLE IF NOT EXISTS city_leads (
+        id SERIAL PRIMARY KEY,
+        type VARCHAR(20),
+        name VARCHAR(255),
+        email VARCHAR(255),
+        phone VARCHAR(50),
+        city_slug VARCHAR(100),
+        city_name VARCHAR(100),
+        state_code VARCHAR(2),
+        created_at TIMESTAMPTZ DEFAULT NOW()
+    )`,
+    `CREATE TABLE IF NOT EXISTS admin_notes (
+        id SERIAL PRIMARY KEY,
+        resource_type VARCHAR(50),
+        resource_id INTEGER,
+        admin_user_id INTEGER REFERENCES users(id),
+        body TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+    )`,
+    `CREATE TABLE IF NOT EXISTS lead_matches (
+        id SERIAL PRIMARY KEY,
+        realtor_id INTEGER REFERENCES users(id),
+        city_lead_id INTEGER REFERENCES city_leads(id),
+        status VARCHAR(50) DEFAULT 'new',
+        notes TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+    )`,
+    `CREATE TABLE IF NOT EXISTS realtor_prospects (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255),
+        email VARCHAR(255),
+        phone VARCHAR(50),
+        source VARCHAR(100),
+        city_slug VARCHAR(100),
+        status VARCHAR(50) DEFAULT 'new',
+        converted_user_id INTEGER REFERENCES users(id),
+        notes TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+    )`,
+    `CREATE TABLE IF NOT EXISTS city_pages (
+        id SERIAL PRIMARY KEY,
+        slug VARCHAR(100) UNIQUE NOT NULL,
+        city_name VARCHAR(100),
+        state_code VARCHAR(2),
+        custom_headline TEXT,
+        custom_description TEXT,
+        is_active BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+    )`,
+    `CREATE TABLE IF NOT EXISTS company_locations (
+        id SERIAL PRIMARY KEY,
+        company_id INTEGER REFERENCES companies(id) ON DELETE CASCADE,
+        address TEXT,
+        city VARCHAR(100),
+        state VARCHAR(50),
+        zip VARCHAR(10),
+        latitude NUMERIC(9,6),
+        longitude NUMERIC(9,6),
         created_at TIMESTAMPTZ DEFAULT NOW()
     )`
 );
