@@ -1434,6 +1434,16 @@
         // Modal Functions
         function openNewListingModal() {
             document.getElementById('newListingModal').classList.add('active');
+            // Pre-fill owner fields from account data to save the seller from retyping
+            if (currentUser) {
+                const form = document.getElementById('newListingForm');
+                const nameField = form.querySelector('[name="ownerName"]');
+                const emailField = form.querySelector('[name="ownerEmail"]');
+                const phoneField = form.querySelector('[name="ownerPhone"]');
+                if (nameField && !nameField.value) nameField.value = `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim();
+                if (emailField && !emailField.value) emailField.value = currentUser.email || '';
+                if (phoneField && !phoneField.value && currentUser.phone) phoneField.value = currentUser.phone;
+            }
         }
 
         let _newListingId = null;
