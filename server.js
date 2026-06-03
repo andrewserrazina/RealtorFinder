@@ -4078,7 +4078,7 @@ app.get('/api/listings/:id/public', async (req, res) => {
 app.get('/api/realtors/founding-count', async (req, res) => {
     try {
         const { rows } = await pool.query(
-            `SELECT COUNT(*) AS count FROM users WHERE user_type = 'realtor' AND is_approved = TRUE AND is_active IS NOT FALSE`
+            `SELECT COUNT(*) AS count FROM users WHERE user_type = 'realtor' AND is_active IS NOT FALSE`
         );
         const claimed = Math.min(parseInt(rows[0].count) || 0, 100);
         res.json({ claimed, total: 100, remaining: Math.max(100 - claimed, 0) });
