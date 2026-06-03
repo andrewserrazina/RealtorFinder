@@ -3655,10 +3655,6 @@ app.get('/locations', async (req, res) => {
     let states = [];
     try { states = await db.getPublishedStates(); } catch (e) { /* DB not migrated yet — show empty */ }
 
-    const newEngland = ['MA','CT','RI','VT','NH','ME'];
-    const neStates = states.filter(s => newEngland.includes(s.state_code));
-    const otherStates = states.filter(s => !newEngland.includes(s.state_code));
-
     const stateCard = (s) => `
         <a href="/locations/${s.state_code.toLowerCase()}" class="state-card">
             <div class="state-code">${s.state_code}</div>
@@ -3671,7 +3667,7 @@ app.get('/locations', async (req, res) => {
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Real Estate Markets by City | RealtorFinder</title>
-    <meta name="description" content="Find your city on RealtorFinder. Sellers list free, realtors compete for listings. Covering New England and growing nationwide.">
+    <meta name="description" content="Find your city on RealtorFinder. Sellers list free, realtors compete for listings. Serving buyers and sellers nationwide.">
     <link rel="canonical" href="https://www.realtorfinder.net/locations">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -3709,12 +3705,10 @@ app.get('/locations', async (req, res) => {
 </nav>
 <div class="hero">
     <h1>Find Your Market on<br><em>RealtorFinder</em></h1>
-    <p>Sellers list free. Realtors compete. Covering New England now — and growing nationwide.</p>
+    <p>Sellers list free. Realtors compete. Serving buyers and sellers nationwide.</p>
 </div>
 <div class="content">
-    ${neStates.length ? `<div class="section-label">New England</div><h2>Our Home Market</h2><div class="states-grid">${neStates.map(stateCard).join('')}</div>` : ''}
-    ${otherStates.length ? `<div class="section-label">Expanding Coverage</div><h2>More States</h2><div class="states-grid">${otherStates.map(stateCard).join('')}</div>` : ''}
-    ${!states.length ? '<p style="color:#6b7280;text-align:center;padding:40px 0;">City pages loading — check back soon.</p>' : ''}
+    ${states.length ? `<div class="section-label">Browse by State</div><h2>All Markets</h2><div class="states-grid">${states.map(stateCard).join('')}</div>` : '<p style="color:#6b7280;text-align:center;padding:40px 0;">City pages loading — check back soon.</p>'}
 </div>
 <footer>
     <p>© ${new Date().getFullYear()} RealtorFinder &nbsp;·&nbsp; <a href="/">Home</a><a href="/realtors">For Realtors</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a></p>
