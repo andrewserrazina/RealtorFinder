@@ -1094,7 +1094,7 @@ const emailService = {
     },
 
     async sendCounterOffer(toEmail, realtorName, listingAddress, counterPct, message) {
-        const body = emailWrap('#FF6B35',
+        const body = emailWrap('Counter-Offer',
             h1('Counter-Offer Received') +
             p(`Hi ${realtorName}, the seller has countered your proposal on <strong>${listingAddress}</strong>.`) +
             infoBox([
@@ -1102,18 +1102,18 @@ const emailService = {
                 ...(message ? [['Seller note', message]] : []),
             ]) +
             p('Log in to accept or decline this counter-offer.') +
-            btn('https://www.realtorfinder.net/dashboard/realtor', 'Respond to Counter-Offer')
+            btn(`${BASE_URL}/dashboard/realtor`, 'Respond to Counter-Offer')
         );
         return await send({ to: toEmail, subject: `Counter-offer on ${listingAddress}`, html: body });
     },
 
     async sendWeeklyDigest(toEmail, firstName, data, unsubToken) {
         // data: { newListings, proposalsWon, profileViews7d, serviceAreas }
-        const unsubUrl = `https://www.realtorfinder.net/unsubscribe?token=${unsubToken}`;
+        const unsubUrl = `${BASE_URL}/unsubscribe?token=${unsubToken}`;
         const listingItems = (data.newListings || []).slice(0, 5).map(l =>
-            `<li style="margin-bottom:8px;"><a href="https://www.realtorfinder.net/listings/${l.id}" style="color:#FF6B35;font-weight:600;">${l.address}, ${l.city}, ${l.state}</a> — ${l.bedrooms}bd/${l.bathrooms}ba · $${Number(l.price).toLocaleString()}</li>`
+            `<li style="margin-bottom:8px;"><a href="${BASE_URL}/listings/${l.id}" style="color:#FF6B35;font-weight:600;">${l.address}, ${l.city}, ${l.state}</a> — ${l.bedrooms}bd/${l.bathrooms}ba · $${Number(l.price).toLocaleString()}</li>`
         ).join('');
-        const body = emailWrap('#FF6B35',
+        const body = emailWrap('Weekly Digest',
             h1(`Your Weekly Market Digest`) +
             p(`Hi ${firstName}, here's what happened in your markets this week.`) +
             infoBox([
@@ -1123,7 +1123,7 @@ const emailService = {
                 ['Service areas', (data.serviceAreas || '—')],
             ]) +
             (listingItems ? `<div style="margin:24px 0;"><div style="font-weight:700;font-size:1rem;margin-bottom:12px;color:#0A2540;">New listings this week:</div><ul style="padding-left:20px;color:#444;">${listingItems}</ul></div>` : '') +
-            btn('https://www.realtorfinder.net/dashboard/realtor', 'Browse New Listings'),
+            btn(`${BASE_URL}/dashboard/realtor`, 'Browse New Listings'),
             unsubUrl
         );
         return await send({ to: toEmail, subject: `Your weekly RealtorFinder digest — ${new Date().toLocaleDateString('en-US',{month:'short',day:'numeric'})}`, html: body });

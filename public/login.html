@@ -454,6 +454,8 @@
                 } else {
                     const redirectUrl = result.userType === 'seller'
                         ? '/dashboard/seller'
+                        : result.userType === 'buyer'
+                        ? '/dashboard/buyer'
                         : '/dashboard/realtor';
                     window.location.href = redirectUrl;
                 }
