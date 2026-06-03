@@ -7348,6 +7348,7 @@ async function runEngagementReminderJob() {
     }
 }
 _schemaMigrations.push(
+    `ALTER TABLE proposals ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()`,
     `ALTER TABLE proposals ADD COLUMN IF NOT EXISTS review_request_sent BOOLEAN DEFAULT FALSE`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS notif_new_proposal BOOLEAN NOT NULL DEFAULT TRUE`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS notif_messages BOOLEAN NOT NULL DEFAULT TRUE`,
