@@ -1177,8 +1177,8 @@ app.post('/api/listings', auth.requireAuth, async (req, res) => {
             pool.query(`UPDATE listings SET owner_attested=TRUE, owner_attested_at=NOW() WHERE id=$1`, [newListing.id]).catch(() => {});
         }
 
-        // Send confirmation email to seller
-        await emailService.sendListingConfirmation(newListing);
+        // Send confirmation email to seller (fire-and-forget — listing already created)
+        emailService.sendListingConfirmation(newListing).catch(err => console.error('Listing confirmation email failed:', err));
 
         // Notify nearby realtors (fire-and-forget — don't block the response)
         notifyNearbyRealtors(newListing);
@@ -1406,7 +1406,10 @@ app.put('/api/listings/:id/status', auth.requireAuth, async (req, res) => {
 });
 
 // Get all offers received across a seller's listings (seller only)
-app.get('/api/seller/offers', auth.requireAuth, async (req, res) => {
+app.get('/api/seller/offers', auth.requireAuth, (req, res, next) => {
+    if (!req.user || req.user.user_type !== 'seller') return res.status(403).json({ error: 'Seller access required' });
+    next();
+}, async (req, res) => {
     try {
         const offers = await db.getSellerOffers(req.session.userId);
         res.json(offers);
@@ -1417,7 +1420,10 @@ app.get('/api/seller/offers', auth.requireAuth, async (req, res) => {
 });
 
 // Get current user's offers (for realtors)
-app.get('/api/my-offers', auth.requireAuth, async (req, res) => {
+app.get('/api/my-offers', auth.requireAuth, (req, res, next) => {
+    if (!req.user || req.user.user_type !== 'realtor') return res.status(403).json({ error: 'Realtor access required' });
+    next();
+}, async (req, res) => {
     try {
         const offers = await db.getUserOffers(req.session.userId);
         res.json(offers);

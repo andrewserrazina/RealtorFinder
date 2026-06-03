@@ -332,7 +332,7 @@
 
 <nav>
     <a href="/" class="nav-logo">Realtor<span>Finder</span></a>
-    <div class="nav-links">
+    <div class="nav-links" id="desktopNavLinks">
         <a href="/realtors">For Realtors</a>
         <a href="/about">About</a>
         <a href="/login" class="nav-cta">Get Started</a>
@@ -347,6 +347,15 @@
     <a href="/contact">Contact</a>
     <a href="/login" class="nav-cta">Get Started</a>
 </div>
+<script>
+(function() {
+    if (!window.location.hostname.startsWith('realtors.')) return;
+    var desktop = document.getElementById('desktopNavLinks');
+    var mobile = document.getElementById('mobileMenu');
+    if (desktop) desktop.innerHTML = '<a href="/realtors#benefits">How It Works</a><a href="/realtors#founding" style="color:#F59E0B;font-weight:600;">🏅 Founding Members</a><a href="/realtors#referral-program">Referrals</a><a href="/realtors#pricing">Pricing</a><a href="/about">About</a><a href="/login?tab=signup&type=realtor" class="nav-cta">Create Account</a>';
+    if (mobile) mobile.innerHTML = '<a href="/realtors#benefits" onclick="if(window.closeMobileMenu)closeMobileMenu()">How It Works</a><a href="/realtors#founding" onclick="if(window.closeMobileMenu)closeMobileMenu()" style="color:#F59E0B;font-weight:600;">🏅 Founding Members</a><a href="/realtors#referral-program" onclick="if(window.closeMobileMenu)closeMobileMenu()">Referrals</a><a href="/realtors#pricing" onclick="if(window.closeMobileMenu)closeMobileMenu()">Pricing</a><a href="/about" onclick="if(window.closeMobileMenu)closeMobileMenu()">About</a><a href="/login?tab=signup&type=realtor" class="nav-cta" onclick="if(window.closeMobileMenu)closeMobileMenu()">Create Account</a>';
+})();
+</script>
 
 <div class="hero">
     <div class="hero-eyebrow">Contact</div>
