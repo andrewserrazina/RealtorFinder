@@ -85,9 +85,19 @@ const uploadLimiter = rateLimit({
 });
 
 // Middleware
-const allowedOrigin = process.env.FRONTEND_URL || 'http://localhost:3000';
+const allowedOrigins = (() => {
+    const base = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const origins = new Set([base, 'http://localhost:3000']);
+    // Always allow both the www and realtors subdomains
+    try {
+        const url = new URL(base);
+        origins.add(`${url.protocol}//www.${url.hostname.replace(/^www\./, '')}`);
+        origins.add(`${url.protocol}//realtors.${url.hostname.replace(/^www\./, '')}`);
+    } catch (_) {}
+    return [...origins];
+})();
 app.use(cors({
-    origin: allowedOrigin,
+    origin: allowedOrigins,
     credentials: true
 }));
 // Stripe webhook needs raw body; everything else gets JSON parsed
