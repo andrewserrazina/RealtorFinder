@@ -372,36 +372,27 @@
 <body>
 
 <nav>
-    <a href="/" class="nav-logo">Realtor<span>Finder</span></a>
-    <div class="nav-links" id="desktopNavLinks">
-        <a href="/features">Features</a>
-        <a href="/realtors">For Realtors</a>
+    <a href="/realtors" class="nav-logo">Realtor<span>Finder</span></a>
+    <div class="nav-links">
+        <a href="/realtors#benefits">How It Works</a>
+        <a href="/realtors#founding" style="color:#F59E0B;font-weight:600;">🏅 Founding Members</a>
+        <a href="/realtors#referral-program">Referrals</a>
         <a href="/pricing">Pricing</a>
         <a href="/about">About</a>
-        <a href="/contact">Contact</a>
-        <a href="/login" class="nav-cta">Get Started</a>
+        <a href="/login?tab=signup&type=realtor" class="nav-cta">Create Account</a>
     </div>
     <button class="nav-hamburger" id="navHamburger" aria-label="Open menu" aria-expanded="false">
         <span></span><span></span><span></span>
     </button>
 </nav>
 <div class="mobile-menu" id="mobileMenu" role="navigation">
-    <a href="/features" onclick="closeMobileMenu()">Features</a>
-    <a href="/realtors" onclick="closeMobileMenu()">For Realtors</a>
+    <a href="/realtors#benefits" onclick="closeMobileMenu()">How It Works</a>
+    <a href="/realtors#founding" onclick="closeMobileMenu()" style="color:#F59E0B;font-weight:600;">🏅 Founding Members</a>
+    <a href="/realtors#referral-program" onclick="closeMobileMenu()">Referrals</a>
     <a href="/pricing" onclick="closeMobileMenu()">Pricing</a>
     <a href="/about" onclick="closeMobileMenu()">About</a>
-    <a href="/contact" onclick="closeMobileMenu()">Contact</a>
-    <a href="/login" class="nav-cta" onclick="closeMobileMenu()">Get Started</a>
+    <a href="/login?tab=signup&type=realtor" class="nav-cta" onclick="closeMobileMenu()">Create Account</a>
 </div>
-<script>
-(function() {
-    if (!window.location.hostname.startsWith('realtors.')) return;
-    var desktop = document.getElementById('desktopNavLinks');
-    var mobile = document.getElementById('mobileMenu');
-    if (desktop) desktop.innerHTML = '<a href="/realtors#benefits">How It Works</a><a href="/realtors#founding" style="color:#F59E0B;font-weight:600;">🏅 Founding Members</a><a href="/realtors#referral-program">Referrals</a><a href="/realtors#pricing">Pricing</a><a href="/about">About</a><a href="/login?tab=signup&type=realtor" class="nav-cta">Create Account</a>';
-    if (mobile) mobile.innerHTML = '<a href="/realtors#benefits" onclick="closeMobileMenu()">How It Works</a><a href="/realtors#founding" onclick="closeMobileMenu()" style="color:#F59E0B;font-weight:600;">🏅 Founding Members</a><a href="/realtors#referral-program" onclick="closeMobileMenu()">Referrals</a><a href="/realtors#pricing" onclick="closeMobileMenu()">Pricing</a><a href="/about" onclick="closeMobileMenu()">About</a><a href="/login?tab=signup&type=realtor" class="nav-cta" onclick="closeMobileMenu()">Create Account</a>';
-})();
-</script>
 
 <!-- Hero -->
 <section class="hero">
