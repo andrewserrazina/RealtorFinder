@@ -54,6 +54,7 @@
           <option value="all">All types</option>
           <option value="seller">Seller</option>
           <option value="realtor">Realtor</option>
+          <option value="buyer">Buyer</option>
         </select>
       </div>
 
@@ -129,7 +130,7 @@
           throw new Error(data.error || 'Failed to load waitlist');
         }
 
-        rows = data.waitlist || [];
+        rows = Array.isArray(data) ? data : (data.waitlist || []);
         applyFilters();
       } catch (error) {
         tableWrap.innerHTML = `<div class="error">${error.message}</div>`;

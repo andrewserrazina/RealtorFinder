@@ -1712,6 +1712,18 @@ app.post('/api/admin/claim-admin', auth.requireAuth, async (req, res) => {
     }
 });
 
+app.get('/api/admin/waitlist', requireAdmin, async (req, res) => {
+    try {
+        const { rows } = await pool.query(
+            `SELECT id, email, user_type, created_at FROM waitlist ORDER BY created_at DESC`
+        );
+        res.json(rows);
+    } catch (err) {
+        console.error('Admin waitlist error:', err);
+        res.status(500).json({ error: 'Failed to fetch waitlist' });
+    }
+});
+
 app.get('/api/admin/stats', requireAdmin, async (req, res) => {
     try {
         const stats = await db.getAdminStats();
@@ -6969,6 +6981,10 @@ app.get('/faq', (req, res) => {
 // Admin panel
 app.get('/admin', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'admin.html'));
+});
+
+app.get('/admin-waitlist', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'admin-waitlist.html'));
 });
 
 // Main application (legacy)
