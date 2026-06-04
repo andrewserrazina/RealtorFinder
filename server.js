@@ -330,7 +330,7 @@ app.use('/api', apiLimiter);
 // Signup
 app.post('/api/auth/signup', async (req, res) => {
     try {
-        const { email, password, userType, firstName, lastName, zipCode, companyName } = req.body;
+        const { email, password, userType, firstName, lastName, zipCode, companyName, licenseNumber } = req.body;
 
         if (!email || !password || !userType || !firstName || !lastName || !zipCode) {
             return res.status(400).json({ error: 'All fields required' });
@@ -370,6 +370,12 @@ app.post('/api/auth/signup', async (req, res) => {
                 await db.createCompany(name, user.id, 'basic');
             } catch (companyErr) {
                 console.error('Company creation failed (non-fatal):', companyErr.message);
+            }
+            if (licenseNumber && licenseNumber.trim()) {
+                await pool.query(
+                    `UPDATE users SET license_number = $1 WHERE id = $2`,
+                    [licenseNumber.trim().substring(0, 50), user.id]
+                ).catch(err => console.error('License number save failed (non-fatal):', err.message));
             }
         }
 
@@ -1971,12 +1977,13 @@ app.put('/api/admin/users/:id/approve', requireAdmin, async (req, res) => {
         // Advisory lock prevents two concurrent approvals from both counting < 100
         await client.query(`SELECT pg_advisory_xact_lock(1001)`);
 
-        // Count already-approved realtors to determine founding status (first 100)
+        // Count already-approved realtors to determine founding status (first 100, before August 2026 deadline)
         const { rows: countRows } = await client.query(
             `SELECT COUNT(*) AS cnt FROM users WHERE user_type = 'realtor' AND is_approved = true AND is_active IS NOT FALSE`
         );
         const approvedCount = parseInt(countRows[0].cnt) || 0;
-        const isFounding = approvedCount < 100;
+        const foundingDeadline = new Date('2026-08-31T23:59:59Z');
+        const isFounding = approvedCount < 100 && new Date() <= foundingDeadline;
 
         const { rows } = await client.query(
             `UPDATE users SET is_approved = true,
@@ -4002,6 +4009,16 @@ app.get('/locations/:stateCode/:citySlug', async (req, res) => {
         console.error('City page error:', err);
         res.status(500).send('Server error');
     }
+});
+
+// Google Search Console HTML verification file
+// Set GSC_VERIFICATION_TOKEN env var to the token from GSC (e.g. "abc123xyz")
+// GSC will request GET /google<token>.html — this route handles it without needing a static file
+app.get('/google:token.html', (req, res) => {
+    const token = process.env.GSC_VERIFICATION_TOKEN;
+    if (!token || req.params.token !== token) return res.status(404).send('Not found');
+    res.type('text/html');
+    res.send(`google-site-verification: google${token}.html`);
 });
 
 // Robots.txt

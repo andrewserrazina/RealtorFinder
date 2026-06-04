@@ -346,6 +346,11 @@
                         <label>Company / Brokerage Name <span style="font-weight:400;color:#6b7280;">(optional)</span></label>
                         <input type="text" name="companyName" placeholder="e.g. Sunrise Realty Group" maxlength="255">
                     </div>
+                    <div class="form-group" id="licenseGroup" style="display:none;">
+                        <label>Real Estate License Number</label>
+                        <input type="text" name="licenseNumber" placeholder="e.g. 9012345" maxlength="50">
+                        <small style="color:#6b7280;font-size:0.8rem;">Used to verify your license before activation. Your account will be reviewed within 1 business day.</small>
+                    </div>
                     <div class="form-group">
                         <label>First Name</label>
                         <input type="text" name="firstName" placeholder="John" required>
@@ -530,12 +535,15 @@
             }
         });
 
-        // Show company name field when userType is realtor
+        // Show realtor-only fields when userType is realtor
         const userTypeSelect = document.querySelector('select[name="userType"]');
         const companyGroup = document.getElementById('companyNameGroup');
+        const licenseGroup = document.getElementById('licenseGroup');
         if (userTypeSelect && companyGroup) {
             userTypeSelect.addEventListener('change', function() {
-                companyGroup.style.display = this.value === 'realtor' ? 'block' : 'none';
+                const isRealtor = this.value === 'realtor';
+                companyGroup.style.display = isRealtor ? 'block' : 'none';
+                if (licenseGroup) licenseGroup.style.display = isRealtor ? 'block' : 'none';
             });
         }
 
