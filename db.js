@@ -842,8 +842,8 @@ const db = {
 
     async getAllPublishedCities() {
         const result = await pool.query(
-            `SELECT state_code, slug, updated_at FROM city_pages
-             WHERE is_published = TRUE ORDER BY state_code, name`
+            `SELECT DISTINCT ON (state_code, slug) state_code, slug, updated_at FROM city_pages
+             WHERE is_published = TRUE ORDER BY state_code, slug, updated_at DESC`
         );
         return result.rows;
     },
