@@ -899,6 +899,37 @@ const db = {
             [id]
         );
         return result.rows[0];
+    },
+
+    // ── Blog ──────────────────────────────────────────────────────────────
+    async getBlogPosts({ limit = 20, offset = 0, category = null } = {}) {
+        const params = [limit, offset];
+        let where = 'WHERE is_published = TRUE';
+        if (category) { where += ` AND category = $3`; params.push(category); }
+        const result = await pool.query(
+            `SELECT id, slug, title, excerpt, author, category, state_code, city_slug,
+                    published_at, read_time_minutes
+             FROM blog_posts ${where}
+             ORDER BY published_at DESC
+             LIMIT $1 OFFSET $2`,
+            params
+        );
+        return result.rows;
+    },
+
+    async getBlogPost(slug) {
+        const result = await pool.query(
+            `SELECT * FROM blog_posts WHERE slug = $1 AND is_published = TRUE`,
+            [slug]
+        );
+        return result.rows[0];
+    },
+
+    async getAllBlogSlugs() {
+        const result = await pool.query(
+            `SELECT slug, updated_at FROM blog_posts WHERE is_published = TRUE ORDER BY published_at DESC`
+        );
+        return result.rows;
     }
 };
 
