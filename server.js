@@ -4034,18 +4034,19 @@ app.get('/sitemap-index.xml', async (req, res) => {
     let states = [];
     try { states = await db.getPublishedStates(); } catch (e) {}
     const staticEntry = `  <sitemap><loc>${base}/sitemap-static.xml</loc><lastmod>${today}</lastmod></sitemap>`;
+    const blogEntry  = `  <sitemap><loc>${base}/sitemap-blog.xml</loc><lastmod>${today}</lastmod></sitemap>`;
     const stateEntries = states.map(s =>
         `  <sitemap><loc>${base}/sitemap-${s.state_code.toLowerCase()}.xml</loc><lastmod>${today}</lastmod></sitemap>`
     ).join('\n');
     res.type('application/xml');
-    res.send(`<?xml version="1.0" encoding="UTF-8"?>\n<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${staticEntry}\n${stateEntries}\n</sitemapindex>`);
+    res.send(`<?xml version="1.0" encoding="UTF-8"?>\n<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${staticEntry}\n${blogEntry}\n${stateEntries}\n</sitemapindex>`);
 });
 
 // Static pages sitemap
 app.get('/sitemap-static.xml', (req, res) => {
     const base = (process.env.FRONTEND_URL || 'https://realtorfinder.net').replace(/\/$/, '');
     const today = new Date().toISOString().split('T')[0];
-    const urls = ['/', '/sellers', '/realtors', '/pricing', '/about', '/about-sellers', '/buyers', '/locations', '/login', '/contact', '/faq', '/find-agent'];
+    const urls = ['/', '/sellers', '/realtors', '/pricing', '/about', '/about-sellers', '/buyers', '/locations', '/blog', '/login', '/contact', '/faq', '/find-agent'];
     const entries = urls.map(u => `  <url><loc>${base}${u}</loc><lastmod>${today}</lastmod><priority>${u === '/' ? '1.0' : '0.7'}</priority></url>`).join('\n');
     res.type('application/xml');
     res.send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${entries}\n</urlset>`);
@@ -4064,6 +4065,21 @@ app.get('/sitemap-:stateCode\\.xml', async (req, res) => {
     ).join('\n');
     res.type('application/xml');
     res.send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${stateEntry}\n${cityEntries}\n</urlset>`);
+});
+
+// Blog sitemap
+app.get('/sitemap-blog.xml', async (req, res) => {
+    const base = (process.env.FRONTEND_URL || 'https://realtorfinder.net').replace(/\/$/, '');
+    const today = new Date().toISOString().split('T')[0];
+    let posts = [];
+    try { posts = await db.getAllBlogSlugs(); } catch (e) {}
+    const indexEntry = `  <url><loc>${base}/blog</loc><lastmod>${today}</lastmod><priority>0.8</priority></url>`;
+    const postEntries = posts.map(p => {
+        const date = p.updated_at ? new Date(p.updated_at).toISOString().split('T')[0] : today;
+        return `  <url><loc>${base}/blog/${p.slug}</loc><lastmod>${date}</lastmod><priority>0.7</priority></url>`;
+    }).join('\n');
+    res.type('application/xml');
+    res.send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${indexEntry}\n${postEntries}\n</urlset>`);
 });
 
 // Legacy sitemap.xml redirect
@@ -7151,6 +7167,158 @@ app.get('/about', (req, res) => {
 app.get('/about-sellers', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'about-sellers.html'));
 });
+
+// ── Blog ─────────────────────────────────────────────────────────────────────
+
+const BLOG_CATEGORIES = ['How It Works', 'Seller Guides', 'Market Reports', 'Realtor Tips'];
+
+function blogNav(activePath) {
+    return `<nav style="position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(248,249,250,0.97);backdrop-filter:blur(10px);border-bottom:1px solid #e5e7eb;height:68px;display:flex;align-items:center;justify-content:space-between;padding:0 5%;">
+        <a href="/" style="font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:900;color:#0A2540;text-decoration:none;">Realtor<span style="color:#FF6B35;">Finder</span></a>
+        <div style="display:flex;align-items:center;gap:2rem;">
+            <a href="/blog" style="color:#0A2540;text-decoration:none;font-weight:500;font-size:0.95rem;">Blog</a>
+            <a href="/sellers" style="color:#0A2540;text-decoration:none;font-weight:500;font-size:0.95rem;">For Sellers</a>
+            <a href="/realtors" style="color:#0A2540;text-decoration:none;font-weight:500;font-size:0.95rem;">For Realtors</a>
+            <a href="/login?tab=signup&type=seller" style="background:#FF6B35;color:#fff;padding:10px 22px;border-radius:50px;font-weight:600;text-decoration:none;font-size:0.9rem;">List Free</a>
+        </div>
+    </nav>`;
+}
+
+function blogHead({ title, desc, canonical, type = 'article' }) {
+    const base = (process.env.FRONTEND_URL || 'https://www.realtorfinder.net').replace(/\/$/, '');
+    return `<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${title} | RealtorFinder</title>
+    <meta name="description" content="${desc}">
+    <link rel="canonical" href="${canonical}">
+    <meta property="og:title" content="${title}">
+    <meta property="og:description" content="${desc}">
+    <meta property="og:url" content="${canonical}">
+    <meta property="og:type" content="${type}">
+    <meta property="og:site_name" content="RealtorFinder">
+    <meta property="og:image" content="${base}/og-default.png">
+    <meta name="twitter:card" content="summary_large_image">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-BRGVVNKT65"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-BRGVVNKT65');</script>
+    <style>
+        :root{--primary:#0A2540;--accent:#FF6B35;--border:#e5e7eb;--soft-bg:#f8f9fa;}
+        *{margin:0;padding:0;box-sizing:border-box;}
+        body{font-family:'Work Sans',sans-serif;color:var(--primary);background:#fff;}
+        a{color:var(--accent);}
+        footer{background:var(--primary);color:rgba(255,255,255,0.6);padding:32px 5%;text-align:center;font-size:0.84rem;}
+        footer a{color:rgba(255,255,255,0.6);margin:0 8px;text-decoration:none;}
+        @media(max-width:768px){nav div{gap:1rem;} nav div a:not(:last-child){display:none;}}
+    </style>
+</head>`;
+}
+
+// Blog index
+app.get('/blog', async (req, res) => {
+    const base = (process.env.FRONTEND_URL || 'https://www.realtorfinder.net').replace(/\/$/, '');
+    const category = req.query.category || null;
+    let posts = [];
+    try { posts = await db.getBlogPosts({ limit: 50, category }); } catch (e) {}
+
+    const categoryTabs = ['All', ...BLOG_CATEGORIES].map(c => {
+        const active = (!category && c === 'All') || category === c;
+        const href = c === 'All' ? '/blog' : `/blog?category=${encodeURIComponent(c)}`;
+        return `<a href="${href}" style="padding:8px 18px;border-radius:50px;font-size:0.88rem;font-weight:600;text-decoration:none;background:${active ? 'var(--accent)' : '#f3f4f6'};color:${active ? '#fff' : 'var(--primary)'};">${c}</a>`;
+    }).join('');
+
+    const cards = posts.map(p => {
+        const date = new Date(p.published_at).toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
+        return `<a href="/blog/${p.slug}" style="display:block;background:#fff;border:1px solid var(--border);border-radius:16px;padding:28px;text-decoration:none;color:inherit;transition:box-shadow 0.2s,transform 0.2s;" onmouseover="this.style.boxShadow='0 8px 24px rgba(0,0,0,0.1)';this.style.transform='translateY(-3px)'" onmouseout="this.style.boxShadow='';this.style.transform=''">
+            ${p.category ? `<div style="display:inline-block;background:#fff3ee;color:var(--accent);font-size:0.75rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;padding:4px 12px;border-radius:50px;margin-bottom:14px;">${p.category}</div>` : ''}
+            <h2 style="font-family:'Playfair Display',serif;font-size:1.25rem;font-weight:700;line-height:1.4;margin-bottom:10px;">${p.title}</h2>
+            <p style="color:#6b7280;font-size:0.92rem;line-height:1.6;margin-bottom:16px;">${p.excerpt || ''}</p>
+            <div style="font-size:0.82rem;color:#9ca3af;">${date} &nbsp;·&nbsp; ${p.read_time_minutes} min read</div>
+        </a>`;
+    }).join('');
+
+    const empty = posts.length === 0 ? '<p style="color:#6b7280;text-align:center;padding:60px 0;">No articles yet — check back soon.</p>' : '';
+
+    res.send(`<!DOCTYPE html><html lang="en">
+${blogHead({ title: 'Real Estate Market Insights & Guides', desc: 'Expert guides, market reports, and insights for home sellers and real estate agents. RealtorFinder helps you make smarter decisions.', canonical: `${base}/blog`, type: 'website' })}
+<body>
+${blogNav('/blog')}
+<div style="padding-top:68px;">
+    <div style="background:linear-gradient(135deg,var(--primary) 0%,#0d3a5c 100%);color:#fff;padding:80px 5% 60px;text-align:center;">
+        <p style="font-size:0.8rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--accent);margin-bottom:12px;">RealtorFinder Blog</p>
+        <h1 style="font-family:'Playfair Display',serif;font-size:clamp(2rem,4vw,3rem);font-weight:900;margin-bottom:16px;">Market Insights &amp; Seller Guides</h1>
+        <p style="font-size:1.1rem;opacity:0.8;max-width:560px;margin:0 auto;">Real estate advice, market reports, and guides to help you sell smarter and find the right agent.</p>
+    </div>
+    <div style="max-width:1100px;margin:0 auto;padding:48px 5%;">
+        <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:40px;">${categoryTabs}</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:24px;">${cards}${empty}</div>
+    </div>
+</div>
+<footer><p>© ${new Date().getFullYear()} RealtorFinder &nbsp;·&nbsp; <a href="/">Home</a><a href="/sellers">For Sellers</a><a href="/realtors">For Realtors</a><a href="/blog">Blog</a><a href="/contact">Contact</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a></p></footer>
+</body></html>`);
+});
+
+// Blog post
+app.get('/blog/:slug', async (req, res) => {
+    const base = (process.env.FRONTEND_URL || 'https://www.realtorfinder.net').replace(/\/$/, '');
+    let post;
+    try { post = await db.getBlogPost(req.params.slug); } catch (e) {}
+    if (!post) return res.status(404).sendFile(path.join(__dirname, 'public', '404.html'));
+
+    let related = [];
+    try { related = await db.getBlogPosts({ limit: 3, category: post.category }); } catch (e) {}
+    related = related.filter(p => p.slug !== post.slug).slice(0, 3);
+
+    const date = new Date(post.published_at).toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
+    const schemaOrg = JSON.stringify({ '@context': 'https://schema.org', '@type': 'Article', headline: post.title, description: post.excerpt, datePublished: post.published_at, author: { '@type': 'Organization', name: 'RealtorFinder' }, publisher: { '@type': 'Organization', name: 'RealtorFinder', url: base } });
+
+    const relatedCards = related.map(p => `
+        <a href="/blog/${p.slug}" style="display:block;background:#f8f9fa;border-radius:12px;padding:20px;text-decoration:none;color:inherit;">
+            ${p.category ? `<div style="font-size:0.72rem;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">${p.category}</div>` : ''}
+            <div style="font-family:'Playfair Display',serif;font-size:1rem;font-weight:700;line-height:1.4;">${p.title}</div>
+            <div style="font-size:0.8rem;color:#9ca3af;margin-top:8px;">${p.read_time_minutes} min read</div>
+        </a>`).join('');
+
+    res.send(`<!DOCTYPE html><html lang="en">
+${blogHead({ title: post.title, desc: post.excerpt || post.title, canonical: `${base}/blog/${post.slug}` })}
+<head><script type="application/ld+json">${schemaOrg}</script></head>
+<body>
+${blogNav(`/blog/${post.slug}`)}
+<div style="padding-top:68px;">
+    <div style="max-width:780px;margin:0 auto;padding:56px 5% 80px;">
+        <div style="margin-bottom:32px;">
+            <a href="/blog" style="color:#6b7280;font-size:0.88rem;text-decoration:none;">← All articles</a>
+        </div>
+        ${post.category ? `<div style="display:inline-block;background:#fff3ee;color:var(--accent);font-size:0.75rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;padding:4px 12px;border-radius:50px;margin-bottom:20px;">${post.category}</div>` : ''}
+        <h1 style="font-family:'Playfair Display',serif;font-size:clamp(1.8rem,3.5vw,2.6rem);font-weight:900;line-height:1.25;margin-bottom:20px;">${post.title}</h1>
+        <div style="display:flex;align-items:center;gap:16px;color:#9ca3af;font-size:0.87rem;margin-bottom:40px;padding-bottom:32px;border-bottom:1px solid var(--border);">
+            <span>${post.author}</span>
+            <span>·</span>
+            <span>${date}</span>
+            <span>·</span>
+            <span>${post.read_time_minutes} min read</span>
+        </div>
+        <div style="font-size:1.05rem;line-height:1.8;color:#1f2937;" class="blog-content">${post.content}</div>
+        <div style="margin-top:56px;padding:32px;background:#f8f9fa;border-radius:16px;text-align:center;">
+            <p style="font-family:'Playfair Display',serif;font-size:1.4rem;font-weight:700;margin-bottom:12px;">Ready to sell smarter?</p>
+            <p style="color:#6b7280;margin-bottom:24px;">List your home free and let licensed realtors compete for your listing.</p>
+            <a href="/login?tab=signup&type=seller" style="display:inline-block;background:var(--accent);color:#fff;padding:14px 32px;border-radius:50px;font-weight:600;text-decoration:none;font-size:1rem;">List Your Home Free</a>
+        </div>
+        ${related.length ? `<div style="margin-top:56px;"><h3 style="font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:700;margin-bottom:20px;">More articles</h3><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;">${relatedCards}</div></div>` : ''}
+    </div>
+</div>
+<style>
+    .blog-content h2{font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:700;margin:2em 0 0.8em;}
+    .blog-content h3{font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:700;margin:1.6em 0 0.6em;}
+    .blog-content p{margin-bottom:1.2em;}
+    .blog-content ul,ol{margin:0 0 1.2em 1.5em;}
+    .blog-content li{margin-bottom:0.4em;}
+    .blog-content a{color:var(--accent);}
+</style>
+<footer><p>© ${new Date().getFullYear()} RealtorFinder &nbsp;·&nbsp; <a href="/">Home</a><a href="/sellers">For Sellers</a><a href="/realtors">For Realtors</a><a href="/blog">Blog</a><a href="/contact">Contact</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a></p></footer>
+</body></html>`);
+});
+
 app.get('/contact', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'contact.html'));
 });
