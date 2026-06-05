@@ -561,6 +561,8 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="RealtorFinder">
+    <!-- Leaflet (loaded only when coverage map tab is opened) -->
+    <link id="leaflet-css" rel="stylesheet" href="" data-src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" disabled>
 </head>
 <body>
 
@@ -662,6 +664,7 @@
         <button class="tab-btn" onclick="switchTab('revenue', this)" style="color:#10b981;font-weight:600;">Revenue 💰</button>
         <button class="tab-btn" onclick="switchTab('campaigns', this)" style="color:#6366f1;font-weight:600;">Campaigns 📣</button>
         <button class="tab-btn" onclick="switchTab('health', this)" style="color:#0ea5e9;font-weight:600;">Health 🩺</button>
+        <button class="tab-btn" onclick="switchTab('coverage-map', this)" style="color:#FF6B35;font-weight:600;">Coverage Map 🗺</button>
     </div>
 
     <!-- Stats tab -->
@@ -1325,6 +1328,26 @@
         </div>
     </div>
 
+    <!-- Coverage Map tab -->
+    <div class="tab-panel" id="tab-coverage-map">
+        <div style="padding:1.5rem;">
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;margin-bottom:1.25rem;">
+                <div>
+                    <h2 style="font-size:1.2rem;font-weight:700;margin-bottom:4px;">Realtor Coverage Map</h2>
+                    <p style="font-size:0.85rem;color:var(--text-muted);">25-mile radius around each approved realtor's ZIP code. Brighter areas = denser coverage.</p>
+                </div>
+                <div style="display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap;">
+                    <div id="map-stat-realtors" style="background:#f3f4f6;border-radius:8px;padding:8px 14px;font-size:0.82rem;font-weight:600;"></div>
+                    <div id="map-stat-zips" style="background:#f3f4f6;border-radius:8px;padding:8px 14px;font-size:0.82rem;font-weight:600;"></div>
+                    <div id="map-stat-states" style="background:#f3f4f6;border-radius:8px;padding:8px 14px;font-size:0.82rem;font-weight:600;"></div>
+                    <button onclick="refreshCoverageMap()" style="background:#FF6B35;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:0.82rem;font-weight:600;cursor:pointer;">⟳ Refresh</button>
+                </div>
+            </div>
+            <div id="map-status" style="font-size:0.83rem;color:#6b7280;margin-bottom:0.75rem;min-height:1.2em;"></div>
+            <div id="coverage-map" style="height:600px;border-radius:12px;border:1px solid var(--border);overflow:hidden;background:#e8f0fe;"></div>
+        </div>
+    </div>
+
     <!-- Impersonate tab -->
     <div class="tab-panel" id="tab-impersonate">
         <div class="table-wrapper" style="padding:2rem;max-width:500px;">
@@ -1607,6 +1630,7 @@
         if (name === 'revenue') loadRevenue();
         if (name === 'health') loadHealth();
         if (name === 'campaigns') onCampaignSegmentChange();
+        if (name === 'coverage-map') initCoverageMap();
     }
 
     // ── Announce ──────────────────────────────────────────────────────────────
@@ -3009,6 +3033,135 @@
     // ── Boot ──────────────────────────────────────────────────────────────────
     checkAuth();
     checkImpersonationStatus();
+
+    // ── Coverage Map ──────────────────────────────────────────────────────────
+
+    let coverageMap = null;
+    let coverageMapInitialised = false;
+    const GEOCACHE_KEY = 'rf_zip_geocache_v1';
+    const CIRCLE_RADIUS_M = 40234; // 25 miles in metres
+
+    function loadLeaflet(cb) {
+        if (window.L) return cb();
+        // Enable pre-declared CSS link
+        const cssLink = document.getElementById('leaflet-css');
+        if (cssLink) { cssLink.href = cssLink.dataset.src; cssLink.removeAttribute('disabled'); }
+        const s = document.createElement('script');
+        s.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+        s.onload = cb;
+        document.head.appendChild(s);
+    }
+
+    async function fetchRealtorZips() {
+        const res = await fetch('/api/admin/realtor-coverage', { credentials: 'include' });
+        if (!res.ok) throw new Error('Failed to load coverage data');
+        return res.json(); // [{zip_code, count, state_code, names:[]}]
+    }
+
+    async function geocodeZip(zip) {
+        const cache = JSON.parse(localStorage.getItem(GEOCACHE_KEY) || '{}');
+        if (cache[zip]) return cache[zip];
+        try {
+            const r = await fetch(`https://nominatim.openstreetmap.org/search?postalcode=${encodeURIComponent(zip)}&country=US&format=json&limit=1`, {
+                headers: { 'Accept-Language': 'en-US', 'User-Agent': 'RealtorFinder-Admin/1.0' }
+            });
+            const data = await r.json();
+            if (!data.length) return null;
+            const coords = { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+            cache[zip] = coords;
+            localStorage.setItem(GEOCACHE_KEY, JSON.stringify(cache));
+            return coords;
+        } catch (e) { return null; }
+    }
+
+    function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+    async function initCoverageMap() {
+        if (coverageMapInitialised) return;
+        const status = document.getElementById('map-status');
+        status.textContent = 'Loading Leaflet…';
+
+        loadLeaflet(async () => {
+            if (coverageMap) { coverageMap.remove(); coverageMap = null; }
+            coverageMap = L.map('coverage-map', { zoomControl: true }).setView([39.5, -98.35], 4);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors', maxZoom: 18
+            }).addTo(coverageMap);
+
+            status.textContent = 'Fetching realtor data…';
+            let zips;
+            try { zips = await fetchRealtorZips(); } catch (e) {
+                status.textContent = '❌ ' + e.message; return;
+            }
+
+            const totalRealtors = zips.reduce((s, z) => s + z.count, 0);
+            const states = [...new Set(zips.map(z => z.state_code).filter(Boolean))];
+            document.getElementById('map-stat-realtors').textContent = `👤 ${totalRealtors} realtors`;
+            document.getElementById('map-stat-zips').textContent = `📍 ${zips.length} ZIP codes`;
+            document.getElementById('map-stat-states').textContent = `🗺 ${states.length} states`;
+
+            const cache = JSON.parse(localStorage.getItem(GEOCACHE_KEY) || '{}');
+            const uncached = zips.filter(z => !cache[z.zip_code]);
+            const circles = [];
+
+            // Draw already-cached ZIPs immediately
+            for (const z of zips) {
+                if (cache[z.zip_code]) {
+                    const c = cache[z.zip_code];
+                    const opacity = Math.min(0.12 + z.count * 0.06, 0.5);
+                    const circle = L.circle([c.lat, c.lng], {
+                        radius: CIRCLE_RADIUS_M,
+                        color: '#FF6B35', fillColor: '#FF6B35',
+                        fillOpacity: opacity, weight: 1, opacity: 0.6
+                    }).bindTooltip(`ZIP ${z.zip_code} · ${z.count} realtor${z.count > 1 ? 's' : ''}<br><small>${z.names.slice(0,3).join(', ')}${z.names.length > 3 ? '…' : ''}</small>`, { sticky: true });
+                    circle.addTo(coverageMap);
+                    circles.push(circle);
+                }
+            }
+
+            if (!uncached.length) {
+                status.textContent = `✅ ${zips.length} ZIP codes plotted (all cached)`;
+                coverageMapInitialised = true;
+                if (circles.length) {
+                    const group = L.featureGroup(circles);
+                    coverageMap.fitBounds(group.getBounds().pad(0.1));
+                }
+                return;
+            }
+
+            // Geocode uncached ZIPs with rate limiting (1.1s between requests per Nominatim ToS)
+            let done = 0;
+            for (const z of uncached) {
+                status.textContent = `Geocoding ZIP codes… ${done}/${uncached.length} (${zips.length - uncached.length + done} total plotted)`;
+                const coords = await geocodeZip(z.zip_code);
+                done++;
+                if (!coords) continue;
+                const opacity = Math.min(0.12 + z.count * 0.06, 0.5);
+                const circle = L.circle([coords.lat, coords.lng], {
+                    radius: CIRCLE_RADIUS_M,
+                    color: '#FF6B35', fillColor: '#FF6B35',
+                    fillOpacity: opacity, weight: 1, opacity: 0.6
+                }).bindTooltip(`ZIP ${z.zip_code} · ${z.count} realtor${z.count > 1 ? 's' : ''}<br><small>${z.names.slice(0,3).join(', ')}${z.names.length > 3 ? '…' : ''}</small>`, { sticky: true });
+                circle.addTo(coverageMap);
+                circles.push(circle);
+                if (done < uncached.length) await sleep(1100); // Nominatim rate limit
+            }
+
+            status.textContent = `✅ ${circles.length} ZIP codes plotted`;
+            coverageMapInitialised = true;
+            if (circles.length) {
+                const group = L.featureGroup(circles);
+                coverageMap.fitBounds(group.getBounds().pad(0.1));
+            }
+        });
+    }
+
+    async function refreshCoverageMap() {
+        localStorage.removeItem(GEOCACHE_KEY);
+        coverageMapInitialised = false;
+        if (coverageMap) { coverageMap.remove(); coverageMap = null; }
+        await initCoverageMap();
+    }
 </script>
     <script>
       if ('serviceWorker' in navigator) {
