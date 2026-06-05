@@ -1221,8 +1221,8 @@
 
                 <div class="trust-badges">
                     <div class="badge">
-                        <div class="badge-number">Aug</div>
-                        <div class="badge-label">2026 Launch</div>
+                        <div class="badge-number" id="waitlistCountBadge">…</div>
+                        <div class="badge-label">On Waitlist</div>
                     </div>
                     <div class="badge">
                         <div class="badge-number">100%</div>
@@ -1698,6 +1698,64 @@
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
       }
+    </script>
+
+    <!-- Exit-intent modal -->
+    <div id="exitIntentOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9000;align-items:center;justify-content:center;">
+        <div style="background:white;border-radius:20px;padding:2.5rem 2rem 2rem;max-width:440px;width:90%;position:relative;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+            <button onclick="closeExitIntent()" style="position:absolute;top:1rem;right:1rem;background:#f3f4f6;border:none;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:1.1rem;color:#374151;">✕</button>
+            <div style="font-size:2.5rem;margin-bottom:0.75rem;">🏡</div>
+            <h3 style="font-family:'Crimson Pro',serif;font-size:1.6rem;font-weight:900;color:#0A2540;margin-bottom:0.5rem;">Before you go…</h3>
+            <p style="color:#6b7280;margin-bottom:1.5rem;font-size:0.95rem;">Join our waitlist and be the first to know when we launch in August 2026. Free forever for sellers.</p>
+            <form id="exitIntentForm" style="display:flex;flex-direction:column;gap:0.75rem;">
+                <input type="email" id="exitIntentEmail" placeholder="Your email address" required style="padding:0.8rem 1rem;border:1.5px solid #e5e7eb;border-radius:10px;font-size:0.95rem;font-family:inherit;outline:none;">
+                <button type="submit" style="background:#FF6B35;color:white;border:none;padding:0.85rem;border-radius:10px;font-weight:700;font-size:1rem;cursor:pointer;font-family:inherit;">Reserve My Spot →</button>
+            </form>
+            <div id="exitIntentSuccess" style="display:none;color:#059669;font-weight:600;margin-top:0.75rem;">✓ You're on the list! See you at launch.</div>
+            <p style="margin-top:1rem;font-size:0.78rem;color:#9ca3af;">No spam, ever. Unsubscribe anytime.</p>
+        </div>
+    </div>
+
+    <script>
+        // Live waitlist counter
+        (async () => {
+            try {
+                const d = await fetch('/api/stats/public').then(r => r.json());
+                const el = document.getElementById('waitlistCountBadge');
+                if (el && d.waitlistCount > 0) el.textContent = d.waitlistCount.toLocaleString();
+                else if (el) el.textContent = '—';
+            } catch(_) {}
+        })();
+
+        // Exit-intent
+        let exitShown = false;
+        function closeExitIntent() {
+            document.getElementById('exitIntentOverlay').style.display = 'none';
+            localStorage.setItem('rf_exit_dismissed', '1');
+        }
+        document.addEventListener('mouseleave', (e) => {
+            if (e.clientY > 0 || exitShown) return;
+            if (localStorage.getItem('rf_exit_dismissed')) return;
+            exitShown = true;
+            document.getElementById('exitIntentOverlay').style.display = 'flex';
+        });
+        document.getElementById('exitIntentForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('exitIntentEmail').value.trim();
+            if (!email) return;
+            try {
+                const recaptchaToken = await grecaptcha.execute('6LdopQ4tAAAAAEvpFE_a4g-B6t17I1Kc06q0IRjx', { action: 'waitlist' });
+                await fetch('/api/waitlist', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, type: 'seller', recaptchaToken })
+                });
+            } catch(_) {}
+            document.getElementById('exitIntentForm').style.display = 'none';
+            document.getElementById('exitIntentSuccess').style.display = 'block';
+            localStorage.setItem('rf_exit_dismissed', '1');
+            setTimeout(closeExitIntent, 2500);
+        });
     </script>
 </body>
 </html>

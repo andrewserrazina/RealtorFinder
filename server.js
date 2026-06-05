@@ -398,6 +398,11 @@ app.post('/api/auth/signup', async (req, res) => {
             }
         }
 
+        // Generate public profile slug (firstname-lastname-id, lowercase, alphanumeric+hyphens)
+        const rawSlug = `${firstName}-${lastName}-${user.id}`.toLowerCase().replace(/[^a-z0-9-]/g, '');
+        pool.query(`UPDATE users SET profile_slug = $1 WHERE id = $2`, [rawSlug, user.id])
+            .catch(err => console.error('Profile slug save failed (non-fatal):', err.message));
+
         // Send verification email (non-blocking)
         const verifyToken = crypto.randomBytes(32).toString('hex');
         const verifyExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
@@ -6846,6 +6851,33 @@ app.get('/realtor/:id', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'realtor-profile.html'));
 });
 
+// Pretty slug URL — resolve to numeric id and redirect
+app.get('/agent/:slug', async (req, res) => {
+    try {
+        const { rows } = await pool.query(
+            `SELECT id FROM users WHERE profile_slug = $1 AND user_type = 'realtor' LIMIT 1`,
+            [req.params.slug]
+        );
+        if (!rows.length) return res.status(404).sendFile(path.join(__dirname, 'public', '404.html'));
+        res.redirect(301, `/realtor/${rows[0].id}`);
+    } catch (err) {
+        res.redirect('/realtor-directory');
+    }
+});
+
+// Public platform stats (waitlist count + realtor count)
+app.get('/api/stats/public', async (req, res) => {
+    try {
+        const [wl, rl] = await Promise.all([
+            pool.query(`SELECT COUNT(*)::int AS count FROM waitlist`),
+            pool.query(`SELECT COUNT(*)::int AS count FROM users WHERE user_type = 'realtor' AND is_active IS NOT FALSE`)
+        ]);
+        res.json({ waitlistCount: wl.rows[0].count, realtorCount: rl.rows[0].count });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed' });
+    }
+});
+
 // Public listing detail page
 app.get('/listing/:id', async (req, res) => {
     try {
@@ -7514,7 +7546,8 @@ _schemaMigrations.push(
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_video_url TEXT`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS onboarding_completed BOOLEAN DEFAULT FALSE`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS re_engagement_sent_at TIMESTAMPTZ`,
-    `ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMPTZ`
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMPTZ`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_slug TEXT UNIQUE`
 );
 
 // Drip email onboarding job — sends 3-step sequences to sellers, realtors, and buyers
@@ -7955,6 +7988,23 @@ async function runSellerDigestJob() {
         console.error('Seller digest job error:', err.message);
     }
 }
+// Backfill profile_slug for any realtors created before the column was added
+async function backfillProfileSlugs() {
+    try {
+        const { rows } = await pool.query(
+            `SELECT id, first_name, last_name FROM users WHERE user_type = 'realtor' AND profile_slug IS NULL`
+        );
+        for (const u of rows) {
+            const slug = `${u.first_name}-${u.last_name}-${u.id}`.toLowerCase().replace(/[^a-z0-9-]/g, '');
+            await pool.query(`UPDATE users SET profile_slug = $1 WHERE id = $2`, [slug, u.id])
+                .catch(() => {}); // ignore conflicts
+        }
+        if (rows.length) console.log(`✅ Backfilled profile slugs for ${rows.length} realtors`);
+    } catch (err) {
+        console.error('Profile slug backfill error:', err.message);
+    }
+}
+
 // Run all schema migrations then start listening
 async function startServer() {
     for (const sql of _schemaMigrations) {
@@ -7967,6 +8017,7 @@ async function startServer() {
             }
         }
     }
+    await backfillProfileSlugs();
     app.listen(PORT, () => {
         console.log(`🏠 RealtorFinder server running on port ${PORT}`);
         console.log(`📍 http://localhost:${PORT}`);

@@ -527,7 +527,7 @@
                         window.location.href = `/waitlist?type=${result.userType}`;
                     } else {
                         const redirectUrl = result.userType === 'seller'
-                            ? '/dashboard/seller'
+                            ? '/dashboard/seller?welcome=1'
                             : '/dashboard/realtor';
                         window.location.href = redirectUrl;
                     }

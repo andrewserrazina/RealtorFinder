@@ -990,6 +990,22 @@
         </aside>
 
         <main class="main-content">
+            <!-- Welcome onboarding banner (shown on first signup) -->
+            <div id="welcomeBanner" style="display:none;background:linear-gradient(135deg,#0A2540,#1a3a5c);color:white;border-radius:16px;padding:2rem 2rem 1.75rem;margin:1.5rem 1.5rem 0;position:relative;">
+                <button onclick="dismissWelcomeBanner()" style="position:absolute;top:1rem;right:1rem;background:rgba(255,255,255,0.15);border:none;color:white;width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:1rem;line-height:1;">✕</button>
+                <div style="font-size:1.75rem;margin-bottom:0.5rem;">🎉 Welcome to RealtorFinder!</div>
+                <p style="opacity:0.9;margin-bottom:1.25rem;max-width:560px;">You're all set. Create your first listing and licensed realtors in your area will compete for your business — completely free.</p>
+                <div style="display:flex;gap:1rem;flex-wrap:wrap;align-items:center;">
+                    <button onclick="dismissWelcomeBanner();openNewListingModal();" style="background:#FF6B35;color:white;border:none;padding:0.75rem 1.75rem;border-radius:10px;font-weight:700;font-size:1rem;cursor:pointer;font-family:inherit;">Create Your First Listing →</button>
+                    <span style="opacity:0.7;font-size:0.875rem;">Takes less than 2 minutes</span>
+                </div>
+                <div style="display:flex;gap:2rem;margin-top:1.5rem;flex-wrap:wrap;">
+                    <div style="display:flex;align-items:center;gap:0.5rem;font-size:0.875rem;opacity:0.8;"><span>✅</span> Free to list, always</div>
+                    <div style="display:flex;align-items:center;gap:0.5rem;font-size:0.875rem;opacity:0.8;"><span>🏆</span> Licensed agents only</div>
+                    <div style="display:flex;align-items:center;gap:0.5rem;font-size:0.875rem;opacity:0.8;"><span>⚡</span> First proposals within 24h</div>
+                </div>
+            </div>
+
             <!-- Overview View -->
             <section id="overview-view" class="view-section active">
                 <div class="page-header">
@@ -2178,10 +2194,22 @@
             document.getElementById('sellerWizard').style.display = 'flex';
         }
 
+        function dismissWelcomeBanner() {
+            document.getElementById('welcomeBanner').style.display = 'none';
+            localStorage.setItem('rf_welcome_dismissed', '1');
+        }
+
         document.addEventListener('DOMContentLoaded', async () => {
             const user = await loadCurrentUser();
             if (!user || (!user.isApproved && !user.isAdmin)) return;
             loadDashboard();
+
+            // Show welcome banner on first signup (?welcome=1) unless already dismissed
+            if (new URLSearchParams(window.location.search).get('welcome') === '1'
+                && !localStorage.getItem('rf_welcome_dismissed')) {
+                document.getElementById('welcomeBanner').style.display = 'block';
+                history.replaceState({}, '', '/dashboard/seller');
+            }
             loadNotifications();
             loadUnreadMsgCount();
             setInterval(loadNotifications, 60000);
