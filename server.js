@@ -308,6 +308,21 @@ const impersonateLimiter = rateLimit({
     legacyHeaders: false
 });
 
+async function verifyRecaptcha(token) {
+    if (!process.env.RECAPTCHA_SECRET) return true; // skip if not configured
+    if (!token) return false;
+    try {
+        const resp = await fetch(
+            `https://www.google.com/recaptcha/api/siteverify?secret=${process.env.RECAPTCHA_SECRET}&response=${encodeURIComponent(token)}`,
+            { method: 'POST' }
+        );
+        const data = await resp.json();
+        return data.success && data.score >= 0.5;
+    } catch {
+        return true; // fail open on network error so real users aren't blocked
+    }
+}
+
 // SSE: in-memory client registry — userId -> Set<res>
 const sseClients = new Map();
 function sseNotify(userId, payload) {
@@ -330,10 +345,14 @@ app.use('/api', apiLimiter);
 // Signup
 app.post('/api/auth/signup', async (req, res) => {
     try {
-        const { email, password, userType, firstName, lastName, zipCode, companyName, licenseNumber } = req.body;
+        const { email, password, userType, firstName, lastName, zipCode, companyName, licenseNumber, recaptchaToken } = req.body;
 
         if (!email || !password || !userType || !firstName || !lastName || !zipCode) {
             return res.status(400).json({ error: 'All fields required' });
+        }
+
+        if (!await verifyRecaptcha(recaptchaToken)) {
+            return res.status(400).json({ error: 'reCAPTCHA verification failed. Please try again.' });
         }
 
         if (!['seller', 'realtor', 'buyer'].includes(userType)) {
@@ -2722,10 +2741,14 @@ app.get('/api/admin/crm/realtors-list', requireAdmin, async (req, res) => {
 // Waitlist signup endpoint
 app.post('/api/waitlist', waitlistLimiter, async (req, res) => {
     try {
-        const { email, type } = req.body; // type = 'seller', 'realtor', or 'buyer'
+        const { email, type, recaptchaToken } = req.body; // type = 'seller', 'realtor', or 'buyer'
 
         if (!email || !email.includes('@')) {
             return res.status(400).json({ error: 'Valid email required' });
+        }
+
+        if (!await verifyRecaptcha(recaptchaToken)) {
+            return res.status(400).json({ error: 'reCAPTCHA verification failed. Please try again.' });
         }
 
         const normalizedType = ['seller', 'realtor', 'buyer'].includes(type) ? type : 'seller';
@@ -2772,9 +2795,12 @@ app.post('/api/waitlist', waitlistLimiter, async (req, res) => {
 // Contact form submission
 app.post('/api/contact', contactLimiter, async (req, res) => {
     try {
-        const { name, email, subject, message } = req.body;
+        const { name, email, subject, message, recaptchaToken } = req.body;
         if (!name || !email || !subject || !message) {
             return res.status(400).json({ error: 'All fields are required' });
+        }
+        if (!await verifyRecaptcha(recaptchaToken)) {
+            return res.status(400).json({ error: 'reCAPTCHA verification failed. Please try again.' });
         }
         if (!email.includes('@')) {
             return res.status(400).json({ error: 'Valid email required' });

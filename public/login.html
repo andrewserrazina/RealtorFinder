@@ -294,6 +294,7 @@
         fbq('track', 'PageView');
     </script>
     <noscript><img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=1189752893170212&ev=PageView&noscript=1"/></noscript>
+    <script src="https://www.google.com/recaptcha/api.js?render=6LdopQ4tAAAAAEvpFE_a4g-B6t17I1Kc06q0IRjx" async defer></script>
 </head>
 <body>
     <div class="login-container">
@@ -498,11 +499,12 @@
             
             try {
                 console.log('Attempting signup...');
+                const recaptchaToken = await grecaptcha.execute('6LdopQ4tAAAAAEvpFE_a4g-B6t17I1Kc06q0IRjx', { action: 'signup' });
                 const response = await fetch(`${API_BASE_URL}/auth/signup`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     credentials: 'include', // Important for cookies!
-                    body: JSON.stringify(data)
+                    body: JSON.stringify({ ...data, recaptchaToken })
                 });
                 
                 console.log('Response status:', response.status);
