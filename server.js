@@ -6453,6 +6453,30 @@ app.get('/api/admin/deals', requireAdmin, async (req, res) => {
     }
 });
 
+app.get('/api/admin/realtor-coverage', requireAdmin, async (req, res) => {
+    try {
+        const { rows } = await pool.query(`
+            SELECT zip_code,
+                   LEFT(zip_code, 3) AS zip3,
+                   COUNT(*)::int AS count,
+                   array_agg(first_name || ' ' || last_name ORDER BY first_name) AS names,
+                   (SELECT state_code FROM city_pages WHERE zip = u.zip_code LIMIT 1) AS state_code
+            FROM users u
+            WHERE user_type = 'realtor'
+              AND is_approved = TRUE
+              AND is_active IS NOT FALSE
+              AND zip_code IS NOT NULL
+              AND zip_code ~ '^[0-9]{5}$'
+            GROUP BY zip_code
+            ORDER BY count DESC, zip_code
+        `);
+        res.json(rows);
+    } catch (err) {
+        console.error('realtor-coverage error:', err);
+        res.status(500).json({ error: 'Failed to load coverage data' });
+    }
+});
+
 app.get('/api/admin/referral-stats', requireAdmin, async (req, res) => {
     try {
         const [totals, topEarners] = await Promise.all([
