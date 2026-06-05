@@ -329,6 +329,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="RealtorFinder">
+    <script src="https://www.google.com/recaptcha/api.js?render=6LdopQ4tAAAAAEvpFE_a4g-B6t17I1Kc06q0IRjx" async defer></script>
 </head>
 <body>
 
@@ -470,10 +471,11 @@
         };
 
         try {
+            const recaptchaToken = await grecaptcha.execute('6LdopQ4tAAAAAEvpFE_a4g-B6t17I1Kc06q0IRjx', { action: 'contact' });
             const res = await fetch('/api/contact', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
+                body: JSON.stringify({ ...data, recaptchaToken })
             });
             const result = await res.json();
 

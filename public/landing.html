@@ -1179,6 +1179,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="RealtorFinder">
+    <script src="https://www.google.com/recaptcha/api.js?render=6LdopQ4tAAAAAEvpFE_a4g-B6t17I1Kc06q0IRjx" async defer></script>
 </head>
 <body id="top">
     <nav>
@@ -1620,13 +1621,14 @@
             // Disable button during submission
             submitButton.disabled = true;
             submitButton.textContent = 'Joining...';
-            
+
             try {
+                const recaptchaToken = await grecaptcha.execute('6LdopQ4tAAAAAEvpFE_a4g-B6t17I1Kc06q0IRjx', { action: 'waitlist' });
                 // Call the waitlist API
                 const response = await fetch('/api/waitlist', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email: email, type: 'seller' })
+                    body: JSON.stringify({ email: email, type: 'seller', recaptchaToken })
                 });
                 
                 if (!response.ok) throw new Error('Signup failed');
@@ -1661,10 +1663,11 @@
             submitButton.disabled = true;
             submitButton.textContent = 'Joining...';
             try {
+                const recaptchaToken = await grecaptcha.execute('6LdopQ4tAAAAAEvpFE_a4g-B6t17I1Kc06q0IRjx', { action: 'waitlist' });
                 const response = await fetch('/api/waitlist', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, type: 'seller' })
+                    body: JSON.stringify({ email, type: 'seller', recaptchaToken })
                 });
                 if (!response.ok) throw new Error('Signup failed');
                 successMessage.classList.add('show');
