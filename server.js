@@ -4719,13 +4719,23 @@ app.get('/api/referrals/leaderboard', async (req, res) => {
 });
 
 // Join page — stores ref code in cookie then redirects to signup
-app.get('/join', (req, res) => {
+app.get('/join', async (req, res) => {
     const ref = req.query.ref;
     if (ref) {
-        // Use res.cookie() so Express sanitizes the value and prevents header injection
         res.cookie('ref_code', ref, { path: '/', maxAge: 7 * 24 * 3600 * 1000, sameSite: 'lax', httpOnly: false });
+        // Look up referrer name to show a personalised banner on the signup page
+        try {
+            const { rows } = await pool.query(
+                `SELECT first_name FROM users WHERE referral_code = $1 AND user_type = 'realtor'`,
+                [ref]
+            );
+            if (rows.length) {
+                const name = encodeURIComponent(rows[0].first_name);
+                return res.redirect(`/login?tab=signup&type=realtor&referrer=${name}`);
+            }
+        } catch (e) { /* non-fatal — fall through */ }
     }
-    res.redirect('/login?tab=signup');
+    res.redirect('/login?tab=signup&type=realtor');
 });
 
 // ===== PWA ROUTES (Feature 5) =====
