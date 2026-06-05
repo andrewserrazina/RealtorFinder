@@ -4055,7 +4055,22 @@ app.get('/google:token.html', (req, res) => {
 // Robots.txt
 app.get('/robots.txt', (req, res) => {
     res.type('text/plain');
-    res.send('User-agent: *\nAllow: /\nDisallow: /dashboard/\nDisallow: /api/\nSitemap: https://www.realtorfinder.net/sitemap-index.xml\n');
+    res.send([
+        'User-agent: *',
+        'Allow: /',
+        'Disallow: /dashboard/',
+        'Disallow: /api/',
+        'Disallow: /admin',
+        'Disallow: /admin-waitlist',
+        'Disallow: /login',
+        'Disallow: /reset-password',
+        'Disallow: /waitlist',
+        'Disallow: /inbox',
+        'Disallow: /subscription-success',
+        'Disallow: /company-dashboard',
+        '',
+        'Sitemap: https://www.realtorfinder.net/sitemap-index.xml',
+    ].join('\n'));
 });
 
 // Sitemap index — points to per-state sitemaps
@@ -4065,12 +4080,13 @@ app.get('/sitemap-index.xml', async (req, res) => {
     let states = [];
     try { states = await db.getPublishedStates(); } catch (e) {}
     const staticEntry = `  <sitemap><loc>${base}/sitemap-static.xml</loc><lastmod>${today}</lastmod></sitemap>`;
-    const blogEntry  = `  <sitemap><loc>${base}/sitemap-blog.xml</loc><lastmod>${today}</lastmod></sitemap>`;
+    const blogEntry   = `  <sitemap><loc>${base}/sitemap-blog.xml</loc><lastmod>${today}</lastmod></sitemap>`;
+    const agentsEntry = `  <sitemap><loc>${base}/sitemap-agents.xml</loc><lastmod>${today}</lastmod></sitemap>`;
     const stateEntries = states.map(s =>
         `  <sitemap><loc>${base}/sitemap-${s.state_code.toLowerCase()}.xml</loc><lastmod>${today}</lastmod></sitemap>`
     ).join('\n');
     res.type('application/xml');
-    res.send(`<?xml version="1.0" encoding="UTF-8"?>\n<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${staticEntry}\n${blogEntry}\n${stateEntries}\n</sitemapindex>`);
+    res.send(`<?xml version="1.0" encoding="UTF-8"?>\n<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${staticEntry}\n${blogEntry}\n${agentsEntry}\n${stateEntries}\n</sitemapindex>`);
 });
 
 // Static pages sitemap
@@ -4111,6 +4127,27 @@ app.get('/sitemap-blog.xml', async (req, res) => {
     }).join('\n');
     res.type('application/xml');
     res.send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${indexEntry}\n${postEntries}\n</urlset>`);
+});
+
+// Agent profile sitemap — /agent/:slug URLs for approved realtors with slugs
+app.get('/sitemap-agents.xml', async (req, res) => {
+    const base = (process.env.FRONTEND_URL || 'https://realtorfinder.net').replace(/\/$/, '');
+    try {
+        const { rows } = await pool.query(
+            `SELECT profile_slug, updated_at FROM users
+             WHERE user_type = 'realtor' AND is_approved = TRUE
+               AND is_active IS NOT FALSE AND profile_slug IS NOT NULL
+             ORDER BY updated_at DESC LIMIT 5000`
+        );
+        const entries = rows.map(r =>
+            `  <url><loc>${base}/agent/${r.profile_slug}</loc><lastmod>${new Date(r.updated_at).toISOString().split('T')[0]}</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>`
+        ).join('\n');
+        res.type('application/xml');
+        res.send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${entries}\n</urlset>`);
+    } catch (err) {
+        res.type('application/xml');
+        res.send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>`);
+    }
 });
 
 // Legacy sitemap.xml redirect
@@ -7446,9 +7483,17 @@ app.use((req, res) => {
 });
 
 // Unhandled errors
+// 404 catch-all — must be before the error handler
+app.use((req, res) => {
+    if (req.accepts('html')) {
+        return res.status(404).sendFile(path.join(__dirname, 'public', '404.html'));
+    }
+    res.status(404).json({ error: 'Not found' });
+});
+
 app.use((err, req, res, next) => {
     console.error('Server error:', err);
-    res.status(500).json({ 
+    res.status(500).json({
         error: 'Internal server error',
         message: process.env.NODE_ENV === 'development' ? err.message : undefined
     });
@@ -7547,7 +7592,8 @@ _schemaMigrations.push(
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS onboarding_completed BOOLEAN DEFAULT FALSE`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS re_engagement_sent_at TIMESTAMPTZ`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMPTZ`,
-    `ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_slug TEXT UNIQUE`
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_slug TEXT UNIQUE`,
+    `ALTER TABLE waitlist ADD COLUMN IF NOT EXISTS nurture_sent BOOLEAN DEFAULT FALSE`
 );
 
 // Drip email onboarding job — sends 3-step sequences to sellers, realtors, and buyers
@@ -7988,6 +8034,30 @@ async function runSellerDigestJob() {
         console.error('Seller digest job error:', err.message);
     }
 }
+// Waitlist nurture — one follow-up email to waitlist-only users at day 7
+async function runWaitlistNurtureJob() {
+    try {
+        const { rows } = await pool.query(`
+            SELECT w.email, w.user_type
+            FROM waitlist w
+            WHERE w.nurture_sent = FALSE
+              AND w.created_at < NOW() - INTERVAL '7 days'
+              AND NOT EXISTS (
+                  SELECT 1 FROM users u WHERE LOWER(u.email) = LOWER(w.email)
+              )
+            LIMIT 50
+        `);
+        for (const w of rows) {
+            try {
+                await emailService.sendWaitlistNurture(w.email, w.user_type);
+                await pool.query(`UPDATE waitlist SET nurture_sent = TRUE WHERE email = $1`, [w.email]);
+                await new Promise(r => setTimeout(r, 300));
+            } catch(e) { console.error('Waitlist nurture error:', e.message); }
+        }
+        if (rows.length) console.log(`Waitlist nurture: sent ${rows.length} emails`);
+    } catch(e) { console.error('Waitlist nurture job error:', e.message); }
+}
+
 // Backfill profile_slug for any realtors created before the column was added
 async function backfillProfileSlugs() {
     try {
@@ -8034,6 +8104,8 @@ async function startServer() {
         setInterval(runListingExpiryJob, 24 * 60 * 60 * 1000).unref();
         runDripEmailJob();
         setInterval(runDripEmailJob, 6 * 60 * 60 * 1000).unref();
+        runWaitlistNurtureJob();
+        setInterval(runWaitlistNurtureJob, 6 * 60 * 60 * 1000).unref();
         runListingAlertJob();
         setInterval(runListingAlertJob, 24 * 60 * 60 * 1000).unref();
         runWeeklyDigestJob();

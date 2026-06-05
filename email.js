@@ -1290,6 +1290,50 @@ const emailService = {
 </div>`;
         return await send({ to: toEmail, subject: `Your weekly RealtorFinder summary, ${firstName}`, html: body });
     },
+
+    // Waitlist nurture — sent 7 days after joining waitlist if user hasn't created an account
+    async sendWaitlistNurture(email, userType) {
+        const isSeller = userType !== 'realtor';
+        const subject = isSeller
+            ? "Still thinking about selling? Here's what to expect"
+            : "Still interested in RealtorFinder? Here's what's coming";
+        const body = isSeller ? `
+            ${h1('Your Spot Is Still Saved 🏡')}
+            ${p(`We noticed you joined our seller waitlist a little while ago — we just wanted to check in and make sure you know your spot is still reserved.`)}
+            <div style="background:#F8F6F3;border-radius:12px;padding:24px 28px;margin:24px 0;border:1px solid #E5E1DB;">
+                <div style="margin-bottom:20px;">
+                    <div style="font-size:15px;font-weight:700;color:#0A2540;margin-bottom:6px;">What You'll Be Able to Do at Launch</div>
+                    <p style="color:#444;font-size:14px;line-height:1.7;margin:0;">Post your home in minutes. Licensed realtors in your area will submit competing proposals — with their commission rates, marketing plans, and a personal pitch. You compare them side by side, message the ones you like, and choose on your terms. Free, forever.</p>
+                </div>
+                <div>
+                    <div style="font-size:15px;font-weight:700;color:#0A2540;margin-bottom:6px;">We Launch August 2026</div>
+                    <p style="color:#444;font-size:14px;line-height:1.7;margin:0;">That's less than a year away. To make sure you get early access and priority listing placement, create a free account now — it only takes 2 minutes and keeps your spot at the front of the line.</p>
+                </div>
+            </div>
+            ${btn(`${BASE_URL}/login?tab=signup&type=seller`, 'Create My Free Account')}
+            ${divider()}
+            <p style="color:#999;font-size:13px;margin:0;">The RealtorFinder Team<br><a href="${BASE_URL}" style="color:#FF6B35;text-decoration:none;">realtorfinder.net</a></p>
+        ` : `
+            ${h1('Your Founding Member Spot Is Still Available 🏆')}
+            ${p(`We noticed you expressed interest in RealtorFinder a while back — founding member pricing is still available, but only until we hit 100 approved agents.`)}
+            <div style="background:linear-gradient(135deg,#0A2540,#0d3659);border-radius:12px;padding:28px 32px;margin:24px 0;color:white;">
+                <div style="font-family:Georgia,serif;font-size:18px;font-weight:900;margin-bottom:12px;color:#FF6B35;">Founding Member Benefits</div>
+                <div style="font-size:14px;line-height:2;opacity:0.9;">
+                    🔒 &nbsp;Rate locked at $99/mo — never increases<br>
+                    ⚡ &nbsp;Early access to motivated sellers at launch<br>
+                    🏅 &nbsp;Founding Member badge on your profile<br>
+                    📋 &nbsp;First proposals on every listing in your area
+                </div>
+            </div>
+            ${p(`We launch in August 2026. Create your account now to lock in your founding rate before we reach 100 members.`)}
+            ${btn(`${BASE_URL}/login?tab=signup&type=realtor`, 'Lock In My Founding Rate')}
+            ${divider()}
+            <p style="color:#999;font-size:13px;margin:0;">The RealtorFinder Team<br><a href="${BASE_URL}/realtors" style="color:#FF6B35;text-decoration:none;">realtorfinder.net/realtors</a></p>
+        `;
+        try {
+            await send({ to: email, subject, html: emailWrap(isSeller ? 'For Sellers' : 'For Realtors', body) });
+        } catch (error) { logSendgridError('Waitlist nurture', error); }
+    },
 };
 
 module.exports = emailService;
