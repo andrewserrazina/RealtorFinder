@@ -337,6 +337,7 @@ const db = {
                 `SELECT u.id, u.email, u.user_type, u.first_name, u.last_name, u.zip_code,
                         u.phone, u.license_number, u.bio, u.years_experience, u.service_areas,
                         u.profile_photo, u.company_id, u.company_name, u.subscription_plan, u.company_role,
+                        u.profile_slug,
                         c.name AS company_display_name, c.plan AS company_plan
                  FROM users u
                  LEFT JOIN companies c ON c.id = u.company_id

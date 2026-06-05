@@ -1148,6 +1148,70 @@
                 font-size: 0.8rem;
             }
         }
+
+        /* ── Hamburger / mobile nav ─────────────────────────────────── */
+        .hamburger {
+            display: none;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 8px;
+            margin-left: auto;
+        }
+        .hamburger span {
+            display: block;
+            width: 22px;
+            height: 2px;
+            background: var(--text);
+            margin: 5px 0;
+            border-radius: 2px;
+            transition: 0.3s;
+        }
+        .mobile-menu {
+            display: none;
+            position: fixed;
+            top: 70px;
+            left: 0; right: 0;
+            background: var(--primary);
+            padding: 1.5rem 2rem;
+            z-index: 999;
+            flex-direction: column;
+            gap: 1rem;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+        }
+        .mobile-menu.open { display: flex; }
+        .mobile-menu a {
+            color: rgba(255,255,255,0.85);
+            text-decoration: none;
+            font-size: 1rem;
+            font-weight: 500;
+            padding: 0.35rem 0;
+            border-bottom: 1px solid rgba(255,255,255,0.07);
+        }
+        .mobile-menu a:last-child { border-bottom: none; color: var(--accent); font-weight: 700; }
+
+        @media (max-width: 768px) {
+            .hamburger { display: block; }
+            .nav-links { display: none !important; }
+        }
+
+        /* ── Small phones (≤ 480px) ────────────────────────────────── */
+        @media (max-width: 480px) {
+            .hero h1 { font-size: 2rem; }
+            .hero p { font-size: 1rem; }
+            .hero-container { padding: 2rem 1.25rem; }
+            .search-box { padding: 0.75rem; }
+            .trust-badges { gap: 1.25rem; justify-content: center; }
+            .badge-number { font-size: 1.75rem; }
+            .badge-label { font-size: 0.7rem; }
+            .section-header h2 { font-size: 2rem; }
+            .features { padding: 3.5rem 1.25rem; }
+            .features-grid { grid-template-columns: 1fr; }
+            .how-it-works { padding: 3.5rem 1.25rem; }
+            .cta h2 { font-size: 1.9rem; }
+            .cta { padding: 3.5rem 1.25rem; }
+        }
     </style>
 <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-BRGVVNKT65"></script>
@@ -1192,8 +1256,18 @@
                 <a href="/contact">Contact</a>
                 <a href="/realtors" class="nav-cta">For Realtors</a>
             </div>
+            <button class="hamburger" id="navHamburger" aria-label="Menu" aria-expanded="false">
+                <span></span><span></span><span></span>
+            </button>
         </div>
     </nav>
+    <div class="mobile-menu" id="mobileMenu">
+        <a href="#how-it-works" onclick="closeMobileMenu()">Why Us</a>
+        <a href="#features" onclick="closeMobileMenu()">How It Works</a>
+        <a href="/about-sellers" onclick="closeMobileMenu()">About</a>
+        <a href="/contact" onclick="closeMobileMenu()">Contact</a>
+        <a href="/realtors" onclick="closeMobileMenu()">For Realtors →</a>
+    </div>
 
     <section class="hero">
         <div class="hero-container">
@@ -1221,8 +1295,8 @@
 
                 <div class="trust-badges">
                     <div class="badge">
-                        <div class="badge-number">Aug</div>
-                        <div class="badge-label">2026 Launch</div>
+                        <div class="badge-number" id="waitlistCountBadge">…</div>
+                        <div class="badge-label">On Waitlist</div>
                     </div>
                     <div class="badge">
                         <div class="badge-number">100%</div>
@@ -1598,6 +1672,20 @@
     </div>
 
     <script>
+        // Hamburger nav
+        const _hamburger = document.getElementById('navHamburger');
+        const _mobileMenu = document.getElementById('mobileMenu');
+        function closeMobileMenu() { _mobileMenu.classList.remove('open'); _hamburger.setAttribute('aria-expanded', 'false'); }
+        _hamburger.addEventListener('click', () => {
+            const open = _mobileMenu.classList.toggle('open');
+            _hamburger.setAttribute('aria-expanded', open);
+        });
+        document.addEventListener('click', e => {
+            if (!_hamburger.contains(e.target) && !_mobileMenu.contains(e.target)) closeMobileMenu();
+        });
+    </script>
+
+    <script>
         // Email form handling
         document.getElementById('waitlistForm').addEventListener('submit', async function(e) {
             e.preventDefault();
@@ -1698,6 +1786,65 @@
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
       }
+    </script>
+
+    <!-- Exit-intent modal -->
+    <div id="exitIntentOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9000;align-items:center;justify-content:center;">
+        <div style="background:white;border-radius:20px;padding:2.5rem 2rem 2rem;max-width:440px;width:90%;position:relative;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+            <button onclick="closeExitIntent()" style="position:absolute;top:1rem;right:1rem;background:#f3f4f6;border:none;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:1.1rem;color:#374151;">✕</button>
+            <div style="font-size:2.5rem;margin-bottom:0.75rem;">🏡</div>
+            <h3 style="font-family:'Crimson Pro',serif;font-size:1.6rem;font-weight:900;color:#0A2540;margin-bottom:0.5rem;">Before you go…</h3>
+            <p style="color:#6b7280;margin-bottom:1.5rem;font-size:0.95rem;">Join our waitlist and be the first to know when we launch in August 2026. Free forever for sellers.</p>
+            <form id="exitIntentForm" style="display:flex;flex-direction:column;gap:0.75rem;">
+                <input type="email" id="exitIntentEmail" placeholder="Your email address" required style="padding:0.8rem 1rem;border:1.5px solid #e5e7eb;border-radius:10px;font-size:0.95rem;font-family:inherit;outline:none;">
+                <button type="submit" style="background:#FF6B35;color:white;border:none;padding:0.85rem;border-radius:10px;font-weight:700;font-size:1rem;cursor:pointer;font-family:inherit;">Reserve My Spot →</button>
+            </form>
+            <div id="exitIntentSuccess" style="display:none;color:#059669;font-weight:600;margin-top:0.75rem;">✓ You're on the list! See you at launch.</div>
+            <p style="margin-top:1rem;font-size:0.78rem;color:#9ca3af;">No spam, ever. Unsubscribe anytime.</p>
+        </div>
+    </div>
+
+    <script>
+        // Live waitlist counter
+        (async () => {
+            try {
+                const d = await fetch('/api/stats/public').then(r => r.json());
+                const el = document.getElementById('waitlistCountBadge');
+                if (el && d.waitlistCount > 0) el.textContent = d.waitlistCount.toLocaleString();
+                else if (el) el.textContent = '—';
+            } catch(_) {}
+        })();
+
+        // Exit-intent — desktop only (mouseleave doesn't apply on touch)
+        let exitShown = false;
+        function closeExitIntent() {
+            document.getElementById('exitIntentOverlay').style.display = 'none';
+            localStorage.setItem('rf_exit_dismissed', '1');
+        }
+        document.addEventListener('mouseleave', (e) => {
+            if (e.clientY > 0 || exitShown) return;
+            if (localStorage.getItem('rf_exit_dismissed')) return;
+            if (window.innerWidth < 768) return; // touch devices don't use exit-intent
+            exitShown = true;
+            document.getElementById('exitIntentOverlay').style.display = 'flex';
+        });
+        document.getElementById('exitIntentForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('exitIntentEmail').value.trim();
+            if (!email) return;
+            try {
+                const recaptchaToken = await grecaptcha.execute('6LdopQ4tAAAAAEvpFE_a4g-B6t17I1Kc06q0IRjx', { action: 'waitlist' });
+                await fetch('/api/waitlist', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, type: 'seller', recaptchaToken })
+                });
+            } catch(_) {}
+            document.getElementById('exitIntentForm').style.display = 'none';
+            document.getElementById('exitIntentSuccess').style.display = 'block';
+            localStorage.setItem('rf_exit_dismissed', '1');
+            setTimeout(closeExitIntent, 2500);
+        });
     </script>
 </body>
 </html>

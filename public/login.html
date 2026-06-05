@@ -280,6 +280,31 @@
                 padding: 3rem 2rem;
             }
         }
+
+        @media (max-width: 480px) {
+            .login-hero {
+                padding: 2rem 1.25rem;
+            }
+            .login-hero h1 {
+                font-size: 1.75rem;
+            }
+            .login-hero p {
+                font-size: 0.95rem;
+            }
+            .login-form-container {
+                padding: 2rem 1.25rem;
+            }
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            .form-tabs {
+                gap: 0;
+            }
+            .tab-btn {
+                font-size: 0.9rem;
+                padding: 0.75rem 0.5rem;
+            }
+        }
     </style>
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#0A2540">
@@ -527,7 +552,7 @@
                         window.location.href = `/waitlist?type=${result.userType}`;
                     } else {
                         const redirectUrl = result.userType === 'seller'
-                            ? '/dashboard/seller'
+                            ? '/dashboard/seller?welcome=1'
                             : '/dashboard/realtor';
                         window.location.href = redirectUrl;
                     }

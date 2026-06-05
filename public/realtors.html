@@ -1136,6 +1136,67 @@
         .cta-inline-form button:hover { background: white; color: var(--primary); transform: translateY(-2px); }
         .cta-inline-form button:disabled { opacity: 0.6; cursor: not-allowed; }
 
+        /* ── Hamburger / mobile nav ─────────────────────────────────── */
+        .hamburger {
+            display: none;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 8px;
+            margin-left: auto;
+        }
+        .hamburger span {
+            display: block;
+            width: 22px;
+            height: 2px;
+            background: var(--text);
+            margin: 5px 0;
+            border-radius: 2px;
+            transition: 0.3s;
+        }
+        .mobile-menu {
+            display: none;
+            position: fixed;
+            top: 70px;
+            left: 0; right: 0;
+            background: var(--primary);
+            padding: 1.5rem 2rem;
+            z-index: 999;
+            flex-direction: column;
+            gap: 1rem;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+        }
+        .mobile-menu.open { display: flex; }
+        .mobile-menu a {
+            color: rgba(255,255,255,0.85);
+            text-decoration: none;
+            font-size: 1rem;
+            font-weight: 500;
+            padding: 0.35rem 0;
+            border-bottom: 1px solid rgba(255,255,255,0.07);
+        }
+        .mobile-menu a:last-child { border-bottom: none; color: var(--accent); font-weight: 700; }
+
+        @media (max-width: 768px) {
+            .hamburger { display: block; }
+            .nav-links { display: none !important; }
+        }
+
+        /* ── Small phones (≤ 480px) ─────────────────────────────────── */
+        @media (max-width: 480px) {
+            .hero h1 { font-size: 2rem; }
+            .hero p { font-size: 1rem; }
+            .hero-container { padding: 2rem 1.25rem; }
+            .section-header h2 { font-size: 2rem; }
+            .benefits { padding: 3.5rem 1.25rem; }
+            .pricing { padding: 3.5rem 1.25rem; }
+            .testimonials { padding: 3.5rem 1.25rem; }
+            .cta h2 { font-size: 1.9rem; }
+            .cta { padding: 3.5rem 1.25rem; }
+            .founding { padding: 3.5rem 1.25rem; }
+        }
+
     </style>
 <!-- Meta Pixel Code -->
     <script>
@@ -1173,8 +1234,20 @@
                 <a href="/contact">Contact</a>
                 <a href="/login?tab=signup&type=realtor" class="nav-cta">Create Account</a>
             </div>
+            <button class="hamburger" id="navHamburger" aria-label="Menu" aria-expanded="false">
+                <span></span><span></span><span></span>
+            </button>
         </div>
     </nav>
+    <div class="mobile-menu" id="mobileMenu">
+        <a href="#benefits" onclick="closeMobileMenu()">How It Works</a>
+        <a href="#founding" onclick="closeMobileMenu()" style="color:#F59E0B;">🏅 Founding Members</a>
+        <a href="#referral-program" onclick="closeMobileMenu()">Referrals</a>
+        <a href="#pricing" onclick="closeMobileMenu()">Pricing</a>
+        <a href="/about" onclick="closeMobileMenu()">About</a>
+        <a href="/contact" onclick="closeMobileMenu()">Contact</a>
+        <a href="/login?tab=signup&type=realtor" onclick="closeMobileMenu()">Create Account →</a>
+    </div>
 
     <section class="hero">
         <div class="hero-container">
@@ -1628,6 +1701,20 @@
             <p>&copy; 2026 RealtorFinder.net. All rights reserved.</p>
         </div>
     </footer>
+
+    <script>
+        // Hamburger nav
+        const _hamburger = document.getElementById('navHamburger');
+        const _mobileMenu = document.getElementById('mobileMenu');
+        function closeMobileMenu() { _mobileMenu.classList.remove('open'); _hamburger.setAttribute('aria-expanded', 'false'); }
+        _hamburger.addEventListener('click', () => {
+            const open = _mobileMenu.classList.toggle('open');
+            _hamburger.setAttribute('aria-expanded', open);
+        });
+        document.addEventListener('click', e => {
+            if (!_hamburger.contains(e.target) && !_mobileMenu.contains(e.target)) closeMobileMenu();
+        });
+    </script>
 
     <script>
         function goToSignup(e) {
