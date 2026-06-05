@@ -6463,8 +6463,6 @@ app.get('/api/admin/realtor-coverage', requireAdmin, async (req, res) => {
                    (SELECT state_code FROM city_pages WHERE zip = u.zip_code LIMIT 1) AS state_code
             FROM users u
             WHERE user_type = 'realtor'
-              AND is_approved = TRUE
-              AND is_active IS NOT FALSE
               AND zip_code IS NOT NULL
               AND zip_code ~ '^[0-9]{5}$'
             GROUP BY zip_code
