@@ -8554,6 +8554,394 @@ async function runWaitlistNurtureJob() {
     } catch(e) { console.error('Waitlist nurture job error:', e.message); }
 }
 
+// ===== COMPANY INVITE ROUTES =====
+
+// POST /api/company/invite — send an invite email to a new agent
+app.post('/api/company/invite', auth.requireAuth, async (req, res) => {
+    try {
+        const { email } = req.body;
+        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            return res.status(400).json({ error: 'Valid email is required' });
+        }
+        const caller = await db.getProfile(req.user.id);
+        if (!caller.company_id || !['owner', 'admin'].includes(caller.company_role)) {
+            return res.status(403).json({ error: 'Only company owner or admin can send invites' });
+        }
+        const company = await db.getCompany(caller.company_id);
+        if (!company) return res.status(404).json({ error: 'Company not found' });
+
+        const token = crypto.randomBytes(24).toString('hex');
+        const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+        await pool.query(
+            `INSERT INTO company_invites (company_id, email, token, invited_by, expires_at)
+             VALUES ($1, $2, $3, $4, $5)`,
+            [caller.company_id, email.toLowerCase().trim(), token, caller.id, expiresAt]
+        );
+
+        const baseUrl = process.env.FRONTEND_URL || `http://localhost:${PORT}`;
+        const inviteUrl = `${baseUrl}/login?tab=signup&type=realtor&invite=${token}`;
+        const inviterName = `${caller.first_name} ${caller.last_name}`.trim();
+        await emailService.sendCompanyInvite(email.toLowerCase().trim(), inviterName, company.name, inviteUrl);
+
+        res.json({ success: true });
+    } catch (err) {
+        console.error('POST /api/company/invite error:', err);
+        res.status(500).json({ error: 'Failed to send invite' });
+    }
+});
+
+// GET /api/company/invite/:token — validate invite token (public)
+app.get('/api/company/invite/:token', async (req, res) => {
+    try {
+        const { rows } = await pool.query(
+            `SELECT ci.email, c.name AS company_name
+             FROM company_invites ci
+             JOIN companies c ON c.id = ci.company_id
+             WHERE ci.token = $1 AND ci.used = FALSE AND ci.expires_at > NOW()`,
+            [req.params.token]
+        );
+        if (!rows.length) return res.json({ valid: false });
+        res.json({ valid: true, companyName: rows[0].company_name, email: rows[0].email });
+    } catch (err) {
+        console.error('GET /api/company/invite/:token error:', err);
+        res.status(500).json({ error: 'Failed to validate invite' });
+    }
+});
+
+// ===== TEAM NOTES ROUTES =====
+
+// GET /api/company/notes
+app.get('/api/company/notes', auth.requireAuth, async (req, res) => {
+    try {
+        const caller = await db.getProfile(req.user.id);
+        if (!caller.company_id) return res.status(403).json({ error: 'Not a company member' });
+
+        const params = [caller.company_id];
+        let listingFilter = '';
+        if (req.query.listing_id) {
+            params.push(parseInt(req.query.listing_id));
+            listingFilter = `AND tn.listing_id = $${params.length}`;
+        }
+
+        const { rows } = await pool.query(
+            `SELECT tn.id, tn.listing_id, tn.note, tn.created_at,
+                    u.first_name AS author_first_name, u.last_name AS author_last_name,
+                    tn.author_id
+             FROM team_notes tn
+             LEFT JOIN users u ON u.id = tn.author_id
+             WHERE tn.company_id = $1 ${listingFilter}
+             ORDER BY tn.created_at DESC
+             LIMIT 100`,
+            params
+        );
+        res.json(rows);
+    } catch (err) {
+        console.error('GET /api/company/notes error:', err);
+        res.status(500).json({ error: 'Failed to load notes' });
+    }
+});
+
+// POST /api/company/notes
+app.post('/api/company/notes', auth.requireAuth, async (req, res) => {
+    try {
+        const caller = await db.getProfile(req.user.id);
+        if (!caller.company_id) return res.status(403).json({ error: 'Not a company member' });
+
+        const { listing_id, note } = req.body;
+        if (!note || !String(note).trim()) return res.status(400).json({ error: 'note is required' });
+
+        const { rows } = await pool.query(
+            `INSERT INTO team_notes (company_id, listing_id, author_id, note)
+             VALUES ($1, $2, $3, $4)
+             RETURNING *`,
+            [caller.company_id, listing_id ? parseInt(listing_id) : null, caller.id, String(note).trim()]
+        );
+        const newNote = rows[0];
+
+        // Fetch author info to return complete object
+        const { rows: authorRows } = await pool.query(
+            `SELECT first_name AS author_first_name, last_name AS author_last_name FROM users WHERE id = $1`,
+            [caller.id]
+        );
+        res.json({ ...newNote, ...authorRows[0] });
+    } catch (err) {
+        console.error('POST /api/company/notes error:', err);
+        res.status(500).json({ error: 'Failed to create note' });
+    }
+});
+
+// DELETE /api/company/notes/:id
+app.delete('/api/company/notes/:id', auth.requireAuth, async (req, res) => {
+    try {
+        const noteId = parseInt(req.params.id);
+        const userId = req.user.id;
+        const { rows } = await pool.query(
+            `DELETE FROM team_notes
+             WHERE id = $1
+               AND (author_id = $2
+                    OR company_id IN (
+                        SELECT company_id FROM users WHERE id = $2
+                          AND company_role IN ('owner', 'admin')
+                    ))
+             RETURNING id`,
+            [noteId, userId]
+        );
+        if (!rows.length) return res.status(404).json({ error: 'Note not found or not authorized' });
+        res.json({ success: true });
+    } catch (err) {
+        console.error('DELETE /api/company/notes/:id error:', err);
+        res.status(500).json({ error: 'Failed to delete note' });
+    }
+});
+
+// ===== LISTING ASSIGNMENT ROUTES =====
+
+// POST /api/company/assignments
+app.post('/api/company/assignments', auth.requireAuth, async (req, res) => {
+    try {
+        const caller = await db.getProfile(req.user.id);
+        if (!caller.company_id || !['owner', 'admin'].includes(caller.company_role)) {
+            return res.status(403).json({ error: 'Only company owner or admin can assign listings' });
+        }
+        const { listing_id, realtor_id, note } = req.body;
+        if (!listing_id || !realtor_id) return res.status(400).json({ error: 'listing_id and realtor_id are required' });
+
+        // Verify realtor is a member of caller's company
+        const { rows: memberRows } = await pool.query(
+            `SELECT id FROM users WHERE id = $1 AND company_id = $2`,
+            [parseInt(realtor_id), caller.company_id]
+        );
+        if (!memberRows.length) return res.status(400).json({ error: 'Realtor is not a member of your company' });
+
+        const { rows } = await pool.query(
+            `INSERT INTO listing_assignments (listing_id, realtor_id, assigned_by, company_id, note)
+             VALUES ($1, $2, $3, $4, $5)
+             ON CONFLICT (listing_id, realtor_id) DO UPDATE SET note = EXCLUDED.note
+             RETURNING *`,
+            [parseInt(listing_id), parseInt(realtor_id), caller.id, caller.company_id, note || null]
+        );
+        res.json(rows[0]);
+    } catch (err) {
+        console.error('POST /api/company/assignments error:', err);
+        res.status(500).json({ error: 'Failed to create assignment' });
+    }
+});
+
+// GET /api/company/assignments
+app.get('/api/company/assignments', auth.requireAuth, async (req, res) => {
+    try {
+        const caller = await db.getProfile(req.user.id);
+        if (!caller.company_id) return res.status(403).json({ error: 'Not a company member' });
+
+        const params = [caller.company_id];
+        let listingFilter = '';
+        if (req.query.listing_id) {
+            params.push(parseInt(req.query.listing_id));
+            listingFilter = `AND la.listing_id = $${params.length}`;
+        }
+
+        const { rows } = await pool.query(
+            `SELECT la.id, la.listing_id, la.realtor_id, la.note, la.created_at,
+                    u.first_name AS realtor_first_name, u.last_name AS realtor_last_name,
+                    u.email AS realtor_email, u.profile_photo AS realtor_profile_photo,
+                    l.address AS listing_address, l.city AS listing_city, l.price AS listing_price
+             FROM listing_assignments la
+             JOIN users u ON u.id = la.realtor_id
+             JOIN listings l ON l.id = la.listing_id
+             WHERE la.company_id = $1 ${listingFilter}
+             ORDER BY la.created_at DESC`,
+            params
+        );
+        res.json(rows);
+    } catch (err) {
+        console.error('GET /api/company/assignments error:', err);
+        res.status(500).json({ error: 'Failed to load assignments' });
+    }
+});
+
+// DELETE /api/company/assignments/:id
+app.delete('/api/company/assignments/:id', auth.requireAuth, async (req, res) => {
+    try {
+        const caller = await db.getProfile(req.user.id);
+        if (!caller.company_id || !['owner', 'admin'].includes(caller.company_role)) {
+            return res.status(403).json({ error: 'Only company owner or admin can remove assignments' });
+        }
+        const { rows } = await pool.query(
+            `DELETE FROM listing_assignments WHERE id = $1 AND company_id = $2 RETURNING id`,
+            [parseInt(req.params.id), caller.company_id]
+        );
+        if (!rows.length) return res.status(404).json({ error: 'Assignment not found' });
+        res.json({ success: true });
+    } catch (err) {
+        console.error('DELETE /api/company/assignments/:id error:', err);
+        res.status(500).json({ error: 'Failed to delete assignment' });
+    }
+});
+
+// ===== PROPOSAL TEMPLATE ROUTES =====
+
+// GET /api/company/templates
+app.get('/api/company/templates', auth.requireAuth, async (req, res) => {
+    try {
+        const caller = await db.getProfile(req.user.id);
+        if (!caller.company_id) return res.status(403).json({ error: 'Not a company member' });
+
+        const { rows } = await pool.query(
+            `SELECT * FROM company_proposal_templates WHERE company_id = $1 ORDER BY created_at DESC`,
+            [caller.company_id]
+        );
+        res.json(rows);
+    } catch (err) {
+        console.error('GET /api/company/templates error:', err);
+        res.status(500).json({ error: 'Failed to load templates' });
+    }
+});
+
+// POST /api/company/templates
+app.post('/api/company/templates', auth.requireAuth, async (req, res) => {
+    try {
+        const caller = await db.getProfile(req.user.id);
+        if (!caller.company_id || !['owner', 'admin'].includes(caller.company_role)) {
+            return res.status(403).json({ error: 'Only company owner or admin can create templates' });
+        }
+        const { name, content } = req.body;
+        if (!name || !content) return res.status(400).json({ error: 'name and content are required' });
+
+        const { rows } = await pool.query(
+            `INSERT INTO company_proposal_templates (company_id, name, content, created_by)
+             VALUES ($1, $2, $3, $4) RETURNING *`,
+            [caller.company_id, String(name).substring(0, 200), String(content), caller.id]
+        );
+        res.json(rows[0]);
+    } catch (err) {
+        console.error('POST /api/company/templates error:', err);
+        res.status(500).json({ error: 'Failed to create template' });
+    }
+});
+
+// PUT /api/company/templates/:id
+app.put('/api/company/templates/:id', auth.requireAuth, async (req, res) => {
+    try {
+        const caller = await db.getProfile(req.user.id);
+        if (!caller.company_id || !['owner', 'admin'].includes(caller.company_role)) {
+            return res.status(403).json({ error: 'Only company owner or admin can update templates' });
+        }
+        const { name, content } = req.body;
+        if (!name || !content) return res.status(400).json({ error: 'name and content are required' });
+
+        const { rows } = await pool.query(
+            `UPDATE company_proposal_templates
+             SET name = $1, content = $2, updated_at = NOW()
+             WHERE id = $3 AND company_id = $4
+             RETURNING *`,
+            [String(name).substring(0, 200), String(content), parseInt(req.params.id), caller.company_id]
+        );
+        if (!rows.length) return res.status(404).json({ error: 'Template not found' });
+        res.json(rows[0]);
+    } catch (err) {
+        console.error('PUT /api/company/templates/:id error:', err);
+        res.status(500).json({ error: 'Failed to update template' });
+    }
+});
+
+// DELETE /api/company/templates/:id
+app.delete('/api/company/templates/:id', auth.requireAuth, async (req, res) => {
+    try {
+        const caller = await db.getProfile(req.user.id);
+        if (!caller.company_id || !['owner', 'admin'].includes(caller.company_role)) {
+            return res.status(403).json({ error: 'Only company owner or admin can delete templates' });
+        }
+        const { rows } = await pool.query(
+            `DELETE FROM company_proposal_templates WHERE id = $1 AND company_id = $2 RETURNING id`,
+            [parseInt(req.params.id), caller.company_id]
+        );
+        if (!rows.length) return res.status(404).json({ error: 'Template not found' });
+        res.json({ success: true });
+    } catch (err) {
+        console.error('DELETE /api/company/templates/:id error:', err);
+        res.status(500).json({ error: 'Failed to delete template' });
+    }
+});
+
+// ===== FIRM LEADERBOARD ROUTE =====
+
+// GET /api/company/leaderboard
+app.get('/api/company/leaderboard', auth.requireAuth, async (req, res) => {
+    try {
+        const caller = await db.getProfile(req.user.id);
+        if (!caller.company_id) return res.status(403).json({ error: 'Not a company member' });
+
+        const { rows } = await pool.query(
+            `SELECT u.id, u.first_name, u.last_name, u.email, u.profile_photo, u.company_role,
+                    COUNT(DISTINCT CASE WHEN p.status = 'accepted' THEN p.id END) AS accepted_proposals,
+                    COUNT(DISTINCT p.id) AS total_proposals,
+                    COUNT(DISTINCT CASE WHEN l.status = 'active' AND l.deleted_at IS NULL THEN l.id END) AS active_listings
+             FROM users u
+             LEFT JOIN proposals p ON p.realtor_id = u.id
+             LEFT JOIN listings l ON l.user_id = u.id
+             WHERE u.company_id = $1 AND (u.is_active IS NULL OR u.is_active = TRUE)
+             GROUP BY u.id, u.first_name, u.last_name, u.email, u.profile_photo, u.company_role
+             ORDER BY accepted_proposals DESC, total_proposals DESC`,
+            [caller.company_id]
+        );
+        res.json(rows);
+    } catch (err) {
+        console.error('GET /api/company/leaderboard error:', err);
+        res.status(500).json({ error: 'Failed to load leaderboard' });
+    }
+});
+
+// ===== FIRM PUBLIC PROFILE ROUTES =====
+
+// Serve firms.html for /firms/:slug
+app.get('/firms/:slug', (req, res) => res.sendFile(path.join(__dirname, 'public/firms.html')));
+
+// GET /api/firms/:slug — public JSON firm profile
+app.get('/api/firms/:slug', async (req, res) => {
+    try {
+        const { rows: companyRows } = await pool.query(
+            `SELECT id, name, slug, description, website, logo_url, plan, created_at
+             FROM companies
+             WHERE slug = $1 AND is_active = TRUE`,
+            [req.params.slug]
+        );
+        if (!companyRows.length) return res.status(404).json({ error: 'Firm not found' });
+        const company = companyRows[0];
+
+        const { rows: agents } = await pool.query(
+            `SELECT id, first_name, last_name, profile_photo, bio, license_verified, profile_slug, company_role
+             FROM users
+             WHERE company_id = $1 AND (is_active IS NULL OR is_active = TRUE) AND user_type = 'realtor'
+             ORDER BY company_role DESC`,
+            [company.id]
+        );
+
+        // Aggregate stats: avg rating, total accepted proposals
+        const { rows: statsRows } = await pool.query(
+            `SELECT
+                COALESCE(AVG(r.rating), 0)::numeric(3,1) AS avg_rating,
+                COUNT(r.id) AS review_count,
+                COUNT(DISTINCT CASE WHEN p.status = 'accepted' THEN p.id END) AS total_accepted
+             FROM users u
+             LEFT JOIN realtor_reviews r ON r.realtor_id = u.id
+             LEFT JOIN proposals p ON p.realtor_id = u.id
+             WHERE u.company_id = $1 AND (u.is_active IS NULL OR u.is_active = TRUE)`,
+            [company.id]
+        );
+        const stats = {
+            agent_count: agents.length,
+            avg_rating: parseFloat(statsRows[0].avg_rating) || 0,
+            review_count: parseInt(statsRows[0].review_count) || 0,
+            total_accepted: parseInt(statsRows[0].total_accepted) || 0
+        };
+
+        res.json({ company, agents, stats });
+    } catch (err) {
+        console.error('GET /api/firms/:slug error:', err);
+        res.status(500).json({ error: 'Failed to load firm profile' });
+    }
+});
+
 _schemaMigrations.push(
     `ALTER TABLE buyer_requests ADD COLUMN IF NOT EXISTS selected_realtor_id INTEGER REFERENCES users(id)`
 );
@@ -8580,6 +8968,70 @@ async function backfillProfileSlugs() {
         console.error('Profile slug backfill error:', err.message);
     }
 }
+
+// ===== NEW COMPANY / TEAM SCHEMA MIGRATIONS =====
+_schemaMigrations.push(
+    `ALTER TABLE companies ADD COLUMN IF NOT EXISTS slug VARCHAR(100) UNIQUE`,
+    `ALTER TABLE companies ADD COLUMN IF NOT EXISTS description TEXT`,
+    `ALTER TABLE companies ADD COLUMN IF NOT EXISTS website TEXT`,
+    `ALTER TABLE companies ADD COLUMN IF NOT EXISTS logo_url TEXT`
+);
+
+_schemaMigrations.push(`
+    CREATE TABLE IF NOT EXISTS company_invites (
+        id SERIAL PRIMARY KEY,
+        company_id INTEGER NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+        email VARCHAR(255) NOT NULL,
+        token TEXT UNIQUE NOT NULL,
+        invited_by INTEGER REFERENCES users(id),
+        used BOOLEAN DEFAULT FALSE,
+        expires_at TIMESTAMPTZ NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+`);
+
+_schemaMigrations.push(`
+    CREATE TABLE IF NOT EXISTS team_notes (
+        id SERIAL PRIMARY KEY,
+        company_id INTEGER NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+        listing_id INTEGER REFERENCES listings(id) ON DELETE CASCADE,
+        author_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        note TEXT NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+`);
+
+_schemaMigrations.push(`
+    CREATE TABLE IF NOT EXISTS listing_assignments (
+        id SERIAL PRIMARY KEY,
+        listing_id INTEGER NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
+        realtor_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        assigned_by INTEGER REFERENCES users(id),
+        company_id INTEGER REFERENCES companies(id) ON DELETE CASCADE,
+        note TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE(listing_id, realtor_id)
+    )
+`);
+
+_schemaMigrations.push(`
+    CREATE TABLE IF NOT EXISTS company_proposal_templates (
+        id SERIAL PRIMARY KEY,
+        company_id INTEGER NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+        name VARCHAR(200) NOT NULL,
+        content TEXT NOT NULL,
+        created_by INTEGER REFERENCES users(id),
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+    )
+`);
+
+// Backfill company slugs for any companies created before the slug column was added
+_schemaMigrations.push(`
+    UPDATE companies
+    SET slug = LOWER(REGEXP_REPLACE(name, '[^a-zA-Z0-9]+', '-', 'g')) || '-' || id
+    WHERE slug IS NULL
+`);
 
 // Run all schema migrations then start listening
 async function startServer() {
