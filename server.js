@@ -345,7 +345,7 @@ app.use('/api', apiLimiter);
 // Signup
 app.post('/api/auth/signup', async (req, res) => {
     try {
-        const { email, password, userType, firstName, lastName, zipCode, companyName, licenseNumber, recaptchaToken } = req.body;
+        const { email, password, userType, firstName, lastName, zipCode, companyName, licenseNumber, recaptchaToken, termsAccepted, marketingConsent } = req.body;
 
         if (!email || !password || !userType || !firstName || !lastName || !zipCode) {
             return res.status(400).json({ error: 'All fields required' });
@@ -381,6 +381,13 @@ app.post('/api/auth/signup', async (req, res) => {
         }
 
         const user = await auth.createUser(email, password, userType, firstName, lastName, zipCode);
+
+        // Record consent timestamps (non-blocking)
+        const now = new Date();
+        pool.query(
+            `UPDATE users SET terms_accepted_at = $1, marketing_consent_at = $2 WHERE id = $3`,
+            [termsAccepted ? now : null, marketingConsent ? now : null, user.id]
+        ).catch(err => console.error('Consent timestamp save failed (non-fatal):', err.message));
 
         // Realtors automatically get a company (solo company if no name provided)
         if (userType === 'realtor') {
@@ -2828,9 +2835,12 @@ app.post('/api/waitlist', waitlistLimiter, async (req, res) => {
         const normalizedType = ['seller', 'realtor', 'buyer'].includes(type) ? type : 'seller';
 
         // Save to database — use xmax to detect insert vs update
+        const unsubToken = crypto.randomBytes(20).toString('hex');
         const result = await pool.query(
-            'INSERT INTO waitlist (email, user_type) VALUES ($1, $2) ON CONFLICT (email) DO UPDATE SET user_type = $2 RETURNING *, (xmax = 0) AS is_insert',
-            [email.trim().toLowerCase(), normalizedType]
+            `INSERT INTO waitlist (email, user_type, unsubscribe_token) VALUES ($1, $2, $3)
+             ON CONFLICT (email) DO UPDATE SET user_type = $2
+             RETURNING *, (xmax = 0) AS is_insert`,
+            [email.trim().toLowerCase(), normalizedType, unsubToken]
         );
 
         // Log the signup
@@ -2840,10 +2850,11 @@ app.post('/api/waitlist', waitlistLimiter, async (req, res) => {
         let emailSent = false;
         let emailErrorMessage = null;
         const isNewSignup = result.rows[0]?.is_insert === true;
+        const storedToken = result.rows[0]?.unsubscribe_token || unsubToken;
 
         try {
             console.log('📤 Attempting to send email via emailService...');
-            await emailService.sendWaitlistConfirmation(email.trim().toLowerCase(), normalizedType);
+            await emailService.sendWaitlistConfirmation(email.trim().toLowerCase(), normalizedType, storedToken);
             emailSent = true;
             console.log('✅ Email sent successfully');
         } catch (emailError) {
@@ -6945,6 +6956,24 @@ app.get('/unsubscribe/:token', async (req, res) => {
     } catch { res.redirect('/'); }
 });
 
+// Waitlist unsubscribe
+app.get('/waitlist/unsubscribe', async (req, res) => {
+    const { token } = req.query;
+    if (!token) {
+        return res.send(`<!DOCTYPE html><html><head><title>Unsubscribe — RealtorFinder</title></head><body style="font-family:sans-serif;text-align:center;padding:60px 20px;"><h2>Unsubscribe from Waitlist</h2><p>If you joined our waitlist and want to be removed, email us at <a href="mailto:privacy@realtorfinder.net">privacy@realtorfinder.net</a>.</p></body></html>`);
+    }
+    try {
+        const { rowCount } = await pool.query(
+            `DELETE FROM waitlist WHERE unsubscribe_token = $1`,
+            [token]
+        );
+        if (!rowCount) {
+            return res.send(`<!DOCTYPE html><html><head><title>Unsubscribed — RealtorFinder</title></head><body style="font-family:sans-serif;text-align:center;padding:60px 20px;"><h2>Already Removed</h2><p>This email address was not found on our waitlist, or has already been removed.</p><p><a href="/">Return home</a></p></body></html>`);
+        }
+        res.send(`<!DOCTYPE html><html><head><title>Unsubscribed — RealtorFinder</title></head><body style="font-family:sans-serif;text-align:center;padding:60px 20px;"><h2>You've been removed</h2><p>You've been successfully removed from the RealtorFinder waitlist. You won't receive any more emails from us.</p><p><a href="/">Return home</a></p></body></html>`);
+    } catch { res.redirect('/'); }
+});
+
 // ===== PAGE ROUTES (Must come AFTER API routes, BEFORE static files) =====
 
 // Password reset page
@@ -8129,6 +8158,12 @@ async function runWaitlistNurtureJob() {
 
 _schemaMigrations.push(
     `ALTER TABLE buyer_requests ADD COLUMN IF NOT EXISTS selected_realtor_id INTEGER REFERENCES users(id)`
+);
+
+_schemaMigrations.push(
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS terms_accepted_at TIMESTAMPTZ`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS marketing_consent_at TIMESTAMPTZ`,
+    `ALTER TABLE waitlist ADD COLUMN IF NOT EXISTS unsubscribe_token TEXT UNIQUE`
 );
 
 // Backfill profile_slug for any realtors created before the column was added

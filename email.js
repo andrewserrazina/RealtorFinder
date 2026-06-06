@@ -108,14 +108,14 @@ function divider() {
 const emailService = {
 
     // Route to correct waitlist template by type
-    async sendWaitlistConfirmation(email, userType) {
-        if (userType === 'realtor') return this.sendRealtorWaitlistConfirmation(email);
-        if (userType === 'buyer') return this.sendBuyerWaitlistConfirmation(email);
-        return this.sendSellerWaitlistConfirmation(email);
+    async sendWaitlistConfirmation(email, userType, unsubscribeToken = null) {
+        if (userType === 'realtor') return this.sendRealtorWaitlistConfirmation(email, unsubscribeToken);
+        if (userType === 'buyer') return this.sendBuyerWaitlistConfirmation(email, unsubscribeToken);
+        return this.sendSellerWaitlistConfirmation(email, unsubscribeToken);
     },
 
     // Seller waitlist confirmation
-    async sendSellerWaitlistConfirmation(email) {
+    async sendSellerWaitlistConfirmation(email, unsubscribeToken = null) {
         const body = `
             ${h1("You're on the Seller Waitlist! 🏠")}
             ${p("Great news — you're among the first sellers to secure a spot on RealtorFinder. When we launch, your listing will get priority placement.")}
@@ -135,12 +135,13 @@ const emailService = {
             <p style="color:#999;font-size:13px;margin:0;">The RealtorFinder Team<br><a href="${BASE_URL}" style="color:#FF6B35;text-decoration:none;">realtorfinder.net</a></p>
         `;
         try {
-            await send({ to: email, subject: "You're on the RealtorFinder Seller Waitlist! 🏠", html: emailWrap('For Sellers', body) });
+            const unsubUrl = unsubscribeToken ? `${BASE_URL}/waitlist/unsubscribe?token=${unsubscribeToken}` : `${BASE_URL}/waitlist/unsubscribe`;
+            await send({ to: email, subject: "You're on the RealtorFinder Seller Waitlist! 🏠", html: emailWrap('For Sellers', body, unsubUrl) });
         } catch (error) { logSendgridError('Seller waitlist email', error); throw error; }
     },
 
     // Realtor waitlist confirmation
-    async sendRealtorWaitlistConfirmation(email) {
+    async sendRealtorWaitlistConfirmation(email, unsubscribeToken = null) {
         const body = `
             ${h1("You're Registered — Agents Are Competing 🏆")}
             ${p("Welcome to RealtorFinder. You're among the first realtors to secure founding member pricing. When we launch, you'll have exclusive early access to motivated sellers in your market.")}
@@ -160,12 +161,13 @@ const emailService = {
             <p style="color:#999;font-size:13px;margin:0;">The RealtorFinder Team<br><a href="${BASE_URL}/realtors" style="color:#FF6B35;text-decoration:none;">realtorfinder.net/realtors</a></p>
         `;
         try {
-            await send({ to: email, subject: "You're Registered — Founding Realtor Access Secured 🏆", html: emailWrap('For Realtors', body) });
+            const unsubUrl = unsubscribeToken ? `${BASE_URL}/waitlist/unsubscribe?token=${unsubscribeToken}` : `${BASE_URL}/waitlist/unsubscribe`;
+            await send({ to: email, subject: "You're Registered — Founding Realtor Access Secured 🏆", html: emailWrap('For Realtors', body, unsubUrl) });
         } catch (error) { logSendgridError('Realtor waitlist email', error); throw error; }
     },
 
     // Buyer waitlist confirmation
-    async sendBuyerWaitlistConfirmation(email) {
+    async sendBuyerWaitlistConfirmation(email, unsubscribeToken = null) {
         const body = `
             ${h1("You're on the Buyer Waitlist! 🔑")}
             ${p("You're in! As a founding buyer member, you'll get priority access when we launch — meaning agents will see your request first.")}
@@ -186,7 +188,8 @@ const emailService = {
             <p style="color:#999;font-size:13px;margin:0;">The RealtorFinder Team<br><a href="${BASE_URL}/buyers" style="color:#FF6B35;text-decoration:none;">realtorfinder.net/buyers</a></p>
         `;
         try {
-            await send({ to: email, subject: "You're on the RealtorFinder Buyer Waitlist! 🔑", html: emailWrap('For Buyers', body) });
+            const unsubUrl = unsubscribeToken ? `${BASE_URL}/waitlist/unsubscribe?token=${unsubscribeToken}` : `${BASE_URL}/waitlist/unsubscribe`;
+            await send({ to: email, subject: "You're on the RealtorFinder Buyer Waitlist! 🔑", html: emailWrap('For Buyers', body, unsubUrl) });
         } catch (error) { logSendgridError('Buyer waitlist email', error); throw error; }
     },
 

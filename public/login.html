@@ -404,6 +404,18 @@
                         <label>Confirm Password</label>
                         <input type="password" name="confirmPassword" placeholder="Re-enter password" required minlength="8">
                     </div>
+                    <div class="form-group" style="margin-bottom:0.75rem;">
+                        <label style="display:flex;align-items:flex-start;gap:10px;font-weight:400;cursor:pointer;">
+                            <input type="checkbox" name="termsAccepted" required style="margin-top:3px;flex-shrink:0;accent-color:#FF6B35;">
+                            <span style="font-size:0.875rem;color:#374151;">I agree to the <a href="/terms" target="_blank" style="color:#FF6B35;">Terms of Service</a> and <a href="/privacy" target="_blank" style="color:#FF6B35;">Privacy Policy</a>. <span style="color:#e53e3e;">*</span></span>
+                        </label>
+                    </div>
+                    <div class="form-group" style="margin-bottom:1.25rem;">
+                        <label style="display:flex;align-items:flex-start;gap:10px;font-weight:400;cursor:pointer;">
+                            <input type="checkbox" name="marketingConsent" style="margin-top:3px;flex-shrink:0;accent-color:#FF6B35;">
+                            <span style="font-size:0.875rem;color:#374151;">I'd like to receive platform updates and helpful tips by email. You can unsubscribe at any time.</span>
+                        </label>
+                    </div>
                     <button type="submit" class="btn btn-primary">Create Account</button>
                 </form>
                 <div class="divider">
@@ -509,13 +521,17 @@
             
             const formData = new FormData(e.target);
             const data = Object.fromEntries(formData);
-            
+
+            // Normalize checkboxes (absent = unchecked)
+            data.termsAccepted = data.termsAccepted === 'on';
+            data.marketingConsent = data.marketingConsent === 'on';
+
             // Validate passwords match
             if (data.password !== data.confirmPassword) {
                 showError('Passwords do not match');
                 return;
             }
-            
+
             delete data.confirmPassword;
             
             const submitBtn = e.target.querySelector('button[type="submit"]');
