@@ -43,22 +43,17 @@
             --muted: #6B7280;
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'DM Sans', sans-serif; background: var(--soft-bg); color: var(--text); }
+        body { font-family: 'DM Sans', sans-serif; background: var(--soft-bg); color: var(--text); overflow-x: hidden; }
 
-        /* Nav */
-        @keyframes slideDown {
-            from { transform: translateY(-100%); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
-        }
+        /* ── Nav ── */
         nav {
             position: fixed;
             top: 0;
             width: 100%;
-            background: var(--soft-bg);
+            background: rgba(248,246,243,0.96);
             backdrop-filter: blur(10px);
             border-bottom: 1px solid var(--border);
             z-index: 1000;
-            animation: slideDown 0.6s ease-out;
         }
         .nav-container {
             max-width: 1400px;
@@ -77,227 +72,18 @@
             text-decoration: none;
         }
         .logo span { color: var(--accent); }
-        .nav-links { display: flex; gap: 2.5rem; align-items: center; }
-        .nav-links a { text-decoration: none; color: var(--text); font-weight: 500; font-size: 0.95rem; transition: color 0.3s; position: relative; }
-        .nav-links a::after { content: ''; position: absolute; bottom: -5px; left: 0; width: 0; height: 2px; background: var(--accent); transition: width 0.3s; }
-        .nav-links a:hover::after { width: 100%; }
+        .nav-links { display: flex; gap: 2rem; align-items: center; }
+        .nav-links a { text-decoration: none; color: var(--text); font-weight: 500; font-size: 0.95rem; transition: color 0.2s; }
+        .nav-links a:hover { color: var(--accent); }
         .nav-cta {
             background: var(--accent);
             color: white !important;
-            padding: 0.75rem 1.75rem;
+            padding: 0.65rem 1.5rem;
             border-radius: 50px;
-            transition: all 0.3s;
-        }
-        .nav-cta::after { display: none !important; }
-        .nav-cta:hover { background: var(--primary); transform: translateY(-2px); box-shadow: 0 10px 30px rgba(10,37,64,0.3); }
-
-        /* Hero */
-        .hero {
-            text-align: center;
-            padding: 5rem 2rem 3rem;
-            max-width: 700px;
-            margin: 90px auto 0;
-        }
-        .hero-eyebrow {
-            display: inline-block;
-            background: #FFF0EB;
-            color: var(--accent);
-            font-weight: 600;
-            font-size: 0.85rem;
-            padding: 0.35rem 1rem;
-            border-radius: 20px;
-            margin-bottom: 1.5rem;
-            letter-spacing: 0.05em;
-            text-transform: uppercase;
-        }
-        .hero h1 {
-            font-family: 'Crimson Pro', serif;
-            font-size: 3.2rem;
-            font-weight: 900;
-            color: var(--primary);
-            line-height: 1.1;
-            margin-bottom: 1.25rem;
-        }
-        .hero p {
-            font-size: 1.15rem;
-            color: var(--muted);
-            line-height: 1.7;
-        }
-
-        /* Pricing grid */
-        .pricing-section {
-            max-width: 1300px;
-            margin: 0 auto;
-            padding: 2rem 2rem 5rem;
-        }
-        .pricing-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 1.5rem;
-            align-items: start;
-        }
-        .plan-card {
-            background: white;
-            border-radius: 20px;
-            padding: 2.5rem 2rem;
-            border: 1px solid var(--border);
-            position: relative;
-        }
-        .plan-card.featured {
-            background: var(--primary);
-            color: white;
-            border-color: var(--primary);
-            transform: translateY(-8px);
-            box-shadow: 0 24px 60px rgba(10,37,64,0.25);
-        }
-        .popular-badge {
-            position: absolute;
-            top: -14px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: var(--accent);
-            color: white;
-            font-size: 0.75rem;
-            font-weight: 700;
-            padding: 0.3rem 1rem;
-            border-radius: 20px;
-            white-space: nowrap;
-            letter-spacing: 0.05em;
-            text-transform: uppercase;
-        }
-        .plan-name {
-            font-size: 0.9rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            color: var(--muted);
-            margin-bottom: 0.75rem;
-        }
-        .plan-card.featured .plan-name { color: rgba(255,255,255,0.7); }
-        .plan-price {
-            font-family: 'Crimson Pro', serif;
-            font-size: 3rem;
-            font-weight: 900;
-            color: var(--primary);
-            line-height: 1;
-            margin-bottom: 0.25rem;
-        }
-        .plan-card.featured .plan-price { color: white; }
-        .plan-price span { font-size: 1rem; font-family: 'DM Sans', sans-serif; font-weight: 400; opacity: 0.7; }
-        .plan-desc {
-            font-size: 0.9rem;
-            color: var(--muted);
-            margin-bottom: 2rem;
-            line-height: 1.5;
-        }
-        .plan-card.featured .plan-desc { color: rgba(255,255,255,0.7); }
-        .plan-features {
-            list-style: none;
-            margin-bottom: 2.5rem;
-        }
-        .plan-features li {
-            display: flex;
-            align-items: flex-start;
-            gap: 0.6rem;
-            font-size: 0.9rem;
-            color: #444;
-            padding: 0.4rem 0;
-            border-bottom: 1px solid var(--border);
-        }
-        .plan-card.featured .plan-features li { color: rgba(255,255,255,0.85); border-bottom-color: rgba(255,255,255,0.1); }
-        .plan-features li::before {
-            content: '✓';
-            color: var(--accent);
-            font-weight: 700;
-            flex-shrink: 0;
-            margin-top: 1px;
-        }
-        .plan-features li:last-child { border-bottom: none; }
-        .plan-btn {
-            display: block;
-            width: 100%;
-            padding: 0.9rem;
-            border-radius: 10px;
-            font-family: 'DM Sans', sans-serif;
-            font-weight: 600;
-            font-size: 0.95rem;
-            text-align: center;
-            cursor: pointer;
-            border: none;
+            font-weight: 600 !important;
             transition: all 0.2s;
-            text-decoration: none;
         }
-        .plan-btn-primary { background: var(--accent); color: white; }
-        .plan-btn-primary:hover { background: #e55a2b; transform: translateY(-1px); }
-        .plan-btn-outline { background: transparent; color: var(--primary); border: 2px solid var(--border); }
-        .plan-btn-outline:hover { border-color: var(--accent); color: var(--accent); }
-        .plan-btn-outline-white { background: transparent; color: white; border: 2px solid rgba(255,255,255,0.35); }
-        .plan-btn-outline-white:hover { background: rgba(255,255,255,0.1); border-color: white; }
-        .plan-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
-
-        /* FAQ */
-        .faq-section {
-            max-width: 720px;
-            margin: 0 auto;
-            padding: 2rem 2rem 5rem;
-        }
-        .faq-section h2 {
-            font-family: 'Crimson Pro', serif;
-            font-size: 2.2rem;
-            font-weight: 900;
-            color: var(--primary);
-            text-align: center;
-            margin-bottom: 3rem;
-        }
-        .faq-item {
-            border-bottom: 1px solid var(--border);
-            padding: 1.5rem 0;
-        }
-        .faq-q {
-            font-weight: 600;
-            font-size: 1rem;
-            color: var(--primary);
-            margin-bottom: 0.6rem;
-        }
-        .faq-a {
-            font-size: 0.95rem;
-            color: var(--muted);
-            line-height: 1.7;
-        }
-
-        /* CTA */
-        .bottom-cta {
-            background: var(--primary);
-            color: white;
-            text-align: center;
-            padding: 5rem 2rem;
-        }
-        .bottom-cta h2 {
-            font-family: 'Crimson Pro', serif;
-            font-size: 2.6rem;
-            font-weight: 900;
-            margin-bottom: 1rem;
-        }
-        .bottom-cta p { font-size: 1.1rem; opacity: 0.8; margin-bottom: 2rem; }
-        .bottom-cta .plan-btn-primary {
-            display: inline-block;
-            padding: 1rem 2.5rem;
-            font-size: 1rem;
-            border-radius: 10px;
-        }
-
-        /* Footer */
-        footer {
-            background: #060F1A;
-            color: rgba(255,255,255,0.5);
-            text-align: center;
-            padding: 2rem;
-            font-size: 0.85rem;
-        }
-        footer a { color: rgba(255,255,255,0.5); text-decoration: none; margin: 0 0.5rem; }
-        footer a:hover { color: white; }
-
-        /* Hamburger */
+        .nav-cta:hover { background: var(--primary) !important; transform: translateY(-1px); box-shadow: 0 8px 20px rgba(10,37,64,0.2); }
         .nav-hamburger {
             display: none;
             flex-direction: column;
@@ -307,14 +93,7 @@
             cursor: pointer;
             padding: 4px;
         }
-        .nav-hamburger span {
-            display: block;
-            width: 24px;
-            height: 2px;
-            background: var(--primary);
-            border-radius: 2px;
-            transition: all 0.2s;
-        }
+        .nav-hamburger span { display: block; width: 24px; height: 2px; background: var(--primary); border-radius: 2px; }
         .mobile-menu {
             display: none;
             background: var(--soft-bg);
@@ -327,45 +106,373 @@
             box-shadow: 0 8px 24px rgba(0,0,0,0.08);
         }
         .mobile-menu.open { display: block; }
-        .mobile-menu a {
-            display: block;
-            color: var(--text);
-            text-decoration: none;
-            font-size: 1rem;
-            font-weight: 500;
-            padding: 1rem 2rem;
-            border-bottom: 1px solid var(--border);
-        }
-        .mobile-menu a:hover { color: var(--accent); background: rgba(255,107,53,0.04); }
-        .mobile-menu .nav-cta {
-            margin: 1rem 2rem;
-            display: block;
-            text-align: center;
-            border-radius: 50px;
-            background: var(--accent);
-            color: white !important;
-            font-weight: 600 !important;
-            border-bottom: none;
-        }
-        .mobile-menu .nav-cta:hover { background: var(--primary); }
+        .mobile-menu a { display: block; color: var(--text); text-decoration: none; font-size: 1rem; font-weight: 500; padding: 1rem 2rem; border-bottom: 1px solid var(--border); }
+        .mobile-menu a:hover { color: var(--accent); }
+        .mobile-menu .nav-cta { margin: 1rem 2rem; display: block; text-align: center; border-radius: 50px; background: var(--accent); color: white !important; border-bottom: none; }
 
-        @media (max-width: 1100px) {
-            .pricing-grid { grid-template-columns: repeat(2, 1fr); }
-            .plan-card.featured { transform: none; }
+        /* ── Hero ── */
+        .hero {
+            text-align: center;
+            padding: 7rem 2rem 4rem;
+            background: var(--soft-bg);
+            position: relative;
+            overflow: hidden;
         }
-        @media (max-width: 680px) {
-            .pricing-grid { grid-template-columns: 1fr; }
-            .hero h1 { font-size: 2.4rem; }
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 50%;
+            transform: translateX(-50%);
+            width: 800px; height: 500px;
+            background: radial-gradient(ellipse, rgba(255,107,53,0.07) 0%, transparent 70%);
+            pointer-events: none;
         }
+        .hero-eyebrow {
+            display: inline-block;
+            background: rgba(255,107,53,0.1);
+            color: var(--accent);
+            font-weight: 600;
+            font-size: 0.8rem;
+            padding: 0.35rem 1.1rem;
+            border-radius: 20px;
+            margin-bottom: 1.5rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            border: 1px solid rgba(255,107,53,0.2);
+        }
+        .hero h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(2.4rem, 5vw, 3.6rem);
+            font-weight: 900;
+            color: var(--primary);
+            line-height: 1.1;
+            margin-bottom: 1.25rem;
+            letter-spacing: -1px;
+        }
+        .hero p {
+            font-size: 1.15rem;
+            color: var(--muted);
+            line-height: 1.7;
+            max-width: 560px;
+            margin: 0 auto 2.5rem;
+        }
+        .hero-trust {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            flex-wrap: wrap;
+        }
+        .hero-trust-item {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.875rem;
+            color: var(--muted);
+            font-weight: 500;
+        }
+        .hero-trust-item .check { color: #10b981; font-weight: 700; }
+
+        /* ── Pricing Cards ── */
+        .pricing-section {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 3rem 2rem 5rem;
+        }
+        .pricing-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+            align-items: start;
+        }
+        .plan-card {
+            background: white;
+            border-radius: 24px;
+            padding: 2.5rem 2rem;
+            border: 1.5px solid var(--border);
+            position: relative;
+            transition: box-shadow 0.2s, transform 0.2s;
+        }
+        .plan-card:hover {
+            box-shadow: 0 16px 48px rgba(0,0,0,0.1);
+            transform: translateY(-4px);
+        }
+        .plan-card.featured {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+            transform: translateY(-12px);
+            box-shadow: 0 28px 64px rgba(10,37,64,0.28);
+        }
+        .plan-card.featured:hover {
+            transform: translateY(-16px);
+            box-shadow: 0 36px 80px rgba(10,37,64,0.32);
+        }
+        .plan-badge {
+            position: absolute;
+            top: -14px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.72rem;
+            font-weight: 700;
+            padding: 0.3rem 1rem;
+            border-radius: 20px;
+            white-space: nowrap;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+        }
+        .plan-badge-trial { background: #dcfce7; color: #16a34a; border: 1px solid #bbf7d0; }
+        .plan-badge-popular { background: var(--accent); color: white; }
+        .plan-name {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--muted);
+            margin-bottom: 1rem;
+        }
+        .plan-card.featured .plan-name { color: rgba(255,255,255,0.6); }
+        .plan-price {
+            font-family: 'Playfair Display', serif;
+            font-size: 3.2rem;
+            font-weight: 900;
+            color: var(--primary);
+            line-height: 1;
+            margin-bottom: 0.3rem;
+        }
+        .plan-card.featured .plan-price { color: white; }
+        .plan-price-unit { font-size: 1rem; font-family: 'DM Sans', sans-serif; font-weight: 400; opacity: 0.65; }
+        .plan-desc {
+            font-size: 0.875rem;
+            color: var(--muted);
+            margin: 0.75rem 0 1.75rem;
+            line-height: 1.55;
+            min-height: 2.5rem;
+        }
+        .plan-card.featured .plan-desc { color: rgba(255,255,255,0.65); }
+        .plan-divider {
+            height: 1px;
+            background: var(--border);
+            margin-bottom: 1.5rem;
+        }
+        .plan-card.featured .plan-divider { background: rgba(255,255,255,0.15); }
+        .plan-features { list-style: none; margin-bottom: 2rem; }
+        .plan-features li {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.6rem;
+            font-size: 0.875rem;
+            color: #444;
+            padding: 0.45rem 0;
+        }
+        .plan-card.featured .plan-features li { color: rgba(255,255,255,0.85); }
+        .plan-features li .feat-check { color: var(--accent); font-weight: 700; flex-shrink: 0; margin-top: 1px; font-size: 0.9rem; }
+        .plan-card.featured .plan-features li .feat-check { color: #86efac; }
+        .plan-btn {
+            display: block;
+            width: 100%;
+            padding: 0.9rem 1rem;
+            border-radius: 12px;
+            font-family: 'DM Sans', sans-serif;
+            font-weight: 600;
+            font-size: 0.95rem;
+            text-align: center;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+        .plan-btn-accent { background: var(--accent); color: white; }
+        .plan-btn-accent:hover { background: #e55a2b; transform: translateY(-1px); box-shadow: 0 8px 20px rgba(255,107,53,0.3); }
+        .plan-btn-outline { background: transparent; color: var(--primary); border: 1.5px solid var(--border); }
+        .plan-btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+        .plan-btn-white { background: white; color: var(--primary); }
+        .plan-btn-white:hover { background: #f0f0f0; transform: translateY(-1px); }
+        .plan-btn:disabled { opacity: 0.55; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
+
+        /* ── Comparison Table ── */
+        .comparison-wrap {
+            max-width: 1100px;
+            margin: 0 auto 5rem;
+            padding: 0 2rem;
+        }
+        .comparison-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 2rem;
+            font-weight: 900;
+            color: var(--primary);
+            text-align: center;
+            margin-bottom: 0.5rem;
+        }
+        .comparison-sub {
+            text-align: center;
+            color: var(--muted);
+            margin-bottom: 2.5rem;
+            font-size: 0.95rem;
+        }
+        .comparison-table-wrap {
+            overflow-x: auto;
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            background: white;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.05);
+        }
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 520px;
+        }
+        .comparison-table thead tr {
+            background: var(--primary);
+            color: white;
+        }
+        .comparison-table th { padding: 1rem 1.25rem; font-size: 0.875rem; font-weight: 600; }
+        .comparison-table th:first-child { text-align: left; width: 42%; }
+        .comparison-table th:not(:first-child) { text-align: center; }
+        .comparison-table th.col-pro { background: var(--accent); }
+        .comparison-table tbody tr { border-bottom: 1px solid var(--border); }
+        .comparison-table tbody tr:last-child { border-bottom: none; }
+        .comparison-table tbody tr:hover { background: #fafaf9; }
+        .comparison-table td { padding: 0.85rem 1.25rem; font-size: 0.875rem; }
+        .comparison-table td:not(:first-child) { text-align: center; }
+        .comparison-table td.col-pro { background: #fff8f5; }
+        .comparison-table tr.group-header td {
+            padding: 0.55rem 1.25rem;
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            color: var(--muted);
+            background: #f5f3f0;
+        }
+        .comparison-table tfoot tr { background: #f5f3f0; border-top: 2px solid var(--border); }
+        .comparison-table tfoot td { padding: 1rem; }
+        .comparison-table tfoot td.col-pro { background: #fff0ea; }
+        .tbl-yes { color: #16a34a; font-weight: 600; }
+        .tbl-no { color: #d1d5db; }
+        .tbl-val { font-weight: 600; font-size: 0.85rem; }
+        .tbl-val-accent { font-weight: 600; font-size: 0.85rem; color: var(--accent); }
+
+        /* ── FAQ ── */
+        .faq-section {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 0 2rem 5rem;
+        }
+        .faq-section h2 {
+            font-family: 'Playfair Display', serif;
+            font-size: 2rem;
+            font-weight: 900;
+            color: var(--primary);
+            text-align: center;
+            margin-bottom: 2.5rem;
+        }
+        .faq-item {
+            border-bottom: 1px solid var(--border);
+            padding: 1.4rem 0;
+        }
+        .faq-q {
+            font-weight: 600;
+            font-size: 0.975rem;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            user-select: none;
+        }
+        .faq-q .faq-icon { color: var(--accent); font-size: 1.3rem; font-weight: 300; transition: transform 0.25s; flex-shrink: 0; margin-left: 1rem; }
+        .faq-item.open .faq-icon { transform: rotate(45deg); }
+        .faq-a { font-size: 0.925rem; color: var(--muted); line-height: 1.75; display: none; padding-top: 0.25rem; }
+        .faq-item.open .faq-a { display: block; }
+
+        /* ── Bottom CTA ── */
+        .bottom-cta {
+            background: var(--accent);
+            color: white;
+            text-align: center;
+            padding: 5rem 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+        .bottom-cta::before {
+            content: '';
+            position: absolute;
+            top: -40%;
+            left: -10%;
+            width: 500px; height: 500px;
+            background: radial-gradient(circle, rgba(255,255,255,0.12) 0%, transparent 70%);
+            border-radius: 50%;
+        }
+        .bottom-cta::after {
+            content: '';
+            position: absolute;
+            bottom: -30%;
+            right: -5%;
+            width: 400px; height: 400px;
+            background: radial-gradient(circle, rgba(10,37,64,0.15) 0%, transparent 70%);
+            border-radius: 50%;
+        }
+        .bottom-cta-inner { position: relative; z-index: 1; }
+        .bottom-cta h2 {
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(2rem, 4vw, 2.8rem);
+            font-weight: 900;
+            margin-bottom: 1rem;
+            letter-spacing: -0.5px;
+        }
+        .bottom-cta p { font-size: 1.1rem; opacity: 0.9; margin-bottom: 2rem; }
+        .bottom-cta-btn {
+            display: inline-block;
+            padding: 1rem 2.5rem;
+            background: var(--primary);
+            color: white;
+            border-radius: 12px;
+            font-family: 'DM Sans', sans-serif;
+            font-weight: 700;
+            font-size: 1rem;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+        .bottom-cta-btn:hover { background: #071c30; transform: translateY(-2px); box-shadow: 0 10px 30px rgba(0,0,0,0.25); }
+
+        /* ── Footer ── */
+        footer {
+            background: #060F1A;
+            color: rgba(255,255,255,0.45);
+            text-align: center;
+            padding: 2rem;
+            font-size: 0.85rem;
+        }
+        footer a { color: rgba(255,255,255,0.45); text-decoration: none; margin: 0 0.5rem; }
+        footer a:hover { color: white; }
+
+        /* ── Responsive ── */
         @media (max-width: 900px) {
             .nav-links { display: none; }
             .nav-hamburger { display: flex; }
+            .nav-container { padding: 1.1rem 1.5rem; }
+        }
+        @media (max-width: 860px) {
+            .pricing-grid { grid-template-columns: 1fr; max-width: 440px; margin: 0 auto; }
+            .plan-card.featured { transform: none; }
+            .plan-card.featured:hover { transform: translateY(-4px); }
+        }
+        @media (max-width: 480px) {
+            .hero { padding: 6rem 1.5rem 3rem; }
+            .hero h1 { font-size: 2.1rem; }
+            .hero p { font-size: 1rem; }
+            .hero-trust { gap: 1rem; }
+            .pricing-section { padding: 2rem 1rem 4rem; }
+            .comparison-wrap { padding: 0 1rem; }
+            .faq-section { padding: 0 1rem 4rem; }
         }
     </style>
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#0A2540">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="RealtorFinder">
 </head>
 <body>
@@ -378,7 +485,7 @@
             <a href="/realtors#founding" style="color:#F59E0B;font-weight:600;">🏅 Founding Members</a>
             <a href="/realtors#referral-program">Referrals</a>
             <a href="/pricing">Pricing</a>
-            <a href="/about">About</a>
+            <a href="/buyers">For Buyers</a>
             <a href="/contact">Contact</a>
             <a href="/login?tab=signup&type=realtor" class="nav-cta">Create Account</a>
         </div>
@@ -387,239 +494,248 @@
         </button>
     </div>
 </nav>
-<div class="mobile-menu" id="mobileMenu" role="navigation">
+<div class="mobile-menu" id="mobileMenu">
     <a href="/realtors#benefits" onclick="closeMobileMenu()">How It Works</a>
     <a href="/realtors#founding" onclick="closeMobileMenu()" style="color:#F59E0B;font-weight:600;">🏅 Founding Members</a>
     <a href="/realtors#referral-program" onclick="closeMobileMenu()">Referrals</a>
     <a href="/pricing" onclick="closeMobileMenu()">Pricing</a>
-    <a href="/about" onclick="closeMobileMenu()">About</a>
+    <a href="/buyers" onclick="closeMobileMenu()">For Buyers</a>
+    <a href="/contact" onclick="closeMobileMenu()">Contact</a>
     <a href="/login?tab=signup&type=realtor" class="nav-cta" onclick="closeMobileMenu()">Create Account</a>
 </div>
 
+<!-- Hero -->
 <div class="hero">
     <div class="hero-eyebrow">Realtor Pricing</div>
     <h1>Start free for 30 days</h1>
-    <p>Every plan starts with a 30-day free trial — no credit card required. Upgrade, downgrade, or cancel any time.</p>
+    <p>Every plan includes a 30-day free trial — no credit card required. Upgrade, downgrade, or cancel any time.</p>
+    <div class="hero-trust">
+        <span class="hero-trust-item"><span class="check">✓</span> No credit card required</span>
+        <span class="hero-trust-item"><span class="check">✓</span> No commission splits</span>
+        <span class="hero-trust-item"><span class="check">✓</span> Cancel any time</span>
+    </div>
 </div>
 
+<!-- Pricing Cards -->
 <div class="pricing-section">
     <div class="pricing-grid">
 
         <!-- Basic -->
         <div class="plan-card">
-            <div class="popular-badge" style="background:#16a34a;">30-Day Free Trial</div>
+            <div class="plan-badge plan-badge-trial">30-Day Free Trial</div>
             <div class="plan-name">Basic</div>
-            <div class="plan-price">$99<span>/month</span></div>
-            <div class="plan-desc">Try free for 30 days — no credit card required. For agents building consistent deal flow.</div>
+            <div class="plan-price">$99<span class="plan-price-unit">/month</span></div>
+            <div class="plan-desc">For agents building consistent deal flow. Try free, no strings attached.</div>
+            <div class="plan-divider"></div>
             <ul class="plan-features">
-                <li>10 proposals included per month</li>
-                <li>View all active listings</li>
-                <li>Buyer leads included</li>
-                <li>New listing email alerts</li>
-                <li>Profile photo &amp; media upload</li>
-                <li>Performance stats &amp; win rate</li>
-                <li>Referral program ($25/referral)</li>
+                <li><span class="feat-check">✓</span> 10 proposals per month</li>
+                <li><span class="feat-check">✓</span> View all active listings</li>
+                <li><span class="feat-check">✓</span> Buyer leads included</li>
+                <li><span class="feat-check">✓</span> New listing email alerts</li>
+                <li><span class="feat-check">✓</span> Public agent profile page</li>
+                <li><span class="feat-check">✓</span> Profile photo &amp; media upload</li>
+                <li><span class="feat-check">✓</span> Performance stats &amp; win rate</li>
+                <li><span class="feat-check">✓</span> Referral program ($25/referral)</li>
             </ul>
             <button class="plan-btn plan-btn-outline" id="btn-basic" onclick="subscribe('basic')">Start Free Trial</button>
         </div>
 
         <!-- Professional -->
         <div class="plan-card featured">
-            <div class="popular-badge">Most Popular</div>
+            <div class="plan-badge plan-badge-popular">Most Popular</div>
             <div class="plan-name">Professional</div>
-            <div class="plan-price">$249<span>/month</span></div>
-            <div class="plan-desc">For agents serious about winning listings</div>
+            <div class="plan-price">$249<span class="plan-price-unit">/month</span></div>
+            <div class="plan-desc">For agents serious about winning listings. Unlimited bids, priority access.</div>
+            <div class="plan-divider"></div>
             <ul class="plan-features">
-                <li>Unlimited bids per month</li>
-                <li>Priority listing alerts</li>
-                <li>Enhanced profile with media</li>
-                <li>Advanced analytics</li>
-                <li>Automated bid templates</li>
-                <li>Featured agent badge</li>
-                <li>Early access to new listings</li>
-                <li>1 agent per location</li>
+                <li><span class="feat-check">✓</span> Unlimited proposals per month</li>
+                <li><span class="feat-check">✓</span> Priority &amp; early listing alerts</li>
+                <li><span class="feat-check">✓</span> Enhanced profile with media</li>
+                <li><span class="feat-check">✓</span> Advanced analytics &amp; insights</li>
+                <li><span class="feat-check">✓</span> Automated bid templates</li>
+                <li><span class="feat-check">✓</span> Featured Agent badge</li>
+                <li><span class="feat-check">✓</span> Early access to new listings</li>
+                <li><span class="feat-check">✓</span> Everything in Basic</li>
             </ul>
-            <button class="plan-btn plan-btn-primary" id="btn-professional" onclick="subscribe('professional')">Get Started</button>
+            <button class="plan-btn plan-btn-white" id="btn-professional" onclick="subscribe('professional')">Get Started</button>
         </div>
 
         <!-- Firm -->
         <div class="plan-card">
             <div class="plan-name">Firm</div>
-            <div class="plan-price">$499<span>/location/mo</span></div>
-            <div class="plan-desc">For brokerages &amp; teams with multiple agents</div>
+            <div class="plan-price">$499<span class="plan-price-unit">/location/mo</span></div>
+            <div class="plan-desc">For brokerages &amp; teams managing multiple agents across markets.</div>
+            <div class="plan-divider"></div>
             <ul class="plan-features">
-                <li>Unlimited agents per location</li>
-                <li>Unlimited bids per agent</li>
-                <li>Add more locations at $499/mo each</li>
-                <li>Firm dashboard &amp; team reporting</li>
-                <li>Bulk bid submission</li>
-                <li>Priority support</li>
-                <li>Custom branding options</li>
-                <li>Dedicated account manager</li>
+                <li><span class="feat-check">✓</span> Unlimited agents per location</li>
+                <li><span class="feat-check">✓</span> Unlimited bids per agent</li>
+                <li><span class="feat-check">✓</span> Add locations at $499/mo each</li>
+                <li><span class="feat-check">✓</span> Firm dashboard &amp; team reporting</li>
+                <li><span class="feat-check">✓</span> Bulk bid submission</li>
+                <li><span class="feat-check">✓</span> Custom branding options</li>
+                <li><span class="feat-check">✓</span> Dedicated account manager</li>
+                <li><span class="feat-check">✓</span> Priority support</li>
             </ul>
-            <button class="plan-btn plan-btn-outline" id="btn-firm" onclick="subscribe('firm')">Get Started</button>
+            <button class="plan-btn plan-btn-accent" id="btn-firm" onclick="subscribe('firm')">Get Started</button>
         </div>
 
     </div>
 </div>
 
-<div style="max-width:1100px;margin:0 auto 5rem;padding:0 2rem;">
-    <h2 style="font-family:'Crimson Pro',serif;font-size:2rem;font-weight:900;color:var(--primary);text-align:center;margin-bottom:0.5rem;">Full feature breakdown</h2>
-    <p style="text-align:center;color:var(--muted);margin-bottom:2.5rem;">Everything included in each plan at a glance</p>
-    <div style="overflow-x:auto;border-radius:16px;border:1px solid var(--border);background:white;box-shadow:0 4px 24px rgba(0,0,0,0.05);">
-        <table style="width:100%;border-collapse:collapse;min-width:520px;">
+<!-- Comparison Table -->
+<div class="comparison-wrap">
+    <h2 class="comparison-title">Full feature breakdown</h2>
+    <p class="comparison-sub">Everything included in each plan at a glance</p>
+    <div class="comparison-table-wrap">
+        <table class="comparison-table">
             <thead>
-                <tr style="background:var(--primary);color:white;">
-                    <th style="padding:1rem 1.25rem;text-align:left;font-weight:600;font-size:0.9rem;width:40%;">Feature</th>
-                    <th style="padding:1rem;text-align:center;font-size:0.9rem;font-weight:600;">Basic<br><span style="font-weight:400;font-size:0.8rem;opacity:0.75;">$99/mo</span></th>
-                    <th style="padding:1rem;text-align:center;font-size:0.9rem;font-weight:600;background:#FF6B35;">Professional<br><span style="font-weight:400;font-size:0.8rem;opacity:0.85;">$249/mo</span></th>
-                    <th style="padding:1rem;text-align:center;font-size:0.9rem;font-weight:600;">Firm<br><span style="font-weight:400;font-size:0.8rem;opacity:0.75;">$499/loc/mo</span></th>
+                <tr>
+                    <th>Feature</th>
+                    <th>Basic<br><span style="font-weight:400;opacity:0.7;font-size:0.78rem;">$99/mo</span></th>
+                    <th class="col-pro">Professional<br><span style="font-weight:400;opacity:0.85;font-size:0.78rem;">$249/mo</span></th>
+                    <th>Firm<br><span style="font-weight:400;opacity:0.7;font-size:0.78rem;">$499/loc/mo</span></th>
                 </tr>
             </thead>
             <tbody>
-                <tr style="background:#f9f7f5;">
-                    <td colspan="4" style="padding:0.6rem 1.25rem;font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);">Lead Access</td>
-                </tr>
-                <tr style="border-bottom:1px solid var(--border);">
-                    <td style="padding:0.9rem 1.25rem;font-size:0.9rem;">Browse all active seller listings</td>
-                    <td style="text-align:center;">✅</td><td style="text-align:center;background:#fff8f5;">✅</td><td style="text-align:center;">✅</td>
-                </tr>
-                <tr style="border-bottom:1px solid var(--border);">
-                    <td style="padding:0.9rem 1.25rem;font-size:0.9rem;">Proposals per month</td>
-                    <td style="text-align:center;font-size:0.85rem;font-weight:600;">10 included</td>
-                    <td style="text-align:center;background:#fff8f5;font-size:0.85rem;font-weight:600;color:var(--accent);">Unlimited</td>
-                    <td style="text-align:center;font-size:0.85rem;font-weight:600;color:var(--accent);">Unlimited</td>
-                </tr>
-                <tr style="border-bottom:1px solid var(--border);">
-                    <td style="padding:0.9rem 1.25rem;font-size:0.9rem;">Browse buyer requests</td>
-                    <td style="text-align:center;">✅</td><td style="text-align:center;background:#fff8f5;">✅</td><td style="text-align:center;">✅</td>
-                </tr>
-                <tr style="border-bottom:1px solid var(--border);">
-                    <td style="padding:0.9rem 1.25rem;font-size:0.9rem;">Buyer leads included</td>
-                    <td style="text-align:center;font-size:0.85rem;font-weight:600;color:#16a34a;">Included</td>
-                    <td style="text-align:center;background:#fff8f5;font-size:0.85rem;font-weight:600;color:#16a34a;">Included</td>
-                    <td style="text-align:center;font-size:0.85rem;font-weight:600;color:#16a34a;">Included</td>
-                </tr>
-                <tr style="background:#f9f7f5;">
-                    <td colspan="4" style="padding:0.6rem 1.25rem;font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);">Alerts & Notifications</td>
-                </tr>
-                <tr style="border-bottom:1px solid var(--border);">
-                    <td style="padding:0.9rem 1.25rem;font-size:0.9rem;">New listing email alerts</td>
-                    <td style="text-align:center;">✅</td><td style="text-align:center;background:#fff8f5;">✅</td><td style="text-align:center;">✅</td>
-                </tr>
-                <tr style="border-bottom:1px solid var(--border);">
-                    <td style="padding:0.9rem 1.25rem;font-size:0.9rem;">Priority / early listing alerts</td>
-                    <td style="text-align:center;color:var(--muted);">—</td><td style="text-align:center;background:#fff8f5;">✅ Early</td><td style="text-align:center;">✅</td>
-                </tr>
-                <tr style="border-bottom:1px solid var(--border);">
-                    <td style="padding:0.9rem 1.25rem;font-size:0.9rem;">In-app real-time notifications</td>
-                    <td style="text-align:center;">✅</td><td style="text-align:center;background:#fff8f5;">✅</td><td style="text-align:center;">✅</td>
-                </tr>
-                <tr style="background:#f9f7f5;">
-                    <td colspan="4" style="padding:0.6rem 1.25rem;font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);">Profile & Visibility</td>
-                </tr>
-                <tr style="border-bottom:1px solid var(--border);">
-                    <td style="padding:0.9rem 1.25rem;font-size:0.9rem;">Public agent profile page</td>
-                    <td style="text-align:center;">✅</td><td style="text-align:center;background:#fff8f5;">✅</td><td style="text-align:center;">✅</td>
-                </tr>
-                <tr style="border-bottom:1px solid var(--border);">
-                    <td style="padding:0.9rem 1.25rem;font-size:0.9rem;">Featured Agent badge</td>
-                    <td style="text-align:center;color:var(--muted);">—</td><td style="text-align:center;background:#fff8f5;font-weight:600;">⭐ Yes</td><td style="text-align:center;font-weight:600;">⭐ Yes</td>
-                </tr>
-                <tr style="border-bottom:1px solid var(--border);">
-                    <td style="padding:0.9rem 1.25rem;font-size:0.9rem;">Profile photo &amp; media upload</td>
-                    <td style="text-align:center;">✅</td><td style="text-align:center;background:#fff8f5;">✅</td><td style="text-align:center;">✅</td>
-                </tr>
-                <tr style="border-bottom:1px solid var(--border);">
-                    <td style="padding:0.9rem 1.25rem;font-size:0.9rem;">Performance stats &amp; win rate</td>
-                    <td style="text-align:center;">✅</td><td style="text-align:center;background:#fff8f5;">✅</td><td style="text-align:center;">✅</td>
-                </tr>
-                <tr style="background:#f9f7f5;">
-                    <td colspan="4" style="padding:0.6rem 1.25rem;font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);">Tools & Analytics</td>
-                </tr>
-                <tr style="border-bottom:1px solid var(--border);">
-                    <td style="padding:0.9rem 1.25rem;font-size:0.9rem;">Proposal &amp; pipeline dashboard</td>
-                    <td style="text-align:center;">✅</td><td style="text-align:center;background:#fff8f5;">✅</td><td style="text-align:center;">✅</td>
-                </tr>
-                <tr style="border-bottom:1px solid var(--border);">
-                    <td style="padding:0.9rem 1.25rem;font-size:0.9rem;">In-platform messaging</td>
-                    <td style="text-align:center;">✅</td><td style="text-align:center;background:#fff8f5;">✅</td><td style="text-align:center;">✅</td>
-                </tr>
-                <tr style="border-bottom:1px solid var(--border);">
-                    <td style="padding:0.9rem 1.25rem;font-size:0.9rem;">Advanced analytics &amp; insights</td>
-                    <td style="text-align:center;color:var(--muted);">—</td><td style="text-align:center;background:#fff8f5;">✅</td><td style="text-align:center;">✅</td>
-                </tr>
-                <tr style="border-bottom:1px solid var(--border);">
-                    <td style="padding:0.9rem 1.25rem;font-size:0.9rem;">Showing schedule management</td>
-                    <td style="text-align:center;">✅</td><td style="text-align:center;background:#fff8f5;">✅</td><td style="text-align:center;">✅</td>
-                </tr>
-                <tr style="background:#f9f7f5;">
-                    <td colspan="4" style="padding:0.6rem 1.25rem;font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);">Referral & Team</td>
-                </tr>
-                <tr style="border-bottom:1px solid var(--border);">
-                    <td style="padding:0.9rem 1.25rem;font-size:0.9rem;">Referral program ($25/referral)</td>
-                    <td style="text-align:center;">✅</td><td style="text-align:center;background:#fff8f5;">✅</td><td style="text-align:center;">✅</td>
-                </tr>
-                <tr style="border-bottom:1px solid var(--border);">
-                    <td style="padding:0.9rem 1.25rem;font-size:0.9rem;">Agents per location</td>
-                    <td style="text-align:center;font-size:0.85rem;">1</td>
-                    <td style="text-align:center;background:#fff8f5;font-size:0.85rem;">1</td>
-                    <td style="text-align:center;font-size:0.85rem;font-weight:600;color:var(--accent);">Unlimited</td>
-                </tr>
-                <tr style="border-bottom:1px solid var(--border);">
-                    <td style="padding:0.9rem 1.25rem;font-size:0.9rem;">Firm dashboard &amp; team reporting</td>
-                    <td style="text-align:center;color:var(--muted);">—</td><td style="text-align:center;background:#fff8f5;color:var(--muted);">—</td><td style="text-align:center;font-weight:600;">✅</td>
+                <tr class="group-header"><td colspan="4">Lead Access</td></tr>
+                <tr>
+                    <td>Browse all active seller listings</td>
+                    <td class="tbl-yes">✓</td><td class="col-pro tbl-yes">✓</td><td class="tbl-yes">✓</td>
                 </tr>
                 <tr>
-                    <td style="padding:0.9rem 1.25rem;font-size:0.9rem;">Dedicated account manager</td>
-                    <td style="text-align:center;color:var(--muted);">—</td><td style="text-align:center;background:#fff8f5;color:var(--muted);">—</td><td style="text-align:center;font-weight:600;">✅</td>
+                    <td>Proposals per month</td>
+                    <td class="tbl-val">10 included</td>
+                    <td class="col-pro tbl-val-accent">Unlimited</td>
+                    <td class="tbl-val-accent">Unlimited</td>
+                </tr>
+                <tr>
+                    <td>Browse buyer requests</td>
+                    <td class="tbl-yes">✓</td><td class="col-pro tbl-yes">✓</td><td class="tbl-yes">✓</td>
+                </tr>
+                <tr>
+                    <td>Buyer lead responses / month</td>
+                    <td class="tbl-val">5 included</td>
+                    <td class="col-pro tbl-val-accent">Unlimited</td>
+                    <td class="tbl-val-accent">Unlimited</td>
+                </tr>
+
+                <tr class="group-header"><td colspan="4">Alerts &amp; Notifications</td></tr>
+                <tr>
+                    <td>New listing email alerts</td>
+                    <td class="tbl-yes">✓</td><td class="col-pro tbl-yes">✓</td><td class="tbl-yes">✓</td>
+                </tr>
+                <tr>
+                    <td>Priority / early listing alerts</td>
+                    <td class="tbl-no">—</td><td class="col-pro tbl-yes">✓ Early</td><td class="tbl-yes">✓</td>
+                </tr>
+                <tr>
+                    <td>In-app real-time notifications</td>
+                    <td class="tbl-yes">✓</td><td class="col-pro tbl-yes">✓</td><td class="tbl-yes">✓</td>
+                </tr>
+
+                <tr class="group-header"><td colspan="4">Profile &amp; Visibility</td></tr>
+                <tr>
+                    <td>Public agent profile page</td>
+                    <td class="tbl-yes">✓</td><td class="col-pro tbl-yes">✓</td><td class="tbl-yes">✓</td>
+                </tr>
+                <tr>
+                    <td>Featured Agent badge</td>
+                    <td class="tbl-no">—</td><td class="col-pro tbl-yes">⭐ Yes</td><td class="tbl-yes">⭐ Yes</td>
+                </tr>
+                <tr>
+                    <td>Profile photo &amp; media upload</td>
+                    <td class="tbl-yes">✓</td><td class="col-pro tbl-yes">✓</td><td class="tbl-yes">✓</td>
+                </tr>
+                <tr>
+                    <td>Performance stats &amp; win rate</td>
+                    <td class="tbl-yes">✓</td><td class="col-pro tbl-yes">✓</td><td class="tbl-yes">✓</td>
+                </tr>
+
+                <tr class="group-header"><td colspan="4">Tools &amp; Analytics</td></tr>
+                <tr>
+                    <td>Proposal &amp; pipeline dashboard</td>
+                    <td class="tbl-yes">✓</td><td class="col-pro tbl-yes">✓</td><td class="tbl-yes">✓</td>
+                </tr>
+                <tr>
+                    <td>In-platform messaging</td>
+                    <td class="tbl-yes">✓</td><td class="col-pro tbl-yes">✓</td><td class="tbl-yes">✓</td>
+                </tr>
+                <tr>
+                    <td>Advanced analytics &amp; insights</td>
+                    <td class="tbl-no">—</td><td class="col-pro tbl-yes">✓</td><td class="tbl-yes">✓</td>
+                </tr>
+                <tr>
+                    <td>Showing schedule management</td>
+                    <td class="tbl-yes">✓</td><td class="col-pro tbl-yes">✓</td><td class="tbl-yes">✓</td>
+                </tr>
+
+                <tr class="group-header"><td colspan="4">Referral &amp; Team</td></tr>
+                <tr>
+                    <td>Referral program ($25/referral)</td>
+                    <td class="tbl-yes">✓</td><td class="col-pro tbl-yes">✓</td><td class="tbl-yes">✓</td>
+                </tr>
+                <tr>
+                    <td>Agents per location</td>
+                    <td class="tbl-val">1</td><td class="col-pro tbl-val">1</td><td class="tbl-val-accent">Unlimited</td>
+                </tr>
+                <tr>
+                    <td>Firm dashboard &amp; team reporting</td>
+                    <td class="tbl-no">—</td><td class="col-pro tbl-no">—</td><td class="tbl-yes">✓</td>
+                </tr>
+                <tr>
+                    <td>Dedicated account manager</td>
+                    <td class="tbl-no">—</td><td class="col-pro tbl-no">—</td><td class="tbl-yes">✓</td>
                 </tr>
             </tbody>
             <tfoot>
-                <tr style="background:#f9f7f5;border-top:2px solid var(--border);">
-                    <td style="padding:1rem 1.25rem;"></td>
-                    <td style="padding:1rem;text-align:center;"><button onclick="subscribe('basic')" style="font-size:0.85rem;font-weight:600;color:var(--primary);background:none;border:1px solid var(--border);padding:6px 16px;border-radius:6px;cursor:pointer;">Start Free Trial</button></td>
-                    <td style="padding:1rem;text-align:center;background:#fff8f5;"><button onclick="subscribe('professional')" style="font-size:0.85rem;font-weight:700;color:white;background:var(--accent);border:none;padding:7px 16px;border-radius:6px;cursor:pointer;">Get Pro</button></td>
-                    <td style="padding:1rem;text-align:center;"><button onclick="subscribe('firm')" style="font-size:0.85rem;font-weight:600;color:var(--primary);background:none;border:1px solid var(--border);padding:6px 16px;border-radius:6px;cursor:pointer;">Get Firm</button></td>
+                <tr>
+                    <td></td>
+                    <td style="text-align:center;"><button onclick="subscribe('basic')" style="font-size:0.82rem;font-weight:600;color:var(--primary);background:none;border:1.5px solid var(--border);padding:6px 18px;border-radius:8px;cursor:pointer;font-family:'DM Sans',sans-serif;">Start Free Trial</button></td>
+                    <td class="col-pro" style="text-align:center;"><button onclick="subscribe('professional')" style="font-size:0.82rem;font-weight:700;color:white;background:var(--accent);border:none;padding:7px 18px;border-radius:8px;cursor:pointer;font-family:'DM Sans',sans-serif;">Get Pro</button></td>
+                    <td style="text-align:center;"><button onclick="subscribe('firm')" style="font-size:0.82rem;font-weight:600;color:var(--primary);background:none;border:1.5px solid var(--border);padding:6px 18px;border-radius:8px;cursor:pointer;font-family:'DM Sans',sans-serif;">Get Firm</button></td>
                 </tr>
             </tfoot>
         </table>
     </div>
 </div>
 
+<!-- FAQ -->
 <div class="faq-section">
     <h2>Frequently asked questions</h2>
 
     <div class="faq-item">
-        <div class="faq-q">Can I cancel any time?</div>
+        <div class="faq-q">Can I cancel any time? <span class="faq-icon">+</span></div>
         <div class="faq-a">Yes — cancel your subscription at any time from your dashboard. You'll retain access through the end of your billing period with no further charges.</div>
     </div>
     <div class="faq-item">
-        <div class="faq-q">How does the 30-day free trial work?</div>
-        <div class="faq-a">Every plan starts with a 30-day free trial — no credit card required. You get full access to all features in your chosen plan from day one. At the end of the 30 days, you'll be prompted to add a payment method to continue. If you don't, your account pauses with no charge.</div>
+        <div class="faq-q">How does the 30-day free trial work? <span class="faq-icon">+</span></div>
+        <div class="faq-a">Every plan starts with a 30-day free trial — no credit card required. You get full access to all features in your chosen plan from day one. At the end of 30 days, you'll be prompted to add a payment method to continue. If you don't, your account pauses with no charge.</div>
     </div>
     <div class="faq-item">
-        <div class="faq-q">What's the difference between Basic and Professional?</div>
-        <div class="faq-a">Basic caps you at 10 bids per month, which works well for agents testing the waters. Professional removes that cap and adds priority alerts, enhanced profile features, and a Featured Agent badge that makes you stand out to sellers.</div>
+        <div class="faq-q">What's the difference between Basic and Professional? <span class="faq-icon">+</span></div>
+        <div class="faq-a">Basic caps you at 10 proposals/month, which works well for agents testing the waters. Professional removes that cap and adds priority alerts, enhanced profile features, and a Featured Agent badge that makes you stand out to sellers.</div>
     </div>
     <div class="faq-item">
-        <div class="faq-q">How does the Firm plan work for multiple locations?</div>
+        <div class="faq-q">How does the Firm plan work for multiple locations? <span class="faq-icon">+</span></div>
         <div class="faq-a">The Firm plan is priced per location at $499/month each. You get unlimited agents and bids at every location, plus a shared firm dashboard with team reporting and bulk bid tools.</div>
     </div>
     <div class="faq-item">
-        <div class="faq-q">Can I upgrade or downgrade my plan?</div>
+        <div class="faq-q">Can I upgrade or downgrade my plan? <span class="faq-icon">+</span></div>
         <div class="faq-a">Yes. You can change plans from your account dashboard at any time. Upgrades take effect immediately; downgrades apply at the next billing cycle.</div>
     </div>
     <div class="faq-item">
-        <div class="faq-q">What payment methods do you accept?</div>
+        <div class="faq-q">What payment methods do you accept? <span class="faq-icon">+</span></div>
         <div class="faq-a">All major credit and debit cards (Visa, Mastercard, Amex, Discover), as well as Apple Pay and Google Pay where supported. Payments are processed securely by Stripe.</div>
     </div>
 </div>
 
+<!-- Bottom CTA -->
 <div class="bottom-cta">
-    <h2>Ready to start winning listings?</h2>
-    <p>Join agents across 659 markets who are using RealtorFinder to connect with motivated sellers.</p>
-    <button class="plan-btn plan-btn-primary" onclick="subscribe('professional')">Start with Professional</button>
+    <div class="bottom-cta-inner">
+        <h2>Ready to start winning listings?</h2>
+        <p>Join agents across 659 markets connecting with motivated sellers.</p>
+        <button class="bottom-cta-btn" onclick="subscribe('professional')">Start with Professional</button>
+    </div>
 </div>
 
 <footer>
@@ -627,41 +743,47 @@
         &copy; 2026 RealtorFinder.net &nbsp;·&nbsp;
         <a href="/">Home</a>
         <a href="/realtors">For Realtors</a>
+        <a href="/buyers">For Buyers</a>
         <a href="/privacy">Privacy</a>
         <a href="/terms">Terms</a>
     </p>
 </footer>
 
 <script>
+    // Nav
     const hamburger = document.getElementById('navHamburger');
     const mobileMenu = document.getElementById('mobileMenu');
-
     hamburger.addEventListener('click', function() {
         const isOpen = mobileMenu.classList.toggle('open');
         hamburger.setAttribute('aria-expanded', isOpen);
     });
-
     function closeMobileMenu() {
         mobileMenu.classList.remove('open');
         hamburger.setAttribute('aria-expanded', 'false');
     }
-</script>
-<script>
+
+    // FAQ accordion
+    document.querySelectorAll('.faq-q').forEach(q => {
+        q.addEventListener('click', () => {
+            const item = q.closest('.faq-item');
+            const isOpen = item.classList.contains('open');
+            document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('open'));
+            if (!isOpen) item.classList.add('open');
+        });
+    });
+
+    // Checkout
     async function subscribe(plan) {
         const btn = document.getElementById('btn-' + plan);
         const originalText = btn ? btn.textContent : '';
         if (btn) { btn.disabled = true; btn.textContent = 'Loading…'; }
-
         try {
-            // Check authentication first
             const authRes = await fetch('/api/auth/me', { credentials: 'include' });
             if (!authRes.ok) {
                 gtag('event', 'pricing_cta_click', { plan, action: 'redirect_signup' });
                 window.location.href = '/login?tab=signup&type=realtor';
                 return;
             }
-
-            // Try to create checkout session
             const res = await fetch('/api/stripe/checkout', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -669,12 +791,10 @@
                 body: JSON.stringify({ plan })
             });
             const data = await res.json();
-
             if (data.url) {
                 gtag('event', 'begin_checkout', { plan, currency: 'USD' });
                 window.location.href = data.url;
             } else if (data.error === 'stripe_not_configured') {
-                // Stripe not set up yet — send to signup
                 gtag('event', 'pricing_cta_click', { plan, action: 'redirect_signup' });
                 window.location.href = '/login?tab=signup&type=realtor';
             } else {
@@ -687,10 +807,10 @@
         }
     }
 </script>
-    <script>
-      if ('serviceWorker' in navigator) {
+<script>
+    if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
-      }
-    </script>
+    }
+</script>
 </body>
 </html>
