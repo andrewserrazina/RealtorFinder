@@ -3685,6 +3685,7 @@
         // ===== COMPANY / MY FIRM =====
         let companyData = null;
         let isCompanyOwner = false;
+        let isCompanyAdmin = false;
 
         async function loadCompany() {
             try {
@@ -3694,7 +3695,10 @@
                 if (!data) { document.getElementById('noCompanyState').style.display = 'block'; document.getElementById('companyOverview').style.display = 'none'; return; }
                 companyData = data;
                 isCompanyOwner = currentUser && data.company && data.company.owner_user_id === currentUser.id;
+                const me = data.members && currentUser ? data.members.find(m => m.id === currentUser.id) : null;
+                isCompanyAdmin = !isCompanyOwner && me && me.company_role === 'admin';
                 renderCompany(data);
+                if (isCompanyOwner || isCompanyAdmin) loadTeamProposals();
             } catch (e) {
                 console.error('loadCompany error', e);
             }
@@ -3714,10 +3718,13 @@
             if (isCompanyOwner && company.plan !== 'firm') { upgradeBanner.style.display = 'flex'; } else { upgradeBanner.style.display = 'none'; }
 
             const addAgentBtn = document.getElementById('addAgentBtn');
-            if (addAgentBtn) addAgentBtn.style.display = isCompanyOwner ? 'inline-flex' : 'none';
+            if (addAgentBtn) addAgentBtn.style.display = (isCompanyOwner || isCompanyAdmin) ? 'inline-flex' : 'none';
 
             const locationsSection = document.getElementById('locationsSection');
             if (company.plan === 'firm') { locationsSection.style.display = 'block'; renderLocations(locations); } else { locationsSection.style.display = 'none'; }
+
+            const teamProposalsSection = document.getElementById('teamProposalsSection');
+            if (teamProposalsSection) teamProposalsSection.style.display = (isCompanyOwner || isCompanyAdmin) ? 'block' : 'none';
 
             renderMembers(members, company);
         }
@@ -3725,7 +3732,22 @@
         function renderMembers(members, company) {
             const list = document.getElementById('membersList');
             if (!members.length) { list.innerHTML = '<p style="color:#6b7280;font-size:14px;">No team members yet.</p>'; return; }
-            list.innerHTML = members.map(m => `
+            list.innerHTML = members.map(m => {
+                let roleControls = '';
+                if (m.company_role === 'owner') {
+                    roleControls = `<span style="background:#dbeafe;color:#1d4ed8;border-radius:6px;padding:3px 10px;font-size:12px;font-weight:600;">Owner</span>`;
+                } else if (isCompanyOwner) {
+                    if (m.company_role === 'admin') {
+                        roleControls = `<span style="background:#f3e8ff;color:#7c3aed;border-radius:6px;padding:3px 10px;font-size:12px;font-weight:600;margin-right:6px;">Admin</span>` +
+                            `<button onclick="changeAgentRole(${m.id},'agent')" style="background:none;border:1px solid #e5e7eb;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;color:#6b7280;margin-right:6px;">Demote</button>`;
+                    } else {
+                        roleControls = `<button onclick="changeAgentRole(${m.id},'admin')" style="background:none;border:1px solid #7c3aed;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;color:#7c3aed;margin-right:6px;">Make Admin</button>`;
+                    }
+                    roleControls += `<button onclick="removeAgent(${m.id})" style="background:none;border:1px solid #e5e7eb;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;color:#6b7280;">Remove</button>`;
+                } else if (isCompanyAdmin && m.company_role !== 'owner') {
+                    roleControls = `<button onclick="removeAgent(${m.id})" style="background:none;border:1px solid #e5e7eb;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;color:#6b7280;">Remove</button>`;
+                }
+                return `
                 <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:#f9fafb;border-radius:8px;">
                     <div style="width:36px;height:36px;border-radius:50%;background:#0A2540;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;flex-shrink:0;">
                         ${(m.first_name || 'A').charAt(0).toUpperCase()}
@@ -3734,9 +3756,56 @@
                         <div style="font-weight:600;font-size:14px;">${m.first_name} ${m.last_name}</div>
                         <div style="font-size:12px;color:#6b7280;">${m.email} &nbsp;·&nbsp; ZIP ${m.zip_code || '—'} &nbsp;·&nbsp; <span style="text-transform:capitalize;">${m.company_role}</span></div>
                     </div>
-                    ${isCompanyOwner && m.company_role !== 'owner' ? `<button onclick="removeAgent(${m.id})" style="background:none;border:1px solid #e5e7eb;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;color:#6b7280;">Remove</button>` : ''}
-                </div>
-            `).join('');
+                    <div style="display:flex;align-items:center;gap:4px;">${roleControls}</div>
+                </div>`;
+            }).join('');
+        }
+
+        async function changeAgentRole(userId, role) {
+            try {
+                const res = await fetch(`${API_BASE_URL}/company/agents/${userId}/role`, {
+                    method: 'PUT', credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ role })
+                });
+                const data = await res.json();
+                if (!res.ok) { showToast(data.error || 'Failed to update role', 'error'); return; }
+                loadCompany();
+            } catch (e) { showToast('Network error. Please try again.', 'error'); }
+        }
+
+        async function loadTeamProposals() {
+            const listEl = document.getElementById('teamProposalsList');
+            if (!listEl) return;
+            listEl.innerHTML = '<p style="color:#6b7280;font-size:14px;">Loading...</p>';
+            try {
+                const res = await fetch(`${API_BASE_URL}/company/proposals`, { credentials: 'include' });
+                if (!res.ok) { listEl.innerHTML = '<p style="color:#ef4444;font-size:14px;">Failed to load proposals.</p>'; return; }
+                const rows = await res.json();
+                if (!rows.length) { listEl.innerHTML = '<p style="color:#6b7280;font-size:14px;">No proposals from your team yet.</p>'; return; }
+                const statusBadge = s => {
+                    const map = { pending: 'background:#fef3c7;color:#92400e;', accepted: 'background:#d1fae5;color:#065f46;', declined: 'background:#f3f4f6;color:#374151;' };
+                    return `<span style="${map[s] || map.pending}border-radius:6px;padding:2px 8px;font-size:11px;font-weight:600;text-transform:capitalize;">${s}</span>`;
+                };
+                listEl.innerHTML = `<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;">
+                    <thead><tr style="border-bottom:2px solid #e5e7eb;">
+                        <th style="text-align:left;padding:8px 10px;color:#6b7280;font-weight:600;">Agent</th>
+                        <th style="text-align:left;padding:8px 10px;color:#6b7280;font-weight:600;">Listing</th>
+                        <th style="text-align:right;padding:8px 10px;color:#6b7280;font-weight:600;">Price</th>
+                        <th style="text-align:right;padding:8px 10px;color:#6b7280;font-weight:600;">Commission %</th>
+                        <th style="text-align:center;padding:8px 10px;color:#6b7280;font-weight:600;">Status</th>
+                        <th style="text-align:left;padding:8px 10px;color:#6b7280;font-weight:600;">Date</th>
+                    </tr></thead>
+                    <tbody>${rows.map(p => `<tr style="border-bottom:1px solid #f3f4f6;">
+                        <td style="padding:8px 10px;">${p.agent_first} ${p.agent_last}<br><span style="color:#9ca3af;font-size:11px;">${p.agent_email}</span></td>
+                        <td style="padding:8px 10px;">${p.address}<br><span style="color:#9ca3af;font-size:11px;">${p.city}, ${p.state}</span></td>
+                        <td style="padding:8px 10px;text-align:right;">$${Number(p.price).toLocaleString()}</td>
+                        <td style="padding:8px 10px;text-align:right;">${p.commission_pct != null ? p.commission_pct + '%' : '—'}</td>
+                        <td style="padding:8px 10px;text-align:center;">${statusBadge(p.status)}</td>
+                        <td style="padding:8px 10px;white-space:nowrap;">${new Date(p.created_at).toLocaleDateString()}</td>
+                    </tr>`).join('')}</tbody>
+                </table></div>`;
+            } catch (e) { listEl.innerHTML = '<p style="color:#ef4444;font-size:14px;">Failed to load proposals.</p>'; }
         }
 
         function renderLocations(locations) {
