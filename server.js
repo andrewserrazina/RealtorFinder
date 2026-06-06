@@ -4160,14 +4160,15 @@ app.get('/sitemap-index.xml', async (req, res) => {
     const today = new Date().toISOString().split('T')[0];
     let states = [];
     try { states = await db.getPublishedStates(); } catch (e) {}
-    const staticEntry = `  <sitemap><loc>${base}/sitemap-static.xml</loc><lastmod>${today}</lastmod></sitemap>`;
-    const blogEntry   = `  <sitemap><loc>${base}/sitemap-blog.xml</loc><lastmod>${today}</lastmod></sitemap>`;
-    const agentsEntry = `  <sitemap><loc>${base}/sitemap-agents.xml</loc><lastmod>${today}</lastmod></sitemap>`;
+    const staticEntry   = `  <sitemap><loc>${base}/sitemap-static.xml</loc><lastmod>${today}</lastmod></sitemap>`;
+    const blogEntry     = `  <sitemap><loc>${base}/sitemap-blog.xml</loc><lastmod>${today}</lastmod></sitemap>`;
+    const agentsEntry   = `  <sitemap><loc>${base}/sitemap-agents.xml</loc><lastmod>${today}</lastmod></sitemap>`;
+    const listingsEntry = `  <sitemap><loc>${base}/sitemap-listings.xml</loc><lastmod>${today}</lastmod></sitemap>`;
     const stateEntries = states.map(s =>
         `  <sitemap><loc>${base}/sitemap-${s.state_code.toLowerCase()}.xml</loc><lastmod>${today}</lastmod></sitemap>`
     ).join('\n');
     res.type('application/xml');
-    res.send(`<?xml version="1.0" encoding="UTF-8"?>\n<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${staticEntry}\n${blogEntry}\n${agentsEntry}\n${stateEntries}\n</sitemapindex>`);
+    res.send(`<?xml version="1.0" encoding="UTF-8"?>\n<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${staticEntry}\n${blogEntry}\n${agentsEntry}\n${listingsEntry}\n${stateEntries}\n</sitemapindex>`);
 });
 
 // Static pages sitemap
@@ -4208,6 +4209,24 @@ app.get('/sitemap-blog.xml', async (req, res) => {
     }).join('\n');
     res.type('application/xml');
     res.send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${indexEntry}\n${postEntries}\n</urlset>`);
+});
+
+// Active listing pages sitemap
+app.get('/sitemap-listings.xml', async (req, res) => {
+    const base = (process.env.FRONTEND_URL || 'https://realtorfinder.net').replace(/\/$/, '');
+    res.type('application/xml');
+    try {
+        const { rows } = await pool.query(
+            `SELECT id, updated_at FROM listings
+             WHERE (status = 'active' OR status IS NULL) AND deleted_at IS NULL
+             ORDER BY created_at DESC LIMIT 5000`
+        );
+        const entries = rows.map(r => {
+            const date = r.updated_at ? new Date(r.updated_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+            return `  <url><loc>${base}/listing/${r.id}</loc><lastmod>${date}</lastmod><priority>0.6</priority></url>`;
+        }).join('\n');
+        res.send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${entries}\n</urlset>`);
+    } catch { res.send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>`); }
 });
 
 // Agent profile sitemap — /agent/:slug URLs for approved realtors with slugs
