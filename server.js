@@ -513,17 +513,20 @@ app.put('/api/company/plan', auth.requireAuth, async (req, res) => {
     }
 });
 
-// Add an agent to the company (owner only) — by email lookup
+// Add an agent to the company (owner or admin) — by email lookup
 app.post('/api/company/agents', auth.requireAuth, async (req, res) => {
     try {
         if (req.user.user_type !== 'realtor') return res.status(403).json({ error: 'Realtors only' });
-        const { email, zipCode } = req.body;
-        if (!email || !zipCode) return res.status(400).json({ error: 'email and zipCode required' });
+        const { email } = req.body;
+        if (!email) return res.status(400).json({ error: 'email required' });
 
         const owner = await db.getProfile(req.user.id);
-        if (!owner.company_id || owner.company_role !== 'owner') {
-            return res.status(403).json({ error: 'Only the company owner can add agents' });
+        if (!owner.company_id || !['owner', 'admin'].includes(owner.company_role)) {
+            return res.status(403).json({ error: 'Only the company owner or admin can add agents' });
         }
+
+        // Use the owner's zip_code as the agent's ZIP (company primary ZIP)
+        const zipCode = owner.zip_code;
 
         const agent = await db.getUserByEmail(email.toLowerCase().trim());
         if (!agent) return res.status(404).json({ error: 'No account found with that email' });
@@ -538,13 +541,13 @@ app.post('/api/company/agents', auth.requireAuth, async (req, res) => {
     }
 });
 
-// Remove an agent from the company (owner only)
+// Remove an agent from the company (owner or admin)
 app.delete('/api/company/agents/:userId', auth.requireAuth, async (req, res) => {
     try {
         if (req.user.user_type !== 'realtor') return res.status(403).json({ error: 'Realtors only' });
         const owner = await db.getProfile(req.user.id);
-        if (!owner.company_id || owner.company_role !== 'owner') {
-            return res.status(403).json({ error: 'Only the company owner can remove agents' });
+        if (!owner.company_id || !['owner', 'admin'].includes(owner.company_role)) {
+            return res.status(403).json({ error: 'Only the company owner or admin can remove agents' });
         }
         await db.removeAgentFromCompany(parseInt(req.params.userId), owner.company_id);
         res.json({ success: true });
@@ -586,6 +589,59 @@ app.delete('/api/company/locations/:locationId', auth.requireAuth, async (req, r
     } catch (err) {
         console.error('DELETE /api/company/locations error:', err);
         res.status(500).json({ error: 'Failed to remove location' });
+    }
+});
+
+// Get all proposals submitted by agents in the company (owner or admin)
+app.get('/api/company/proposals', auth.requireAuth, async (req, res) => {
+    try {
+        if (req.user.user_type !== 'realtor') return res.status(403).json({ error: 'Realtors only' });
+        const user = await db.getProfile(req.user.id);
+        if (!user.company_id || !['owner', 'admin'].includes(user.company_role)) {
+            return res.status(403).json({ error: 'Only the company owner or admin can view team proposals' });
+        }
+        const result = await pool.query(
+            `SELECT p.id, p.commission_pct, p.marketing_plan, p.personal_note, p.status, p.created_at,
+                    u.first_name AS agent_first, u.last_name AS agent_last, u.email AS agent_email,
+                    l.address, l.city, l.state, l.price,
+                    su.first_name AS seller_first, su.last_name AS seller_last
+             FROM proposals p
+             JOIN users u ON u.id = p.realtor_id
+             JOIN listings l ON l.id = p.listing_id
+             JOIN users su ON su.id = l.user_id
+             WHERE u.company_id = $1
+             ORDER BY p.created_at DESC
+             LIMIT 200`,
+            [user.company_id]
+        );
+        res.json(result.rows);
+    } catch (err) {
+        console.error('GET /api/company/proposals error:', err);
+        res.status(500).json({ error: 'Failed to load team proposals' });
+    }
+});
+
+// Update an agent's role within the company (owner only)
+app.put('/api/company/agents/:userId/role', auth.requireAuth, async (req, res) => {
+    try {
+        if (req.user.user_type !== 'realtor') return res.status(403).json({ error: 'Realtors only' });
+        const caller = await db.getProfile(req.user.id);
+        if (!caller.company_id || caller.company_role !== 'owner') {
+            return res.status(403).json({ error: 'Only the company owner can change agent roles' });
+        }
+        const { role } = req.body;
+        if (!['admin', 'agent'].includes(role)) {
+            return res.status(400).json({ error: 'Role must be admin or agent' });
+        }
+        const targetId = parseInt(req.params.userId);
+        await pool.query(
+            `UPDATE users SET company_role = $1 WHERE id = $2 AND company_id = $3 AND company_role != 'owner'`,
+            [role, targetId, caller.company_id]
+        );
+        res.json({ success: true });
+    } catch (err) {
+        console.error('PUT /api/company/agents/:userId/role error:', err);
+        res.status(500).json({ error: 'Failed to update agent role' });
     }
 });
 

@@ -1411,10 +1411,9 @@
                     </div>
                     <!-- Add agent form (hidden by default) -->
                     <div id="addAgentForm" style="display:none; background:#f9fafb; border-radius:8px; padding:16px; margin-bottom:16px;">
-                        <p style="margin:0 0 12px; font-size:14px; color:#374151;">Enter the email of a registered realtor to add them to your company.</p>
+                        <p style="margin:0 0 12px; font-size:14px; color:#374151;">Enter the email address of a registered realtor to add them.</p>
                         <div style="display:flex; gap:10px; flex-wrap:wrap;">
                             <input type="email" id="agentEmail" placeholder="agent@example.com" style="flex:1; min-width:200px; padding:8px 12px; border:1px solid #d1d5db; border-radius:8px; font-size:14px;">
-                            <input type="text" id="agentZip" placeholder="Their ZIP code" maxlength="10" style="width:140px; padding:8px 12px; border:1px solid #d1d5db; border-radius:8px; font-size:14px;">
                             <button class="btn-primary" onclick="addAgent()" style="font-size:13px; padding:8px 16px;">Add</button>
                             <button onclick="hideAddAgentForm()" style="background:none; border:1px solid #d1d5db; border-radius:8px; padding:8px 14px; cursor:pointer; font-size:13px;">Cancel</button>
                         </div>
@@ -1439,6 +1438,15 @@
                         <p id="addLocationError" style="display:none; color:#ef4444; font-size:13px; margin:8px 0 0;"></p>
                     </div>
                     <div id="locationsList" style="display:flex; flex-direction:column; gap:10px;"></div>
+                </div>
+
+                <!-- Team Proposals (firm owners and admins only) -->
+                <div id="teamProposalsSection" style="display:none; background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:24px; margin-top:28px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                        <h3 style="margin:0; font-size:18px;">Team Proposals</h3>
+                        <button onclick="loadTeamProposals()" style="background:none;border:1px solid #d1d5db;border-radius:8px;padding:6px 14px;cursor:pointer;font-size:13px;color:#374151;">&#x21BB; Refresh</button>
+                    </div>
+                    <div id="teamProposalsList"></div>
                 </div>
             </div>
         </section>
@@ -3752,21 +3760,19 @@
 
         async function addAgent() {
             const email = document.getElementById('agentEmail').value.trim();
-            const zipCode = document.getElementById('agentZip').value.trim();
             const errEl = document.getElementById('addAgentError');
             errEl.style.display = 'none';
-            if (!email || !zipCode) { errEl.textContent = 'Both email and ZIP code are required.'; errEl.style.display = 'block'; return; }
+            if (!email) { errEl.textContent = 'Email is required.'; errEl.style.display = 'block'; return; }
             try {
                 const res = await fetch(`${API_BASE_URL}/company/agents`, {
                     method: 'POST', credentials: 'include',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, zipCode })
+                    body: JSON.stringify({ email })
                 });
                 const data = await res.json();
                 if (!res.ok) { errEl.textContent = data.error || 'Failed to add agent.'; errEl.style.display = 'block'; return; }
                 hideAddAgentForm();
                 document.getElementById('agentEmail').value = '';
-                document.getElementById('agentZip').value = '';
                 loadCompany();
             } catch (e) { errEl.textContent = 'Network error. Please try again.'; errEl.style.display = 'block'; }
         }
