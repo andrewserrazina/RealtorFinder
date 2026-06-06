@@ -8513,6 +8513,7 @@ async function startServer() {
         }
     }
     await backfillProfileSlugs();
+    await seedBlogPosts();
     app.listen(PORT, () => {
         console.log(`🏠 RealtorFinder server running on port ${PORT}`);
         console.log(`📍 http://localhost:${PORT}`);
@@ -8523,9 +8524,6 @@ async function startServer() {
         console.log(`   /dashboard/seller → Seller dashboard`);
         console.log(`   /dashboard/realtor → Realtor dashboard`);
         console.log(`   /app → Main application (legacy)`);
-
-        // Seed blog posts if table is empty
-        await seedBlogPosts();
 
         // Schedule background jobs — run after migrations so tables exist
         runListingExpiryJob();
