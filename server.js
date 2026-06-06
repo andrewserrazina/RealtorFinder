@@ -446,6 +446,27 @@ app.post('/api/auth/signup', async (req, res) => {
             } catch(e) { console.error('Referral attribution error:', e.message); }
         }
 
+        // Handle company invite token (non-blocking — bad token must not break signup)
+        if (req.body.inviteToken && userType === 'realtor') {
+            try {
+                const { rows: inviteRows } = await pool.query(
+                    `SELECT ci.*, c.owner_user_id FROM company_invites ci
+                     JOIN companies c ON c.id = ci.company_id
+                     WHERE ci.token = $1 AND ci.used = FALSE AND ci.expires_at > NOW()`,
+                    [req.body.inviteToken]
+                );
+                if (inviteRows.length) {
+                    const invite = inviteRows[0];
+                    const { rows: ownerRows } = await pool.query(
+                        `SELECT zip_code FROM users WHERE id = $1`, [invite.owner_user_id]
+                    );
+                    const ownerZip = ownerRows[0]?.zip_code || user.zip_code;
+                    await db.addAgentToCompany(user.id, invite.company_id, ownerZip);
+                    await pool.query(`UPDATE company_invites SET used = TRUE WHERE token = $1`, [req.body.inviteToken]);
+                }
+            } catch(e) { console.error('Invite token processing error (non-fatal):', e.message); }
+        }
+
         // Create session
         req.session.userId = user.id;
         req.session.userType = user.user_type;
