@@ -1147,14 +1147,27 @@
 
             <!-- Step 2: Photo upload (shown after listing created) -->
             <div id="newListingPhotoStep" style="display:none;">
-                <div id="newListingPreviews" style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-bottom:1rem;"></div>
-                <div style="display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap;margin-bottom:0.75rem;">
-                    <input type="file" id="newListingImageInput" accept="image/*" multiple style="flex:1;font-size:0.9rem;">
-                    <button type="button" class="btn btn-outline" onclick="uploadNewListingImages()" style="font-size:0.85rem;padding:0.5rem 1rem;">Upload</button>
+                <p style="font-size:0.9rem;color:#555;margin-bottom:1rem;">Listings with photos get <strong>5× more proposals</strong>. Add up to 10 images.</p>
+
+                <!-- Drag-drop zone -->
+                <div id="newListingDropZone"
+                     style="border:2px dashed #e5e1db;border-radius:12px;padding:2rem 1.5rem;text-align:center;cursor:pointer;transition:border-color 0.2s,background 0.2s;margin-bottom:1rem;"
+                     ondragover="event.preventDefault();this.style.borderColor='#FF6B35';this.style.background='#fff8f5';"
+                     ondragleave="this.style.borderColor='#e5e1db';this.style.background='';"
+                     ondrop="handleNewListingDrop(event)"
+                     onclick="document.getElementById('newListingImageInput').click()">
+                    <div style="font-size:2rem;margin-bottom:0.5rem;">📸</div>
+                    <p style="font-weight:600;color:#0a2540;margin-bottom:0.25rem;">Drag photos here or click to browse</p>
+                    <p style="font-size:0.8rem;color:#9ca3af;">JPG, PNG, WEBP — up to 10 photos</p>
                 </div>
-                <p id="newListingPhotoStatus" style="font-size:0.85rem;color:#666;margin-bottom:1.5rem;"></p>
-                <button type="button" class="btn btn-primary" onclick="finishNewListing()" style="width:100%;padding:1rem;">Done</button>
-                <button type="button" onclick="finishNewListing()" style="display:block;width:100%;text-align:center;margin-top:0.75rem;background:none;border:none;color:#999;font-size:0.9rem;cursor:pointer;">Skip photos for now</button>
+                <input type="file" id="newListingImageInput" accept="image/*" multiple style="display:none;" onchange="handleNewListingFileSelect(event)">
+
+                <!-- Previews -->
+                <div id="newListingPreviews" style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-bottom:1rem;"></div>
+
+                <p id="newListingPhotoStatus" style="font-size:0.85rem;color:#666;margin-bottom:1rem;min-height:1.2em;"></p>
+                <button type="button" class="btn btn-primary" onclick="uploadAndFinishNewListing()" style="width:100%;padding:1rem;">Upload & Continue</button>
+                <button type="button" onclick="finishNewListing()" style="display:block;width:100%;text-align:center;margin-top:0.75rem;background:none;border:none;color:#9ca3af;font-size:0.85rem;cursor:pointer;">Skip for now — add photos later</button>
             </div>
 
             <form id="newListingForm">
@@ -1473,6 +1486,7 @@
             document.getElementById('newListingModalSub').textContent = 'List your property and start receiving offers from qualified realtors';
             document.getElementById('newListingPreviews').innerHTML = '';
             document.getElementById('newListingPhotoStatus').textContent = '';
+            _stagedFiles = [];
             _newListingId = null;
         }
 
@@ -1481,14 +1495,59 @@
             loadDashboard();
         }
 
-        async function uploadNewListingImages() {
-            if (!_newListingId) return;
-            const input = document.getElementById('newListingImageInput');
+        // Track staged files (before upload)
+        let _stagedFiles = [];
+
+        function renderNewListingPreviews() {
+            const previews = document.getElementById('newListingPreviews');
+            previews.innerHTML = _stagedFiles.map((f, i) => {
+                const url = URL.createObjectURL(f);
+                return `<div style="position:relative;">
+                    <img src="${url}" style="width:80px;height:60px;object-fit:cover;border-radius:6px;border:1px solid #e5e1db;display:block;">
+                    <button type="button" onclick="removeStagedFile(${i})" style="position:absolute;top:-6px;right:-6px;background:#ef4444;color:white;border:none;border-radius:50%;width:18px;height:18px;font-size:11px;cursor:pointer;line-height:1;display:flex;align-items:center;justify-content:center;">✕</button>
+                </div>`;
+            }).join('');
             const status = document.getElementById('newListingPhotoStatus');
-            if (!input.files.length) { status.textContent = 'Please select at least one photo.'; return; }
-            status.textContent = 'Uploading…';
+            if (_stagedFiles.length > 0) {
+                status.textContent = `${_stagedFiles.length} photo${_stagedFiles.length > 1 ? 's' : ''} selected — click "Upload & Continue" when ready.`;
+                status.style.color = '#059669';
+            } else {
+                status.textContent = '';
+            }
+        }
+
+        function removeStagedFile(idx) {
+            _stagedFiles.splice(idx, 1);
+            renderNewListingPreviews();
+        }
+
+        function handleNewListingFileSelect(e) {
+            const files = Array.from(e.target.files).filter(f => f.type.startsWith('image/'));
+            const remaining = 10 - _stagedFiles.length;
+            _stagedFiles.push(...files.slice(0, remaining));
+            if (_stagedFiles.length > 10) _stagedFiles = _stagedFiles.slice(0, 10);
+            e.target.value = '';
+            renderNewListingPreviews();
+        }
+
+        function handleNewListingDrop(e) {
+            e.preventDefault();
+            document.getElementById('newListingDropZone').style.borderColor = '#e5e1db';
+            document.getElementById('newListingDropZone').style.background = '';
+            const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+            const remaining = 10 - _stagedFiles.length;
+            _stagedFiles.push(...files.slice(0, remaining));
+            renderNewListingPreviews();
+        }
+
+        async function uploadAndFinishNewListing() {
+            if (!_newListingId) { finishNewListing(); return; }
+            const status = document.getElementById('newListingPhotoStatus');
+            if (!_stagedFiles.length) { finishNewListing(); return; }
+            status.textContent = `Uploading ${_stagedFiles.length} photo${_stagedFiles.length > 1 ? 's' : ''}…`;
+            status.style.color = '#6b7280';
             const formData = new FormData();
-            Array.from(input.files).forEach(f => formData.append('images', f));
+            _stagedFiles.forEach(f => formData.append('images', f));
             try {
                 const res = await fetch(`${API_BASE_URL}/listings/${_newListingId}/images`, {
                     method: 'POST',
@@ -1497,21 +1556,18 @@
                 });
                 if (!res.ok) throw new Error();
                 const data = await res.json();
-                status.textContent = `✓ ${data.imageCount || input.files.length} photo(s) uploaded successfully.`;
-                // Show thumbnails
-                const previews = document.getElementById('newListingPreviews');
-                previews.innerHTML = '';
-                (data.imageUrls || []).forEach(url => {
-                    const img = document.createElement('img');
-                    img.src = url;
-                    img.style.cssText = 'width:80px;height:60px;object-fit:cover;border-radius:6px;';
-                    previews.appendChild(img);
-                });
-                input.value = '';
+                status.textContent = `✓ ${data.imageCount || _stagedFiles.length} photo(s) uploaded!`;
+                status.style.color = '#059669';
+                _stagedFiles = [];
+                setTimeout(finishNewListing, 800);
             } catch {
                 status.textContent = 'Upload failed — please try again.';
+                status.style.color = '#dc2626';
             }
         }
+
+        // Legacy shim (still called from elsewhere)
+        function uploadNewListingImages() { uploadAndFinishNewListing(); }
 
         // ── Price formatting ──────────────────────────────────────────────────────
         function formatCurrencyInput(input) {

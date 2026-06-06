@@ -1125,6 +1125,15 @@
                         <option value="5">5+</option>
                     </select>
                 </div>
+                <div class="filter-group">
+                    <label>Sort By</label>
+                    <select id="filterSort">
+                        <option value="newest">Newest First</option>
+                        <option value="price_asc">Price: Low → High</option>
+                        <option value="price_desc">Price: High → Low</option>
+                        <option value="most_bids">Most Bids</option>
+                    </select>
+                </div>
                 <div class="filter-group" style="flex-direction:row;gap:0.5rem;">
                     <button class="btn btn-primary" onclick="applyFilters()" style="padding:0.55rem 1.25rem;font-size:0.9rem;">Filter</button>
                     <button class="btn btn-outline" onclick="clearFilters()" style="padding:0.55rem 1rem;font-size:0.9rem;">Clear</button>
@@ -2156,11 +2165,13 @@
             const minPrice = document.getElementById('filterMinPrice').value;
             const maxPrice = document.getElementById('filterMaxPrice').value;
             const minBeds = document.getElementById('filterMinBeds').value;
+            const sort = document.getElementById('filterSort').value;
             if (city) f.city = city;
             if (type) f.type = type;
             if (minPrice) f.minPrice = minPrice;
             if (maxPrice) f.maxPrice = maxPrice;
             if (minBeds) f.minBeds = minBeds;
+            if (sort) f.sort = sort;
             currentFilters = f;
             currentPage = 1;
             loadListings();
@@ -2172,6 +2183,7 @@
             document.getElementById('filterMinPrice').value = '';
             document.getElementById('filterMaxPrice').value = '';
             document.getElementById('filterMinBeds').value = '';
+            document.getElementById('filterSort').value = 'newest';
             currentFilters = {};
             currentPage = 1;
             loadListings();
