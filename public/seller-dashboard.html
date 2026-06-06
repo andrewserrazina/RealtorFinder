@@ -1812,6 +1812,7 @@
                         ${listing.shareToken ? `<button class="btn btn-outline" onclick="copyShareLink('${listing.shareToken}')" style="font-size:0.85rem;">🔗 Share</button>` : ''}
                         ${!isExpired ? `<button class="btn btn-outline" onclick="openEditModal(${listing.id})">Edit</button>` : ''}
                         <button class="btn btn-outline" onclick="openListingAnalytics(${listing.id})" style="font-size:0.85rem;">📊 Analytics</button>
+                        ${status === 'active' ? `<button class="btn btn-outline" onclick="markListingUnderContract(${listing.id})" style="font-size:0.85rem;border-color:#d97706;color:#d97706;">Under Contract</button>` : ''}
                         ${status !== 'sold' && !isExpired ? `<button class="btn btn-outline" onclick="markListingSold(${listing.id})" style="font-size:0.85rem;">Mark Sold</button>` : ''}
                         <button class="btn btn-outline" onclick="deleteListing(${listing.id})" style="font-size:0.85rem;border-color:#ef4444;color:#ef4444;">Delete</button>
                         ${renderBoostControl(listing)}
@@ -2054,6 +2055,21 @@
                 if (!res.ok) throw new Error('Failed');
                 loadOffers();
             } catch { alert('Failed to decline offer. Please try again.'); }
+        }
+
+        // Mark listing as under contract
+        async function markListingUnderContract(listingId) {
+            if (!confirm('Mark this listing as Under Contract? It will stay visible but show as pending.')) return;
+            try {
+                const res = await fetch(`${API_BASE_URL}/listings/${listingId}/status`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ status: 'under_contract' })
+                });
+                if (!res.ok) throw new Error('Failed');
+                loadDashboard();
+            } catch { alert('Failed to update listing. Please try again.'); }
         }
 
         // Mark listing as sold
