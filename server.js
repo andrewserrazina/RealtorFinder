@@ -1204,6 +1204,11 @@ app.get('/api/listings/:id', async (req, res) => {
         }
         const isOwner = req.session?.userId && req.session.userId === listing.user_id;
         const isAdmin = req.user?.is_admin;
+        const isRealtor = req.user?.user_type === 'realtor';
+        // Increment view count when a realtor (not the owner) views this listing
+        if (isRealtor && !isOwner) {
+            pool.query(`UPDATE listings SET view_count = COALESCE(view_count,0)+1 WHERE id=$1`, [listing.id]).catch(() => {});
+        }
         const { owner_name, owner_email, owner_phone, ...publicListing } = listing;
         const payload = { ...publicListing, date: formatDate(listing.created_at) };
         if (isOwner || isAdmin) {
@@ -2129,8 +2134,7 @@ app.delete('/api/admin/users/:id', requireAdmin, async (req, res) => {
     const client = await pool.connect();
     try {
         await client.query('BEGIN');
-        // Remove dependent data before deleting the user
-        await client.query(`DELETE FROM sessions WHERE user_id = $1`, [userId]);
+        await client.query(`DELETE FROM session WHERE sess->>'userId' = $1::text`, [userId]);
         await client.query(`DELETE FROM offers WHERE user_id = $1`, [userId]);
         await client.query(`UPDATE listings SET deleted_at = NOW() WHERE user_id = $1 AND deleted_at IS NULL`, [userId]);
         const { rows } = await client.query(`DELETE FROM users WHERE id = $1 RETURNING id, email`, [userId]);
