@@ -1063,7 +1063,7 @@ app.get('/api/listings', async (req, res) => {
         }
 
         // Realtors/public: filtered, paginated, active only
-        const { city, type, minPrice, maxPrice, minBeds, maxBeds, minBaths, zip, swLat, swLng, neLat, neLng, page = 1, limit = 50 } = req.query;
+        const { city, type, minPrice, maxPrice, minBeds, maxBeds, minBaths, zip, swLat, swLng, neLat, neLng, sort, page = 1, limit = 50 } = req.query;
         const filters = {};
         if (city) filters.city = city;
         if (zip) filters.zip = zip;
@@ -1074,6 +1074,7 @@ app.get('/api/listings', async (req, res) => {
         if (maxBeds) filters.maxBeds = maxBeds;
         if (minBaths) filters.minBaths = minBaths;
         if (swLat && swLng && neLat && neLng) { filters.swLat = swLat; filters.swLng = swLng; filters.neLat = neLat; filters.neLng = neLng; }
+        if (['newest', 'price_asc', 'price_desc', 'most_bids'].includes(sort)) filters.sort = sort;
 
         const result = await db.getFilteredListings(filters, parseInt(page), Math.min(parseInt(limit), 50));
         res.json({
@@ -6799,6 +6800,59 @@ app.post('/api/admin/users/:id/billing-portal', auth.requireAuth, requireAdmin, 
     }
 });
 
+// ===== ADMIN BLOG CRUD =====
+
+app.get('/api/admin/blog', requireAdmin, async (req, res) => {
+    const { rows } = await pool.query(
+        `SELECT id, slug, title, excerpt, author, category, published_at, read_time_minutes, is_published
+         FROM blog_posts ORDER BY published_at DESC`
+    );
+    res.json(rows);
+});
+
+app.post('/api/admin/blog', requireAdmin, async (req, res) => {
+    try {
+        const { slug, title, excerpt, author, category, state_code, city_slug, published_at, read_time_minutes, content, is_published } = req.body;
+        if (!slug || !title || !content) return res.status(400).json({ error: 'slug, title, and content are required' });
+        const { rows } = await pool.query(
+            `INSERT INTO blog_posts (slug, title, excerpt, author, category, state_code, city_slug, published_at, read_time_minutes, content, is_published)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
+            [slug, title, excerpt || null, author || 'RealtorFinder Editorial Team',
+             category || null, state_code || null, city_slug || null,
+             published_at || new Date(), read_time_minutes || 5, content, is_published !== false]
+        );
+        res.json(rows[0]);
+    } catch (err) {
+        if (err.code === '23505') return res.status(409).json({ error: 'A post with this slug already exists' });
+        res.status(500).json({ error: 'Failed to create post' });
+    }
+});
+
+app.put('/api/admin/blog/:id', requireAdmin, async (req, res) => {
+    try {
+        const { title, excerpt, author, category, state_code, city_slug, published_at, read_time_minutes, content, is_published } = req.body;
+        const { rows } = await pool.query(
+            `UPDATE blog_posts SET title=COALESCE($1,title), excerpt=COALESCE($2,excerpt),
+             author=COALESCE($3,author), category=COALESCE($4,category), state_code=COALESCE($5,state_code),
+             city_slug=COALESCE($6,city_slug), published_at=COALESCE($7,published_at),
+             read_time_minutes=COALESCE($8,read_time_minutes), content=COALESCE($9,content),
+             is_published=COALESCE($10,is_published), updated_at=NOW()
+             WHERE id=$11 RETURNING *`,
+            [title, excerpt, author, category, state_code, city_slug, published_at, read_time_minutes, content, is_published, req.params.id]
+        );
+        if (!rows.length) return res.status(404).json({ error: 'Post not found' });
+        res.json(rows[0]);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to update post' });
+    }
+});
+
+app.delete('/api/admin/blog/:id', requireAdmin, async (req, res) => {
+    const { rowCount } = await pool.query(`DELETE FROM blog_posts WHERE id=$1`, [req.params.id]);
+    if (!rowCount) return res.status(404).json({ error: 'Post not found' });
+    res.json({ success: true });
+});
+
 // ===== COMPANY ANALYTICS =====
 
 app.get('/api/company/analytics', auth.requireAuth, async (req, res) => {
@@ -7392,6 +7446,208 @@ app.get('/about', (req, res) => {
 app.get('/about-sellers', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'about-sellers.html'));
 });
+
+// ── Blog Seed ─────────────────────────────────────────────────────────────────
+
+async function seedBlogPosts() {
+    try {
+        const { rows } = await pool.query(`SELECT COUNT(*) FROM blog_posts`);
+        if (parseInt(rows[0].count) > 0) return;
+        const posts = [
+            {
+                slug: 'how-to-find-the-best-real-estate-agent-to-sell-your-home',
+                title: 'How to Find the Best Real Estate Agent to Sell Your Home',
+                excerpt: 'Choosing the right listing agent can mean thousands of dollars in your pocket. Here\'s exactly what to look for — and what most sellers miss.',
+                category: 'Seller Guides',
+                read_time_minutes: 7,
+                content: `<p>Selling your home is one of the largest financial transactions you'll ever make. The listing agent you hire will negotiate on your behalf, market your property, and guide you through a complex process — so choosing the right one matters more than most sellers realize.</p>
+
+<h2>1. Interview at Least Three Agents</h2>
+<p>Most sellers hire the first agent they meet. That's a mistake. Interview at least three agents, and ask each the same questions so you can compare answers directly. Pay attention not just to what they say, but how they say it — confidence, market knowledge, and honesty about your home's realistic price are all signals.</p>
+
+<h2>2. Ask for a Comparative Market Analysis (CMA)</h2>
+<p>Any serious listing agent should provide a free CMA — a detailed analysis of what similar homes have sold for in your neighborhood over the last 90 days. If an agent prices your home significantly higher than the comps to "win" your listing, that's a red flag. Overpriced listings sit on the market and eventually sell for less than if they'd been priced correctly from the start.</p>
+
+<h2>3. Understand Their Marketing Plan</h2>
+<p>Professional photography is table stakes. Ask what else they do: Do they use video or 3D tours? Do they run paid advertising on Zillow, social media, or Google? How many active buyers are in their network? The best agents treat each listing as a marketing campaign, not just an MLS entry.</p>
+
+<h2>4. Check Actual Sales Data, Not Just Reviews</h2>
+<p>Anyone can collect five-star reviews from friends. What matters is verifiable production: How many homes did this agent sell in the last 12 months? What was the average days-on-market? What was the average sale price vs. list price ratio? Agents with strong numbers are proud to share them.</p>
+
+<h2>5. Understand the Commission Structure</h2>
+<p>Following the August 2024 NAR settlement, commission structures are more negotiable than ever. Listing agent commissions typically range from 2–3%. Some discount brokers charge less but provide less service. Ask exactly what you're getting at each price point and make sure the agreement is in writing before you sign anything.</p>
+
+<h2>6. Use a Platform Where Agents Compete for Your Business</h2>
+<p>The traditional model has sellers calling agents one by one. Reverse marketplaces like RealtorFinder flip the dynamic: you post your home details once and qualified agents in your area send you their proposals — commission rates, marketing plans, and credentials — so you can compare side by side. It's free for sellers and dramatically reduces the time it takes to find the right agent.</p>
+
+<h2>Bottom Line</h2>
+<p>The best real estate agent for your home is the one who can demonstrate a consistent track record, has a concrete marketing plan, prices your home based on data not flattery, and communicates clearly. Take your time, ask hard questions, and don't be afraid to walk away if something feels off.</p>`
+            },
+            {
+                slug: 'what-to-look-for-in-a-buyers-agent',
+                title: "What to Look for in a Buyer's Agent: A Complete Guide",
+                excerpt: "A good buyer's agent can save you tens of thousands of dollars and months of stress. Here's how to find one who actually works for you.",
+                category: "Buyer Guides",
+                read_time_minutes: 6,
+                content: `<p>In a competitive housing market, a great buyer's agent isn't a luxury — it's a strategic advantage. They know about listings before they hit Zillow, can write winning offers, and will tell you when a deal isn't worth pursuing. Here's what to look for.</p>
+
+<h2>Local Market Expertise</h2>
+<p>Real estate is hyper-local. An agent who dominates in one suburb may have limited knowledge in the next town over. Ask how many buyers they've represented in your specific target area in the last year. Look for someone who can tell you which neighborhoods are appreciating, where the schools are rated highest, and which streets to avoid — without looking anything up.</p>
+
+<h2>Responsiveness and Availability</h2>
+<p>Good homes in popular markets sell in days or even hours. You need an agent who will get you into a showing the same day it lists and can submit an offer quickly when you're ready. Ask them directly: "If I call you at 7pm on a Tuesday because I want to see a house, what happens?" Their answer tells you a lot.</p>
+
+<h2>Strong Negotiation Track Record</h2>
+<p>In a hot market, winning an offer isn't just about price — it's about terms. An experienced agent knows which sellers care about a quick close vs. a leaseback, when to include an escalation clause, and how to make your offer stand out without overpaying. Ask for examples of deals where their negotiation strategy made a real difference.</p>
+
+<h2>Fiduciary Duty</h2>
+<p>Your buyer's agent is legally obligated to act in your best interest. That means they should tell you when a home is overpriced, flag red flags in an inspection report, and advise you to walk away from a bad deal — even if it means they don't earn a commission. If an agent is pushing you to make an offer you're not comfortable with, that's a warning sign.</p>
+
+<h2>Understanding the New Commission Rules</h2>
+<p>Following the August 2024 NAR settlement, buyer's agent compensation is no longer automatically built into seller offers through the MLS. Before you start touring homes, you'll sign a buyer representation agreement that specifies your agent's compensation. This can be structured different ways — a flat fee, a percentage, or a rate that the seller may or may not agree to cover. Discuss this clearly upfront so there are no surprises at closing.</p>
+
+<h2>How to Find One</h2>
+<p>Platforms like RealtorFinder let you post your buyer criteria — budget, location, home type — and receive competing proposals from licensed buyer's agents in your area. You can compare their experience, approach, and proposed compensation before committing to any interviews. It's free for buyers and takes 5 minutes.</p>`
+            },
+            {
+                slug: 'how-real-estate-commissions-work-2024',
+                title: 'How Real Estate Agent Commissions Work in 2024 (After the NAR Settlement)',
+                excerpt: 'The August 2024 NAR settlement changed how agent commissions work. Here\'s exactly what changed, what it means for buyers and sellers, and how to navigate the new rules.',
+                category: 'Market Insights',
+                read_time_minutes: 8,
+                content: `<p>The real estate industry went through its biggest structural change in decades in August 2024, when a landmark settlement with the National Association of Realtors took effect. If you're buying or selling a home, here's what you need to know.</p>
+
+<h2>What Was the Old System?</h2>
+<p>Under the old model, home sellers typically paid a combined commission of 5–6% at closing — split between the listing agent and the buyer's agent. The buyer's agent commission was advertised in the MLS, effectively requiring all sellers to offer buyer-agent compensation as a condition of listing. Critics argued this made commissions artificially high and non-negotiable.</p>
+
+<h2>What Changed in August 2024?</h2>
+<p>Following the settlement, MLS platforms can no longer advertise or require sellers to offer buyer-agent compensation. Key changes:</p>
+<ul>
+<li><strong>Buyer representation agreements are now required</strong> before a buyer's agent can show homes. This written agreement must specify exactly how the agent will be compensated.</li>
+<li><strong>Buyer's agent compensation is now negotiated separately</strong> between the buyer and their agent — not bundled into the seller's MLS listing.</li>
+<li><strong>Sellers can still offer to cover buyer-agent fees</strong> as a concession, but it must be negotiated as part of the offer, not listed in the MLS.</li>
+</ul>
+
+<h2>What Does This Mean for Sellers?</h2>
+<p>You now have more flexibility on what you pay. You can offer to cover the buyer's agent fee as part of negotiations, or you can leave it entirely to the buyer. Many sellers still choose to offer buyer-agent compensation because it broadens the pool of potential buyers who can afford to purchase. Your listing agent should walk you through the tradeoffs for your specific market and price point.</p>
+
+<h2>What Does This Mean for Buyers?</h2>
+<p>Before touring homes, you'll need to sign a buyer representation agreement. This document specifies how your agent gets paid — typically 2–3% of the purchase price. In practice, many sellers still offer to cover this cost, but you should be prepared in case they don't. Discuss compensation structure clearly with any buyer's agent before you begin your search.</p>
+
+<h2>How to Navigate the New Rules</h2>
+<p>The best approach is to treat agent compensation the same way you treat any other negotiation: with information and options. Comparing proposals from multiple agents — including their proposed compensation structures — is now more important than ever. Platforms like RealtorFinder make this easy by letting you receive competing proposals from agents so you can compare terms side by side.</p>`
+            },
+            {
+                slug: 'questions-to-ask-before-hiring-a-listing-agent',
+                title: '12 Questions to Ask Before Hiring a Listing Agent',
+                excerpt: "Most sellers don't ask nearly enough questions before signing a listing agreement. These 12 questions will separate the great agents from the average ones.",
+                category: 'Seller Guides',
+                read_time_minutes: 5,
+                content: `<p>Signing a listing agreement is a significant commitment — typically 3 to 6 months exclusive with one agent. Before you sign, get answers to these 12 questions.</p>
+
+<h2>1. How many homes have you sold in this ZIP code in the last 12 months?</h2>
+<p>Local expertise is everything. An agent who has sold 10+ homes in your specific neighborhood will know the comps, the buyer pool, and the local quirks better than anyone.</p>
+
+<h2>2. What's your average days-on-market?</h2>
+<p>A low days-on-market number combined with a high sale-to-list-price ratio is the gold standard. Ask for both figures for their listings in the last year.</p>
+
+<h2>3. What is your list-to-sale price ratio?</h2>
+<p>Strong agents consistently sell homes at or above asking price. Anything above 98% in a normal market is solid. Below 95% is a red flag.</p>
+
+<h2>4. What's your marketing plan for my home?</h2>
+<p>The answer should go well beyond "we'll list it on the MLS." Look for professional photography, video tours, social media campaigns, email blasts to active buyers, and open house strategy.</p>
+
+<h2>5. Who takes the listing photos?</h2>
+<p>Professional real estate photography is non-negotiable in today's market. If an agent plans to use their phone camera, that tells you something about their standards.</p>
+
+<h2>6. How will you price my home?</h2>
+<p>You want a data-driven answer: recent comparable sales, current competition, market trend direction. Be cautious of agents who quote a number without showing you the data behind it.</p>
+
+<h2>7. What's your commission and what does it include?</h2>
+<p>Get a complete breakdown in writing. What services are included? What happens if you find your own buyer? What are the terms if you need to cancel?</p>
+
+<h2>8. How will you communicate with me?</h2>
+<p>Weekly updates minimum. Ask what channel they use (email, text, phone) and how quickly they respond. Poor communication is the #1 complaint sellers have about their agents.</p>
+
+<h2>9. Will you personally handle my listing or hand it off?</h2>
+<p>Some top-producing agents assign your listing to a junior team member. Know upfront who your actual point of contact will be.</p>
+
+<h2>10. What will you tell me that I don't want to hear?</h2>
+<p>Great agents give honest advice even when it's uncomfortable — whether that's a price reduction, a staging issue, or walking away from a deal. Ask for an example from a past client.</p>
+
+<h2>11. Do you have references I can speak with directly?</h2>
+<p>Any agent worth hiring should be able to give you 3–4 recent seller references. Call them.</p>
+
+<h2>12. Why should I list with you over the other agents I'm considering?</h2>
+<p>This final question cuts through the pitch. A confident, data-backed answer is a good sign. Vague generalities are not.</p>`
+            },
+            {
+                slug: 'how-to-negotiate-real-estate-agent-commission',
+                title: 'How to Negotiate Your Real Estate Agent Commission Rate',
+                excerpt: "Commission rates are more negotiable than most sellers realize — especially in 2024. Here's how to have the conversation and what to expect.",
+                category: 'Seller Guides',
+                read_time_minutes: 5,
+                content: `<p>Real estate commission rates have long been presented as standard and non-negotiable. They're not. Here's how to negotiate effectively without sacrificing service quality.</p>
+
+<h2>Understand the Current Rate Landscape</h2>
+<p>Listing agent commissions typically range from 2% to 3% of the sale price. Following the 2024 NAR settlement, buyer-agent compensation is now negotiated separately. Total transaction costs for sellers vary significantly depending on what you offer buyer agents and what you negotiate with your listing agent.</p>
+
+<h2>Leverage Your Home's Advantages</h2>
+<p>Agents are more likely to negotiate on high-value homes (the dollar value of their commission is already high), homes in fast-moving markets (less marketing effort required), and situations where you're also buying through the same agent (a two-transaction relationship). Know your leverage points before you sit down to talk.</p>
+
+<h2>Compare Multiple Proposals</h2>
+<p>The most effective negotiating tool is simply having competing offers. When agents know they're being compared against others, commission rates naturally compress and service levels rise. This is exactly what RealtorFinder is designed for — post your home details and let agents send you proposals with their actual rates and marketing plans.</p>
+
+<h2>Ask About Tiered Commission Structures</h2>
+<p>Some agents will offer a base commission with a bonus if the home sells above a target price. This aligns incentives — the agent earns more by pushing for a higher price. It's worth proposing if you're confident in your home's value.</p>
+
+<h2>Understand What You're Trading</h2>
+<p>A lower commission sometimes means reduced services: fewer marketing dollars, less agent time, or a junior team member handling your listing. Before you accept a lower rate, get specific commitments in writing about exactly what will be included. A great agent at a fair commission will outperform a mediocre agent at a discount rate every time.</p>
+
+<h2>The Bottom Line</h2>
+<p>Negotiating is normal and expected. Professional agents negotiate for a living — they won't be offended if you ask. The goal isn't the lowest possible commission; it's the best net proceeds from your sale, which means finding an agent who delivers enough value to justify their fee.</p>`
+            },
+            {
+                slug: 'best-time-to-sell-your-house',
+                title: 'When Is the Best Time to Sell Your House?',
+                excerpt: "Timing your sale can mean the difference of thousands of dollars. The data on what month, season, and market conditions favor sellers — and when to wait.",
+                category: 'Market Insights',
+                read_time_minutes: 6,
+                content: `<p>Timing a home sale perfectly is impossible — but data can tell you when conditions historically favor sellers and help you make an informed decision.</p>
+
+<h2>The Short Answer: Late Spring</h2>
+<p>Nationally, homes listed in late April through mid-June sell fastest and closest to (or above) list price. Buyers are more active, competition among sellers is still manageable, and families motivated by the school calendar want to close before summer. Homes listed in May specifically have historically sold for 1–3% more than the annual average.</p>
+
+<h2>But Local Markets Vary Significantly</h2>
+<p>National averages mean little for your specific situation. In warm-weather markets like Florida or Arizona, winter is often peak season as snowbirds and retirees look to buy. In college towns, the market moves with the academic calendar. Ask a local agent for month-by-month data on your specific ZIP code — that's what actually matters.</p>
+
+<h2>Interest Rates and Buyer Demand</h2>
+<p>The best season matters less when interest rates are high enough to sideline buyers. When rates are elevated, buyer pools shrink regardless of the calendar. Conversely, when rates drop, demand spikes across all seasons. Watch rate trends: a significant drop in the weeks before you plan to list can meaningfully change your sale outcome.</p>
+
+<h2>Your Personal Timeline Matters More Than Timing</h2>
+<p>Here's the honest truth: trying to time the market perfectly is often a losing game. Sellers who wait for ideal conditions sometimes wait too long, or sell into a worse market than if they'd acted sooner. If you need to sell — or genuinely want to — the best time is usually when you're ready, with the right agent and the right price.</p>
+
+<h2>What You Can Control</h2>
+<p>You can't control the market, but you can control your preparation. Homes that are staged, professionally photographed, competitively priced, and well-marketed sell faster and for more money in any season. Getting those elements right will have more impact than listing in April vs. September.</p>
+
+<h2>How to Prepare Regardless of Timing</h2>
+<p>Start by getting your home assessed — what needs repair, what staging changes would help, what price range is realistic based on comps. Then find a strong listing agent early so they can guide your preparation. Platforms like RealtorFinder let you receive proposals from multiple qualified agents at once, making it easy to find the right fit before you're ready to list.</p>`
+            }
+        ];
+
+        for (const p of posts) {
+            await pool.query(
+                `INSERT INTO blog_posts (slug, title, excerpt, author, category, read_time_minutes, content, is_published, published_at)
+                 VALUES ($1,$2,$3,'RealtorFinder Editorial Team',$4,$5,$6,TRUE,NOW())
+                 ON CONFLICT (slug) DO NOTHING`,
+                [p.slug, p.title, p.excerpt, p.category, p.read_time_minutes, p.content]
+            );
+        }
+        console.log('✅ Blog posts seeded');
+    } catch (err) {
+        console.error('Blog seed error (non-fatal):', err.message);
+    }
+}
 
 // ── Blog ─────────────────────────────────────────────────────────────────────
 
@@ -8041,6 +8297,25 @@ _schemaMigrations.push(
     )`
 );
 
+_schemaMigrations.push(
+    `CREATE TABLE IF NOT EXISTS blog_posts (
+        id SERIAL PRIMARY KEY,
+        slug VARCHAR(200) UNIQUE NOT NULL,
+        title TEXT NOT NULL,
+        excerpt TEXT,
+        author VARCHAR(100) DEFAULT 'RealtorFinder Editorial Team',
+        category VARCHAR(100),
+        state_code VARCHAR(2),
+        city_slug VARCHAR(100),
+        published_at TIMESTAMPTZ DEFAULT NOW(),
+        read_time_minutes INTEGER DEFAULT 5,
+        content TEXT,
+        is_published BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+    )`
+);
+
 // Review request job — emails sellers to review their accepted realtor 3 days after acceptance
 async function runReviewRequestJob() {
     try {
@@ -8206,6 +8481,9 @@ async function startServer() {
         console.log(`   /dashboard/seller → Seller dashboard`);
         console.log(`   /dashboard/realtor → Realtor dashboard`);
         console.log(`   /app → Main application (legacy)`);
+
+        // Seed blog posts if table is empty
+        await seedBlogPosts();
 
         // Schedule background jobs — run after migrations so tables exist
         runListingExpiryJob();

@@ -163,7 +163,7 @@ const db = {
 
     // Filtered listings with pagination (realtors — active only)
     async getFilteredListings(filters = {}, page = 1, limit = 20) {
-        const { city, type, minPrice, maxPrice, minBeds, maxBeds, minBaths, zip, swLat, swLng, neLat, neLng } = filters;
+        const { city, type, minPrice, maxPrice, minBeds, maxBeds, minBaths, zip, swLat, swLng, neLat, neLng, sort } = filters;
         const offset = (page - 1) * limit;
         const params = [];
         const conditions = ["(l.status = 'active' OR l.status IS NULL)", "l.deleted_at IS NULL"];
@@ -223,7 +223,10 @@ const db = {
              ${where}
              ORDER BY
                CASE WHEN l.boosted_until IS NOT NULL AND l.boosted_until > NOW() THEN 0 ELSE 1 END ASC,
-               l.created_at DESC
+               ${sort === 'price_asc' ? 'l.price ASC NULLS LAST' :
+                 sort === 'price_desc' ? 'l.price DESC NULLS LAST' :
+                 sort === 'most_bids' ? '(SELECT COUNT(*) FROM offers WHERE listing_id = l.id) DESC' :
+                 'l.created_at DESC'}
              LIMIT $${params.length - 1} OFFSET $${params.length}`,
             params
         );
