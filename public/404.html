@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Page Not Found | RealtorFinder</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@700;900&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="icon" type="image/x-icon" href="/favicon.ico">
+<style>
+    :root {
+        --primary: #0A2540;
+        --accent: #FF6B35;
+        --text: #1a1a2e;
+        --muted: #6b7280;
+        --bg: #F8F6F3;
+        --border: #e5e1db;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
+
+    nav {
+        background: var(--primary);
+        padding: 0 2rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        height: 64px;
+        position: sticky;
+        top: 0;
+        z-index: 100;
+    }
+    .logo { font-family: 'Crimson Pro', serif; font-size: 1.6rem; font-weight: 900; color: white; text-decoration: none; }
+    .logo span { color: var(--accent); }
+    nav a.nav-cta {
+        background: var(--accent);
+        color: white;
+        padding: 8px 18px;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        text-decoration: none;
+    }
+
+    main {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 4rem 2rem;
+        text-align: center;
+    }
+
+    .container { max-width: 560px; }
+
+    .error-code {
+        font-family: 'Crimson Pro', serif;
+        font-size: clamp(6rem, 20vw, 10rem);
+        font-weight: 900;
+        color: var(--primary);
+        line-height: 1;
+        opacity: 0.08;
+        user-select: none;
+        margin-bottom: -1.5rem;
+    }
+
+    .icon { font-size: 3.5rem; margin-bottom: 1rem; }
+
+    h1 {
+        font-family: 'Crimson Pro', serif;
+        font-size: clamp(1.75rem, 5vw, 2.5rem);
+        font-weight: 900;
+        color: var(--primary);
+        margin-bottom: 0.75rem;
+    }
+
+    p {
+        color: var(--muted);
+        font-size: 1.05rem;
+        line-height: 1.7;
+        margin-bottom: 2rem;
+    }
+
+    .actions {
+        display: flex;
+        gap: 0.75rem;
+        justify-content: center;
+        flex-wrap: wrap;
+        margin-bottom: 2.5rem;
+    }
+
+    .btn-primary {
+        background: var(--accent);
+        color: white;
+        padding: 0.75rem 1.75rem;
+        border-radius: 10px;
+        font-weight: 700;
+        font-size: 0.95rem;
+        text-decoration: none;
+        transition: opacity 0.2s;
+    }
+    .btn-primary:hover { opacity: 0.88; }
+
+    .btn-secondary {
+        background: white;
+        color: var(--primary);
+        border: 1.5px solid var(--border);
+        padding: 0.75rem 1.75rem;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 0.95rem;
+        text-decoration: none;
+        transition: border-color 0.2s;
+    }
+    .btn-secondary:hover { border-color: var(--primary); }
+
+    .links {
+        display: flex;
+        gap: 1.5rem;
+        justify-content: center;
+        flex-wrap: wrap;
+        font-size: 0.875rem;
+    }
+    .links a {
+        color: var(--muted);
+        text-decoration: none;
+        transition: color 0.2s;
+    }
+    .links a:hover { color: var(--accent); }
+
+    footer {
+        padding: 1.5rem 2rem;
+        text-align: center;
+        font-size: 0.8rem;
+        color: var(--muted);
+        border-top: 1px solid var(--border);
+    }
+</style>
+</head>
+<body>
+
+<nav>
+    <a href="/" class="logo">Realtor<span>Finder</span></a>
+    <a href="/" class="nav-cta">Go Home</a>
+</nav>
+
+<main>
+    <div class="container">
+        <div class="error-code">404</div>
+        <div class="icon">🏡</div>
+        <h1>This page moved out</h1>
+        <p>The page you're looking for doesn't exist or may have been moved. Let's get you back on track.</p>
+
+        <div class="actions">
+            <a href="/" class="btn-primary">Back to Home</a>
+            <a href="/contact" class="btn-secondary">Contact Us</a>
+        </div>
+
+        <div class="links">
+            <a href="/sellers">For Sellers</a>
+            <a href="/realtors">For Realtors</a>
+            <a href="/blog">Blog</a>
+            <a href="/realtor-directory">Find an Agent</a>
+            <a href="/about-sellers">About</a>
+        </div>
+    </div>
+</main>
+
+<footer>
+    &copy; 2026 RealtorFinder.net &nbsp;·&nbsp;
+    <a href="/privacy" style="color:inherit;">Privacy</a> &nbsp;·&nbsp;
+    <a href="/terms" style="color:inherit;">Terms</a>
+</footer>
+
+</body>
+</html>

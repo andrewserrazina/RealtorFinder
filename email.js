@@ -108,14 +108,14 @@ function divider() {
 const emailService = {
 
     // Route to correct waitlist template by type
-    async sendWaitlistConfirmation(email, userType) {
-        if (userType === 'realtor') return this.sendRealtorWaitlistConfirmation(email);
-        if (userType === 'buyer') return this.sendBuyerWaitlistConfirmation(email);
-        return this.sendSellerWaitlistConfirmation(email);
+    async sendWaitlistConfirmation(email, userType, unsubscribeToken = null) {
+        if (userType === 'realtor') return this.sendRealtorWaitlistConfirmation(email, unsubscribeToken);
+        if (userType === 'buyer') return this.sendBuyerWaitlistConfirmation(email, unsubscribeToken);
+        return this.sendSellerWaitlistConfirmation(email, unsubscribeToken);
     },
 
     // Seller waitlist confirmation
-    async sendSellerWaitlistConfirmation(email) {
+    async sendSellerWaitlistConfirmation(email, unsubscribeToken = null) {
         const body = `
             ${h1("You're on the Seller Waitlist! 🏠")}
             ${p("Great news — you're among the first sellers to secure a spot on RealtorFinder. When we launch, your listing will get priority placement.")}
@@ -135,12 +135,13 @@ const emailService = {
             <p style="color:#999;font-size:13px;margin:0;">The RealtorFinder Team<br><a href="${BASE_URL}" style="color:#FF6B35;text-decoration:none;">realtorfinder.net</a></p>
         `;
         try {
-            await send({ to: email, subject: "You're on the RealtorFinder Seller Waitlist! 🏠", html: emailWrap('For Sellers', body) });
+            const unsubUrl = unsubscribeToken ? `${BASE_URL}/waitlist/unsubscribe?token=${unsubscribeToken}` : `${BASE_URL}/waitlist/unsubscribe`;
+            await send({ to: email, subject: "You're on the RealtorFinder Seller Waitlist! 🏠", html: emailWrap('For Sellers', body, unsubUrl) });
         } catch (error) { logSendgridError('Seller waitlist email', error); throw error; }
     },
 
     // Realtor waitlist confirmation
-    async sendRealtorWaitlistConfirmation(email) {
+    async sendRealtorWaitlistConfirmation(email, unsubscribeToken = null) {
         const body = `
             ${h1("You're Registered — Agents Are Competing 🏆")}
             ${p("Welcome to RealtorFinder. You're among the first realtors to secure founding member pricing. When we launch, you'll have exclusive early access to motivated sellers in your market.")}
@@ -160,12 +161,13 @@ const emailService = {
             <p style="color:#999;font-size:13px;margin:0;">The RealtorFinder Team<br><a href="${BASE_URL}/realtors" style="color:#FF6B35;text-decoration:none;">realtorfinder.net/realtors</a></p>
         `;
         try {
-            await send({ to: email, subject: "You're Registered — Founding Realtor Access Secured 🏆", html: emailWrap('For Realtors', body) });
+            const unsubUrl = unsubscribeToken ? `${BASE_URL}/waitlist/unsubscribe?token=${unsubscribeToken}` : `${BASE_URL}/waitlist/unsubscribe`;
+            await send({ to: email, subject: "You're Registered — Founding Realtor Access Secured 🏆", html: emailWrap('For Realtors', body, unsubUrl) });
         } catch (error) { logSendgridError('Realtor waitlist email', error); throw error; }
     },
 
     // Buyer waitlist confirmation
-    async sendBuyerWaitlistConfirmation(email) {
+    async sendBuyerWaitlistConfirmation(email, unsubscribeToken = null) {
         const body = `
             ${h1("You're on the Buyer Waitlist! 🔑")}
             ${p("You're in! As a founding buyer member, you'll get priority access when we launch — meaning agents will see your request first.")}
@@ -186,7 +188,8 @@ const emailService = {
             <p style="color:#999;font-size:13px;margin:0;">The RealtorFinder Team<br><a href="${BASE_URL}/buyers" style="color:#FF6B35;text-decoration:none;">realtorfinder.net/buyers</a></p>
         `;
         try {
-            await send({ to: email, subject: "You're on the RealtorFinder Buyer Waitlist! 🔑", html: emailWrap('For Buyers', body) });
+            const unsubUrl = unsubscribeToken ? `${BASE_URL}/waitlist/unsubscribe?token=${unsubscribeToken}` : `${BASE_URL}/waitlist/unsubscribe`;
+            await send({ to: email, subject: "You're on the RealtorFinder Buyer Waitlist! 🔑", html: emailWrap('For Buyers', body, unsubUrl) });
         } catch (error) { logSendgridError('Buyer waitlist email', error); throw error; }
     },
 
@@ -243,6 +246,21 @@ const emailService = {
         try {
             await send({ to: buyerEmail, subject: `${realtorName} wants to be your buyer's agent — RealtorFinder`, html: emailWrap('For Buyers', body) });
         } catch (error) { logSendgridError('Realtor buyer lead email', error); }
+    },
+
+    async sendBuyerSelectedRealtor(realtorEmail, realtorFirstName, buyer) {
+        const buyerName = `${buyer.first_name || ''} ${buyer.last_name || ''}`.trim() || 'A buyer';
+        const body = `
+            ${h1(`You've Been Chosen! 🎉`)}
+            ${p(`Congratulations ${realtorFirstName} — ${buyerName} has selected you as their buyer's agent on RealtorFinder.`)}
+            ${p(`This is a warm introduction. Reach out to them directly to schedule a call and get started.`)}
+            ${btn(`${BASE_URL}/dashboard/realtor`, 'View in Dashboard')}
+            ${divider()}
+            <p style="color:#999;font-size:13px;margin:0;">The RealtorFinder Team</p>
+        `;
+        try {
+            await send({ to: realtorEmail, subject: `${buyerName} selected you as their buyer's agent — RealtorFinder`, html: emailWrap('For Realtors', body) });
+        } catch (error) { logSendgridError('Buyer selected realtor email', error); }
     },
 
     // ─── Listing Emails (Sellers) ─────────────────────────────────────────
@@ -1289,6 +1307,50 @@ const emailService = {
   </div>
 </div>`;
         return await send({ to: toEmail, subject: `Your weekly RealtorFinder summary, ${firstName}`, html: body });
+    },
+
+    // Waitlist nurture — sent 7 days after joining waitlist if user hasn't created an account
+    async sendWaitlistNurture(email, userType) {
+        const isSeller = userType !== 'realtor';
+        const subject = isSeller
+            ? "Still thinking about selling? Here's what to expect"
+            : "Still interested in RealtorFinder? Here's what's coming";
+        const body = isSeller ? `
+            ${h1('Your Spot Is Still Saved 🏡')}
+            ${p(`We noticed you joined our seller waitlist a little while ago — we just wanted to check in and make sure you know your spot is still reserved.`)}
+            <div style="background:#F8F6F3;border-radius:12px;padding:24px 28px;margin:24px 0;border:1px solid #E5E1DB;">
+                <div style="margin-bottom:20px;">
+                    <div style="font-size:15px;font-weight:700;color:#0A2540;margin-bottom:6px;">What You'll Be Able to Do at Launch</div>
+                    <p style="color:#444;font-size:14px;line-height:1.7;margin:0;">Post your home in minutes. Licensed realtors in your area will submit competing proposals — with their commission rates, marketing plans, and a personal pitch. You compare them side by side, message the ones you like, and choose on your terms. Free, forever.</p>
+                </div>
+                <div>
+                    <div style="font-size:15px;font-weight:700;color:#0A2540;margin-bottom:6px;">We Launch August 2026</div>
+                    <p style="color:#444;font-size:14px;line-height:1.7;margin:0;">That's less than a year away. To make sure you get early access and priority listing placement, create a free account now — it only takes 2 minutes and keeps your spot at the front of the line.</p>
+                </div>
+            </div>
+            ${btn(`${BASE_URL}/login?tab=signup&type=seller`, 'Create My Free Account')}
+            ${divider()}
+            <p style="color:#999;font-size:13px;margin:0;">The RealtorFinder Team<br><a href="${BASE_URL}" style="color:#FF6B35;text-decoration:none;">realtorfinder.net</a></p>
+        ` : `
+            ${h1('Your Founding Member Spot Is Still Available 🏆')}
+            ${p(`We noticed you expressed interest in RealtorFinder a while back — founding member pricing is still available, but only until we hit 100 approved agents.`)}
+            <div style="background:linear-gradient(135deg,#0A2540,#0d3659);border-radius:12px;padding:28px 32px;margin:24px 0;color:white;">
+                <div style="font-family:Georgia,serif;font-size:18px;font-weight:900;margin-bottom:12px;color:#FF6B35;">Founding Member Benefits</div>
+                <div style="font-size:14px;line-height:2;opacity:0.9;">
+                    🔒 &nbsp;Rate locked at $99/mo — never increases<br>
+                    ⚡ &nbsp;Early access to motivated sellers at launch<br>
+                    🏅 &nbsp;Founding Member badge on your profile<br>
+                    📋 &nbsp;First proposals on every listing in your area
+                </div>
+            </div>
+            ${p(`We launch in August 2026. Create your account now to lock in your founding rate before we reach 100 members.`)}
+            ${btn(`${BASE_URL}/login?tab=signup&type=realtor`, 'Lock In My Founding Rate')}
+            ${divider()}
+            <p style="color:#999;font-size:13px;margin:0;">The RealtorFinder Team<br><a href="${BASE_URL}/realtors" style="color:#FF6B35;text-decoration:none;">realtorfinder.net/realtors</a></p>
+        `;
+        try {
+            await send({ to: email, subject, html: emailWrap(isSeller ? 'For Sellers' : 'For Realtors', body) });
+        } catch (error) { logSendgridError('Waitlist nurture', error); }
     },
 };
 

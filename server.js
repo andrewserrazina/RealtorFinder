@@ -345,7 +345,7 @@ app.use('/api', apiLimiter);
 // Signup
 app.post('/api/auth/signup', async (req, res) => {
     try {
-        const { email, password, userType, firstName, lastName, zipCode, companyName, licenseNumber, recaptchaToken } = req.body;
+        const { email, password, userType, firstName, lastName, zipCode, companyName, licenseNumber, recaptchaToken, termsAccepted, marketingConsent } = req.body;
 
         if (!email || !password || !userType || !firstName || !lastName || !zipCode) {
             return res.status(400).json({ error: 'All fields required' });
@@ -381,6 +381,13 @@ app.post('/api/auth/signup', async (req, res) => {
         }
 
         const user = await auth.createUser(email, password, userType, firstName, lastName, zipCode);
+
+        // Record consent timestamps (non-blocking)
+        const now = new Date();
+        pool.query(
+            `UPDATE users SET terms_accepted_at = $1, marketing_consent_at = $2 WHERE id = $3`,
+            [termsAccepted ? now : null, marketingConsent ? now : null, user.id]
+        ).catch(err => console.error('Consent timestamp save failed (non-fatal):', err.message));
 
         // Realtors automatically get a company (solo company if no name provided)
         if (userType === 'realtor') {
@@ -733,6 +740,26 @@ app.post('/api/buyer-requests/:id/respond', auth.requireAuth, async (req, res) =
         }
         const request = await db.getBuyerRequestById(req.params.id);
         if (!request) return res.status(404).json({ error: 'Buyer request not found' });
+
+        // Subscription check: basic plan limited to 5 buyer-request responses/month
+        const planRow = await pool.query(
+            `SELECT COALESCE(c.plan, u.subscription_plan, 'basic') AS plan
+             FROM users u LEFT JOIN companies c ON u.company_id = c.id
+             WHERE u.id = $1`,
+            [req.session.userId]
+        );
+        const realtorPlan = planRow.rows[0]?.plan || 'basic';
+        if (realtorPlan === 'basic') {
+            const countRow = await pool.query(
+                `SELECT COUNT(*) AS cnt FROM buyer_request_responses
+                 WHERE realtor_user_id = $1 AND created_at >= date_trunc('month', NOW())`,
+                [req.session.userId]
+            );
+            if (parseInt(countRow.rows[0].cnt) >= 5) {
+                return res.status(429).json({ error: "You've reached your 5 buyer-lead responses/month on the Basic plan. Upgrade to Professional or Firm for unlimited responses." });
+            }
+        }
+
         await db.respondToBuyerRequest(req.params.id, req.session.userId, message);
         // Email the buyer
         emailService.sendRealtorBuyerLeadEmail(request.user_email, request.first_name, req.user, message)
@@ -741,6 +768,55 @@ app.post('/api/buyer-requests/:id/respond', auth.requireAuth, async (req, res) =
     } catch (error) {
         console.error('Error responding to buyer request:', error);
         res.status(500).json({ error: 'Failed to send response' });
+    }
+});
+
+// Buyer selects a realtor from their responses
+app.post('/api/buyer-requests/:id/select-realtor', auth.requireAuth, async (req, res) => {
+    try {
+        if (req.user.user_type !== 'buyer') return res.status(403).json({ error: 'Buyers only' });
+        const { realtorUserId } = req.body;
+        if (!realtorUserId) return res.status(400).json({ error: 'realtorUserId required' });
+
+        // Verify the request belongs to this buyer
+        const reqRow = await pool.query(
+            `SELECT id, status FROM buyer_requests WHERE id = $1 AND user_id = $2`,
+            [req.params.id, req.session.userId]
+        );
+        if (!reqRow.rows.length) return res.status(404).json({ error: 'Request not found' });
+        if (reqRow.rows[0].status === 'matched') return res.status(400).json({ error: 'You already selected a realtor for this request' });
+
+        // Verify the realtor responded to this request
+        const responseRow = await pool.query(
+            `SELECT brr.id, u.first_name, u.last_name, u.email FROM buyer_request_responses brr
+             JOIN users u ON u.id = brr.realtor_user_id
+             WHERE brr.buyer_request_id = $1 AND brr.realtor_user_id = $2`,
+            [req.params.id, realtorUserId]
+        );
+        if (!responseRow.rows.length) return res.status(404).json({ error: 'Realtor response not found' });
+
+        const realtor = responseRow.rows[0];
+
+        // Mark request as matched
+        await pool.query(
+            `UPDATE buyer_requests SET status = 'matched', selected_realtor_id = $1, updated_at = NOW() WHERE id = $2`,
+            [realtorUserId, req.params.id]
+        );
+
+        // Notify the selected realtor
+        pool.query(
+            `INSERT INTO notifications (user_id, type, title, body, link) VALUES ($1, 'buyer_selected', 'A Buyer Chose You!', $2, '/dashboard/realtor')`,
+            [realtorUserId, `${req.user.first_name || 'A buyer'} selected you as their agent for their home search.`]
+        ).catch(() => {});
+
+        emailService.sendBuyerSelectedRealtor && emailService.sendBuyerSelectedRealtor(
+            realtor.email, realtor.first_name, req.user
+        ).catch(() => {});
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error selecting realtor:', error);
+        res.status(500).json({ error: 'Failed to select realtor' });
     }
 });
 
@@ -2759,9 +2835,12 @@ app.post('/api/waitlist', waitlistLimiter, async (req, res) => {
         const normalizedType = ['seller', 'realtor', 'buyer'].includes(type) ? type : 'seller';
 
         // Save to database — use xmax to detect insert vs update
+        const unsubToken = crypto.randomBytes(20).toString('hex');
         const result = await pool.query(
-            'INSERT INTO waitlist (email, user_type) VALUES ($1, $2) ON CONFLICT (email) DO UPDATE SET user_type = $2 RETURNING *, (xmax = 0) AS is_insert',
-            [email.trim().toLowerCase(), normalizedType]
+            `INSERT INTO waitlist (email, user_type, unsubscribe_token) VALUES ($1, $2, $3)
+             ON CONFLICT (email) DO UPDATE SET user_type = $2
+             RETURNING *, (xmax = 0) AS is_insert`,
+            [email.trim().toLowerCase(), normalizedType, unsubToken]
         );
 
         // Log the signup
@@ -2771,10 +2850,11 @@ app.post('/api/waitlist', waitlistLimiter, async (req, res) => {
         let emailSent = false;
         let emailErrorMessage = null;
         const isNewSignup = result.rows[0]?.is_insert === true;
+        const storedToken = result.rows[0]?.unsubscribe_token || unsubToken;
 
         try {
             console.log('📤 Attempting to send email via emailService...');
-            await emailService.sendWaitlistConfirmation(email.trim().toLowerCase(), normalizedType);
+            await emailService.sendWaitlistConfirmation(email.trim().toLowerCase(), normalizedType, storedToken);
             emailSent = true;
             console.log('✅ Email sent successfully');
         } catch (emailError) {
@@ -4055,7 +4135,22 @@ app.get('/google:token.html', (req, res) => {
 // Robots.txt
 app.get('/robots.txt', (req, res) => {
     res.type('text/plain');
-    res.send('User-agent: *\nAllow: /\nDisallow: /dashboard/\nDisallow: /api/\nSitemap: https://www.realtorfinder.net/sitemap-index.xml\n');
+    res.send([
+        'User-agent: *',
+        'Allow: /',
+        'Disallow: /dashboard/',
+        'Disallow: /api/',
+        'Disallow: /admin',
+        'Disallow: /admin-waitlist',
+        'Disallow: /login',
+        'Disallow: /reset-password',
+        'Disallow: /waitlist',
+        'Disallow: /inbox',
+        'Disallow: /subscription-success',
+        'Disallow: /company-dashboard',
+        '',
+        'Sitemap: https://www.realtorfinder.net/sitemap-index.xml',
+    ].join('\n'));
 });
 
 // Sitemap index — points to per-state sitemaps
@@ -4065,12 +4160,13 @@ app.get('/sitemap-index.xml', async (req, res) => {
     let states = [];
     try { states = await db.getPublishedStates(); } catch (e) {}
     const staticEntry = `  <sitemap><loc>${base}/sitemap-static.xml</loc><lastmod>${today}</lastmod></sitemap>`;
-    const blogEntry  = `  <sitemap><loc>${base}/sitemap-blog.xml</loc><lastmod>${today}</lastmod></sitemap>`;
+    const blogEntry   = `  <sitemap><loc>${base}/sitemap-blog.xml</loc><lastmod>${today}</lastmod></sitemap>`;
+    const agentsEntry = `  <sitemap><loc>${base}/sitemap-agents.xml</loc><lastmod>${today}</lastmod></sitemap>`;
     const stateEntries = states.map(s =>
         `  <sitemap><loc>${base}/sitemap-${s.state_code.toLowerCase()}.xml</loc><lastmod>${today}</lastmod></sitemap>`
     ).join('\n');
     res.type('application/xml');
-    res.send(`<?xml version="1.0" encoding="UTF-8"?>\n<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${staticEntry}\n${blogEntry}\n${stateEntries}\n</sitemapindex>`);
+    res.send(`<?xml version="1.0" encoding="UTF-8"?>\n<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${staticEntry}\n${blogEntry}\n${agentsEntry}\n${stateEntries}\n</sitemapindex>`);
 });
 
 // Static pages sitemap
@@ -4111,6 +4207,27 @@ app.get('/sitemap-blog.xml', async (req, res) => {
     }).join('\n');
     res.type('application/xml');
     res.send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${indexEntry}\n${postEntries}\n</urlset>`);
+});
+
+// Agent profile sitemap — /agent/:slug URLs for approved realtors with slugs
+app.get('/sitemap-agents.xml', async (req, res) => {
+    const base = (process.env.FRONTEND_URL || 'https://realtorfinder.net').replace(/\/$/, '');
+    try {
+        const { rows } = await pool.query(
+            `SELECT profile_slug, updated_at FROM users
+             WHERE user_type = 'realtor' AND is_approved = TRUE
+               AND is_active IS NOT FALSE AND profile_slug IS NOT NULL
+             ORDER BY updated_at DESC LIMIT 5000`
+        );
+        const entries = rows.map(r =>
+            `  <url><loc>${base}/agent/${r.profile_slug}</loc><lastmod>${new Date(r.updated_at).toISOString().split('T')[0]}</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>`
+        ).join('\n');
+        res.type('application/xml');
+        res.send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${entries}\n</urlset>`);
+    } catch (err) {
+        res.type('application/xml');
+        res.send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>`);
+    }
 });
 
 // Legacy sitemap.xml redirect
@@ -6839,6 +6956,24 @@ app.get('/unsubscribe/:token', async (req, res) => {
     } catch { res.redirect('/'); }
 });
 
+// Waitlist unsubscribe
+app.get('/waitlist/unsubscribe', async (req, res) => {
+    const { token } = req.query;
+    if (!token) {
+        return res.send(`<!DOCTYPE html><html><head><title>Unsubscribe — RealtorFinder</title></head><body style="font-family:sans-serif;text-align:center;padding:60px 20px;"><h2>Unsubscribe from Waitlist</h2><p>If you joined our waitlist and want to be removed, email us at <a href="mailto:privacy@realtorfinder.net">privacy@realtorfinder.net</a>.</p></body></html>`);
+    }
+    try {
+        const { rowCount } = await pool.query(
+            `DELETE FROM waitlist WHERE unsubscribe_token = $1`,
+            [token]
+        );
+        if (!rowCount) {
+            return res.send(`<!DOCTYPE html><html><head><title>Unsubscribed — RealtorFinder</title></head><body style="font-family:sans-serif;text-align:center;padding:60px 20px;"><h2>Already Removed</h2><p>This email address was not found on our waitlist, or has already been removed.</p><p><a href="/">Return home</a></p></body></html>`);
+        }
+        res.send(`<!DOCTYPE html><html><head><title>Unsubscribed — RealtorFinder</title></head><body style="font-family:sans-serif;text-align:center;padding:60px 20px;"><h2>You've been removed</h2><p>You've been successfully removed from the RealtorFinder waitlist. You won't receive any more emails from us.</p><p><a href="/">Return home</a></p></body></html>`);
+    } catch { res.redirect('/'); }
+});
+
 // ===== PAGE ROUTES (Must come AFTER API routes, BEFORE static files) =====
 
 // Password reset page
@@ -7446,9 +7581,17 @@ app.use((req, res) => {
 });
 
 // Unhandled errors
+// 404 catch-all — must be before the error handler
+app.use((req, res) => {
+    if (req.accepts('html')) {
+        return res.status(404).sendFile(path.join(__dirname, 'public', '404.html'));
+    }
+    res.status(404).json({ error: 'Not found' });
+});
+
 app.use((err, req, res, next) => {
     console.error('Server error:', err);
-    res.status(500).json({ 
+    res.status(500).json({
         error: 'Internal server error',
         message: process.env.NODE_ENV === 'development' ? err.message : undefined
     });
@@ -7547,7 +7690,8 @@ _schemaMigrations.push(
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS onboarding_completed BOOLEAN DEFAULT FALSE`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS re_engagement_sent_at TIMESTAMPTZ`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMPTZ`,
-    `ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_slug TEXT UNIQUE`
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_slug TEXT UNIQUE`,
+    `ALTER TABLE waitlist ADD COLUMN IF NOT EXISTS nurture_sent BOOLEAN DEFAULT FALSE`
 );
 
 // Drip email onboarding job — sends 3-step sequences to sellers, realtors, and buyers
@@ -7988,6 +8132,40 @@ async function runSellerDigestJob() {
         console.error('Seller digest job error:', err.message);
     }
 }
+// Waitlist nurture — one follow-up email to waitlist-only users at day 7
+async function runWaitlistNurtureJob() {
+    try {
+        const { rows } = await pool.query(`
+            SELECT w.email, w.user_type
+            FROM waitlist w
+            WHERE w.nurture_sent = FALSE
+              AND w.created_at < NOW() - INTERVAL '7 days'
+              AND NOT EXISTS (
+                  SELECT 1 FROM users u WHERE LOWER(u.email) = LOWER(w.email)
+              )
+            LIMIT 50
+        `);
+        for (const w of rows) {
+            try {
+                await emailService.sendWaitlistNurture(w.email, w.user_type);
+                await pool.query(`UPDATE waitlist SET nurture_sent = TRUE WHERE email = $1`, [w.email]);
+                await new Promise(r => setTimeout(r, 300));
+            } catch(e) { console.error('Waitlist nurture error:', e.message); }
+        }
+        if (rows.length) console.log(`Waitlist nurture: sent ${rows.length} emails`);
+    } catch(e) { console.error('Waitlist nurture job error:', e.message); }
+}
+
+_schemaMigrations.push(
+    `ALTER TABLE buyer_requests ADD COLUMN IF NOT EXISTS selected_realtor_id INTEGER REFERENCES users(id)`
+);
+
+_schemaMigrations.push(
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS terms_accepted_at TIMESTAMPTZ`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS marketing_consent_at TIMESTAMPTZ`,
+    `ALTER TABLE waitlist ADD COLUMN IF NOT EXISTS unsubscribe_token TEXT UNIQUE`
+);
+
 // Backfill profile_slug for any realtors created before the column was added
 async function backfillProfileSlugs() {
     try {
@@ -8034,6 +8212,8 @@ async function startServer() {
         setInterval(runListingExpiryJob, 24 * 60 * 60 * 1000).unref();
         runDripEmailJob();
         setInterval(runDripEmailJob, 6 * 60 * 60 * 1000).unref();
+        runWaitlistNurtureJob();
+        setInterval(runWaitlistNurtureJob, 6 * 60 * 60 * 1000).unref();
         runListingAlertJob();
         setInterval(runListingAlertJob, 24 * 60 * 60 * 1000).unref();
         runWeeklyDigestJob();

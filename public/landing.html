@@ -1252,6 +1252,7 @@
             <div class="nav-links">
                 <a href="#how-it-works">Why Us</a>
                 <a href="#features">How It Works</a>
+                <a href="/buyers">For Buyers</a>
                 <a href="/about-sellers">About</a>
                 <a href="/contact">Contact</a>
                 <a href="/realtors" class="nav-cta">For Realtors</a>
@@ -1264,6 +1265,7 @@
     <div class="mobile-menu" id="mobileMenu">
         <a href="#how-it-works" onclick="closeMobileMenu()">Why Us</a>
         <a href="#features" onclick="closeMobileMenu()">How It Works</a>
+        <a href="/buyers" onclick="closeMobileMenu()">For Buyers</a>
         <a href="/about-sellers" onclick="closeMobileMenu()">About</a>
         <a href="/contact" onclick="closeMobileMenu()">Contact</a>
         <a href="/realtors" onclick="closeMobileMenu()">For Realtors →</a>
@@ -1283,6 +1285,7 @@
                     <input type="email" id="emailInput" placeholder="Enter your email address" required>
                     <button type="submit" onclick="if(typeof gtag!=='undefined')gtag('event','cta_click',{variant:document.cookie.includes('ab_variant=b')?'b':'a'})">Join Waitlist</button>
                 </form>
+                <p style="font-size:0.78rem;color:#6b7280;margin-top:0.5rem;">By joining, you agree to receive email updates about RealtorFinder. Unsubscribe any time.</p>
                 </div>
                 <div id="successMessage" class="success-message">✓ Thanks! You're on the waitlist. We'll email you when we launch.</div>
                 <div id="errorMessage" class="error-message">Please enter a valid email address.</div>
@@ -1619,6 +1622,7 @@
                 <input type="email" id="ctaEmailInput" placeholder="Enter your email address" required>
                 <button type="submit">Reserve Your Spot</button>
             </form>
+            <p style="font-size:0.78rem;color:rgba(255,255,255,0.65);margin-top:0.5rem;">By joining, you agree to receive email updates about RealtorFinder. Unsubscribe any time.</p>
             <div id="ctaSuccessMessage" class="success-message" style="color:white; background: rgba(16,185,129,0.2); border: 1px solid rgba(255,255,255,0.3); margin-top: 1rem;">✓ You're on the list! We'll email you at launch.</div>
             <div id="ctaErrorMessage" class="error-message" style="color:white; background: rgba(239,68,68,0.2); border: 1px solid rgba(255,255,255,0.3); margin-top: 1rem;">Please enter a valid email address.</div>
             <p class="cta-urgency">⏳ Early access spots are limited. Founding members get priority listing placement at launch.</p>
@@ -1647,6 +1651,13 @@
                     <li><a href="/realtors#pricing">Platform Access</a></li>
                     <li><a href="/realtors#benefits">Benefits</a></li>
                     <li><a href="/realtors">Join as a Realtor</a></li>
+                </ul>
+            </div>
+            <div>
+                <div class="footer-title">For Buyers</div>
+                <ul class="footer-links">
+                    <li><a href="/buyers">How It Works</a></li>
+                    <li><a href="/login?tab=signup&type=buyer">Create Account</a></li>
                 </ul>
             </div>
             <div>
@@ -1800,7 +1811,7 @@
                 <button type="submit" style="background:#FF6B35;color:white;border:none;padding:0.85rem;border-radius:10px;font-weight:700;font-size:1rem;cursor:pointer;font-family:inherit;">Reserve My Spot →</button>
             </form>
             <div id="exitIntentSuccess" style="display:none;color:#059669;font-weight:600;margin-top:0.75rem;">✓ You're on the list! See you at launch.</div>
-            <p style="margin-top:1rem;font-size:0.78rem;color:#9ca3af;">No spam, ever. Unsubscribe anytime.</p>
+            <p style="margin-top:1rem;font-size:0.78rem;color:#9ca3af;">By joining, you agree to receive email updates about RealtorFinder. Unsubscribe anytime.</p>
         </div>
     </div>
 
