@@ -2123,6 +2123,29 @@ app.put('/api/admin/users/:id/unapprove', requireAdmin, async (req, res) => {
     }
 });
 
+app.delete('/api/admin/users/:id', requireAdmin, async (req, res) => {
+    const userId = parseInt(req.params.id);
+    if (!userId) return res.status(400).json({ error: 'Invalid user id' });
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+        // Remove dependent data before deleting the user
+        await client.query(`DELETE FROM sessions WHERE user_id = $1`, [userId]);
+        await client.query(`DELETE FROM offers WHERE user_id = $1`, [userId]);
+        await client.query(`UPDATE listings SET deleted_at = NOW() WHERE user_id = $1 AND deleted_at IS NULL`, [userId]);
+        const { rows } = await client.query(`DELETE FROM users WHERE id = $1 RETURNING id, email`, [userId]);
+        if (!rows.length) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'User not found' }); }
+        await client.query('COMMIT');
+        res.json({ success: true, deleted: rows[0] });
+    } catch (error) {
+        await client.query('ROLLBACK').catch(() => {});
+        console.error('Admin delete user error:', error);
+        res.status(500).json({ error: 'Failed to delete user' });
+    } finally {
+        client.release();
+    }
+});
+
 app.post('/api/admin/users/approve-all', requireAdmin, async (req, res) => {
     try {
         const { rows } = await pool.query(

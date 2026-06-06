@@ -2020,6 +2020,7 @@
             const activateBtn = active
                 ? `<button class="btn-action btn-deactivate" onclick="deactivateUser(${u.id}, this)">Deactivate</button>`
                 : `<button class="btn-action btn-reactivate" onclick="reactivateUser(${u.id}, this)">Reactivate</button>`;
+            const deleteBtn = `<button class="btn-action" onclick="deleteUser(${u.id}, '${escHtml(u.email)}')" style="background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5;margin-left:4px;">Delete</button>`;
 
             return `<tr>
                 <td style="text-align:center;"><input type="checkbox" class="user-row-cb" data-id="${u.id}" onchange="onUserCheckbox(this)"></td>
@@ -2031,7 +2032,7 @@
                 <td style="text-align:center">${approved}</td>
                 <td>${statusBadge}</td>
                 <td class="td-muted">${fmtDate(u.created_at)}</td>
-                <td>${approveBtn}${activateBtn}</td>
+                <td>${approveBtn}${activateBtn}${deleteBtn}</td>
             </tr>`;
         }).join('');
     }
@@ -2102,6 +2103,23 @@
         } catch {
             showToast('Failed to reactivate user.', 'error');
             btn.disabled = false;
+        }
+    }
+
+    async function deleteUser(id, email) {
+        if (!confirm(`Permanently delete user "${email}"?\n\nThis will also soft-delete their listings and remove their proposals. This cannot be undone.`)) return;
+        if (!confirm(`Are you sure? This is irreversible.`)) return;
+        try {
+            const res = await fetch(`/api/admin/users/${id}`, {
+                method: 'DELETE',
+                credentials: 'include'
+            });
+            if (!res.ok) throw new Error((await res.json()).error || 'Failed');
+            usersData = usersData.filter(u => u.id !== id);
+            renderUsers();
+            showToast(`User ${email} deleted permanently.`, 'success');
+        } catch (err) {
+            showToast('Failed to delete user: ' + err.message, 'error');
         }
     }
 
