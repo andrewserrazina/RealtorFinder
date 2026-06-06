@@ -733,6 +733,26 @@ app.post('/api/buyer-requests/:id/respond', auth.requireAuth, async (req, res) =
         }
         const request = await db.getBuyerRequestById(req.params.id);
         if (!request) return res.status(404).json({ error: 'Buyer request not found' });
+
+        // Subscription check: basic plan limited to 5 buyer-request responses/month
+        const planRow = await pool.query(
+            `SELECT COALESCE(c.plan, u.subscription_plan, 'basic') AS plan
+             FROM users u LEFT JOIN companies c ON u.company_id = c.id
+             WHERE u.id = $1`,
+            [req.session.userId]
+        );
+        const realtorPlan = planRow.rows[0]?.plan || 'basic';
+        if (realtorPlan === 'basic') {
+            const countRow = await pool.query(
+                `SELECT COUNT(*) AS cnt FROM buyer_request_responses
+                 WHERE realtor_user_id = $1 AND created_at >= date_trunc('month', NOW())`,
+                [req.session.userId]
+            );
+            if (parseInt(countRow.rows[0].cnt) >= 5) {
+                return res.status(429).json({ error: "You've reached your 5 buyer-lead responses/month on the Basic plan. Upgrade to Professional or Firm for unlimited responses." });
+            }
+        }
+
         await db.respondToBuyerRequest(req.params.id, req.session.userId, message);
         // Email the buyer
         emailService.sendRealtorBuyerLeadEmail(request.user_email, request.first_name, req.user, message)
@@ -741,6 +761,55 @@ app.post('/api/buyer-requests/:id/respond', auth.requireAuth, async (req, res) =
     } catch (error) {
         console.error('Error responding to buyer request:', error);
         res.status(500).json({ error: 'Failed to send response' });
+    }
+});
+
+// Buyer selects a realtor from their responses
+app.post('/api/buyer-requests/:id/select-realtor', auth.requireAuth, async (req, res) => {
+    try {
+        if (req.user.user_type !== 'buyer') return res.status(403).json({ error: 'Buyers only' });
+        const { realtorUserId } = req.body;
+        if (!realtorUserId) return res.status(400).json({ error: 'realtorUserId required' });
+
+        // Verify the request belongs to this buyer
+        const reqRow = await pool.query(
+            `SELECT id, status FROM buyer_requests WHERE id = $1 AND user_id = $2`,
+            [req.params.id, req.session.userId]
+        );
+        if (!reqRow.rows.length) return res.status(404).json({ error: 'Request not found' });
+        if (reqRow.rows[0].status === 'matched') return res.status(400).json({ error: 'You already selected a realtor for this request' });
+
+        // Verify the realtor responded to this request
+        const responseRow = await pool.query(
+            `SELECT brr.id, u.first_name, u.last_name, u.email FROM buyer_request_responses brr
+             JOIN users u ON u.id = brr.realtor_user_id
+             WHERE brr.buyer_request_id = $1 AND brr.realtor_user_id = $2`,
+            [req.params.id, realtorUserId]
+        );
+        if (!responseRow.rows.length) return res.status(404).json({ error: 'Realtor response not found' });
+
+        const realtor = responseRow.rows[0];
+
+        // Mark request as matched
+        await pool.query(
+            `UPDATE buyer_requests SET status = 'matched', selected_realtor_id = $1, updated_at = NOW() WHERE id = $2`,
+            [realtorUserId, req.params.id]
+        );
+
+        // Notify the selected realtor
+        pool.query(
+            `INSERT INTO notifications (user_id, type, title, body, link) VALUES ($1, 'buyer_selected', 'A Buyer Chose You!', $2, '/dashboard/realtor')`,
+            [realtorUserId, `${req.user.first_name || 'A buyer'} selected you as their agent for their home search.`]
+        ).catch(() => {});
+
+        emailService.sendBuyerSelectedRealtor && emailService.sendBuyerSelectedRealtor(
+            realtor.email, realtor.first_name, req.user
+        ).catch(() => {});
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error selecting realtor:', error);
+        res.status(500).json({ error: 'Failed to select realtor' });
     }
 });
 
@@ -8057,6 +8126,10 @@ async function runWaitlistNurtureJob() {
         if (rows.length) console.log(`Waitlist nurture: sent ${rows.length} emails`);
     } catch(e) { console.error('Waitlist nurture job error:', e.message); }
 }
+
+_schemaMigrations.push(
+    `ALTER TABLE buyer_requests ADD COLUMN IF NOT EXISTS selected_realtor_id INTEGER REFERENCES users(id)`
+);
 
 // Backfill profile_slug for any realtors created before the column was added
 async function backfillProfileSlugs() {

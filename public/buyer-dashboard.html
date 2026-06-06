@@ -1473,24 +1473,71 @@
                 return;
             }
 
-            container.innerHTML = `<div class="responses-list">${responses.map(r => buildResponseCard(r)).join('')}</div>`;
+            const isMatched = buyerRequest && buyerRequest.status === 'matched';
+            const selectedId = buyerRequest && buyerRequest.selected_realtor_id;
+
+            if (isMatched && selectedId) {
+                const chosen = responses.find(r => r.user_id === selectedId || r.realtor_user_id === selectedId);
+                const name = chosen ? (chosen.realtorName || chosen.realtor_name || 'your agent') : 'your agent';
+                container.innerHTML = `
+                    <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:14px;padding:1.5rem 2rem;margin-bottom:1.5rem;display:flex;align-items:center;gap:1rem;">
+                        <span style="font-size:2rem;">🎉</span>
+                        <div>
+                            <div style="font-weight:700;color:#166534;font-size:1rem;">You matched with ${name}!</div>
+                            <div style="color:#15803d;font-size:0.875rem;margin-top:0.25rem;">Reach out via the Contact button below to get started.</div>
+                        </div>
+                    </div>
+                    <div class="responses-list">${responses.map(r => buildResponseCard(r, false, selectedId)).join('')}</div>`;
+            } else {
+                container.innerHTML = `<div class="responses-list">${responses.map(r => buildResponseCard(r, false, null)).join('')}</div>`;
+            }
         }
 
-        function buildResponseCard(r, showCompare = false) {
+        async function selectRealtor(realtorUserId, realtorName) {
+            if (!buyerRequest) return;
+            if (!confirm(`Select ${realtorName} as your buyer's agent? They'll be notified right away.`)) return;
+            try {
+                const res = await fetch(`${API_BASE_URL}/buyer-requests/${buyerRequest.id}/select-realtor`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ realtorUserId })
+                });
+                const data = await res.json();
+                if (!res.ok) { showToast(data.error || 'Failed to select realtor'); return; }
+                buyerRequest.status = 'matched';
+                buyerRequest.selected_realtor_id = realtorUserId;
+                showToast(`✓ ${realtorName} selected! They've been notified.`);
+                renderResponses(cachedResponses || []);
+            } catch (e) { showToast('Something went wrong'); }
+        }
+
+        function buildResponseCard(r, showCompare = false, selectedRealtorId = null) {
             const metaParts = [];
             if (r.yearsExperience != null) metaParts.push(`<span>🏆 ${r.yearsExperience} yrs experience</span>`);
             if (r.serviceAreas) metaParts.push(`<span>📍 ${r.serviceAreas}</span>`);
             const rData = encodeURIComponent(JSON.stringify(r));
+            const realtorId = r.user_id || r.realtor_user_id;
+            const realtorName = r.realtorName || r.realtor_name || 'Agent';
+            const isChosen = selectedRealtorId && realtorId === selectedRealtorId;
+            const isMatched = buyerRequest && buyerRequest.status === 'matched';
+
+            const selectBtn = (!isMatched && realtorId && buyerRequest && buyerRequest.status === 'active')
+                ? `<button class="btn btn-primary" style="font-size:0.875rem;padding:0.6rem 1rem;background:#10b981;border-color:#10b981;" onclick="selectRealtor(${realtorId}, '${realtorName.replace(/'/g, "\\'")}')">✓ Select Agent</button>`
+                : isChosen
+                    ? `<span style="background:#f0fdf4;color:#166534;border:1px solid #86efac;border-radius:8px;padding:0.5rem 1rem;font-size:0.875rem;font-weight:600;">✓ Selected</span>`
+                    : '';
 
             return `
-                <div class="response-card">
+                <div class="response-card" style="${isChosen ? 'border-color:#10b981;background:#f0fdf4;' : ''}">
                     <div class="response-info">
-                        <div class="response-name">${r.realtorName || r.realtor_name || 'Agent'}</div>
+                        <div class="response-name">${realtorName}</div>
                         <div class="response-brokerage">${r.brokerage || ''}</div>
                         ${metaParts.length ? `<div class="response-meta">${metaParts.join('')}</div>` : ''}
                         ${r.message ? `<div class="response-message">"${r.message}"</div>` : ''}
                     </div>
                     <div class="response-actions">
+                        ${selectBtn}
                         ${r.email || r.realtorEmail ? `<a href="mailto:${r.email || r.realtorEmail}" class="btn btn-primary" style="font-size:0.875rem;padding:0.6rem 1rem;">Contact</a>` : ''}
                         ${r.phone || r.realtorPhone ? `<a href="tel:${r.phone || r.realtorPhone}" class="btn btn-outline" style="font-size:0.875rem;padding:0.6rem 1rem;">Call</a>` : ''}
                         ${r.user_id ? `<a href="/realtor/${r.user_id}" target="_blank" class="btn btn-outline" style="font-size:0.875rem;padding:0.6rem 1rem;">Profile</a>` : ''}

@@ -245,6 +245,21 @@ const emailService = {
         } catch (error) { logSendgridError('Realtor buyer lead email', error); }
     },
 
+    async sendBuyerSelectedRealtor(realtorEmail, realtorFirstName, buyer) {
+        const buyerName = `${buyer.first_name || ''} ${buyer.last_name || ''}`.trim() || 'A buyer';
+        const body = `
+            ${h1(`You've Been Chosen! 🎉`)}
+            ${p(`Congratulations ${realtorFirstName} — ${buyerName} has selected you as their buyer's agent on RealtorFinder.`)}
+            ${p(`This is a warm introduction. Reach out to them directly to schedule a call and get started.`)}
+            ${btn(`${BASE_URL}/dashboard/realtor`, 'View in Dashboard')}
+            ${divider()}
+            <p style="color:#999;font-size:13px;margin:0;">The RealtorFinder Team</p>
+        `;
+        try {
+            await send({ to: realtorEmail, subject: `${buyerName} selected you as their buyer's agent — RealtorFinder`, html: emailWrap('For Realtors', body) });
+        } catch (error) { logSendgridError('Buyer selected realtor email', error); }
+    },
+
     // ─── Listing Emails (Sellers) ─────────────────────────────────────────
 
     async sendListingConfirmation(listing) {
