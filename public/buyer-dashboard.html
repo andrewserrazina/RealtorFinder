@@ -736,6 +736,27 @@
         .nearby-stats-card .ns-label { font-size: 0.73rem; text-transform: uppercase; letter-spacing: 0.4px; color: #aaa; font-weight: 600; }
         .nearby-stats-card .ns-val { font-weight: 700; color: var(--ink); font-size: 0.9rem; }
 
+        /* Browse card action buttons */
+        .browse-card-actions { display: flex; gap: 0.5rem; margin-top: 0.5rem; flex-wrap: wrap; }
+        .btn-action-sm { background: var(--brand); color: #fff; border: none; border-radius: 6px; padding: 0.3rem 0.65rem; font-size: 0.78rem; cursor: pointer; font-weight: 600; }
+        .btn-action-sm:hover { background: var(--brand-dark, #7c5c3f); }
+
+        /* Mortgage estimator panel */
+        .mortgage-calc-panel { border-top: 1px solid var(--border); margin-top: 0.75rem; padding-top: 0.75rem; font-size: 0.82rem; }
+        .mortgage-calc-panel .mc-row { display: flex; gap: 0.4rem; align-items: center; margin-bottom: 0.4rem; flex-wrap: wrap; }
+        .mortgage-calc-panel label { font-size: 0.75rem; color: #888; white-space: nowrap; }
+        .mortgage-calc-panel input[type=number] { width: 70px; padding: 0.2rem 0.35rem; border: 1px solid var(--border); border-radius: 4px; font-size: 0.8rem; }
+        .mortgage-calc-panel .mc-result { font-weight: 700; color: var(--brand); font-size: 1rem; margin-top: 0.4rem; }
+
+        /* Open houses panel */
+        .open-houses-panel { border-top: 1px solid var(--border); margin-top: 0.75rem; padding-top: 0.75rem; font-size: 0.82rem; }
+        .oh-item { background: #f9f6f3; border-radius: 6px; padding: 0.5rem 0.65rem; margin-bottom: 0.4rem; }
+        .oh-item-time { font-weight: 600; color: var(--ink); font-size: 0.85rem; }
+        .oh-item-notes { color: #777; font-size: 0.78rem; margin-top: 0.2rem; }
+        .oh-rsvp-form { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-top: 0.4rem; }
+        .oh-rsvp-form input { flex: 1; min-width: 80px; padding: 0.2rem 0.4rem; border: 1px solid var(--border); border-radius: 4px; font-size: 0.78rem; }
+        .oh-rsvp-btn { background: #22c55e; color: #fff; border: none; border-radius: 4px; padding: 0.2rem 0.6rem; font-size: 0.78rem; font-weight: 600; cursor: pointer; }
+
         /* Calculator responsive */
         @media (max-width: 860px) {
             #calculator-view > div { grid-template-columns: 1fr !important; }
@@ -961,6 +982,13 @@
                     <button class="btn btn-outline" onclick="clearCompare()" style="padding:0.5rem 1rem;font-size:0.875rem;">Clear</button>
                 </div>
                 <div id="responsesContainer"></div>
+
+                <!-- Proactive matched realtors -->
+                <div id="matchedRealtorsSection" style="display:none;margin-top:2rem;">
+                    <h3 style="font-family:'Crimson Pro',serif;font-size:1.4rem;font-weight:700;color:var(--ink);margin-bottom:0.25rem;">Realtors in Your Area</h3>
+                    <p style="color:#666;font-size:0.875rem;margin-bottom:1rem;">These licensed agents cover your target areas — reach out directly.</p>
+                    <div id="matchedRealtorsList" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem;"></div>
+                </div>
             </section>
 
             <!-- Browse Listings View -->
@@ -1261,6 +1289,46 @@
                 console.error('Error loading responses:', error);
                 return [];
             }
+        }
+
+        async function loadMatchedRealtors() {
+            try {
+                const res = await fetch(`${API_BASE_URL}/buyer-requests/matched-realtors`, { credentials: 'include' });
+                if (!res.ok) return;
+                const realtors = await res.json();
+                const section = document.getElementById('matchedRealtorsSection');
+                const list = document.getElementById('matchedRealtorsList');
+                if (!realtors.length || !section) return;
+                section.style.display = 'block';
+                list.innerHTML = realtors.map(r => {
+                    const name = `${r.first_name || ''} ${r.last_name || ''}`.trim() || 'Agent';
+                    const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2);
+                    const photo = r.profile_photo
+                        ? `<img src="${r.profile_photo}" alt="" style="width:48px;height:48px;border-radius:50%;object-fit:cover;">`
+                        : `<div style="width:48px;height:48px;border-radius:50%;background:#e8ded8;display:flex;align-items:center;justify-content:center;font-weight:700;color:#0a2540;font-size:1rem;">${initials}</div>`;
+                    const rating = r.avg_rating ? `★ ${parseFloat(r.avg_rating).toFixed(1)}` : '';
+                    const verified = r.license_verified ? '<span style="background:#ecfdf5;color:#059669;font-size:0.7rem;font-weight:700;padding:2px 6px;border-radius:20px;">✓ Verified</span>' : '';
+                    const deals = parseInt(r.accepted_proposals) || 0;
+                    const profileLink = r.profile_slug ? `/realtor/${r.profile_slug}` : (r.id ? `/realtor/${r.id}` : null);
+                    return `<div style="background:white;border:1px solid var(--border);border-radius:12px;padding:1.25rem;display:flex;flex-direction:column;gap:0.75rem;">
+                        <div style="display:flex;align-items:center;gap:0.75rem;">
+                            ${photo}
+                            <div>
+                                <div style="font-weight:700;font-size:0.95rem;">${name} ${verified}</div>
+                                <div style="color:#666;font-size:0.8rem;">${r.brokerage || ''}</div>
+                                ${r.years_experience != null ? `<div style="color:#888;font-size:0.78rem;">${r.years_experience} yrs experience</div>` : ''}
+                            </div>
+                        </div>
+                        <div style="display:flex;gap:1rem;font-size:0.8rem;color:#555;">
+                            ${rating ? `<span>${rating}</span>` : ''}
+                            ${deals > 0 ? `<span>🏆 ${deals} deal${deals !== 1 ? 's' : ''}</span>` : ''}
+                        </div>
+                        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+                            ${profileLink ? `<a href="${profileLink}" target="_blank" style="background:#0a2540;color:white;border-radius:7px;padding:0.4rem 0.875rem;font-size:0.8rem;font-weight:600;text-decoration:none;">View Profile</a>` : ''}
+                        </div>
+                    </div>`;
+                }).join('');
+            } catch (e) { /* non-critical */ }
         }
 
         async function submitRequest(formData, requestId = null) {
@@ -1657,6 +1725,9 @@
             renderOverview(request, responses);
             renderRequest(request);
             renderResponses(responses);
+
+            // Load proactive matches if buyer has a request
+            if (request && request.target_areas) loadMatchedRealtors();
         }
 
         // ─── Init ──────────────────────────────────────────────────────────────────
@@ -1819,6 +1890,12 @@
                         <label class="browse-card-compare" onclick="event.stopPropagation()">
                             <input type="checkbox" ${isSelected ? 'checked' : ''} onchange="toggleListingCompare(${l.id}, this.checked, ${JSON.stringify(l).replace(/"/g,'&quot;')})"> Compare
                         </label>
+                        <div class="browse-card-actions" onclick="event.stopPropagation()">
+                            <button class="btn-action-sm" onclick="toggleMortgageCalc(${l.id}, ${Number(l.price)})">💰 Estimate Payment</button>
+                            <button class="btn-action-sm" onclick="toggleOpenHouses(${l.id})">🏡 Open Houses</button>
+                        </div>
+                        <div id="mortgage-calc-${l.id}" class="mortgage-calc-panel" style="display:none;"></div>
+                        <div id="open-houses-${l.id}" class="open-houses-panel" style="display:none;"></div>
                         <div id="nearby-stats-${l.id}" class="nearby-stats-card" style="display:none;"></div>
                     </div>
                 </div>`;
@@ -1857,6 +1934,98 @@
                     </div>`;
             } catch {
                 el.innerHTML = '<div style="color:#aaa;font-size:0.8rem;">Could not load nearby stats.</div>';
+            }
+        }
+
+        // ─── Mortgage Estimator ───────────────────────────────────────────────────
+        function toggleMortgageCalc(listingId, price) {
+            const el = document.getElementById(`mortgage-calc-${listingId}`);
+            if (!el) return;
+            if (el.style.display === 'block') { el.style.display = 'none'; return; }
+            el.style.display = 'block';
+            el.innerHTML = `
+                <div style="font-weight:600;font-size:0.85rem;margin-bottom:0.5rem;">💰 Mortgage Estimator</div>
+                <div class="mc-row">
+                    <label>Down %</label>
+                    <input type="number" id="mc-down-${listingId}" value="20" min="0" max="100" step="1" oninput="calcMortgage(${listingId},${price})">
+                    <label>Rate %</label>
+                    <input type="number" id="mc-rate-${listingId}" value="7.0" min="0.1" max="20" step="0.1" oninput="calcMortgage(${listingId},${price})">
+                    <label>Term yrs</label>
+                    <input type="number" id="mc-term-${listingId}" value="30" min="5" max="40" step="5" oninput="calcMortgage(${listingId},${price})">
+                </div>
+                <div class="mc-result" id="mc-result-${listingId}"></div>`;
+            calcMortgage(listingId, price);
+        }
+
+        function calcMortgage(listingId, price) {
+            const downPct = parseFloat(document.getElementById(`mc-down-${listingId}`).value) || 20;
+            const annualRate = parseFloat(document.getElementById(`mc-rate-${listingId}`).value) || 7;
+            const termYrs = parseInt(document.getElementById(`mc-term-${listingId}`).value) || 30;
+            const P = price * (1 - downPct / 100);
+            const r = annualRate / 100 / 12;
+            const n = termYrs * 12;
+            let monthly;
+            if (r === 0) {
+                monthly = P / n;
+            } else {
+                monthly = P * r * Math.pow(1 + r, n) / (Math.pow(1 + r, n) - 1);
+            }
+            const el = document.getElementById(`mc-result-${listingId}`);
+            if (el) el.textContent = `~$${Math.round(monthly).toLocaleString()}/mo (${downPct}% down, ${annualRate}%, ${termYrs}yr)`;
+        }
+
+        // ─── Open Houses ──────────────────────────────────────────────────────────
+        async function toggleOpenHouses(listingId) {
+            const el = document.getElementById(`open-houses-${listingId}`);
+            if (!el) return;
+            if (el.style.display === 'block' && el.dataset.loaded === '1') { el.style.display = 'none'; el.dataset.loaded = ''; return; }
+            el.style.display = 'block';
+            el.innerHTML = '<div style="color:#aaa;font-size:0.8rem;">Loading open houses…</div>';
+            try {
+                const res = await fetch(`${API_BASE_URL}/listings/${listingId}/open-houses`);
+                const data = await res.json();
+                el.dataset.loaded = '1';
+                if (!data.length) {
+                    el.innerHTML = '<div style="color:#aaa;font-size:0.8rem;">No upcoming open houses scheduled.</div>';
+                    return;
+                }
+                el.innerHTML = `<div style="font-weight:600;font-size:0.85rem;margin-bottom:0.5rem;">🏡 Upcoming Open Houses</div>` +
+                    data.map(oh => {
+                        const dt = new Date(oh.scheduled_at);
+                        const dtStr = dt.toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                        return `<div class="oh-item">
+                            <div class="oh-item-time">${dtStr} (${oh.duration_minutes} min)</div>
+                            ${oh.notes ? `<div class="oh-item-notes">${esc2(oh.notes)}</div>` : ''}
+                            <div class="oh-rsvp-form">
+                                <input type="text" id="oh-name-${oh.id}" placeholder="Your name" autocomplete="name">
+                                <input type="email" id="oh-email-${oh.id}" placeholder="Email" autocomplete="email">
+                                <button class="oh-rsvp-btn" onclick="rsvpOpenHouse(${oh.id}, ${listingId})">RSVP</button>
+                            </div>
+                            <div id="oh-msg-${oh.id}" style="font-size:0.75rem;margin-top:0.3rem;"></div>
+                        </div>`;
+                    }).join('');
+            } catch {
+                el.innerHTML = '<div style="color:#aaa;font-size:0.8rem;">Could not load open houses.</div>';
+            }
+        }
+
+        async function rsvpOpenHouse(openHouseId, listingId) {
+            const name = (document.getElementById(`oh-name-${openHouseId}`) || {}).value || '';
+            const email = (document.getElementById(`oh-email-${openHouseId}`) || {}).value || '';
+            const msg = document.getElementById(`oh-msg-${openHouseId}`);
+            if (!name.trim() || !email.trim()) { if (msg) { msg.style.color = '#e53e3e'; msg.textContent = 'Name and email are required.'; } return; }
+            try {
+                const res = await fetch(`${API_BASE_URL}/open-houses/${openHouseId}/rsvp`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: name.trim(), email: email.trim() }), credentials: 'include'
+                });
+                const d = await res.json();
+                if (msg) {
+                    if (res.ok) { msg.style.color = '#22c55e'; msg.textContent = "You're registered!"; }
+                    else { msg.style.color = '#e53e3e'; msg.textContent = d.error || 'RSVP failed.'; }
+                }
+            } catch {
+                if (msg) { msg.style.color = '#e53e3e'; msg.textContent = 'Network error. Please try again.'; }
             }
         }
 

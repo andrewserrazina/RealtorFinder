@@ -807,6 +807,39 @@ app.delete('/api/buyer-requests/:id', auth.requireAuth, async (req, res) => {
     }
 });
 
+// Proactive realtor matches for buyer — realtors whose service areas match buyer's target areas
+app.get('/api/buyer-requests/matched-realtors', auth.requireAuth, async (req, res) => {
+    try {
+        if (req.user.user_type !== 'buyer') return res.status(403).json({ error: 'Buyers only' });
+        const request = await db.getBuyerRequestByUser(req.session.userId);
+        if (!request || !request.target_areas) return res.json([]);
+        const terms = String(request.target_areas).split(',').map(t => t.trim()).filter(Boolean).slice(0, 5);
+        if (!terms.length) return res.json([]);
+        const conditions = terms.map((_, i) => `u.service_areas ILIKE $${i + 1}`);
+        const params = terms.map(t => `%${t}%`);
+        const { rows } = await pool.query(`
+            SELECT u.id, u.first_name, u.last_name, u.profile_photo, u.brokerage,
+                   u.years_experience, u.service_areas, u.profile_slug, u.license_verified,
+                   COALESCE(
+                       (SELECT AVG(rating)::numeric(3,1) FROM realtor_reviews WHERE realtor_id = u.id),
+                       NULL
+                   ) AS avg_rating,
+                   (SELECT COUNT(*) FROM proposals WHERE realtor_id = u.id AND status = 'accepted') AS accepted_proposals
+            FROM users u
+            WHERE u.user_type = 'realtor'
+              AND u.is_approved = true
+              AND u.is_active IS NOT FALSE
+              AND (${conditions.join(' OR ')})
+            ORDER BY accepted_proposals DESC, avg_rating DESC NULLS LAST
+            LIMIT 8
+        `, params);
+        res.json(rows);
+    } catch (err) {
+        console.error('matched-realtors error:', err);
+        res.status(500).json({ error: 'Failed to fetch matched realtors' });
+    }
+});
+
 // Realtor responds to a buyer request
 app.post('/api/buyer-requests/:id/respond', auth.requireAuth, async (req, res) => {
     try {
@@ -1305,7 +1338,7 @@ app.post('/api/listings', auth.requireAuth, async (req, res) => {
     try {
         if (!req.session.emailVerified && !req.user.email_verified) return res.status(403).json({ error: 'Please verify your email address before creating a listing. Check your inbox for a verification link.' });
         if (req.user.user_type !== 'seller') return res.status(403).json({ error: 'Only seller accounts can create listings' });
-        const { address, price, type, bedrooms, bathrooms, sqft, description, ownerName, ownerEmail, ownerPhone, zestimate, owner_attested } = req.body;
+        const { address, price, type, bedrooms, bathrooms, sqft, description, ownerName, ownerEmail, ownerPhone, zestimate, owner_attested, proposal_deadline, video_url } = req.body;
         
         // Parse address into components (basic parsing - could be enhanced with address validation API)
         const addressParts = address.split(',').map(s => s.trim());
@@ -1351,7 +1384,9 @@ app.post('/api/listings', auth.requireAuth, async (req, res) => {
             ownerPhone,
             userId: req.session.userId,
             latitude: coords?.latitude || null,
-            longitude: coords?.longitude || null
+            longitude: coords?.longitude || null,
+            proposal_deadline: proposal_deadline || null,
+            video_url: video_url || null
         };
 
         const newListing = await db.createListing(listingData);
@@ -1389,12 +1424,12 @@ app.put('/api/listings/:id', auth.requireAuth, async (req, res) => {
         if (!listing) return res.status(404).json({ error: 'Listing not found' });
         if (listing.user_id !== req.session.userId) return res.status(403).json({ error: 'Forbidden' });
 
-        const { price, type, bedrooms, bathrooms, sqft, description } = req.body;
+        const { price, type, bedrooms, bathrooms, sqft, description, proposal_deadline, video_url } = req.body;
         if (!price || !type || !bedrooms || !bathrooms || !sqft || !description) {
             return res.status(400).json({ error: 'All fields are required' });
         }
 
-        const updated = await db.updateListing(req.params.id, { price, type, bedrooms, bathrooms, sqft, description });
+        const updated = await db.updateListing(req.params.id, { price, type, bedrooms, bathrooms, sqft, description, proposal_deadline, video_url });
         res.json({ ...updated, date: formatDate(updated.created_at) });
     } catch (error) {
         console.error('Error updating listing:', error);
@@ -5473,6 +5508,30 @@ app.get('/api/realtors/me/analytics', auth.requireAuth, async (req, res) => {
     }
 });
 
+// Monthly win-rate trend — last 6 months, grouped by month
+app.get('/api/realtors/me/win-rate-trend', auth.requireAuth, async (req, res) => {
+    try {
+        if (req.user.user_type !== 'realtor') return res.status(403).json({ error: 'Realtors only' });
+        const { rows } = await pool.query(`
+            SELECT DATE_TRUNC('month', created_at) AS month,
+                   COUNT(*) AS total,
+                   COUNT(*) FILTER (WHERE status = 'accepted') AS accepted
+            FROM proposals
+            WHERE realtor_id = $1 AND created_at >= NOW() - INTERVAL '6 months'
+            GROUP BY month ORDER BY month ASC
+        `, [req.session.userId]);
+        res.json(rows.map(r => ({
+            month: r.month,
+            total: parseInt(r.total),
+            accepted: parseInt(r.accepted),
+            win_rate: parseInt(r.total) > 0 ? Math.round((parseInt(r.accepted) / parseInt(r.total)) * 100) : 0
+        })));
+    } catch (err) {
+        console.error('Win-rate trend error:', err);
+        res.status(500).json({ error: 'Failed to fetch win-rate trend' });
+    }
+});
+
 // ===== FEATURE 4: SAVED REALTORS =====
 
 app.post('/api/saved-realtors/:realtorId', auth.requireAuth, async (req, res) => {
@@ -5612,6 +5671,200 @@ app.get('/api/listings/:id/boost-status', auth.requireAuth, async (req, res) => 
         res.json({ active, boosted_until: boostedUntil || null });
     } catch (err) {
         res.status(500).json({ error: 'Failed to check boost status' });
+    }
+});
+
+// ===== DOCUMENT VAULT =====
+
+app.post('/api/listings/:id/documents', auth.requireAuth, uploadLimiter, uploadDoc.single('doc'), async (req, res) => {
+    try {
+        if (req.user.user_type !== 'seller') return res.status(403).json({ error: 'Sellers only' });
+        const listingId = parseInt(req.params.id);
+        const { rows: [l] } = await pool.query(`SELECT user_id FROM listings WHERE id=$1 AND deleted_at IS NULL`, [listingId]);
+        if (!l) return res.status(404).json({ error: 'Listing not found' });
+        if (l.user_id !== req.session.userId) return res.status(403).json({ error: 'Forbidden' });
+        if (!req.file) return res.status(400).json({ error: 'No file provided' });
+        const result = await uploadToCloudinaryDoc(req.file.buffer, req.file.originalname);
+        const name = req.body.name || req.file.originalname || 'Document';
+        const { rows } = await pool.query(
+            `INSERT INTO listing_documents (listing_id, uploaded_by, name, url) VALUES ($1,$2,$3,$4) RETURNING *`,
+            [listingId, req.session.userId, name.slice(0, 100), result.secure_url]
+        );
+        res.status(201).json(rows[0]);
+    } catch (err) {
+        console.error('Doc upload error:', err);
+        res.status(500).json({ error: 'Failed to upload document' });
+    }
+});
+
+app.get('/api/listings/:id/documents', auth.requireAuth, async (req, res) => {
+    try {
+        const listingId = parseInt(req.params.id);
+        const { rows: [l] } = await pool.query(`SELECT user_id FROM listings WHERE id=$1 AND deleted_at IS NULL`, [listingId]);
+        if (!l) return res.status(404).json({ error: 'Listing not found' });
+        // Seller sees own docs; realtors can view docs for any listing
+        if (req.user.user_type === 'seller' && l.user_id !== req.session.userId) return res.status(403).json({ error: 'Forbidden' });
+        if (!['seller', 'realtor'].includes(req.user.user_type)) return res.status(403).json({ error: 'Access denied' });
+        const { rows } = await pool.query(
+            `SELECT id, name, url, created_at FROM listing_documents WHERE listing_id=$1 ORDER BY created_at DESC`,
+            [listingId]
+        );
+        res.json(rows);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch documents' });
+    }
+});
+
+app.delete('/api/listings/:id/documents/:docId', auth.requireAuth, async (req, res) => {
+    try {
+        if (req.user.user_type !== 'seller') return res.status(403).json({ error: 'Sellers only' });
+        const { rows } = await pool.query(
+            `DELETE FROM listing_documents ld
+             USING listings l
+             WHERE ld.id=$1 AND ld.listing_id=$2 AND l.id=$2 AND l.user_id=$3
+             RETURNING ld.id`,
+            [parseInt(req.params.docId), parseInt(req.params.id), req.session.userId]
+        );
+        if (!rows.length) return res.status(404).json({ error: 'Document not found' });
+        res.json({ ok: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to delete document' });
+    }
+});
+
+// ===== CMA COMPS =====
+
+app.get('/api/listings/:id/comps', async (req, res) => {
+    try {
+        const { rows: [target] } = await pool.query(
+            `SELECT latitude, longitude, price, property_type, bedrooms, sqft, city, state
+             FROM listings WHERE id=$1 AND deleted_at IS NULL`,
+            [parseInt(req.params.id)]
+        );
+        if (!target) return res.status(404).json({ error: 'Listing not found' });
+        if (!target.latitude || !target.longitude) return res.json([]);
+        // Nearby listings within rough bounding box, then filter by haversine
+        const { rows } = await pool.query(`
+            SELECT id, address, city, state, price, property_type, bedrooms, bathrooms, sqft,
+                   status, latitude, longitude
+            FROM listings
+            WHERE id != $1 AND deleted_at IS NULL
+              AND latitude IS NOT NULL AND longitude IS NOT NULL
+              AND ABS(latitude - $2) < 0.12 AND ABS(longitude - $3) < 0.12
+            ORDER BY created_at DESC LIMIT 30
+        `, [parseInt(req.params.id), target.latitude, target.longitude]);
+        const comps = rows
+            .map(l => ({ ...l, distance_miles: Math.round(haversineMiles(target.latitude, target.longitude, l.latitude, l.longitude) * 10) / 10 }))
+            .filter(l => l.distance_miles <= 5)
+            .sort((a, b) => a.distance_miles - b.distance_miles)
+            .slice(0, 6);
+        res.json(comps);
+    } catch (err) {
+        console.error('Comps error:', err);
+        res.status(500).json({ error: 'Failed to fetch comps' });
+    }
+});
+
+// ===== OPEN HOUSES =====
+
+app.post('/api/open-houses', auth.requireAuth, async (req, res) => {
+    try {
+        if (req.user.user_type !== 'realtor') return res.status(403).json({ error: 'Realtors only' });
+        const { listing_id, scheduled_at, duration_minutes, notes } = req.body;
+        if (!listing_id || !scheduled_at) return res.status(400).json({ error: 'listing_id and scheduled_at required' });
+        const dt = new Date(scheduled_at);
+        if (isNaN(dt) || dt < new Date()) return res.status(400).json({ error: 'scheduled_at must be a future date/time' });
+        // Verify realtor has an accepted or pending proposal for this listing
+        const { rows: [prop] } = await pool.query(
+            `SELECT id FROM proposals WHERE listing_id=$1 AND realtor_id=$2`,
+            [parseInt(listing_id), req.session.userId]
+        );
+        if (!prop) return res.status(403).json({ error: 'You must have a proposal on this listing to schedule an open house' });
+        const { rows } = await pool.query(
+            `INSERT INTO open_houses (listing_id, realtor_id, scheduled_at, duration_minutes, notes)
+             VALUES ($1,$2,$3,$4,$5) RETURNING *`,
+            [parseInt(listing_id), req.session.userId, dt, parseInt(duration_minutes) || 60, notes || null]
+        );
+        res.status(201).json(rows[0]);
+    } catch (err) {
+        console.error('Open house create error:', err);
+        res.status(500).json({ error: 'Failed to create open house' });
+    }
+});
+
+app.get('/api/listings/:id/open-houses', async (req, res) => {
+    try {
+        const { rows } = await pool.query(`
+            SELECT oh.*, u.first_name, u.last_name, u.brokerage,
+                   (SELECT COUNT(*) FROM open_house_rsvps WHERE open_house_id = oh.id) AS rsvp_count
+            FROM open_houses oh
+            JOIN users u ON u.id = oh.realtor_id
+            WHERE oh.listing_id=$1 AND oh.scheduled_at >= NOW()
+            ORDER BY oh.scheduled_at ASC
+        `, [parseInt(req.params.id)]);
+        res.json(rows);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch open houses' });
+    }
+});
+
+app.delete('/api/open-houses/:id', auth.requireAuth, async (req, res) => {
+    try {
+        if (req.user.user_type !== 'realtor') return res.status(403).json({ error: 'Realtors only' });
+        const { rows } = await pool.query(
+            `DELETE FROM open_houses WHERE id=$1 AND realtor_id=$2 RETURNING id`,
+            [parseInt(req.params.id), req.session.userId]
+        );
+        if (!rows.length) return res.status(404).json({ error: 'Not found' });
+        res.json({ ok: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to delete open house' });
+    }
+});
+
+app.post('/api/open-houses/:id/rsvp', async (req, res) => {
+    try {
+        const { name, email } = req.body;
+        if (!name || !email) return res.status(400).json({ error: 'name and email required' });
+        const userId = req.session?.userId || null;
+        await pool.query(
+            `INSERT INTO open_house_rsvps (open_house_id, user_id, name, email)
+             VALUES ($1,$2,$3,$4) ON CONFLICT (open_house_id, email) DO NOTHING`,
+            [parseInt(req.params.id), userId, name.slice(0, 100), email.slice(0, 200)]
+        );
+        res.json({ ok: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to RSVP' });
+    }
+});
+
+app.delete('/api/open-houses/:id/rsvp', auth.requireAuth, async (req, res) => {
+    try {
+        const uid = req.session.userId;
+        await pool.query(
+            `DELETE FROM open_house_rsvps WHERE open_house_id=$1 AND (user_id=$2 OR email=(SELECT email FROM users WHERE id=$2))`,
+            [parseInt(req.params.id), uid]
+        );
+        res.json({ ok: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to cancel RSVP' });
+    }
+});
+
+app.get('/api/realtors/me/open-houses', auth.requireAuth, async (req, res) => {
+    try {
+        if (req.user.user_type !== 'realtor') return res.status(403).json({ error: 'Realtors only' });
+        const { rows } = await pool.query(`
+            SELECT oh.*, l.address, l.city, l.state,
+                   (SELECT COUNT(*) FROM open_house_rsvps WHERE open_house_id = oh.id) AS rsvp_count
+            FROM open_houses oh
+            JOIN listings l ON l.id = oh.listing_id
+            WHERE oh.realtor_id=$1
+            ORDER BY oh.scheduled_at DESC
+        `, [req.session.userId]);
+        res.json(rows);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch open houses' });
     }
 });
 
@@ -8944,6 +9197,38 @@ app.get('/api/firms/:slug', async (req, res) => {
 
 _schemaMigrations.push(
     `ALTER TABLE buyer_requests ADD COLUMN IF NOT EXISTS selected_realtor_id INTEGER REFERENCES users(id)`
+);
+
+_schemaMigrations.push(
+    `ALTER TABLE listings ADD COLUMN IF NOT EXISTS proposal_deadline DATE`,
+    `ALTER TABLE listings ADD COLUMN IF NOT EXISTS video_url TEXT`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS unavailable_until DATE`,
+    `CREATE TABLE IF NOT EXISTS listing_documents (
+        id SERIAL PRIMARY KEY,
+        listing_id INTEGER NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
+        uploaded_by INTEGER NOT NULL REFERENCES users(id),
+        name TEXT NOT NULL,
+        url TEXT NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+    )`,
+    `CREATE TABLE IF NOT EXISTS open_houses (
+        id SERIAL PRIMARY KEY,
+        listing_id INTEGER NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
+        realtor_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        scheduled_at TIMESTAMPTZ NOT NULL,
+        duration_minutes INTEGER NOT NULL DEFAULT 60,
+        notes TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+    )`,
+    `CREATE TABLE IF NOT EXISTS open_house_rsvps (
+        id SERIAL PRIMARY KEY,
+        open_house_id INTEGER NOT NULL REFERENCES open_houses(id) ON DELETE CASCADE,
+        user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        name TEXT NOT NULL,
+        email TEXT NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE(open_house_id, email)
+    )`
 );
 
 _schemaMigrations.push(

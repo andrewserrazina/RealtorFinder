@@ -859,6 +859,26 @@
             white-space: nowrap;
         }
 
+        /* Proposal compare bar & modal */
+        .proposal-compare-bar { position: fixed; bottom: 0; left: 0; right: 0; background: #0a2540; color: white; padding: 0.875rem 2rem; display: flex; align-items: center; gap: 1.5rem; z-index: 200; box-shadow: 0 -4px 20px rgba(0,0,0,0.25); transition: transform 0.3s; }
+        .proposal-compare-bar.hidden { transform: translateY(100%); }
+        .proposal-compare-bar-label { font-weight: 600; font-size: 0.9rem; white-space: nowrap; }
+        .proposal-compare-btn { background: #FF6B35; color: white; border: none; border-radius: 8px; padding: 0.5rem 1.25rem; font-weight: 700; cursor: pointer; font-size: 0.9rem; font-family: inherit; }
+        .proposal-compare-btn:hover { background: #e85d2a; }
+        .compare-chip { background: rgba(255,255,255,0.15); border-radius: 20px; padding: 0.25rem 0.75rem; font-size: 0.8rem; display: flex; align-items: center; gap: 0.5rem; }
+        .compare-chip-remove { background: none; border: none; color: white; cursor: pointer; font-size: 1rem; padding: 0; line-height: 1; }
+        .proposal-compare-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 300; align-items: center; justify-content: center; }
+        .proposal-compare-modal.active { display: flex; }
+        .proposal-compare-modal-inner { background: white; border-radius: 16px; padding: 2rem; max-width: 900px; width: 95vw; max-height: 90vh; overflow-y: auto; }
+        .compare-grid { display: grid; gap: 0; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin-top: 1.5rem; }
+        .compare-grid-row { display: grid; border-bottom: 1px solid var(--border); }
+        .compare-grid-row:last-child { border-bottom: none; }
+        .compare-grid-row.header-row { background: #f8f9fa; }
+        .compare-cell { padding: 0.75rem 1rem; font-size: 0.9rem; border-right: 1px solid var(--border); }
+        .compare-cell:last-child { border-right: none; }
+        .compare-cell.label-cell { font-weight: 600; color: #666; font-size: 0.8rem; background: #f8f9fa; }
+        .compare-cell.winner { background: #f0fdf4; font-weight: 700; color: #065f46; }
+
         /* Boost modal */
         .boost-option-card {
             border: 2px solid var(--border);
@@ -1214,6 +1234,18 @@
                 <div class="form-group">
                     <label>Description *</label>
                     <textarea name="description" placeholder="Describe your property..." required></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Proposal Deadline <span style="font-weight:400;color:#6b7280;">(optional)</span></label>
+                        <input type="date" name="proposal_deadline" id="newListingDeadline" style="padding:0.75rem 1rem;border:1px solid #e1e8ed;border-radius:8px;font-family:inherit;font-size:0.95rem;width:100%;">
+                        <p style="font-size:0.8rem;color:#6b7280;margin-top:4px;">Creates urgency — realtors see a countdown.</p>
+                    </div>
+                    <div class="form-group">
+                        <label>Video Tour URL <span style="font-weight:400;color:#6b7280;">(optional)</span></label>
+                        <input type="url" name="video_url" placeholder="https://youtube.com/watch?v=…" style="padding:0.75rem 1rem;border:1px solid #e1e8ed;border-radius:8px;font-family:inherit;font-size:0.95rem;width:100%;">
+                        <p style="font-size:0.8rem;color:#6b7280;margin-top:4px;">YouTube or Vimeo link.</p>
+                    </div>
                 </div>
                 <h3 style="margin: 2rem 0 1rem; font-size: 1.2rem;">Contact Information</h3>
                 <div class="form-group">
@@ -1802,6 +1834,9 @@
                         </div>
                         <p style="margin-top:1rem;color:#666;">${listing.description}</p>
                         <p style="margin-top:0.5rem;font-size:0.9rem;color:#999;">${listing.date} &nbsp;·&nbsp; 👁 ${listing.view_count || 0} views &nbsp;·&nbsp; 🔗 ${listing.shareViews || 0} share views &nbsp;·&nbsp; 📬 ${listing.offerCount || 0} proposals &nbsp;·&nbsp; 📅 ${Math.floor((Date.now() - new Date(listing.created_at).getTime()) / 86400000)} days on market</p>
+                        ${renderDeadlineBadge(listing)}
+                        ${listing.video_url ? `<div style="margin-top:0.75rem;">${renderVideoEmbed(listing.video_url, true)}</div>` : ''}
+                        <div id="docs-panel-${listing.id}" style="margin-top:0.75rem;"></div>
                     </div>
                     <div class="listing-actions">
                         ${isExpired
@@ -1816,6 +1851,7 @@
                         ${status !== 'sold' && !isExpired ? `<button class="btn btn-outline" onclick="markListingSold(${listing.id})" style="font-size:0.85rem;">Mark Sold</button>` : ''}
                         <button class="btn btn-outline" onclick="deleteListing(${listing.id})" style="font-size:0.85rem;border-color:#ef4444;color:#ef4444;">Delete</button>
                         ${renderBoostControl(listing)}
+                        <button class="btn btn-outline" onclick="toggleDocsPanel(${listing.id})" style="font-size:0.85rem;">📄 Docs</button>
                     </div>
                 </div>
             `}).join('');
@@ -2560,6 +2596,89 @@
 
         // ===== PROPOSALS (Feature 1) =====
 
+        let _proposalCompareList = [];
+
+        function _propCompareKey(p) { return `${p.realtor_id}-${p.listing_id}`; }
+
+        function addToProposalCompare(pJson) {
+            const p = JSON.parse(decodeURIComponent(pJson));
+            if (_proposalCompareList.find(c => _propCompareKey(c) === _propCompareKey(p))) return;
+            if (_proposalCompareList.length >= 3) { showToast('Max 3 proposals can be compared at once', 'error'); return; }
+            _proposalCompareList.push(p);
+            updateProposalCompareBar();
+        }
+
+        function removeFromProposalCompare(key) {
+            _proposalCompareList = _proposalCompareList.filter(c => _propCompareKey(c) !== key);
+            updateProposalCompareBar();
+        }
+
+        function clearProposalCompare() {
+            _proposalCompareList = [];
+            updateProposalCompareBar();
+        }
+
+        function updateProposalCompareBar() {
+            const bar = document.getElementById('proposalCompareBar');
+            if (!bar) return;
+            if (!_proposalCompareList.length) { bar.classList.add('hidden'); return; }
+            bar.classList.remove('hidden');
+            document.getElementById('proposalCompareChips').innerHTML = _proposalCompareList.map(p => {
+                const name = `${p.first_name || ''} ${p.last_name || ''}`.trim() || 'Realtor';
+                const key = _propCompareKey(p);
+                return `<span class="compare-chip">${esc(name)} <button class="compare-chip-remove" onclick="removeFromProposalCompare('${esc(key)}')">&times;</button></span>`;
+            }).join('');
+            document.getElementById('proposalCompareCount').textContent = _proposalCompareList.length;
+        }
+
+        function openProposalCompareModal() {
+            if (_proposalCompareList.length < 2) { showToast('Select at least 2 proposals to compare', 'error'); return; }
+            const modal = document.getElementById('proposalCompareModal');
+            modal.classList.add('active');
+            const cols = _proposalCompareList.length + 1;
+            const rows = [
+                { label: 'Realtor', fn: p => esc(`${p.first_name || ''} ${p.last_name || ''}`.trim() || 'Agent') },
+                { label: 'Brokerage', fn: p => esc(p.brokerage || '—') },
+                { label: 'Experience', fn: p => p.years_experience != null ? p.years_experience + ' yrs' : '—' },
+                { label: 'Rating', fn: p => p.rating != null ? '★ ' + parseFloat(p.rating).toFixed(1) : '—' },
+                { label: 'License', fn: p => p.license_verified ? '<span style="color:#059669;font-weight:600;">✓ Verified</span>' : '—' },
+                { label: 'Commission', fn: p => `<strong>${p.commission_pct}%</strong>`, winFn: ps => ps.reduce((best, p) => parseFloat(p.commission_pct) < parseFloat(best.commission_pct) ? p : best, ps[0]) },
+                { label: 'Timeline', fn: p => esc(p.timeline || '—') },
+                { label: 'Pitch / Note', fn: p => `<span style="font-size:0.85rem;color:#555;">${esc(p.cover_note || '—')}</span>` },
+            ];
+            const winnerMap = {};
+            for (const row of rows) {
+                if (row.winFn) {
+                    const winner = row.winFn(_proposalCompareList);
+                    winnerMap[row.label] = _propCompareKey(winner);
+                }
+            }
+            const gridRows = rows.map(row => {
+                const cells = _proposalCompareList.map(p => {
+                    const isWinner = winnerMap[row.label] && winnerMap[row.label] === _propCompareKey(p);
+                    return `<div class="compare-cell${isWinner ? ' winner' : ''}">${row.fn(p)}</div>`;
+                }).join('');
+                return `<div class="compare-grid-row" style="grid-template-columns: 120px repeat(${_proposalCompareList.length}, 1fr);">
+                    <div class="compare-cell label-cell">${row.label}</div>${cells}
+                </div>`;
+            }).join('');
+            const headers = _proposalCompareList.map(p => {
+                const name = esc(`${p.first_name || ''} ${p.last_name || ''}`.trim() || 'Agent');
+                return `<div class="compare-cell" style="font-weight:700;font-size:0.95rem;">${name}</div>`;
+            }).join('');
+            document.getElementById('proposalCompareBody').innerHTML = `
+                <div class="compare-grid">
+                    <div class="compare-grid-row header-row" style="grid-template-columns: 120px repeat(${_proposalCompareList.length}, 1fr);">
+                        <div class="compare-cell label-cell"></div>${headers}
+                    </div>
+                    ${gridRows}
+                </div>`;
+        }
+
+        function closeProposalCompareModal() {
+            document.getElementById('proposalCompareModal').classList.remove('active');
+        }
+
         async function loadProposals() {
             try {
                 const listingsRes = await fetch('/api/listings', { credentials: 'include' });
@@ -2602,6 +2721,14 @@
                             const counterBtn = p.status === 'pending' ? `<button onclick="openCounterModal(${p.id}, ${p.commission_pct})" style="background:white;border:1px solid var(--accent);color:var(--accent);padding:0.5rem 1rem;border-radius:6px;font-weight:600;cursor:pointer;font-size:0.85rem;">Counter</button>` : '';
                             const realtorDisplayName = `${p.first_name || ''} ${p.last_name || ''}`.trim() || 'this realtor';
                             const acceptBtn = p.status === 'pending' ? `<button onclick="acceptProposal(${p.id}, ${listing.id}, ${p.realtor_id}, ${JSON.stringify(realtorDisplayName)})" style="background:var(--accent);color:white;border:none;border-radius:6px;padding:6px 14px;cursor:pointer;font-size:0.85rem;">Accept</button>` : status;
+                            const pData = encodeURIComponent(JSON.stringify({
+                                realtor_id: p.realtor_id, listing_id: p.listing_id,
+                                first_name: p.first_name, last_name: p.last_name,
+                                brokerage: p.brokerage, years_experience: p.years_experience,
+                                rating: p.rating, license_verified: p.license_verified,
+                                commission_pct: p.commission_pct, timeline: p.timeline, cover_note: p.cover_note
+                            }));
+                            const compareBtn = `<button onclick="addToProposalCompare('${pData}')" style="background:white;border:1px solid #6366f1;color:#6366f1;padding:5px 10px;border-radius:6px;font-weight:600;cursor:pointer;font-size:0.8rem;">⚖️</button>`;
                             return `<tr style="${isLowest ? 'background:#f0fdf4;' : ''}">
                                 <td style="padding:10px 12px;font-weight:600;">${name}${badge}${verifiedBadge}</td>
                                 <td style="padding:10px 12px;font-weight:700;color:${isLowest ? '#065f46' : 'var(--accent)'};">${p.commission_pct}%</td>
@@ -2609,7 +2736,7 @@
                                 <td style="padding:10px 12px;color:#444;font-size:0.85rem;max-width:200px;">${esc(p.cover_note || '—').slice(0, 80)}${(p.cover_note || '').length > 80 ? '…' : ''}
                                     ${(p.attachments || []).length ? '<div style="margin-top:4px;">' + (p.attachments||[]).map(a => { const att = typeof a === 'string' ? (() => { try { return JSON.parse(a); } catch { return {url:a,name:'file'}; } })() : a; return `<a href="${esc(att.url)}" target="_blank" style="font-size:0.75rem;color:#0284c7;display:inline-block;margin-right:4px;">📎 ${esc(att.name||'doc')}</a>`; }).join('') + '</div>' : ''}
                                 </td>
-                                <td style="padding:10px 12px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;">${acceptBtn}${counterBtn}${counterBadge}</td>
+                                <td style="padding:10px 12px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;">${acceptBtn}${counterBtn}${counterBadge}${compareBtn}</td>
                             </tr>`;
                         }).join('');
                         card.innerHTML = `
@@ -2900,6 +3027,91 @@
             document.getElementById('listingAnalyticsModal').style.display = 'none';
         }
 
+        // ===== HELPERS: deadline, video, docs =====
+
+        function renderDeadlineBadge(listing) {
+            if (!listing.proposal_deadline) return '';
+            const deadline = new Date(listing.proposal_deadline);
+            const now = new Date();
+            const daysLeft = Math.ceil((deadline - now) / (1000 * 60 * 60 * 24));
+            if (daysLeft < 0) return '<div style="display:inline-block;background:#fee2e2;color:#991b1b;font-size:0.78rem;font-weight:600;padding:3px 10px;border-radius:20px;margin-top:0.5rem;">Deadline passed</div>';
+            const color = daysLeft <= 2 ? '#dc2626' : daysLeft <= 5 ? '#d97706' : '#059669';
+            const bg = daysLeft <= 2 ? '#fee2e2' : daysLeft <= 5 ? '#fef3c7' : '#d1fae5';
+            return `<div style="display:inline-block;background:${bg};color:${color};font-size:0.78rem;font-weight:600;padding:3px 10px;border-radius:20px;margin-top:0.5rem;">⏰ ${daysLeft === 0 ? 'Deadline today' : daysLeft + ' day' + (daysLeft !== 1 ? 's' : '') + ' left for proposals'}</div>`;
+        }
+
+        function renderVideoEmbed(url, small = false) {
+            if (!url) return '';
+            let embedUrl = '';
+            const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([A-Za-z0-9_-]{11})/);
+            const viMatch = url.match(/vimeo\.com\/(\d+)/);
+            if (ytMatch) embedUrl = `https://www.youtube.com/embed/${ytMatch[1]}`;
+            else if (viMatch) embedUrl = `https://player.vimeo.com/video/${viMatch[1]}`;
+            if (!embedUrl) return `<a href="${esc(url)}" target="_blank" style="font-size:0.85rem;color:#0284c7;">🎥 View Video Tour</a>`;
+            const h = small ? '160px' : '220px';
+            return `<iframe src="${embedUrl}" style="width:100%;height:${h};border-radius:8px;border:none;" allowfullscreen loading="lazy"></iframe>`;
+        }
+
+        async function toggleDocsPanel(listingId) {
+            const panel = document.getElementById(`docs-panel-${listingId}`);
+            if (!panel) return;
+            if (panel.dataset.loaded === '1') { panel.style.display = panel.style.display === 'none' ? 'block' : 'none'; return; }
+            panel.style.display = 'block';
+            panel.innerHTML = '<div style="color:#999;font-size:0.85rem;">Loading…</div>';
+            panel.dataset.loaded = '1';
+            await renderDocsPanel(listingId);
+        }
+
+        async function renderDocsPanel(listingId) {
+            const panel = document.getElementById(`docs-panel-${listingId}`);
+            if (!panel) return;
+            try {
+                const res = await fetch(`/api/listings/${listingId}/documents`, { credentials: 'include' });
+                const docs = res.ok ? await res.json() : [];
+                panel.innerHTML = `
+                    <div style="background:#f8f9fa;border:1px solid #e1e8ed;border-radius:10px;padding:1rem;margin-top:0.5rem;">
+                        <div style="font-weight:600;font-size:0.85rem;color:#374151;margin-bottom:0.75rem;">📄 Documents & Disclosures</div>
+                        <div id="docs-list-${listingId}">
+                            ${docs.length ? docs.map(d => `
+                                <div style="display:flex;align-items:center;justify-content:space-between;padding:0.35rem 0;border-bottom:1px solid #e5e7eb;font-size:0.85rem;">
+                                    <a href="${esc(d.url)}" target="_blank" style="color:#0284c7;text-decoration:none;">📎 ${esc(d.name)}</a>
+                                    <button onclick="deleteDoc(${listingId},${d.id})" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:0.85rem;padding:0 0.25rem;">✕</button>
+                                </div>`).join('') : '<div style="color:#9ca3af;font-size:0.83rem;">No documents yet.</div>'}
+                        </div>
+                        <div style="margin-top:0.75rem;display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
+                            <input type="file" id="docFile-${listingId}" accept=".pdf,.doc,.docx,.txt" style="font-size:0.82rem;color:#555;">
+                            <input type="text" id="docName-${listingId}" placeholder="Document name (optional)" style="padding:0.4rem 0.75rem;border:1px solid #d1d5db;border-radius:6px;font-size:0.82rem;font-family:inherit;flex:1;min-width:140px;">
+                            <button onclick="uploadDoc(${listingId})" style="background:#0a2540;color:white;border:none;border-radius:6px;padding:0.4rem 0.9rem;font-size:0.82rem;font-weight:600;cursor:pointer;white-space:nowrap;font-family:inherit;">Upload</button>
+                        </div>
+                        <div id="docUploadMsg-${listingId}" style="font-size:0.8rem;margin-top:0.4rem;"></div>
+                    </div>`;
+            } catch { panel.innerHTML = '<div style="color:#ef4444;font-size:0.83rem;">Failed to load documents.</div>'; }
+        }
+
+        async function uploadDoc(listingId) {
+            const fileEl = document.getElementById(`docFile-${listingId}`);
+            const nameEl = document.getElementById(`docName-${listingId}`);
+            const msgEl = document.getElementById(`docUploadMsg-${listingId}`);
+            if (!fileEl?.files[0]) { msgEl.textContent = 'Please select a file.'; msgEl.style.color = '#dc2626'; return; }
+            msgEl.textContent = 'Uploading…'; msgEl.style.color = '#6b7280';
+            const fd = new FormData();
+            fd.append('doc', fileEl.files[0]);
+            if (nameEl?.value.trim()) fd.append('name', nameEl.value.trim());
+            try {
+                const res = await fetch(`/api/listings/${listingId}/documents`, { method: 'POST', credentials: 'include', body: fd });
+                if (!res.ok) { const d = await res.json(); msgEl.textContent = d.error || 'Upload failed.'; msgEl.style.color = '#dc2626'; return; }
+                msgEl.textContent = '✓ Uploaded!'; msgEl.style.color = '#059669';
+                fileEl.value = ''; if (nameEl) nameEl.value = '';
+                await renderDocsPanel(listingId);
+            } catch { msgEl.textContent = 'Upload failed.'; msgEl.style.color = '#dc2626'; }
+        }
+
+        async function deleteDoc(listingId, docId) {
+            if (!confirm('Delete this document?')) return;
+            await fetch(`/api/listings/${listingId}/documents/${docId}`, { method: 'DELETE', credentials: 'include' });
+            await renderDocsPanel(listingId);
+        }
+
         // ===== BOOST =====
 
         let _boostListingId = null;
@@ -3031,6 +3243,30 @@
                 <button onclick="closeListingAnalyticsModal()" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:#666;">&times;</button>
             </div>
             <div id="listingAnalyticsBody"></div>
+        </div>
+    </div>
+
+    <!-- Proposal Compare Bar -->
+    <div id="proposalCompareBar" class="proposal-compare-bar hidden">
+        <span class="proposal-compare-bar-label">⚖️ <span id="proposalCompareCount">0</span> selected</span>
+        <div id="proposalCompareChips" style="display:flex;gap:0.5rem;flex-wrap:wrap;flex:1;"></div>
+        <button class="proposal-compare-btn" onclick="openProposalCompareModal()">Compare Now</button>
+        <button onclick="clearProposalCompare()" style="background:rgba(255,255,255,0.15);color:white;border:none;border-radius:8px;padding:0.5rem 1rem;cursor:pointer;font-size:0.85rem;font-family:inherit;">Clear</button>
+    </div>
+
+    <!-- Proposal Compare Modal -->
+    <div id="proposalCompareModal" class="proposal-compare-modal" onclick="if(event.target===this)closeProposalCompareModal()">
+        <div class="proposal-compare-modal-inner">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.25rem;">
+                <h2 style="font-family:'Crimson Pro',serif;font-size:1.8rem;color:#0a2540;">Compare Proposals</h2>
+                <button onclick="closeProposalCompareModal()" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:#aaa;">&times;</button>
+            </div>
+            <p style="color:#666;font-size:0.9rem;margin-bottom:0;">Side-by-side comparison. Green highlight = best value.</p>
+            <div id="proposalCompareBody"></div>
+            <div style="margin-top:1.5rem;display:flex;gap:1rem;">
+                <button onclick="clearProposalCompare();closeProposalCompareModal();" style="background:#f3f4f6;color:#374151;border:none;border-radius:8px;padding:0.6rem 1.25rem;font-weight:600;cursor:pointer;font-family:inherit;">Clear & Close</button>
+                <button onclick="closeProposalCompareModal()" style="background:#0a2540;color:white;border:none;border-radius:8px;padding:0.6rem 1.25rem;font-weight:600;cursor:pointer;font-family:inherit;">Done</button>
+            </div>
         </div>
     </div>
 
