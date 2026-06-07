@@ -178,6 +178,12 @@
             display: block;
             animation: fadeIn 0.3s ease-out;
         }
+        .hub-subnav { display:flex; gap:0; border-bottom:2px solid #e1e8ed; margin-bottom:1.5rem; }
+        .hub-btn { background:none; border:none; border-bottom:2px solid transparent; margin-bottom:-2px; padding:0.6rem 1.25rem; font-family:inherit; font-size:0.9rem; font-weight:600; color:#6b7280; cursor:pointer; }
+        .hub-btn:hover { color:#0a2540; }
+        .hub-btn.active { color:#ff6b35; border-bottom-color:#ff6b35; }
+        .hub-section { display:none; }
+        .hub-section.active { display:block; }
 
         @keyframes fadeIn {
             from {
@@ -1004,14 +1010,15 @@
                         <span>My Listings</span>
                         <span class="badge" id="listingCount">0</span>
                     </div>
-                    <div class="nav-item" data-view="offers">
-                        <span class="nav-icon">📬</span>
-                        <span>Offers Received</span>
+                    <div class="nav-item" data-view="realtors">
+                        <span class="nav-icon">📋</span>
+                        <span>Realtors</span>
                         <span class="badge" id="offerCount">0</span>
                     </div>
-                    <div class="nav-item" data-view="proposals">
-                        <span class="nav-icon">📋</span>
-                        <span>Proposals</span>
+                    <div class="nav-item" data-view="buyer-offers">
+                        <span class="nav-icon">💰</span>
+                        <span>Buyer Offers</span>
+                        <span class="badge" id="buyerOfferCount" style="display:none;">0</span>
                     </div>
                     <div class="nav-item" data-view="showings">
                         <span class="nav-icon">🏠</span>
@@ -1074,9 +1081,9 @@
                         <div class="stat-label">Proposals Accepted</div>
                         <div class="stat-value" id="statAcceptedProposals">0</div>
                     </div>
-                    <div class="stat-card">
-                        <div class="stat-label">Unread Messages</div>
-                        <div class="stat-value" id="statUnreadMessages">0</div>
+                    <div class="stat-card" style="cursor:pointer;" onclick="document.querySelector('[data-view=buyer-offers]').click()">
+                        <div class="stat-label">Buyer Offers</div>
+                        <div class="stat-value" id="statBuyerOffers">0</div>
                     </div>
                 </div>
 
@@ -1093,22 +1100,31 @@
                 <div class="listings-grid" id="myListingsGrid"></div>
             </section>
 
-            <!-- Offers View -->
-            <section id="offers-view" class="view-section">
+            <!-- Realtors Hub View -->
+            <section id="realtors-view" class="view-section">
                 <div class="page-header">
-                    <h1 class="page-title">Offers Received</h1>
-                    <p class="page-subtitle">Review and manage realtor proposals</p>
+                    <h1 class="page-title">Realtors</h1>
+                    <p class="page-subtitle">Structured proposals and classic bids from licensed realtors</p>
                 </div>
-                <div id="offersContainer"></div>
+                <div class="hub-subnav">
+                    <button class="hub-btn active" onclick="switchRealtorsTab('proposals')">Proposals</button>
+                    <button class="hub-btn" onclick="switchRealtorsTab('bids')">Classic Bids</button>
+                </div>
+                <div id="rt-proposals" class="hub-section active">
+                    <div id="proposalsByListing"></div>
+                </div>
+                <div id="rt-bids" class="hub-section">
+                    <div id="offersContainer"></div>
+                </div>
             </section>
 
-            <!-- Proposals View -->
-            <section id="proposals-view" class="view-section">
+            <!-- Buyer Offers View -->
+            <section id="buyer-offers-view" class="view-section">
                 <div class="page-header">
-                    <h1 class="page-title">Proposals</h1>
-                    <p class="page-subtitle">View structured proposals from realtors, ranked by commission rate</p>
+                    <h1 class="page-title">Buyer Offers</h1>
+                    <p class="page-subtitle">Direct purchase offers from buyers on your listings</p>
                 </div>
-                <div id="proposalsByListing"></div>
+                <div id="buyerOffersContainer"></div>
             </section>
 
             <!-- Showings View -->
@@ -1513,7 +1529,8 @@
                 document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
                 document.getElementById(`${view}-view`).classList.add('active');
                 
-                if (view === 'offers') loadOffers();
+                if (view === 'realtors') { loadProposals(); loadOffers(); }
+                if (view === 'buyer-offers') loadBuyerOffers();
                 if (view === 'messages') loadConversations();
                 if (view === 'showings') loadSellerShowings();
                 if (view === 'settings') loadNotifPrefs();
@@ -1866,7 +1883,6 @@
                         ${renderDeadlineBadge(listing)}
                         ${listing.video_url ? `<div style="margin-top:0.75rem;">${renderVideoEmbed(listing.video_url, true)}</div>` : ''}
                         <div id="docs-panel-${listing.id}" style="margin-top:0.75rem;"></div>
-                        <div id="buyer-offers-panel-${listing.id}" style="display:none;"></div>
                     </div>
                     <div class="listing-actions">
                         ${isExpired
@@ -1880,7 +1896,7 @@
                         <button class="btn btn-outline" onclick="deleteListing(${listing.id})" style="font-size:0.85rem;border-color:#ef4444;color:#ef4444;">Delete</button>
                         ${renderBoostControl(listing)}
                         <button class="btn btn-outline" onclick="toggleDocsPanel(${listing.id})" style="font-size:0.85rem;">📄 Docs</button>
-                        <button class="btn btn-outline" onclick="toggleBuyerOffersPanel(${listing.id})" style="font-size:0.85rem;">💰 Buyer Offers</button>
+
                     </div>
                 </div>
             `}).join('');
@@ -1952,11 +1968,11 @@
         }
 
         async function viewOffers(listingId) {
-            // Switch to offers view and filter by listing
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-            document.querySelector('[data-view="offers"]').classList.add('active');
+            document.querySelector('[data-view="realtors"]').classList.add('active');
             document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
-            document.getElementById('offers-view').classList.add('active');
+            document.getElementById('realtors-view').classList.add('active');
+            switchRealtorsTab('bids');
             await loadOffers(listingId);
         }
 
@@ -2812,10 +2828,10 @@
             } catch { alert('Network error. Please try again.'); }
         }
 
-        // Hook proposals view load into nav
+        // Hook realtors view load into nav (handles proposals + bids)
         document.addEventListener('DOMContentLoaded', () => {
-            document.querySelectorAll('.nav-item[data-view="proposals"]').forEach(el => {
-                el.addEventListener('click', loadProposals);
+            document.querySelectorAll('.nav-item[data-view="realtors"]').forEach(el => {
+                el.addEventListener('click', () => { loadProposals(); loadOffers(); });
             });
         });
 
@@ -3136,11 +3152,66 @@
                     body: JSON.stringify({ status })
                 });
                 if (!res.ok) throw new Error('Failed');
-                // reload the panel
-                const panel = document.getElementById(`buyer-offers-panel-${listingId}`);
-                if (panel) { panel.dataset.loaded = ''; }
-                toggleBuyerOffersPanel(listingId);
+                loadBuyerOffers();
             } catch { alert('Failed to update offer.'); }
+        }
+
+        function switchRealtorsTab(sub) {
+            document.querySelectorAll('#realtors-view .hub-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('#realtors-view .hub-section').forEach(s => s.classList.remove('active'));
+            document.querySelector(`#realtors-view .hub-btn[onclick*="${sub}"]`).classList.add('active');
+            document.getElementById(`rt-${sub}`).classList.add('active');
+        }
+
+        async function loadBuyerOffers() {
+            const container = document.getElementById('buyerOffersContainer');
+            if (!container) return;
+            container.innerHTML = '<div style="color:#999;padding:2rem;text-align:center;">Loading buyer offers…</div>';
+            try {
+                const listingsRes = await fetch(`${API_BASE_URL}/listings`, { credentials: 'include' });
+                if (!listingsRes.ok) throw new Error('Failed');
+                const listings = await listingsRes.json();
+                if (!listings.length) {
+                    container.innerHTML = '<div style="text-align:center;padding:3rem;color:#666;"><div style="font-size:3rem;margin-bottom:1rem;">💰</div><h3>No listings yet</h3><p>Create a listing to start receiving buyer offers.</p></div>';
+                    return;
+                }
+                let totalPending = 0;
+                let html = '';
+                for (const listing of listings) {
+                    const res = await fetch(`${API_BASE_URL}/listings/${listing.id}/buyer-offers`, { credentials: 'include' });
+                    if (!res.ok) continue;
+                    const offers = await res.json();
+                    const pending = offers.filter(o => o.status === 'pending').length;
+                    totalPending += pending;
+                    html += `<div style="background:white;border-radius:12px;border:1px solid #e1e8ed;padding:1.5rem;margin-bottom:1.25rem;">
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:${offers.length ? '1rem' : '0'};flex-wrap:wrap;gap:0.5rem;">
+                            <div>
+                                <h3 style="margin:0;font-family:'Crimson Pro',serif;font-size:1.2rem;">${esc(listing.address)}</h3>
+                                <div style="font-size:0.85rem;color:#666;margin-top:0.2rem;">${offers.length} offer${offers.length !== 1 ? 's' : ''}${pending ? ` · <strong style="color:#ff6b35;">${pending} pending</strong>` : ''}</div>
+                            </div>
+                        </div>
+                        ${offers.length === 0 ? '<div style="color:#aaa;font-size:0.875rem;padding:0.5rem 0;">No buyer offers yet.</div>' :
+                            offers.map(o => `<div class="bo-card" style="background:#f9f6f3;border-radius:8px;padding:0.875rem 1rem;margin-bottom:0.5rem;">
+                                <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+                                    <span style="font-size:1.1rem;font-weight:700;color:#0a2540;">$${Number(o.offer_price).toLocaleString()}</span>
+                                    <span style="background:${o.status==='accepted'?'#d1fae5':o.status==='declined'?'#fee2e2':'#fef3c7'};color:${o.status==='accepted'?'#065f46':o.status==='declined'?'#991b1b':'#92400e'};font-size:0.75rem;font-weight:600;padding:2px 10px;border-radius:20px;">${o.status}</span>
+                                </div>
+                                <div style="font-size:0.875rem;color:#374151;margin-top:0.4rem;">${esc(o.buyer_name)} &middot; ${esc(o.buyer_email)}${o.closing_date_target ? ` &middot; Close: ${new Date(o.closing_date_target).toLocaleDateString()}` : ''}</div>
+                                ${o.contingencies ? `<div style="font-size:0.82rem;color:#6b7280;margin-top:0.25rem;">Contingencies: ${esc(o.contingencies)}</div>` : ''}
+                                ${o.notes ? `<div style="font-size:0.82rem;color:#6b7280;font-style:italic;margin-top:0.25rem;">${esc(o.notes)}</div>` : ''}
+                                ${o.status === 'pending' ? `<div style="display:flex;gap:0.5rem;margin-top:0.75rem;">
+                                    <button onclick="updateBuyerOfferStatus(${o.id},${listing.id},'accepted')" style="background:#10b981;color:white;border:none;border-radius:6px;padding:0.4rem 1rem;font-weight:600;cursor:pointer;font-size:0.85rem;font-family:inherit;">Accept</button>
+                                    <button onclick="updateBuyerOfferStatus(${o.id},${listing.id},'declined')" style="background:white;color:#ef4444;border:1px solid #ef4444;border-radius:6px;padding:0.4rem 1rem;font-weight:600;cursor:pointer;font-size:0.85rem;font-family:inherit;">Decline</button>
+                                </div>` : ''}
+                            </div>`).join('')}
+                    </div>`;
+                }
+                if (!html) html = '<div style="text-align:center;padding:3rem;color:#666;"><div style="font-size:3rem;margin-bottom:1rem;">💰</div><h3>No buyer offers yet</h3><p>Buyer offers will appear here when buyers submit them on your listings.</p></div>';
+                container.innerHTML = html;
+                // Update badge
+                const badge = document.getElementById('buyerOfferCount');
+                if (badge) { badge.textContent = totalPending; badge.style.display = totalPending ? '' : 'none'; }
+            } catch(e) { container.innerHTML = '<div style="color:#ef4444;padding:2rem;">Could not load buyer offers.</div>'; }
         }
 
         function renderDeadlineBadge(listing) {
