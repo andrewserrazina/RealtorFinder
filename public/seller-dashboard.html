@@ -1235,6 +1235,18 @@
                     <label>Description *</label>
                     <textarea name="description" placeholder="Describe your property..." required></textarea>
                 </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Proposal Deadline <span style="font-weight:400;color:#6b7280;">(optional)</span></label>
+                        <input type="date" name="proposal_deadline" id="newListingDeadline" style="padding:0.75rem 1rem;border:1px solid #e1e8ed;border-radius:8px;font-family:inherit;font-size:0.95rem;width:100%;">
+                        <p style="font-size:0.8rem;color:#6b7280;margin-top:4px;">Creates urgency — realtors see a countdown.</p>
+                    </div>
+                    <div class="form-group">
+                        <label>Video Tour URL <span style="font-weight:400;color:#6b7280;">(optional)</span></label>
+                        <input type="url" name="video_url" placeholder="https://youtube.com/watch?v=…" style="padding:0.75rem 1rem;border:1px solid #e1e8ed;border-radius:8px;font-family:inherit;font-size:0.95rem;width:100%;">
+                        <p style="font-size:0.8rem;color:#6b7280;margin-top:4px;">YouTube or Vimeo link.</p>
+                    </div>
+                </div>
                 <h3 style="margin: 2rem 0 1rem; font-size: 1.2rem;">Contact Information</h3>
                 <div class="form-group">
                     <label>Your Name *</label>
@@ -1822,6 +1834,9 @@
                         </div>
                         <p style="margin-top:1rem;color:#666;">${listing.description}</p>
                         <p style="margin-top:0.5rem;font-size:0.9rem;color:#999;">${listing.date} &nbsp;·&nbsp; 👁 ${listing.view_count || 0} views &nbsp;·&nbsp; 🔗 ${listing.shareViews || 0} share views &nbsp;·&nbsp; 📬 ${listing.offerCount || 0} proposals &nbsp;·&nbsp; 📅 ${Math.floor((Date.now() - new Date(listing.created_at).getTime()) / 86400000)} days on market</p>
+                        ${renderDeadlineBadge(listing)}
+                        ${listing.video_url ? `<div style="margin-top:0.75rem;">${renderVideoEmbed(listing.video_url, true)}</div>` : ''}
+                        <div id="docs-panel-${listing.id}" style="margin-top:0.75rem;"></div>
                     </div>
                     <div class="listing-actions">
                         ${isExpired
@@ -1836,6 +1851,7 @@
                         ${status !== 'sold' && !isExpired ? `<button class="btn btn-outline" onclick="markListingSold(${listing.id})" style="font-size:0.85rem;">Mark Sold</button>` : ''}
                         <button class="btn btn-outline" onclick="deleteListing(${listing.id})" style="font-size:0.85rem;border-color:#ef4444;color:#ef4444;">Delete</button>
                         ${renderBoostControl(listing)}
+                        <button class="btn btn-outline" onclick="toggleDocsPanel(${listing.id})" style="font-size:0.85rem;">📄 Docs</button>
                     </div>
                 </div>
             `}).join('');
@@ -3009,6 +3025,91 @@
 
         function closeListingAnalyticsModal() {
             document.getElementById('listingAnalyticsModal').style.display = 'none';
+        }
+
+        // ===== HELPERS: deadline, video, docs =====
+
+        function renderDeadlineBadge(listing) {
+            if (!listing.proposal_deadline) return '';
+            const deadline = new Date(listing.proposal_deadline);
+            const now = new Date();
+            const daysLeft = Math.ceil((deadline - now) / (1000 * 60 * 60 * 24));
+            if (daysLeft < 0) return '<div style="display:inline-block;background:#fee2e2;color:#991b1b;font-size:0.78rem;font-weight:600;padding:3px 10px;border-radius:20px;margin-top:0.5rem;">Deadline passed</div>';
+            const color = daysLeft <= 2 ? '#dc2626' : daysLeft <= 5 ? '#d97706' : '#059669';
+            const bg = daysLeft <= 2 ? '#fee2e2' : daysLeft <= 5 ? '#fef3c7' : '#d1fae5';
+            return `<div style="display:inline-block;background:${bg};color:${color};font-size:0.78rem;font-weight:600;padding:3px 10px;border-radius:20px;margin-top:0.5rem;">⏰ ${daysLeft === 0 ? 'Deadline today' : daysLeft + ' day' + (daysLeft !== 1 ? 's' : '') + ' left for proposals'}</div>`;
+        }
+
+        function renderVideoEmbed(url, small = false) {
+            if (!url) return '';
+            let embedUrl = '';
+            const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([A-Za-z0-9_-]{11})/);
+            const viMatch = url.match(/vimeo\.com\/(\d+)/);
+            if (ytMatch) embedUrl = `https://www.youtube.com/embed/${ytMatch[1]}`;
+            else if (viMatch) embedUrl = `https://player.vimeo.com/video/${viMatch[1]}`;
+            if (!embedUrl) return `<a href="${esc(url)}" target="_blank" style="font-size:0.85rem;color:#0284c7;">🎥 View Video Tour</a>`;
+            const h = small ? '160px' : '220px';
+            return `<iframe src="${embedUrl}" style="width:100%;height:${h};border-radius:8px;border:none;" allowfullscreen loading="lazy"></iframe>`;
+        }
+
+        async function toggleDocsPanel(listingId) {
+            const panel = document.getElementById(`docs-panel-${listingId}`);
+            if (!panel) return;
+            if (panel.dataset.loaded === '1') { panel.style.display = panel.style.display === 'none' ? 'block' : 'none'; return; }
+            panel.style.display = 'block';
+            panel.innerHTML = '<div style="color:#999;font-size:0.85rem;">Loading…</div>';
+            panel.dataset.loaded = '1';
+            await renderDocsPanel(listingId);
+        }
+
+        async function renderDocsPanel(listingId) {
+            const panel = document.getElementById(`docs-panel-${listingId}`);
+            if (!panel) return;
+            try {
+                const res = await fetch(`/api/listings/${listingId}/documents`, { credentials: 'include' });
+                const docs = res.ok ? await res.json() : [];
+                panel.innerHTML = `
+                    <div style="background:#f8f9fa;border:1px solid #e1e8ed;border-radius:10px;padding:1rem;margin-top:0.5rem;">
+                        <div style="font-weight:600;font-size:0.85rem;color:#374151;margin-bottom:0.75rem;">📄 Documents & Disclosures</div>
+                        <div id="docs-list-${listingId}">
+                            ${docs.length ? docs.map(d => `
+                                <div style="display:flex;align-items:center;justify-content:space-between;padding:0.35rem 0;border-bottom:1px solid #e5e7eb;font-size:0.85rem;">
+                                    <a href="${esc(d.url)}" target="_blank" style="color:#0284c7;text-decoration:none;">📎 ${esc(d.name)}</a>
+                                    <button onclick="deleteDoc(${listingId},${d.id})" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:0.85rem;padding:0 0.25rem;">✕</button>
+                                </div>`).join('') : '<div style="color:#9ca3af;font-size:0.83rem;">No documents yet.</div>'}
+                        </div>
+                        <div style="margin-top:0.75rem;display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
+                            <input type="file" id="docFile-${listingId}" accept=".pdf,.doc,.docx,.txt" style="font-size:0.82rem;color:#555;">
+                            <input type="text" id="docName-${listingId}" placeholder="Document name (optional)" style="padding:0.4rem 0.75rem;border:1px solid #d1d5db;border-radius:6px;font-size:0.82rem;font-family:inherit;flex:1;min-width:140px;">
+                            <button onclick="uploadDoc(${listingId})" style="background:#0a2540;color:white;border:none;border-radius:6px;padding:0.4rem 0.9rem;font-size:0.82rem;font-weight:600;cursor:pointer;white-space:nowrap;font-family:inherit;">Upload</button>
+                        </div>
+                        <div id="docUploadMsg-${listingId}" style="font-size:0.8rem;margin-top:0.4rem;"></div>
+                    </div>`;
+            } catch { panel.innerHTML = '<div style="color:#ef4444;font-size:0.83rem;">Failed to load documents.</div>'; }
+        }
+
+        async function uploadDoc(listingId) {
+            const fileEl = document.getElementById(`docFile-${listingId}`);
+            const nameEl = document.getElementById(`docName-${listingId}`);
+            const msgEl = document.getElementById(`docUploadMsg-${listingId}`);
+            if (!fileEl?.files[0]) { msgEl.textContent = 'Please select a file.'; msgEl.style.color = '#dc2626'; return; }
+            msgEl.textContent = 'Uploading…'; msgEl.style.color = '#6b7280';
+            const fd = new FormData();
+            fd.append('doc', fileEl.files[0]);
+            if (nameEl?.value.trim()) fd.append('name', nameEl.value.trim());
+            try {
+                const res = await fetch(`/api/listings/${listingId}/documents`, { method: 'POST', credentials: 'include', body: fd });
+                if (!res.ok) { const d = await res.json(); msgEl.textContent = d.error || 'Upload failed.'; msgEl.style.color = '#dc2626'; return; }
+                msgEl.textContent = '✓ Uploaded!'; msgEl.style.color = '#059669';
+                fileEl.value = ''; if (nameEl) nameEl.value = '';
+                await renderDocsPanel(listingId);
+            } catch { msgEl.textContent = 'Upload failed.'; msgEl.style.color = '#dc2626'; }
+        }
+
+        async function deleteDoc(listingId, docId) {
+            if (!confirm('Delete this document?')) return;
+            await fetch(`/api/listings/${listingId}/documents/${docId}`, { method: 'DELETE', credentials: 'include' });
+            await renderDocsPanel(listingId);
         }
 
         // ===== BOOST =====

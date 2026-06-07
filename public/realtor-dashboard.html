@@ -1176,6 +1176,46 @@
                 <h2 style="font-family: 'Crimson Pro', serif; font-size: 2rem;">Won Listings &amp; Deals</h2>
             </div>
             <div class="bids-list" id="wonListingsList"></div>
+
+            <!-- Open Houses -->
+            <div style="margin-top:2.5rem;">
+                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;margin-bottom:1rem;">
+                    <h3 style="font-family:'Crimson Pro',serif;font-size:1.5rem;font-weight:700;color:var(--ink);">Open Houses</h3>
+                    <button onclick="document.getElementById('openHouseForm').style.display=document.getElementById('openHouseForm').style.display==='none'?'block':'none'" style="background:var(--accent);color:white;border:none;border-radius:8px;padding:0.5rem 1.25rem;font-weight:600;cursor:pointer;font-size:0.875rem;font-family:inherit;">+ Schedule Open House</button>
+                </div>
+                <div id="openHouseForm" style="display:none;background:#f8f9fa;border:1px solid var(--border);border-radius:12px;padding:1.25rem;margin-bottom:1.25rem;">
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:0.75rem;">
+                        <div>
+                            <label style="font-size:0.8rem;font-weight:600;color:#374151;display:block;margin-bottom:0.3rem;">Listing</label>
+                            <select id="ohListingId" style="width:100%;padding:0.55rem 0.75rem;border:1px solid var(--border);border-radius:7px;font-family:inherit;font-size:0.875rem;"></select>
+                        </div>
+                        <div>
+                            <label style="font-size:0.8rem;font-weight:600;color:#374151;display:block;margin-bottom:0.3rem;">Date &amp; Time</label>
+                            <input type="datetime-local" id="ohScheduledAt" style="width:100%;padding:0.55rem 0.75rem;border:1px solid var(--border);border-radius:7px;font-family:inherit;font-size:0.875rem;">
+                        </div>
+                        <div>
+                            <label style="font-size:0.8rem;font-weight:600;color:#374151;display:block;margin-bottom:0.3rem;">Duration (min)</label>
+                            <select id="ohDuration" style="width:100%;padding:0.55rem 0.75rem;border:1px solid var(--border);border-radius:7px;font-family:inherit;font-size:0.875rem;">
+                                <option value="30">30 min</option>
+                                <option value="60" selected>1 hour</option>
+                                <option value="90">1.5 hours</option>
+                                <option value="120">2 hours</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="font-size:0.8rem;font-weight:600;color:#374151;display:block;margin-bottom:0.3rem;">Notes (optional)</label>
+                            <input type="text" id="ohNotes" placeholder="e.g. Refreshments provided" style="width:100%;padding:0.55rem 0.75rem;border:1px solid var(--border);border-radius:7px;font-family:inherit;font-size:0.875rem;">
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:0.75rem;align-items:center;">
+                        <button onclick="createOpenHouse()" style="background:#0a2540;color:white;border:none;border-radius:8px;padding:0.55rem 1.25rem;font-weight:600;cursor:pointer;font-size:0.875rem;font-family:inherit;">Schedule</button>
+                        <span id="ohMsg" style="font-size:0.85rem;"></span>
+                    </div>
+                </div>
+                <div id="openHousesList" style="display:flex;flex-direction:column;gap:0.75rem;">
+                    <div style="color:#9ca3af;font-size:0.875rem;">Loading…</div>
+                </div>
+            </div>
         </section>
 
         <!-- Saved Listings View -->
@@ -1729,7 +1769,19 @@
                 <!-- Availability -->
                 <div style="background:white;border-radius:12px;border:1px solid var(--border);padding:1.5rem;">
                     <h3 style="font-family:'Crimson Pro',serif;font-size:1.3rem;font-weight:700;margin-bottom:0.25rem;color:var(--ink);">Availability</h3>
-                    <p style="color:#6b7280;font-size:0.875rem;margin-bottom:1.25rem;">Set the days and times you're available to meet with sellers.</p>
+                    <p style="color:#6b7280;font-size:0.875rem;margin-bottom:1rem;">Set the days and times you're available to meet with sellers.</p>
+                    <!-- Away/unavailable toggle -->
+                    <div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;padding:0.875rem 1rem;margin-bottom:1.25rem;">
+                        <label style="font-size:0.85rem;font-weight:600;color:#92400e;display:block;margin-bottom:0.5rem;">Mark as Away</label>
+                        <div style="display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap;">
+                            <label style="font-size:0.82rem;color:#78350f;">Away until:</label>
+                            <input type="date" id="unavailableUntil" style="padding:0.4rem 0.75rem;border:1px solid #fcd34d;border-radius:6px;font-family:inherit;font-size:0.875rem;background:white;">
+                            <button onclick="saveUnavailableUntil()" style="background:#d97706;color:white;border:none;border-radius:6px;padding:0.4rem 0.875rem;font-weight:600;cursor:pointer;font-size:0.82rem;font-family:inherit;">Save</button>
+                            <button onclick="clearUnavailableUntil()" style="background:white;color:#92400e;border:1px solid #fcd34d;border-radius:6px;padding:0.4rem 0.875rem;font-weight:600;cursor:pointer;font-size:0.82rem;font-family:inherit;">Clear</button>
+                            <span id="unavailSaved" style="display:none;color:#059669;font-size:0.82rem;">✓ Saved</span>
+                        </div>
+                        <p style="font-size:0.78rem;color:#92400e;margin-top:0.4rem;">Sellers will see an "Away" badge on your proposals until this date.</p>
+                    </div>
                     <!-- Add slot form -->
                     <div style="display:flex;gap:0.75rem;flex-wrap:wrap;align-items:flex-end;margin-bottom:1.25rem;">
                         <div style="display:flex;flex-direction:column;gap:0.3rem;">
@@ -2327,6 +2379,7 @@
                 renderMyBids(myBidsData);
                 renderWonListings(myBidsData);
                 await loadListings();
+                loadMyOpenHouses(myBidsData);
             } catch (error) {
                 console.error('Error loading dashboard:', error);
             }
@@ -2380,6 +2433,7 @@
                             <span>📏 ${listing.sqft.toLocaleString()} sqft</span>
                         </div>
                         <div class="listing-description">${listing.description}</div>
+                        ${renderDeadlineBadgeR(listing)}
                         ${isFreePlan && !hasPaidLead && !alreadyProposed ? `<div style="font-size:0.78rem;color:#6b7280;margin-bottom:0.5rem;">Start your free trial to submit proposals · <a href="/pricing" style="color:var(--accent);">See plans →</a></div>` : ''}
                         ${actionBtn}
                     </div>
@@ -4850,6 +4904,88 @@
             }
         }
 
+        // ─── Open Houses ─────────────────────────────────────────────────────────
+        async function loadMyOpenHouses(wonBids) {
+            const list = document.getElementById('openHousesList');
+            const sel = document.getElementById('ohListingId');
+            if (!list) return;
+            // Populate listing dropdown with accepted proposals
+            if (sel) {
+                const won = (wonBids || []).filter(b => b.status === 'accepted');
+                sel.innerHTML = won.length
+                    ? won.map(b => `<option value="${b.listing_id}">${b.address || 'Listing #' + b.listing_id}</option>`).join('')
+                    : '<option value="">No accepted proposals yet</option>';
+            }
+            try {
+                const res = await fetch('/api/realtors/me/open-houses', { credentials: 'include' });
+                const houses = res.ok ? await res.json() : [];
+                if (!houses.length) { list.innerHTML = '<div style="color:#9ca3af;font-size:0.875rem;">No open houses scheduled yet.</div>'; return; }
+                list.innerHTML = houses.map(oh => {
+                    const dt = new Date(oh.scheduled_at);
+                    const label = dt.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' }) + ' at ' + dt.toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit' });
+                    const addr = [oh.address, oh.city, oh.state].filter(Boolean).join(', ');
+                    const isPast = dt < new Date();
+                    return `<div style="background:white;border:1px solid var(--border);border-radius:10px;padding:1rem 1.25rem;display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;${isPast ? 'opacity:0.6;' : ''}">
+                        <div>
+                            <div style="font-weight:600;font-size:0.9rem;">${addr}</div>
+                            <div style="font-size:0.82rem;color:#6b7280;margin-top:0.2rem;">📅 ${label} · ${oh.duration_minutes} min · ${oh.rsvp_count} RSVP${oh.rsvp_count !== 1 ? 's' : ''}</div>
+                            ${oh.notes ? `<div style="font-size:0.8rem;color:#9ca3af;margin-top:0.15rem;">${oh.notes}</div>` : ''}
+                        </div>
+                        ${!isPast ? `<button onclick="deleteOpenHouse(${oh.id})" style="background:none;border:1px solid #e5e7eb;color:#ef4444;border-radius:6px;padding:0.35rem 0.75rem;cursor:pointer;font-size:0.8rem;font-family:inherit;">Cancel</button>` : '<span style="font-size:0.75rem;color:#9ca3af;">Past</span>'}
+                    </div>`;
+                }).join('');
+            } catch { list.innerHTML = '<div style="color:#9ca3af;font-size:0.875rem;">Could not load open houses.</div>'; }
+        }
+
+        async function createOpenHouse() {
+            const listingId = document.getElementById('ohListingId')?.value;
+            const scheduledAt = document.getElementById('ohScheduledAt')?.value;
+            const duration = document.getElementById('ohDuration')?.value;
+            const notes = document.getElementById('ohNotes')?.value;
+            const msg = document.getElementById('ohMsg');
+            if (!listingId || !scheduledAt) { msg.textContent = 'Please select a listing and date/time.'; msg.style.color = '#dc2626'; return; }
+            msg.textContent = 'Saving…'; msg.style.color = '#6b7280';
+            try {
+                const res = await fetch('/api/open-houses', {
+                    method: 'POST', credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ listing_id: listingId, scheduled_at: scheduledAt, duration_minutes: duration, notes })
+                });
+                const d = await res.json();
+                if (!res.ok) { msg.textContent = d.error || 'Failed'; msg.style.color = '#dc2626'; return; }
+                msg.textContent = '✓ Scheduled!'; msg.style.color = '#059669';
+                document.getElementById('ohNotes').value = '';
+                // Reload
+                const bidsRes = await fetch('/api/proposals/my', { credentials: 'include' });
+                const bids = bidsRes.ok ? await bidsRes.json() : [];
+                loadMyOpenHouses(bids);
+            } catch { msg.textContent = 'Error'; msg.style.color = '#dc2626'; }
+        }
+
+        async function deleteOpenHouse(id) {
+            if (!confirm('Cancel this open house?')) return;
+            await fetch(`/api/open-houses/${id}`, { method: 'DELETE', credentials: 'include' });
+            const bidsRes = await fetch('/api/proposals/my', { credentials: 'include' });
+            const bids = bidsRes.ok ? await bidsRes.json() : [];
+            loadMyOpenHouses(bids);
+        }
+
+        async function saveUnavailableUntil() {
+            const date = document.getElementById('unavailableUntil')?.value;
+            const saved = document.getElementById('unavailSaved');
+            await fetch('/api/profile', {
+                method: 'PUT', credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ unavailable_until: date || null })
+            });
+            if (saved) { saved.style.display = 'inline'; setTimeout(() => saved.style.display = 'none', 2000); }
+        }
+
+        async function clearUnavailableUntil() {
+            document.getElementById('unavailableUntil').value = '';
+            await saveUnavailableUntil();
+        }
+
         // ─── Availability ─────────────────────────────────────────────────────────
         const DAY_NAMES = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
         async function loadAvailability() {
@@ -4909,6 +5045,53 @@
             } catch(e) { showToast('Network error.', 'error'); }
         }
 
+        function renderDeadlineBadgeR(listing) {
+            if (!listing.proposal_deadline) return '';
+            const deadline = new Date(listing.proposal_deadline);
+            const daysLeft = Math.ceil((deadline - new Date()) / (1000*60*60*24));
+            if (daysLeft < 0) return '';
+            const color = daysLeft <= 2 ? '#dc2626' : daysLeft <= 5 ? '#d97706' : '#059669';
+            const bg = daysLeft <= 2 ? '#fee2e2' : daysLeft <= 5 ? '#fef3c7' : '#d1fae5';
+            return `<div style="display:inline-block;background:${bg};color:${color};font-size:0.73rem;font-weight:700;padding:2px 8px;border-radius:20px;margin:0.25rem 0 0.5rem;">⏰ ${daysLeft === 0 ? 'Deadline today' : daysLeft + 'd left'}</div>`;
+        }
+
+        async function loadComps() {
+            const listingId = document.getElementById('proposalListingId')?.value;
+            if (!listingId) return;
+            const loading = document.getElementById('compsLoading');
+            const panel = document.getElementById('compsPanel');
+            const body = document.getElementById('compsBody');
+            loading.style.display = 'inline'; panel.style.display = 'none';
+            try {
+                const res = await fetch(`/api/listings/${listingId}/comps`, { credentials: 'include' });
+                const comps = res.ok ? await res.json() : [];
+                loading.style.display = 'none';
+                if (!comps.length) { body.innerHTML = '<div style="color:#9ca3af;font-size:0.8rem;">No nearby listings found.</div>'; panel.style.display = 'block'; return; }
+                body.innerHTML = comps.map(c => `
+                    <div style="display:flex;justify-content:space-between;align-items:center;padding:0.3rem 0;border-bottom:1px solid #e5e7eb;font-size:0.8rem;">
+                        <span style="color:#374151;">${c.address} <span style="color:#9ca3af;">${c.distance_miles}mi</span></span>
+                        <span style="font-weight:700;color:#0a2540;">$${Number(c.price).toLocaleString()}</span>
+                        <span style="color:#6b7280;">${c.bedrooms}bd/${c.bathrooms}ba</span>
+                        <span style="background:${c.status==='active'?'#d1fae5':'#f3f4f6'};color:${c.status==='active'?'#065f46':'#374151'};padding:1px 6px;border-radius:10px;">${c.status}</span>
+                    </div>`).join('');
+                panel.style.display = 'block';
+            } catch { loading.style.display = 'none'; }
+        }
+
+        async function loadListingDocs(listingId) {
+            const panel = document.getElementById('listingDocsPanel');
+            const body = document.getElementById('listingDocsBody');
+            if (!panel || !body) return;
+            try {
+                const res = await fetch(`/api/listings/${listingId}/documents`, { credentials: 'include' });
+                if (!res.ok) return;
+                const docs = await res.json();
+                if (!docs.length) return;
+                panel.style.display = 'block';
+                body.innerHTML = docs.map(d => `<div style="font-size:0.82rem;padding:0.2rem 0;"><a href="${d.url}" target="_blank" style="color:#0284c7;text-decoration:none;">📎 ${d.name}</a></div>`).join('');
+            } catch { /* silent */ }
+        }
+
         function showProposalModal(listingId, listingAddress) {
             // Check if already submitted
             const existing = mySubmittedProposals.find(p => p.listing_id === listingId);
@@ -4920,9 +5103,14 @@
             if (!modal) return;
             document.getElementById('proposalListingId').value = listingId;
             document.getElementById('proposalListingAddr').textContent = listingAddress;
+            // Reset comps panel
+            const cp = document.getElementById('compsPanel'); if (cp) cp.style.display = 'none';
+            const dp = document.getElementById('listingDocsPanel'); if (dp) dp.style.display = 'none';
             modal.style.display = 'flex';
             // Load templates if not yet loaded
             if (!_templates.length) loadTemplates();
+            // Load docs for this listing
+            loadListingDocs(listingId);
         }
 
         function closeProposalModal() {
@@ -5737,7 +5925,21 @@
                 <h2 style="font-family:'Crimson Pro',serif;font-size:1.5rem;">Submit Proposal</h2>
                 <button onclick="closeProposalModal()" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:#666;">&times;</button>
             </div>
-            <p id="proposalListingAddr" style="color:#666;font-size:0.9rem;margin-bottom:1.5rem;font-style:italic;"></p>
+            <p id="proposalListingAddr" style="color:#666;font-size:0.9rem;margin-bottom:0.75rem;font-style:italic;"></p>
+            <!-- CMA Comps -->
+            <div style="margin-bottom:1rem;">
+                <button type="button" onclick="loadComps()" style="background:#f3f4f6;border:1px solid #e5e7eb;color:#374151;padding:0.4rem 0.9rem;border-radius:6px;font-size:0.8rem;font-weight:600;cursor:pointer;font-family:inherit;">📊 Get Nearby Comps</button>
+                <span id="compsLoading" style="display:none;font-size:0.8rem;color:#9ca3af;margin-left:0.5rem;">Loading…</span>
+            </div>
+            <div id="compsPanel" style="display:none;margin-bottom:1rem;background:#f8f9fa;border:1px solid #e5e7eb;border-radius:8px;padding:0.75rem;max-height:160px;overflow-y:auto;">
+                <div style="font-size:0.78rem;font-weight:700;color:#374151;margin-bottom:0.5rem;">NEARBY COMPARABLE LISTINGS</div>
+                <div id="compsBody"></div>
+            </div>
+            <!-- Listing Docs -->
+            <div id="listingDocsPanel" style="display:none;margin-bottom:1rem;background:#fdf4f2;border:1px solid var(--border,#e8ded8);border-radius:8px;padding:0.75rem;">
+                <div style="font-size:0.78rem;font-weight:700;color:#374151;margin-bottom:0.4rem;">📄 SELLER DOCUMENTS</div>
+                <div id="listingDocsBody"></div>
+            </div>
             <form onsubmit="submitProposalForm(event)">
                 <input type="hidden" id="proposalListingId">
                 <div style="margin-bottom:1rem;">
