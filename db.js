@@ -565,7 +565,8 @@ const db = {
         const [dataRes, countRes] = await Promise.all([
             pool.query(
                 `SELECT id, email, user_type, first_name, last_name, zip_code,
-                        email_verified, is_active, is_admin, is_approved, created_at
+                        email_verified, is_active, is_admin, is_approved, created_at,
+                        crm_stage, crm_flags
                  FROM users u
                  ${where}
                  ORDER BY created_at DESC

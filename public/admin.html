@@ -555,6 +555,119 @@
             font-size: 0.8rem;
             font-family: monospace;
         }
+
+        /* ── CRM Stage Badges ── */
+        .crm-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        .crm-new      { background: #F3F4F6; color: #6B7280; border: 1px solid #D1D5DB; }
+        .crm-prospect { background: #EFF6FF; color: #1D4ED8; border: 1px solid #BFDBFE; }
+        .crm-active   { background: #ECFDF5; color: #065F46; border: 1px solid #A7F3D0; }
+        .crm-at_risk  { background: #FEFCE8; color: #854D0E; border: 1px solid #FDE68A; }
+        .crm-churned  { background: #FEF2F2; color: #991B1B; border: 1px solid #FECACA; }
+
+        /* ── User Detail Panel ── */
+        #user-detail-panel {
+            transform: translateX(100%);
+            transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        #user-detail-panel.panel-open {
+            transform: translateX(0);
+        }
+
+        .detail-section {
+            margin-bottom: 1.5rem;
+        }
+        .detail-section-title {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-muted);
+            margin-bottom: 0.6rem;
+        }
+        .detail-stats-row {
+            display: flex;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+        .detail-stat-box {
+            flex: 1;
+            background: var(--soft-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.6rem 0.75rem;
+            text-align: center;
+        }
+        .detail-stat-val {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+        .detail-stat-lbl {
+            font-size: 0.68rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .flag-btn {
+            padding: 5px 10px;
+            border-radius: 7px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: 1px solid var(--border);
+            background: var(--soft-bg);
+            color: var(--text-muted);
+            transition: background 0.15s, color 0.15s, border-color 0.15s;
+        }
+        .flag-btn.flag-on {
+            background: #FFF7ED;
+            color: #C2410C;
+            border-color: #FED7AA;
+        }
+        .note-item {
+            border-bottom: 1px solid var(--border);
+            padding: 0.6rem 0;
+            display: flex;
+            gap: 0.5rem;
+            align-items: flex-start;
+        }
+        .note-item:last-child { border-bottom: none; }
+        .note-meta {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-bottom: 2px;
+        }
+        .note-body {
+            font-size: 0.875rem;
+            white-space: pre-wrap;
+        }
+
+        /* ── Signup Bar Chart ── */
+        #signup-chart .bar-wrap {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex: 1;
+        }
+        #signup-chart .bar {
+            background: #6366f1;
+            border-radius: 3px 3px 0 0;
+            width: 100%;
+            min-height: 4px;
+            transition: height 0.4s;
+        }
+
+        /* ── Clickable user rows ── */
+        #users-tbody tr { cursor: pointer; }
+        #users-tbody tr td:first-child { cursor: default; }
     </style>
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#0A2540">
@@ -746,6 +859,12 @@
             </div>
 
             <div style="padding:0 28px 28px;">
+                <h3 style="font-size:1.1rem;font-weight:700;color:#0A2540;margin-bottom:1rem;">Signups — Last 12 Weeks</h3>
+                <div id="signup-chart" style="display:flex;align-items:flex-end;gap:4px;height:80px;"></div>
+                <div id="signup-chart-labels" style="display:flex;gap:4px;margin-top:4px;font-size:0.68rem;color:#9ca3af;"></div>
+            </div>
+
+            <div style="padding:0 28px 28px;">
                 <h3 style="font-size:1.1rem;font-weight:700;color:#0A2540;margin-bottom:16px;">CRM Overview</h3>
                 <div class="stats-grid" id="crm-stats-grid">
                     <div class="stat-card"><span class="stat-icon">🤝</span><span class="stat-value" id="cs-realtors">—</span><span class="stat-label">Total Realtors</span></div>
@@ -764,6 +883,22 @@
 
     <!-- Users tab -->
     <div class="tab-panel active" id="tab-users">
+        <!-- Filter Bar -->
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.75rem;align-items:center;">
+            <input type="text" id="users-search" placeholder="Search name or email…" oninput="filterUsers()" style="padding:7px 12px;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.875rem;outline:none;min-width:200px;">
+            <select id="users-type-filter" onchange="filterUsers()" style="padding:7px 12px;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.875rem;outline:none;background:white;">
+                <option value="">All Types</option>
+                <option value="seller">Sellers</option>
+                <option value="realtor">Realtors</option>
+                <option value="buyer">Buyers</option>
+            </select>
+            <select id="users-status-filter" onchange="filterUsers()" style="padding:7px 12px;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.875rem;outline:none;background:white;">
+                <option value="">All Statuses</option>
+                <option value="active">Active</option>
+                <option value="deactivated">Deactivated</option>
+                <option value="waitlist">Waitlisted</option>
+            </select>
+        </div>
         <!-- Bulk Actions Bar -->
         <div style="background:var(--white);border:1px solid var(--border);border-radius:12px;padding:0.875rem 1.25rem;margin-bottom:1rem;display:flex;align-items:center;gap:0.6rem;flex-wrap:wrap;">
             <span style="font-size:0.8rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-right:0.25rem;">Bulk Actions</span>
@@ -1500,6 +1635,13 @@
     </div>
 </div>
 
+<!-- User Detail Panel -->
+<div id="user-detail-overlay" onclick="closeUserDetail()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.35);z-index:1000;"></div>
+<div id="user-detail-panel" style="display:none;position:fixed;top:0;right:0;width:480px;max-width:100%;height:100vh;background:white;box-shadow:-4px 0 24px rgba(0,0,0,0.12);z-index:1001;overflow-y:auto;padding:2rem;">
+    <button onclick="closeUserDetail()" style="position:absolute;top:1rem;right:1rem;background:none;border:none;font-size:1.3rem;cursor:pointer;color:#9ca3af;">✕</button>
+    <div id="user-detail-content">Loading…</div>
+</div>
+
 <!-- Toast -->
 <div id="toast"></div>
 
@@ -1620,7 +1762,7 @@
         document.getElementById('tab-' + name).classList.add('active');
         if (name === 'reviews') loadAdminReviews();
         if (name === 'license-queue') loadLicenseQueue();
-        if (name === 'stats') { loadCrmStats(); loadFunnelAnalytics(); }
+        if (name === 'stats') { loadCrmStats(); loadFunnelAnalytics(); loadSignupChart(); }
         if (name === 'crm-realtors') loadCrmRealtors();
         if (name === 'crm-homeowner-leads') { loadCrmLeads(); loadApprovedRealtorsList(); }
         if (name === 'crm-matches') loadMatches();
@@ -1856,6 +1998,51 @@
         }
     }
 
+    function filterUsers() {
+        const search = (document.getElementById('users-search').value || '').toLowerCase();
+        const typeFilter = document.getElementById('users-type-filter').value;
+        const statusFilter = document.getElementById('users-status-filter').value;
+        let filtered = usersData;
+        if (search) {
+            filtered = filtered.filter(u => {
+                const name = ((u.first_name || '') + ' ' + (u.last_name || '')).toLowerCase();
+                return name.includes(search) || (u.email || '').toLowerCase().includes(search);
+            });
+        }
+        if (typeFilter) {
+            filtered = filtered.filter(u => u.user_type === typeFilter);
+        }
+        if (statusFilter === 'active') {
+            filtered = filtered.filter(u => u.is_active !== false && u.is_approved);
+        } else if (statusFilter === 'deactivated') {
+            filtered = filtered.filter(u => u.is_active === false);
+        } else if (statusFilter === 'waitlist') {
+            filtered = filtered.filter(u => !u.is_approved && u.is_active !== false);
+        }
+        renderUsers(filtered);
+    }
+
+    function crmStageBadge(stage) {
+        const map = {
+            new:      { cls: 'crm-new',      label: 'New' },
+            prospect: { cls: 'crm-prospect',  label: 'Prospect' },
+            active:   { cls: 'crm-active',    label: 'Active' },
+            at_risk:  { cls: 'crm-at_risk',   label: 'At Risk' },
+            churned:  { cls: 'crm-churned',   label: 'Churned' },
+        };
+        const s = map[stage] || map['new'];
+        return `<span class="crm-badge ${s.cls}">${s.label}</span>`;
+    }
+
+    function crmFlagIcons(flags) {
+        if (!flags) return '';
+        const icons = [];
+        if (flags.vip)     icons.push('<span title="VIP">⭐</span>');
+        if (flags.at_risk) icons.push('<span title="At Risk">⚠️</span>');
+        if (flags.watch)   icons.push('<span title="Watch">👀</span>');
+        return icons.length ? `<span style="margin-left:4px;">${icons.join('')}</span>` : '';
+    }
+
     function typeBadge(type) {
         const map = {
             seller: 'badge-seller',
@@ -1918,21 +2105,22 @@
         }
     }
 
-    function renderUsers() {
+    function renderUsers(data) {
+        const displayData = data !== undefined ? data : usersData;
         const tbody = document.getElementById('users-tbody');
-        document.getElementById('users-count').textContent = usersData.length + ' users';
+        document.getElementById('users-count').textContent = displayData.length + ' users';
         // Reset select-all on re-render
         const selAll = document.getElementById('users-select-all');
         if (selAll) { selAll.checked = false; selAll.indeterminate = false; }
         selectedUserIds.clear();
         updateBulkCount();
 
-        if (!usersData.length) {
+        if (!displayData.length) {
             tbody.innerHTML = '<tr><td colspan="10" class="empty-state">No users found.</td></tr>';
             return;
         }
 
-        tbody.innerHTML = usersData.map(u => {
+        tbody.innerHTML = displayData.map(u => {
             const name = [u.first_name, u.last_name].filter(Boolean).join(' ') || '—';
             const verified = (u.email_verified || u.emailVerified)
                 ? '<span class="verified-yes" title="Verified">✓</span>'
@@ -1945,23 +2133,24 @@
                 ? '<span class="badge badge-active">Active</span>'
                 : '<span class="badge badge-deactivated">Deactivated</span>';
             const approveBtn = u.is_approved
-                ? `<button class="btn-action btn-deactivate" onclick="unapproveUser(${u.id}, this)" style="margin-right:4px">Waitlist</button>`
-                : `<button class="btn-action btn-reactivate" onclick="approveUser(${u.id}, this)" style="margin-right:4px">Approve</button>`;
+                ? `<button class="btn-action btn-deactivate" onclick="event.stopPropagation();unapproveUser(${u.id}, this)" style="margin-right:4px">Waitlist</button>`
+                : `<button class="btn-action btn-reactivate" onclick="event.stopPropagation();approveUser(${u.id}, this)" style="margin-right:4px">Approve</button>`;
             const activateBtn = active
-                ? `<button class="btn-action btn-deactivate" onclick="deactivateUser(${u.id}, this)">Deactivate</button>`
-                : `<button class="btn-action btn-reactivate" onclick="reactivateUser(${u.id}, this)">Reactivate</button>`;
+                ? `<button class="btn-action btn-deactivate" onclick="event.stopPropagation();deactivateUser(${u.id}, this)">Deactivate</button>`
+                : `<button class="btn-action btn-reactivate" onclick="event.stopPropagation();reactivateUser(${u.id}, this)">Reactivate</button>`;
+            const crmFlags = typeof u.crm_flags === 'string' ? JSON.parse(u.crm_flags || '{}') : (u.crm_flags || {});
 
-            return `<tr>
-                <td style="text-align:center;"><input type="checkbox" class="user-row-cb" data-id="${u.id}" onchange="onUserCheckbox(this)"></td>
+            return `<tr onclick="openUserDetail(${u.id})">
+                <td style="text-align:center;" onclick="event.stopPropagation()"><input type="checkbox" class="user-row-cb" data-id="${u.id}" onchange="onUserCheckbox(this)"></td>
                 <td class="id-cell">#${u.id}</td>
-                <td class="name-cell">${escHtml(name)}</td>
+                <td class="name-cell">${escHtml(name)}${crmStageBadge(u.crm_stage || 'new')}${crmFlagIcons(crmFlags)}</td>
                 <td>${escHtml(u.email)}</td>
                 <td>${typeBadge(u.user_type)}</td>
                 <td style="text-align:center">${verified}</td>
                 <td style="text-align:center">${approved}</td>
                 <td>${statusBadge}</td>
                 <td class="td-muted">${fmtDate(u.created_at)}</td>
-                <td>${approveBtn}${activateBtn}</td>
+                <td onclick="event.stopPropagation()">${approveBtn}${activateBtn}</td>
             </tr>`;
         }).join('');
     }
@@ -3028,6 +3217,292 @@
             if (label) label.textContent = 'Failed to load health data';
             showToast('Failed to load health data', 'error');
         }
+    }
+
+    // ── User Detail Panel ─────────────────────────────────────────────────────
+
+    let _detailUserId = null;
+
+    function openUserDetail(userId) {
+        _detailUserId = userId;
+        const overlay = document.getElementById('user-detail-overlay');
+        const panel   = document.getElementById('user-detail-panel');
+        overlay.style.display = 'block';
+        panel.style.display   = 'block';
+        // Force reflow before adding class for animation
+        panel.offsetHeight;
+        panel.classList.add('panel-open');
+        document.getElementById('user-detail-content').innerHTML = '<p style="color:var(--text-muted);">Loading…</p>';
+        _loadUserDetail(userId);
+    }
+
+    function closeUserDetail() {
+        const overlay = document.getElementById('user-detail-overlay');
+        const panel   = document.getElementById('user-detail-panel');
+        panel.classList.remove('panel-open');
+        setTimeout(() => {
+            overlay.style.display = 'none';
+            panel.style.display   = 'none';
+        }, 280);
+        _detailUserId = null;
+    }
+
+    async function _loadUserDetail(userId) {
+        try {
+            const [detailRes, notesRes] = await Promise.all([
+                fetch(`/api/admin/users/${userId}/detail`, { credentials: 'include' }),
+                fetch(`/api/admin/users/${userId}/notes`, { credentials: 'include' })
+            ]);
+            const { user, stats } = await detailRes.json();
+            const notes = await notesRes.json();
+            _renderUserDetail(user, stats, notes);
+        } catch (err) {
+            document.getElementById('user-detail-content').innerHTML =
+                '<p style="color:#ef4444;">Failed to load user detail.</p>';
+        }
+    }
+
+    function _renderUserDetail(user, stats, notes) {
+        const name = [user.first_name, user.last_name].filter(Boolean).join(' ') || '—';
+        const crmFlags = typeof user.crm_flags === 'string'
+            ? JSON.parse(user.crm_flags || '{}')
+            : (user.crm_flags || {});
+        const stage = user.crm_stage || 'new';
+        const isActive = user.is_active !== false;
+        const isApproved = !!user.is_approved;
+
+        const stageOptions = ['prospect','new','active','at_risk','churned']
+            .map(s => `<option value="${s}" ${stage === s ? 'selected' : ''}>${s.replace('_',' ')}</option>`)
+            .join('');
+
+        const flagBtnClass = (key) => crmFlags[key] ? 'flag-btn flag-on' : 'flag-btn';
+
+        const notesHtml = notes.length ? notes.map(n => `
+            <div class="note-item">
+                <div style="flex:1">
+                    <div class="note-meta">${fmtDate(n.created_at)} — ${escHtml(n.author_name || 'Admin')}</div>
+                    <div class="note-body">${escHtml(n.note)}</div>
+                </div>
+                <button onclick="deleteUserNote(${n.id}, ${user.id})" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:0.85rem;flex-shrink:0;padding:2px 4px;">✕</button>
+            </div>`).join('') : '<p style="color:var(--text-muted);font-size:0.875rem;">No notes yet.</p>';
+
+        document.getElementById('user-detail-content').innerHTML = `
+            <div style="margin-bottom:1.5rem;padding-right:2rem;">
+                <div style="font-size:1.4rem;font-weight:700;color:var(--primary);">${escHtml(name)}</div>
+                <div style="color:var(--text-muted);font-size:0.875rem;margin:2px 0 6px;">${escHtml(user.email)}</div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+                    ${typeBadge(user.user_type)}
+                    ${crmStageBadge(stage)}
+                    <span style="font-size:0.78rem;color:var(--text-muted);">Joined ${fmtDate(user.created_at)}</span>
+                </div>
+            </div>
+
+            <div class="detail-section">
+                <div class="detail-section-title">Activity</div>
+                <div class="detail-stats-row">
+                    <div class="detail-stat-box">
+                        <div class="detail-stat-val">${stats.listings_count || 0}</div>
+                        <div class="detail-stat-lbl">Listings</div>
+                    </div>
+                    <div class="detail-stat-box">
+                        <div class="detail-stat-val">${stats.proposals_count || 0}</div>
+                        <div class="detail-stat-lbl">Proposals</div>
+                    </div>
+                    <div class="detail-stat-box">
+                        <div class="detail-stat-val" style="font-size:0.85rem;">${stats.last_active ? fmtDate(stats.last_active) : '—'}</div>
+                        <div class="detail-stat-lbl">Last Active</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="detail-section">
+                <div class="detail-section-title">CRM Stage</div>
+                <select id="detail-crm-stage" onchange="updateUserCrm(${user.id})" style="padding:7px 12px;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.875rem;width:100%;background:white;">
+                    ${stageOptions}
+                </select>
+            </div>
+
+            <div class="detail-section">
+                <div class="detail-section-title">Flags</div>
+                <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+                    <button id="flag-vip" class="${flagBtnClass('vip')}" onclick="toggleFlag(${user.id},'vip')">⭐ VIP</button>
+                    <button id="flag-at_risk" class="${flagBtnClass('at_risk')}" onclick="toggleFlag(${user.id},'at_risk')">⚠️ At-Risk</button>
+                    <button id="flag-watch" class="${flagBtnClass('watch')}" onclick="toggleFlag(${user.id},'watch')">👀 Watch</button>
+                </div>
+            </div>
+
+            <div class="detail-section">
+                <div class="detail-section-title">Quick Actions</div>
+                <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+                    <button class="btn-action" onclick="impersonateFromPanel(${user.id})" style="background:#EFF6FF;color:#1D4ED8;border:1px solid #BFDBFE;">Impersonate</button>
+                    ${isApproved
+                        ? `<button class="btn-action btn-deactivate" onclick="unapproveUser(${user.id},this);closeUserDetail()">Move to Waitlist</button>`
+                        : `<button class="btn-action btn-reactivate" onclick="approveUser(${user.id},this);closeUserDetail()">Approve</button>`
+                    }
+                    ${isActive
+                        ? `<button class="btn-action btn-deactivate" onclick="deactivateUser(${user.id},this);closeUserDetail()">Deactivate</button>`
+                        : `<button class="btn-action btn-reactivate" onclick="reactivateUser(${user.id},this);closeUserDetail()">Reactivate</button>`
+                    }
+                </div>
+            </div>
+
+            <div class="detail-section">
+                <div class="detail-section-title">Admin Notes</div>
+                <div id="detail-notes-list">${notesHtml}</div>
+                <div style="margin-top:0.75rem;">
+                    <textarea id="detail-note-input" rows="3" placeholder="Add a note…" style="width:100%;padding:0.65rem 0.75rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.875rem;resize:vertical;outline:none;"></textarea>
+                    <button onclick="addUserNote(${user.id})" style="margin-top:0.5rem;padding:7px 18px;background:var(--primary);color:white;border:none;border-radius:8px;font-weight:600;font-size:0.875rem;cursor:pointer;font-family:inherit;">Add Note</button>
+                </div>
+            </div>
+        `;
+    }
+
+    async function loadUserNotes(userId) {
+        try {
+            const res = await fetch(`/api/admin/users/${userId}/notes`, { credentials: 'include' });
+            const notes = await res.json();
+            const notesHtml = notes.length ? notes.map(n => `
+                <div class="note-item">
+                    <div style="flex:1">
+                        <div class="note-meta">${fmtDate(n.created_at)} — ${escHtml(n.author_name || 'Admin')}</div>
+                        <div class="note-body">${escHtml(n.note)}</div>
+                    </div>
+                    <button onclick="deleteUserNote(${n.id}, ${userId})" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:0.85rem;flex-shrink:0;padding:2px 4px;">✕</button>
+                </div>`).join('') : '<p style="color:var(--text-muted);font-size:0.875rem;">No notes yet.</p>';
+            const el = document.getElementById('detail-notes-list');
+            if (el) el.innerHTML = notesHtml;
+        } catch { /* silently fail */ }
+    }
+
+    async function addUserNote(userId) {
+        const input = document.getElementById('detail-note-input');
+        const note = (input?.value || '').trim();
+        if (!note) return;
+        try {
+            const res = await fetch(`/api/admin/users/${userId}/notes`, {
+                method: 'POST', credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ note })
+            });
+            if (!res.ok) throw new Error();
+            if (input) input.value = '';
+            await loadUserNotes(userId);
+        } catch {
+            showToast('Failed to add note', 'error');
+        }
+    }
+
+    async function deleteUserNote(noteId, userId) {
+        try {
+            const res = await fetch(`/api/admin/notes/${noteId}`, { method: 'DELETE', credentials: 'include' });
+            if (!res.ok) throw new Error();
+            await loadUserNotes(userId);
+        } catch {
+            showToast('Failed to delete note', 'error');
+        }
+    }
+
+    function toggleFlag(userId, key) {
+        const btn = document.getElementById('flag-' + key);
+        const isOn = btn && btn.classList.contains('flag-on');
+        if (btn) {
+            if (isOn) btn.classList.remove('flag-on');
+            else btn.classList.add('flag-on');
+        }
+        updateUserCrm(userId);
+    }
+
+    async function updateUserCrm(userId) {
+        const stageEl = document.getElementById('detail-crm-stage');
+        const crm_stage = stageEl ? stageEl.value : undefined;
+        const crm_flags = {
+            vip:     document.getElementById('flag-vip')?.classList.contains('flag-on') || false,
+            at_risk: document.getElementById('flag-at_risk')?.classList.contains('flag-on') || false,
+            watch:   document.getElementById('flag-watch')?.classList.contains('flag-on') || false,
+        };
+        try {
+            const res = await fetch(`/api/admin/users/${userId}/crm`, {
+                method: 'PUT', credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ crm_stage, crm_flags })
+            });
+            if (!res.ok) throw new Error();
+            // Update cached data
+            const idx = usersData.findIndex(u => u.id === userId);
+            if (idx !== -1) {
+                usersData[idx].crm_stage = crm_stage;
+                usersData[idx].crm_flags = crm_flags;
+            }
+            showToast('Saved ✓', 'success');
+        } catch {
+            showToast('Failed to save CRM data', 'error');
+        }
+    }
+
+    async function impersonateFromPanel(userId) {
+        try {
+            const res = await fetch(`/api/admin/impersonate/${userId}`, {
+                method: 'POST', credentials: 'include'
+            });
+            const d = await res.json();
+            if (!res.ok) throw new Error(d.error || 'Failed');
+            const dashMap = { seller: '/dashboard/seller', realtor: '/dashboard/realtor', buyer: '/dashboard/buyer' };
+            const dest = dashMap[d.userType] || '/dashboard/seller';
+            showToast('Impersonating user — redirecting…', 'success');
+            setTimeout(() => { window.location.href = dest; }, 800);
+        } catch (err) {
+            showToast('Failed to impersonate: ' + err.message, 'error');
+        }
+    }
+
+    // ── Signup Trend Chart ────────────────────────────────────────────────────
+
+    async function loadSignupChart() {
+        try {
+            const res = await fetch('/api/admin/analytics/signups', { credentials: 'include' });
+            if (!res.ok) return;
+            const data = await res.json();
+            if (!data.length) return;
+            const chartEl  = document.getElementById('signup-chart');
+            const labelsEl = document.getElementById('signup-chart-labels');
+            if (!chartEl || !labelsEl) return;
+
+            const maxCount = Math.max(...data.map(d => d.count), 1);
+            chartEl.innerHTML  = '';
+            labelsEl.innerHTML = '';
+
+            data.forEach(item => {
+                const pct = Math.max((item.count / maxCount) * 80, 4);
+                const d = new Date(item.week);
+                const label = (d.getMonth() + 1) + '/' + String(d.getDate()).padStart(2,'0');
+
+                const barWrap = document.createElement('div');
+                barWrap.className = 'bar-wrap';
+                barWrap.style.flex = '1';
+                barWrap.style.display = 'flex';
+                barWrap.style.flexDirection = 'column';
+                barWrap.style.alignItems = 'center';
+                barWrap.style.justifyContent = 'flex-end';
+                barWrap.style.height = '80px';
+                barWrap.title = label + ': ' + item.count + ' signups';
+
+                const bar = document.createElement('div');
+                bar.className = 'bar';
+                bar.style.height = pct + 'px';
+                bar.style.width = '100%';
+                barWrap.appendChild(bar);
+                chartEl.appendChild(barWrap);
+
+                const lbl = document.createElement('div');
+                lbl.style.flex = '1';
+                lbl.style.textAlign = 'center';
+                lbl.style.fontSize = '0.65rem';
+                lbl.style.color = '#9ca3af';
+                lbl.style.overflow = 'hidden';
+                lbl.textContent = label;
+                labelsEl.appendChild(lbl);
+            });
+        } catch (e) { console.error('Signup chart error', e); }
     }
 
     // ── Boot ──────────────────────────────────────────────────────────────────
