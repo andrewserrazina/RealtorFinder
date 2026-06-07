@@ -879,6 +879,34 @@
         .compare-cell.label-cell { font-weight: 600; color: #666; font-size: 0.8rem; background: #f8f9fa; }
         .compare-cell.winner { background: #f0fdf4; font-weight: 700; color: #065f46; }
 
+        /* Visual status pipeline */
+        .status-pipeline { display: flex; align-items: center; gap: 0; margin: 0.75rem 0; flex-wrap: wrap; }
+        .sp-step { display: flex; align-items: center; gap: 0; }
+        .sp-dot { width: 22px; height: 22px; border-radius: 50%; border: 2px solid #d1d5db; background: white; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; font-weight: 700; color: #9ca3af; flex-shrink: 0; transition: all 0.2s; }
+        .sp-dot.active { border-color: #ff6b35; background: #ff6b35; color: white; }
+        .sp-dot.done { border-color: #22c55e; background: #22c55e; color: white; }
+        .sp-label { font-size: 0.68rem; color: #9ca3af; margin: 0 0.2rem; white-space: nowrap; }
+        .sp-label.active { color: #ff6b35; font-weight: 700; }
+        .sp-label.done { color: #22c55e; font-weight: 600; }
+        .sp-line { width: 18px; height: 2px; background: #e5e7eb; flex-shrink: 0; }
+        .sp-line.done { background: #22c55e; }
+        .sp-actions { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-top: 0.4rem; }
+        .sp-btn { font-size: 0.75rem; padding: 0.25rem 0.6rem; border-radius: 6px; border: 1px solid #d1d5db; background: white; cursor: pointer; color: #374151; font-family: inherit; }
+        .sp-btn:hover { background: #f9fafb; }
+        /* Buyer offers panel */
+        .buyer-offers-panel { margin-top: 0.75rem; border-top: 1px solid var(--border); padding-top: 0.75rem; }
+        .bo-card { background: #f9f6f3; border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 0.5rem; }
+        .bo-price { font-size: 1.1rem; font-weight: 700; color: var(--ink); }
+        .bo-meta { font-size: 0.8rem; color: #666; margin-top: 0.2rem; }
+        .bo-actions { display: flex; gap: 0.4rem; margin-top: 0.5rem; }
+        .bo-btn { font-size: 0.75rem; padding: 0.25rem 0.6rem; border-radius: 6px; border: none; cursor: pointer; font-family: inherit; font-weight: 600; }
+        .bo-btn-accept { background: #22c55e; color: white; }
+        .bo-btn-decline { background: #ef4444; color: white; }
+        .bo-status-badge { display: inline-block; padding: 0.1rem 0.5rem; border-radius: 12px; font-size: 0.7rem; font-weight: 700; }
+        .bo-status-pending { background: #fef3c7; color: #92400e; }
+        .bo-status-accepted { background: #d1fae5; color: #065f46; }
+        .bo-status-declined { background: #fee2e2; color: #991b1b; }
+
         /* Boost modal */
         .boost-option-card {
             border: 2px solid var(--border);
@@ -1834,9 +1862,11 @@
                         </div>
                         <p style="margin-top:1rem;color:#666;">${listing.description}</p>
                         <p style="margin-top:0.5rem;font-size:0.9rem;color:#999;">${listing.date} &nbsp;·&nbsp; 👁 ${listing.view_count || 0} views &nbsp;·&nbsp; 🔗 ${listing.shareViews || 0} share views &nbsp;·&nbsp; 📬 ${listing.offerCount || 0} proposals &nbsp;·&nbsp; 📅 ${Math.floor((Date.now() - new Date(listing.created_at).getTime()) / 86400000)} days on market</p>
+                        ${renderStatusPipeline(listing)}
                         ${renderDeadlineBadge(listing)}
                         ${listing.video_url ? `<div style="margin-top:0.75rem;">${renderVideoEmbed(listing.video_url, true)}</div>` : ''}
                         <div id="docs-panel-${listing.id}" style="margin-top:0.75rem;"></div>
+                        <div id="buyer-offers-panel-${listing.id}" style="display:none;"></div>
                     </div>
                     <div class="listing-actions">
                         ${isExpired
@@ -1847,11 +1877,10 @@
                         ${listing.shareToken ? `<button class="btn btn-outline" onclick="copyShareLink('${listing.shareToken}')" style="font-size:0.85rem;">🔗 Share</button>` : ''}
                         ${!isExpired ? `<button class="btn btn-outline" onclick="openEditModal(${listing.id})">Edit</button>` : ''}
                         <button class="btn btn-outline" onclick="openListingAnalytics(${listing.id})" style="font-size:0.85rem;">📊 Analytics</button>
-                        ${status === 'active' ? `<button class="btn btn-outline" onclick="markListingUnderContract(${listing.id})" style="font-size:0.85rem;border-color:#d97706;color:#d97706;">Under Contract</button>` : ''}
-                        ${status !== 'sold' && !isExpired ? `<button class="btn btn-outline" onclick="markListingSold(${listing.id})" style="font-size:0.85rem;">Mark Sold</button>` : ''}
                         <button class="btn btn-outline" onclick="deleteListing(${listing.id})" style="font-size:0.85rem;border-color:#ef4444;color:#ef4444;">Delete</button>
                         ${renderBoostControl(listing)}
                         <button class="btn btn-outline" onclick="toggleDocsPanel(${listing.id})" style="font-size:0.85rem;">📄 Docs</button>
+                        <button class="btn btn-outline" onclick="toggleBuyerOffersPanel(${listing.id})" style="font-size:0.85rem;">💰 Buyer Offers</button>
                     </div>
                 </div>
             `}).join('');
@@ -3028,6 +3057,91 @@
         }
 
         // ===== HELPERS: deadline, video, docs =====
+
+        function renderStatusPipeline(listing) {
+            const status = listing.status || 'active';
+            const steps = [
+                { key: 'active', label: 'Active' },
+                { key: 'reviewing', label: 'Reviewing' },
+                { key: 'under_contract', label: 'Under Contract' },
+                { key: 'sold', label: 'Sold' }
+            ];
+            const idx = steps.findIndex(s => s.key === status);
+            if (listing.status === 'expired' || listing.deleted_at) return '';
+            const dots = steps.map((s, i) => {
+                const cls = i < idx ? 'done' : (i === idx ? 'active' : '');
+                return `<div class="sp-step">
+                    ${i > 0 ? `<div class="sp-line${i <= idx ? ' done' : ''}"></div>` : ''}
+                    <div class="sp-dot ${cls}">${i < idx ? '✓' : (i + 1)}</div>
+                    <div class="sp-label ${cls}">${s.label}</div>
+                </div>`;
+            }).join('');
+            const nextActions = [];
+            if (status === 'active') nextActions.push(`<button class="sp-btn" onclick="advanceListingStatus(${listing.id},'reviewing')">Mark Reviewing</button>`);
+            if (status === 'active' || status === 'reviewing') nextActions.push(`<button class="sp-btn" onclick="advanceListingStatus(${listing.id},'under_contract')">Under Contract</button>`);
+            if (status !== 'sold') nextActions.push(`<button class="sp-btn" style="border-color:#22c55e;color:#15803d;" onclick="advanceListingStatus(${listing.id},'sold')">Mark Sold</button>`);
+            return `<div class="status-pipeline">${dots}</div>${nextActions.length ? `<div class="sp-actions">${nextActions.join('')}</div>` : ''}`;
+        }
+
+        async function advanceListingStatus(listingId, newStatus) {
+            const labels = { reviewing: 'Reviewing Proposals', under_contract: 'Under Contract', sold: 'Sold' };
+            if (!confirm(`Mark this listing as "${labels[newStatus] || newStatus}"?`)) return;
+            try {
+                const res = await fetch(`${API_BASE_URL}/listings/${listingId}/status`, {
+                    method: 'PUT', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+                    body: JSON.stringify({ status: newStatus })
+                });
+                if (!res.ok) throw new Error('Failed');
+                loadDashboard();
+            } catch { alert('Failed to update status.'); }
+        }
+
+        async function toggleBuyerOffersPanel(listingId) {
+            const panel = document.getElementById(`buyer-offers-panel-${listingId}`);
+            if (!panel) return;
+            if (panel.style.display === 'block' && panel.dataset.loaded === '1') { panel.style.display = 'none'; panel.dataset.loaded = ''; return; }
+            panel.style.display = 'block';
+            panel.innerHTML = '<div style="color:#aaa;font-size:0.8rem;padding:0.5rem 0;">Loading buyer offers…</div>';
+            try {
+                const res = await fetch(`${API_BASE_URL}/listings/${listingId}/buyer-offers`, { credentials: 'include' });
+                const data = await res.json();
+                panel.dataset.loaded = '1';
+                panel.innerHTML = `<div class="buyer-offers-panel">
+                    <div style="font-weight:600;font-size:0.9rem;margin-bottom:0.5rem;">💰 Buyer Offers (${data.length})</div>
+                    ${data.length === 0 ? '<div style="color:#aaa;font-size:0.82rem;">No buyer offers yet.</div>' :
+                        data.map(o => `<div class="bo-card">
+                            <div style="display:flex;align-items:center;gap:0.5rem;">
+                                <span class="bo-price">$${Number(o.offer_price).toLocaleString()}</span>
+                                <span class="bo-status-badge bo-status-${o.status}">${o.status}</span>
+                            </div>
+                            <div class="bo-meta">
+                                ${esc(o.buyer_name)} · ${esc(o.buyer_email)}
+                                ${o.closing_date_target ? ` · Close: ${new Date(o.closing_date_target).toLocaleDateString()}` : ''}
+                            </div>
+                            ${o.contingencies ? `<div class="bo-meta" style="margin-top:0.25rem;">Contingencies: ${esc(o.contingencies)}</div>` : ''}
+                            ${o.notes ? `<div class="bo-meta" style="margin-top:0.25rem;font-style:italic;">${esc(o.notes)}</div>` : ''}
+                            ${o.status === 'pending' ? `<div class="bo-actions">
+                                <button class="bo-btn bo-btn-accept" onclick="updateBuyerOfferStatus(${o.id},${listingId},'accepted')">Accept</button>
+                                <button class="bo-btn bo-btn-decline" onclick="updateBuyerOfferStatus(${o.id},${listingId},'declined')">Decline</button>
+                            </div>` : ''}
+                        </div>`).join('')}
+                </div>`;
+            } catch { panel.innerHTML = '<div style="color:#aaa;font-size:0.8rem;">Could not load buyer offers.</div>'; }
+        }
+
+        async function updateBuyerOfferStatus(offerId, listingId, status) {
+            try {
+                const res = await fetch(`${API_BASE_URL}/buyer-offers/${offerId}/status`, {
+                    method: 'PUT', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+                    body: JSON.stringify({ status })
+                });
+                if (!res.ok) throw new Error('Failed');
+                // reload the panel
+                const panel = document.getElementById(`buyer-offers-panel-${listingId}`);
+                if (panel) { panel.dataset.loaded = ''; }
+                toggleBuyerOffersPanel(listingId);
+            } catch { alert('Failed to update offer.'); }
+        }
 
         function renderDeadlineBadge(listing) {
             if (!listing.proposal_deadline) return '';

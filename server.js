@@ -1588,10 +1588,30 @@ app.put('/api/listings/:id/status', auth.requireAuth, async (req, res) => {
         if (listing.user_id !== req.session.userId) return res.status(403).json({ error: 'Forbidden' });
 
         const { status } = req.body;
-        if (!['active', 'under_contract', 'sold'].includes(status)) {
+        if (!['active', 'reviewing', 'under_contract', 'sold'].includes(status)) {
             return res.status(400).json({ error: 'Invalid status' });
         }
         const updated = await db.updateListingStatus(req.params.id, status);
+
+        // Notify accepted realtor of status change
+        if (['reviewing', 'under_contract', 'sold'].includes(status)) {
+            (async () => {
+                try {
+                    const { rows: pRows } = await pool.query(
+                        `SELECT u.email, u.first_name, u.last_name FROM proposals p
+                         JOIN users u ON u.id = p.realtor_id
+                         WHERE p.listing_id = $1 AND p.status = 'accepted' LIMIT 1`,
+                        [parseInt(req.params.id)]
+                    );
+                    if (pRows.length) {
+                        const r = pRows[0];
+                        const lRes = await pool.query(`SELECT address, city, state FROM listings WHERE id=$1`, [parseInt(req.params.id)]);
+                        const addr = lRes.rows[0] ? [lRes.rows[0].address, lRes.rows[0].city, lRes.rows[0].state].filter(Boolean).join(', ') : '';
+                        await emailService.sendListingStatusEmail(r.email, `${r.first_name||''} ${r.last_name||''}`.trim(), status, addr);
+                    }
+                } catch(e) { console.error('Status change email failed:', e.message); }
+            })();
+        }
 
         // Feature 2: When marked sold/closed, request review from seller
         if (status === 'sold') {
@@ -5832,6 +5852,21 @@ app.post('/api/open-houses/:id/rsvp', async (req, res) => {
              VALUES ($1,$2,$3,$4) ON CONFLICT (open_house_id, email) DO NOTHING`,
             [parseInt(req.params.id), userId, name.slice(0, 100), email.slice(0, 200)]
         );
+        // Fire-and-forget RSVP confirmation email
+        (async () => {
+            try {
+                const ohRes = await pool.query(
+                    `SELECT oh.scheduled_at, l.address, l.city, l.state FROM open_houses oh
+                     JOIN listings l ON l.id = oh.listing_id WHERE oh.id = $1`,
+                    [parseInt(req.params.id)]
+                );
+                if (ohRes.rows.length) {
+                    const oh = ohRes.rows[0];
+                    const addr = [oh.address, oh.city, oh.state].filter(Boolean).join(', ');
+                    await emailService.sendRsvpConfirmation(email.slice(0,200), name.slice(0,100), addr, oh.scheduled_at);
+                }
+            } catch(_) {}
+        })();
         res.json({ ok: true });
     } catch (err) {
         res.status(500).json({ error: 'Failed to RSVP' });
@@ -5958,6 +5993,133 @@ app.post('/api/proposals/:id/followup', auth.requireAuth, async (req, res) => {
     } catch (err) {
         console.error('Follow-up error:', err);
         res.status(500).json({ error: 'Failed to send follow-up' });
+    }
+});
+
+// ===== BUYER FORMAL OFFERS =====
+
+app.post('/api/listings/:id/buyer-offers', async (req, res) => {
+    try {
+        const listingId = parseInt(req.params.id);
+        const { buyer_name, buyer_email, offer_price, contingencies, closing_date_target, notes } = req.body;
+        if (!buyer_name || !buyer_email || !offer_price) return res.status(400).json({ error: 'Name, email, and offer price are required' });
+        const listing = await db.getListingById(listingId);
+        if (!listing) return res.status(404).json({ error: 'Listing not found' });
+        const buyer_id = req.session?.userId || null;
+        const { rows } = await pool.query(
+            `INSERT INTO buyer_offers (listing_id, buyer_id, buyer_name, buyer_email, offer_price, contingencies, closing_date_target, notes)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
+            [listingId, buyer_id, buyer_name.trim().slice(0,200), buyer_email.trim().slice(0,255), parseFloat(offer_price),
+             contingencies || null, closing_date_target || null, notes || null]
+        );
+        sseNotify(listing.user_id, { type: 'buyer_offer', listingId, buyerName: buyer_name.trim(), offerPrice: offer_price });
+        // Email seller
+        (async () => {
+            try {
+                const sRes = await pool.query(`SELECT u.email, u.first_name FROM users u JOIN listings l ON l.user_id = u.id WHERE l.id=$1`, [listingId]);
+                if (sRes.rows.length) {
+                    const addr = [listing.address, listing.city, listing.state].filter(Boolean).join(', ');
+                    await emailService.sendBuyerOfferNotification(sRes.rows[0].email, sRes.rows[0].first_name, addr, buyer_name.trim(), offer_price);
+                }
+            } catch(_) {}
+        })();
+        res.status(201).json(rows[0]);
+    } catch (err) {
+        console.error('buyer-offers POST error:', err);
+        res.status(500).json({ error: 'Failed to submit offer' });
+    }
+});
+
+app.get('/api/listings/:id/buyer-offers', auth.requireAuth, async (req, res) => {
+    try {
+        const listing = await db.getListingById(req.params.id);
+        if (!listing) return res.status(404).json({ error: 'Listing not found' });
+        if (listing.user_id !== req.session.userId && !req.user?.is_admin) return res.status(403).json({ error: 'Forbidden' });
+        const { rows } = await pool.query(
+            `SELECT * FROM buyer_offers WHERE listing_id = $1 ORDER BY offer_price DESC, created_at DESC`,
+            [parseInt(req.params.id)]
+        );
+        res.json(rows);
+    } catch (err) {
+        console.error('buyer-offers GET error:', err);
+        res.status(500).json({ error: 'Failed to fetch offers' });
+    }
+});
+
+app.put('/api/buyer-offers/:id/status', auth.requireAuth, async (req, res) => {
+    try {
+        const { status } = req.body;
+        if (!['pending', 'accepted', 'declined'].includes(status)) return res.status(400).json({ error: 'Invalid status' });
+        const { rows } = await pool.query(
+            `UPDATE buyer_offers SET status=$1 WHERE id=$2
+             AND listing_id IN (SELECT id FROM listings WHERE user_id=$3) RETURNING *`,
+            [status, parseInt(req.params.id), req.session.userId]
+        );
+        if (!rows.length) return res.status(404).json({ error: 'Offer not found' });
+        res.json(rows[0]);
+    } catch (err) {
+        console.error('buyer-offers PUT error:', err);
+        res.status(500).json({ error: 'Failed to update offer' });
+    }
+});
+
+// ===== NEIGHBORHOOD SNAPSHOT =====
+
+app.get('/api/listings/:id/neighborhood', async (req, res) => {
+    try {
+        const listing = await db.getListingById(req.params.id);
+        if (!listing || !listing.latitude || !listing.longitude) {
+            return res.status(404).json({ error: 'Listing not found or missing coordinates' });
+        }
+        const lat = parseFloat(listing.latitude);
+        const lng = parseFloat(listing.longitude);
+        const radius = 1609; // ~1 mile in meters
+
+        const query = `[out:json][timeout:12];
+(
+  node["amenity"~"^(school|college|university)$"](around:${radius},${lat},${lng});
+  way["amenity"~"^(school|college|university)$"](around:${radius},${lat},${lng});
+  node["amenity"~"^(restaurant|cafe|fast_food|bar)$"](around:${radius},${lat},${lng});
+  node["leisure"~"^(park|garden|playground)$"](around:${radius},${lat},${lng});
+  way["leisure"~"^(park|garden|playground)$"](around:${radius},${lat},${lng});
+  node["shop"~"^(supermarket|grocery|convenience)$"](around:${radius},${lat},${lng});
+  node["amenity"="pharmacy"](around:${radius},${lat},${lng});
+);
+out tags;`;
+
+        const overpassData = await new Promise((resolve, reject) => {
+            const body = 'data=' + encodeURIComponent(query);
+            const options = {
+                hostname: 'overpass-api.de',
+                path: '/api/interpreter',
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': Buffer.byteLength(body), 'User-Agent': 'RealtorFinder/1.0' }
+            };
+            const httpReq = https.request(options, (resp) => {
+                let data = '';
+                resp.on('data', d => data += d);
+                resp.on('end', () => { try { resolve(JSON.parse(data)); } catch(e) { reject(e); } });
+            });
+            httpReq.on('error', reject);
+            httpReq.setTimeout(13000, () => { httpReq.destroy(); reject(new Error('timeout')); });
+            httpReq.write(body);
+            httpReq.end();
+        });
+
+        let schools = 0, dining = 0, parks = 0, grocery = 0, pharmacy = 0;
+        for (const el of (overpassData.elements || [])) {
+            const t = el.tags || {};
+            if (t.amenity === 'school' || t.amenity === 'college' || t.amenity === 'university') schools++;
+            else if (t.amenity === 'restaurant' || t.amenity === 'cafe' || t.amenity === 'fast_food' || t.amenity === 'bar') dining++;
+            else if (t.leisure === 'park' || t.leisure === 'garden' || t.leisure === 'playground') parks++;
+            else if (t.shop === 'supermarket' || t.shop === 'grocery' || t.shop === 'convenience') grocery++;
+            else if (t.amenity === 'pharmacy') pharmacy++;
+        }
+
+        res.json({ schools, dining, parks, grocery, pharmacy, radius_miles: 1 });
+    } catch (err) {
+        console.error('neighborhood error:', err.message);
+        res.status(500).json({ error: 'Failed to load neighborhood data' });
     }
 });
 
@@ -9308,6 +9470,22 @@ _schemaMigrations.push(`
         created_by INTEGER REFERENCES users(id),
         created_at TIMESTAMPTZ DEFAULT NOW(),
         updated_at TIMESTAMPTZ DEFAULT NOW()
+    )
+`);
+
+_schemaMigrations.push(`
+    CREATE TABLE IF NOT EXISTS buyer_offers (
+        id SERIAL PRIMARY KEY,
+        listing_id INTEGER NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
+        buyer_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        buyer_name TEXT NOT NULL,
+        buyer_email TEXT NOT NULL,
+        offer_price NUMERIC(12,2) NOT NULL,
+        contingencies TEXT,
+        closing_date_target DATE,
+        notes TEXT,
+        status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending','accepted','declined')),
+        created_at TIMESTAMPTZ DEFAULT NOW()
     )
 `);
 

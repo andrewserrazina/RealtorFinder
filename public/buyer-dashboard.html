@@ -748,6 +748,20 @@
         .mortgage-calc-panel input[type=number] { width: 70px; padding: 0.2rem 0.35rem; border: 1px solid var(--border); border-radius: 4px; font-size: 0.8rem; }
         .mortgage-calc-panel .mc-result { font-weight: 700; color: var(--brand); font-size: 1rem; margin-top: 0.4rem; }
 
+        /* Make an offer panel */
+        .make-offer-panel { border-top: 1px solid var(--border); margin-top: 0.75rem; padding-top: 0.75rem; font-size: 0.82rem; }
+        .make-offer-panel input, .make-offer-panel textarea, .make-offer-panel select { width: 100%; padding: 0.3rem 0.45rem; border: 1px solid var(--border); border-radius: 5px; font-size: 0.8rem; font-family: inherit; box-sizing: border-box; margin-bottom: 0.4rem; }
+        .make-offer-panel textarea { min-height: 55px; resize: vertical; }
+        .make-offer-submit { background: var(--brand); color: white; border: none; border-radius: 6px; padding: 0.4rem 1rem; font-size: 0.82rem; font-weight: 700; cursor: pointer; width: 100%; margin-top: 0.2rem; }
+
+        /* Neighborhood panel */
+        .neighborhood-panel { border-top: 1px solid var(--border); margin-top: 0.75rem; padding-top: 0.75rem; font-size: 0.82rem; }
+        .nb-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 0.4rem; margin-top: 0.4rem; }
+        .nb-item { background: #f9f6f3; border-radius: 6px; padding: 0.4rem 0.5rem; text-align: center; }
+        .nb-icon { font-size: 1.1rem; }
+        .nb-count { font-size: 1rem; font-weight: 700; color: var(--ink); }
+        .nb-label { font-size: 0.68rem; color: #888; margin-top: 0.1rem; }
+
         /* Open houses panel */
         .open-houses-panel { border-top: 1px solid var(--border); margin-top: 0.75rem; padding-top: 0.75rem; font-size: 0.82rem; }
         .oh-item { background: #f9f6f3; border-radius: 6px; padding: 0.5rem 0.65rem; margin-bottom: 0.4rem; }
@@ -1893,9 +1907,13 @@
                         <div class="browse-card-actions" onclick="event.stopPropagation()">
                             <button class="btn-action-sm" onclick="toggleMortgageCalc(${l.id}, ${Number(l.price)})">💰 Estimate Payment</button>
                             <button class="btn-action-sm" onclick="toggleOpenHouses(${l.id})">🏡 Open Houses</button>
+                            <button class="btn-action-sm" onclick="toggleMakeOffer(${l.id}, ${JSON.stringify(l).replace(/"/g,'&quot;')})">✍️ Make Offer</button>
+                            <button class="btn-action-sm" onclick="toggleNeighborhood(${l.id})">🏘 Neighborhood</button>
                         </div>
                         <div id="mortgage-calc-${l.id}" class="mortgage-calc-panel" style="display:none;"></div>
                         <div id="open-houses-${l.id}" class="open-houses-panel" style="display:none;"></div>
+                        <div id="make-offer-${l.id}" class="make-offer-panel" style="display:none;"></div>
+                        <div id="neighborhood-${l.id}" class="neighborhood-panel" style="display:none;"></div>
                         <div id="nearby-stats-${l.id}" class="nearby-stats-card" style="display:none;"></div>
                     </div>
                 </div>`;
@@ -2026,6 +2044,77 @@
                 }
             } catch {
                 if (msg) { msg.style.color = '#e53e3e'; msg.textContent = 'Network error. Please try again.'; }
+            }
+        }
+
+        // ─── Make an Offer ────────────────────────────────────────────────────────
+        function toggleMakeOffer(listingId, listing) {
+            const el = document.getElementById(`make-offer-${listingId}`);
+            if (!el) return;
+            if (el.style.display === 'block') { el.style.display = 'none'; return; }
+            el.style.display = 'block';
+            el.innerHTML = `
+                <div style="font-weight:600;font-size:0.85rem;margin-bottom:0.5rem;">✍️ Submit a Formal Offer</div>
+                <input type="text" id="bo-name-${listingId}" placeholder="Your name" autocomplete="name">
+                <input type="email" id="bo-email-${listingId}" placeholder="Your email" autocomplete="email">
+                <input type="number" id="bo-price-${listingId}" placeholder="Offer price (e.g. 450000)" min="1" step="1000">
+                <input type="date" id="bo-close-${listingId}" placeholder="Target closing date">
+                <input type="text" id="bo-contingencies-${listingId}" placeholder="Contingencies (e.g. financing, inspection)">
+                <textarea id="bo-notes-${listingId}" placeholder="Additional notes (optional)"></textarea>
+                <button class="make-offer-submit" onclick="submitBuyerOffer(${listingId})">Submit Offer</button>
+                <div id="bo-msg-${listingId}" style="font-size:0.75rem;margin-top:0.3rem;"></div>
+            `;
+        }
+
+        async function submitBuyerOffer(listingId) {
+            const name = (document.getElementById(`bo-name-${listingId}`) || {}).value || '';
+            const email = (document.getElementById(`bo-email-${listingId}`) || {}).value || '';
+            const price = (document.getElementById(`bo-price-${listingId}`) || {}).value || '';
+            const close = (document.getElementById(`bo-close-${listingId}`) || {}).value || '';
+            const contingencies = (document.getElementById(`bo-contingencies-${listingId}`) || {}).value || '';
+            const notes = (document.getElementById(`bo-notes-${listingId}`) || {}).value || '';
+            const msg = document.getElementById(`bo-msg-${listingId}`);
+            if (!name.trim() || !email.trim() || !price) { if (msg) { msg.style.color='#e53e3e'; msg.textContent='Name, email, and offer price are required.'; } return; }
+            const btn = document.querySelector(`#make-offer-${listingId} .make-offer-submit`);
+            if (btn) { btn.disabled = true; btn.textContent = 'Submitting…'; }
+            try {
+                const res = await fetch(`${API_BASE_URL}/listings/${listingId}/buyer-offers`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+                    body: JSON.stringify({ buyer_name: name.trim(), buyer_email: email.trim(), offer_price: parseFloat(price),
+                        closing_date_target: close || null, contingencies: contingencies || null, notes: notes || null })
+                });
+                const d = await res.json();
+                if (msg) {
+                    if (res.ok) { msg.style.color='#22c55e'; msg.textContent='Offer submitted! The seller will be in touch.'; if (btn) { btn.style.display='none'; } }
+                    else { msg.style.color='#e53e3e'; msg.textContent = d.error || 'Submission failed.'; }
+                }
+            } catch {
+                if (msg) { msg.style.color='#e53e3e'; msg.textContent='Network error. Please try again.'; }
+            } finally { if (btn) { btn.disabled=false; if (btn.textContent==='Submitting…') btn.textContent='Submit Offer'; } }
+        }
+
+        // ─── Neighborhood Snapshot ────────────────────────────────────────────────
+        async function toggleNeighborhood(listingId) {
+            const el = document.getElementById(`neighborhood-${listingId}`);
+            if (!el) return;
+            if (el.style.display === 'block' && el.dataset.loaded === '1') { el.style.display = 'none'; el.dataset.loaded = ''; return; }
+            el.style.display = 'block';
+            el.innerHTML = '<div style="color:#aaa;font-size:0.8rem;">Loading neighborhood data…</div>';
+            try {
+                const res = await fetch(`${API_BASE_URL}/listings/${listingId}/neighborhood`);
+                if (!res.ok) throw new Error();
+                const d = await res.json();
+                el.dataset.loaded = '1';
+                el.innerHTML = `<div style="font-weight:600;font-size:0.85rem;margin-bottom:0.4rem;">🏘 Neighborhood (within 1 mile)</div>
+                    <div class="nb-grid">
+                        <div class="nb-item"><div class="nb-icon">🏫</div><div class="nb-count">${d.schools}</div><div class="nb-label">Schools</div></div>
+                        <div class="nb-item"><div class="nb-icon">🍽</div><div class="nb-count">${d.dining}</div><div class="nb-label">Dining</div></div>
+                        <div class="nb-item"><div class="nb-icon">🌳</div><div class="nb-count">${d.parks}</div><div class="nb-label">Parks</div></div>
+                        <div class="nb-item"><div class="nb-icon">🛒</div><div class="nb-count">${d.grocery}</div><div class="nb-label">Grocery</div></div>
+                        <div class="nb-item"><div class="nb-icon">💊</div><div class="nb-count">${d.pharmacy}</div><div class="nb-label">Pharmacy</div></div>
+                    </div>`;
+            } catch {
+                el.innerHTML = '<div style="color:#aaa;font-size:0.8rem;">Neighborhood data unavailable for this listing.</div>';
             }
         }
 

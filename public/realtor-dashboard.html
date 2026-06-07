@@ -143,6 +143,34 @@
             border-bottom-color: var(--accent);
         }
 
+        /* Hub sub-navigation */
+        .hub-subnav {
+            display: flex;
+            gap: 0.4rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 0;
+        }
+        .hub-btn {
+            background: none;
+            border: none;
+            border-bottom: 3px solid transparent;
+            padding: 0.65rem 1.1rem;
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #666;
+            cursor: pointer;
+            font-family: inherit;
+            margin-bottom: -1px;
+            transition: color 0.15s, border-color 0.15s;
+            white-space: nowrap;
+        }
+        .hub-btn:hover { color: var(--ink); }
+        .hub-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+        .hub-section { display: none; }
+        .hub-section.active { display: block; animation: fadeIn 0.2s ease-out; }
+
         /* Main Layout */
         .dashboard-container {
             max-width: 1600px;
@@ -1040,21 +1068,13 @@
 
     <div class="tabs-container">
         <div class="tabs">
-            <div class="tab active" data-view="browse">Browse Listings</div>
-            <div class="tab" data-view="map">Map View</div>
-            <div class="tab" data-view="mybids">My Bids</div>
-            <div class="tab" data-view="won">Won Listings</div>
-            <div class="tab" data-view="saved">Saved</div>
-            <div class="tab" data-view="analytics">Analytics</div>
-            <div class="tab" data-view="profile">My Profile</div>
+            <div class="tab active" data-view="browse">Browse</div>
+            <div class="tab" data-view="pipeline">Pipeline <span id="pipelineBadge" style="display:none;background:var(--accent);color:white;border-radius:50%;width:16px;height:16px;font-size:0.65rem;font-weight:700;text-align:center;line-height:16px;margin-left:4px;vertical-align:middle;"></span></div>
             <div class="tab" data-view="buyer-requests">Buyer Requests <span id="buyerMatchBadge" style="display:none;background:var(--accent);color:white;border-radius:50%;width:16px;height:16px;font-size:0.65rem;font-weight:700;text-align:center;line-height:16px;margin-left:4px;vertical-align:middle;"></span></div>
-            <div class="tab" data-view="showings">Showings</div>
-            <div class="tab" data-view="my-proposals">My Proposals <span class="counter-badge" style="display:none;background:#f59e0b;color:white;border-radius:50%;width:16px;height:16px;font-size:0.65rem;font-weight:700;text-align:center;line-height:16px;margin-left:4px;vertical-align:middle;"></span></div>
-            <div class="tab" data-view="reviews">Reviews</div>
-            <div class="tab" data-view="referrals">Referrals</div>
-            <div class="tab" data-view="company">My Company</div>
-            <div class="tab" data-view="settings">Settings</div>
-            <div class="tab" data-view="messages" id="msgTab">Messages <span id="msgTabBadge" style="display:none;background:var(--accent);color:white;border-radius:50%;width:16px;height:16px;font-size:0.65rem;font-weight:700;text-align:center;line-height:16px;display:none;margin-left:4px;vertical-align:middle;"></span></div>
+            <div class="tab" data-view="messages" id="msgTab">Messages <span id="msgTabBadge" style="display:none;background:var(--accent);color:white;border-radius:50%;width:16px;height:16px;font-size:0.65rem;font-weight:700;text-align:center;line-height:16px;margin-left:4px;vertical-align:middle;"></span></div>
+            <div class="tab" data-view="analytics">Analytics</div>
+            <div class="tab" data-view="profile-hub">Profile</div>
+            <div class="tab" data-view="settings-hub">Settings</div>
         </div>
     </div>
 
@@ -1140,91 +1160,127 @@
                 </div>
             </div>
 
-            <h2 style="font-family: 'Crimson Pro', serif; font-size: 2rem; margin-bottom: 2rem;">Available Properties</h2>
-            <div class="listings-grid" id="availableListings"></div>
-            <div class="pagination" id="listingPagination" style="display:none;">
-                <button class="btn btn-outline" id="prevPage" onclick="changePage(-1)">← Prev</button>
-                <span class="page-info" id="pageInfo">Page 1 of 1</span>
-                <button class="btn btn-outline" id="nextPage" onclick="changePage(1)">Next →</button>
-            </div>
-        </section>
-
-        <!-- Map View -->
-        <section id="map-view" class="view-section">
-            <div class="map-status-bar">
-                <div>
-                    <div style="font-family: 'Crimson Pro', serif; font-size: 1.6rem; font-weight: 700; margin-bottom: 0.25rem;">Listings Near You</div>
-                    <div class="map-status-text" id="mapStatusText">Click the Map View tab to load.</div>
-                </div>
-                <div style="text-align: right;">
-                    <div class="map-nearby-count" id="mapNearbyCount">--</div>
-                    <div style="font-size: 0.8rem; color: #999; margin-top: 2px;">within 25 miles</div>
-                </div>
-            </div>
-            <div id="map-container"></div>
-        </section>
-
-        <!-- My Bids View -->
-        <section id="mybids-view" class="view-section">
-            <h2 style="font-family: 'Crimson Pro', serif; font-size: 2rem; margin-bottom: 2rem;">My Bids</h2>
-            <div class="bids-list" id="myBidsList"></div>
-        </section>
-
-        <!-- Won Listings View -->
-        <section id="won-view" class="view-section">
             <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem;">
-                <h2 style="font-family: 'Crimson Pro', serif; font-size: 2rem;">Won Listings &amp; Deals</h2>
+                <h2 style="font-family: 'Crimson Pro', serif; font-size: 2rem;">Available Properties</h2>
+                <div style="display:flex;gap:0.4rem;">
+                    <button id="browseGridBtn" onclick="setBrowseMode('grid')" style="background:var(--accent);color:white;border:none;border-radius:8px;padding:0.45rem 1rem;font-size:0.85rem;font-weight:600;cursor:pointer;font-family:inherit;">⊞ Grid</button>
+                    <button id="browseMapBtn" onclick="setBrowseMode('map')" style="background:#f3f4f6;color:#374151;border:1px solid var(--border);border-radius:8px;padding:0.45rem 1rem;font-size:0.85rem;font-weight:600;cursor:pointer;font-family:inherit;">🗺 Map</button>
+                </div>
             </div>
-            <div class="bids-list" id="wonListingsList"></div>
+            <div id="browseGridContent">
+                <div class="listings-grid" id="availableListings"></div>
+                <div class="pagination" id="listingPagination" style="display:none;">
+                    <button class="btn btn-outline" id="prevPage" onclick="changePage(-1)">← Prev</button>
+                    <span class="page-info" id="pageInfo">Page 1 of 1</span>
+                    <button class="btn btn-outline" id="nextPage" onclick="changePage(1)">Next →</button>
+                </div>
+            </div>
+            <div id="browseMapContent" style="display:none;">
+                <div class="map-status-bar">
+                    <div>
+                        <div style="font-family: 'Crimson Pro', serif; font-size: 1.6rem; font-weight: 700; margin-bottom: 0.25rem;">Listings Near You</div>
+                        <div class="map-status-text" id="mapStatusText">Loading map…</div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div class="map-nearby-count" id="mapNearbyCount">--</div>
+                        <div style="font-size: 0.8rem; color: #999; margin-top: 2px;">within 25 miles</div>
+                    </div>
+                </div>
+                <div id="map-container"></div>
+            </div>
+        </section>
 
-            <!-- Open Houses -->
-            <div style="margin-top:2.5rem;">
-                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;margin-bottom:1rem;">
-                    <h3 style="font-family:'Crimson Pro',serif;font-size:1.5rem;font-weight:700;color:var(--ink);">Open Houses</h3>
-                    <button onclick="document.getElementById('openHouseForm').style.display=document.getElementById('openHouseForm').style.display==='none'?'block':'none'" style="background:var(--accent);color:white;border:none;border-radius:8px;padding:0.5rem 1.25rem;font-weight:600;cursor:pointer;font-size:0.875rem;font-family:inherit;">+ Schedule Open House</button>
-                </div>
-                <div id="openHouseForm" style="display:none;background:#f8f9fa;border:1px solid var(--border);border-radius:12px;padding:1.25rem;margin-bottom:1.25rem;">
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:0.75rem;">
-                        <div>
-                            <label style="font-size:0.8rem;font-weight:600;color:#374151;display:block;margin-bottom:0.3rem;">Listing</label>
-                            <select id="ohListingId" style="width:100%;padding:0.55rem 0.75rem;border:1px solid var(--border);border-radius:7px;font-family:inherit;font-size:0.875rem;"></select>
+        <!-- Pipeline View -->
+        <section id="pipeline-view" class="view-section">
+            <div class="hub-subnav">
+                <button class="hub-btn active" onclick="switchPipelineTab('proposals')">My Proposals</button>
+                <button class="hub-btn" onclick="switchPipelineTab('won')">Won Listings</button>
+                <button class="hub-btn" onclick="switchPipelineTab('showings')">Showings</button>
+            </div>
+
+            <!-- Proposals sub-section -->
+            <div id="pipeline-proposals" class="hub-section active">
+                <div id="pendingCountersBanner" style="display:none;background:#FEF9C3;border:1px solid #FDE047;border-radius:12px;padding:1.25rem 1.5rem;margin-bottom:1rem;">
+                    <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+                        <span style="font-size:1.25rem;">⚡</span>
+                        <div style="flex:1;">
+                            <div style="font-weight:700;color:#713F12;font-size:0.95rem;" id="pendingCountersTitle">Counter-offers need your response</div>
+                            <div style="color:#78350F;font-size:0.85rem;margin-top:0.2rem;">Sellers have countered your proposals. Respond before they expire.</div>
                         </div>
-                        <div>
-                            <label style="font-size:0.8rem;font-weight:600;color:#374151;display:block;margin-bottom:0.3rem;">Date &amp; Time</label>
-                            <input type="datetime-local" id="ohScheduledAt" style="width:100%;padding:0.55rem 0.75rem;border:1px solid var(--border);border-radius:7px;font-family:inherit;font-size:0.875rem;">
-                        </div>
-                        <div>
-                            <label style="font-size:0.8rem;font-weight:600;color:#374151;display:block;margin-bottom:0.3rem;">Duration (min)</label>
-                            <select id="ohDuration" style="width:100%;padding:0.55rem 0.75rem;border:1px solid var(--border);border-radius:7px;font-family:inherit;font-size:0.875rem;">
-                                <option value="30">30 min</option>
-                                <option value="60" selected>1 hour</option>
-                                <option value="90">1.5 hours</option>
-                                <option value="120">2 hours</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label style="font-size:0.8rem;font-weight:600;color:#374151;display:block;margin-bottom:0.3rem;">Notes (optional)</label>
-                            <input type="text" id="ohNotes" placeholder="e.g. Refreshments provided" style="width:100%;padding:0.55rem 0.75rem;border:1px solid var(--border);border-radius:7px;font-family:inherit;font-size:0.875rem;">
-                        </div>
-                    </div>
-                    <div style="display:flex;gap:0.75rem;align-items:center;">
-                        <button onclick="createOpenHouse()" style="background:#0a2540;color:white;border:none;border-radius:8px;padding:0.55rem 1.25rem;font-weight:600;cursor:pointer;font-size:0.875rem;font-family:inherit;">Schedule</button>
-                        <span id="ohMsg" style="font-size:0.85rem;"></span>
+                        <button onclick="scrollToFirstCounter()" style="background:#F59E0B;color:white;border:none;padding:0.5rem 1.25rem;border-radius:6px;font-weight:600;cursor:pointer;font-size:0.85rem;white-space:nowrap;">View Counters ↓</button>
                     </div>
                 </div>
-                <div id="openHousesList" style="display:flex;flex-direction:column;gap:0.75rem;">
-                    <div style="color:#9ca3af;font-size:0.875rem;">Loading…</div>
+                <h3 style="font-family:'Crimson Pro',serif;font-size:1.4rem;font-weight:700;color:var(--ink);margin-bottom:1rem;">Structured Proposals</h3>
+                <div id="myProposalsList"></div>
+                <h3 style="font-family:'Crimson Pro',serif;font-size:1.4rem;font-weight:700;color:var(--ink);margin:2rem 0 1rem;">Classic Bids</h3>
+                <div class="bids-list" id="myBidsList"></div>
+            </div>
+
+            <!-- Won Listings sub-section -->
+            <div id="pipeline-won" class="hub-section">
+                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem;">
+                    <h2 style="font-family: 'Crimson Pro', serif; font-size: 2rem;">Won Listings &amp; Deals</h2>
                 </div>
+                <div class="bids-list" id="wonListingsList"></div>
+                <div style="margin-top:2.5rem;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;margin-bottom:1rem;">
+                        <h3 style="font-family:'Crimson Pro',serif;font-size:1.5rem;font-weight:700;color:var(--ink);">Open Houses</h3>
+                        <button onclick="document.getElementById('openHouseForm').style.display=document.getElementById('openHouseForm').style.display==='none'?'block':'none'" style="background:var(--accent);color:white;border:none;border-radius:8px;padding:0.5rem 1.25rem;font-weight:600;cursor:pointer;font-size:0.875rem;font-family:inherit;">+ Schedule Open House</button>
+                    </div>
+                    <div id="openHouseForm" style="display:none;background:#f8f9fa;border:1px solid var(--border);border-radius:12px;padding:1.25rem;margin-bottom:1.25rem;">
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:0.75rem;">
+                            <div>
+                                <label style="font-size:0.8rem;font-weight:600;color:#374151;display:block;margin-bottom:0.3rem;">Listing</label>
+                                <select id="ohListingId" style="width:100%;padding:0.55rem 0.75rem;border:1px solid var(--border);border-radius:7px;font-family:inherit;font-size:0.875rem;"></select>
+                            </div>
+                            <div>
+                                <label style="font-size:0.8rem;font-weight:600;color:#374151;display:block;margin-bottom:0.3rem;">Date &amp; Time</label>
+                                <input type="datetime-local" id="ohScheduledAt" style="width:100%;padding:0.55rem 0.75rem;border:1px solid var(--border);border-radius:7px;font-family:inherit;font-size:0.875rem;">
+                            </div>
+                            <div>
+                                <label style="font-size:0.8rem;font-weight:600;color:#374151;display:block;margin-bottom:0.3rem;">Duration (min)</label>
+                                <select id="ohDuration" style="width:100%;padding:0.55rem 0.75rem;border:1px solid var(--border);border-radius:7px;font-family:inherit;font-size:0.875rem;">
+                                    <option value="30">30 min</option>
+                                    <option value="60" selected>1 hour</option>
+                                    <option value="90">1.5 hours</option>
+                                    <option value="120">2 hours</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style="font-size:0.8rem;font-weight:600;color:#374151;display:block;margin-bottom:0.3rem;">Notes (optional)</label>
+                                <input type="text" id="ohNotes" placeholder="e.g. Refreshments provided" style="width:100%;padding:0.55rem 0.75rem;border:1px solid var(--border);border-radius:7px;font-family:inherit;font-size:0.875rem;">
+                            </div>
+                        </div>
+                        <div style="display:flex;gap:0.75rem;align-items:center;">
+                            <button onclick="createOpenHouse()" style="background:#0a2540;color:white;border:none;border-radius:8px;padding:0.55rem 1.25rem;font-weight:600;cursor:pointer;font-size:0.875rem;font-family:inherit;">Schedule</button>
+                            <span id="ohMsg" style="font-size:0.85rem;"></span>
+                        </div>
+                    </div>
+                    <div id="openHousesList" style="display:flex;flex-direction:column;gap:0.75rem;">
+                        <div style="color:#9ca3af;font-size:0.875rem;">Loading…</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Showings sub-section -->
+            <div id="pipeline-showings" class="hub-section">
+                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem;">
+                    <div>
+                        <h2 style="font-family:'Crimson Pro',serif;font-size:2rem;margin-bottom:0.25rem;">Showings</h2>
+                        <p style="color:#666;font-size:0.95rem;">Buyer showing requests &amp; your realtor showing requests</p>
+                    </div>
+                    <button onclick="openRealtorShowingModal()" style="background:var(--accent);color:white;border:none;border-radius:8px;padding:0.65rem 1.25rem;font-weight:600;cursor:pointer;font-size:0.9rem;font-family:inherit;">+ Request Showing</button>
+                </div>
+                <div style="display:flex;gap:0.5rem;margin-bottom:1.5rem;">
+                    <button id="showingsTabBuyer" onclick="switchShowingsTab('buyer')" style="background:var(--primary);color:white;border:none;border-radius:6px;padding:0.4rem 1rem;cursor:pointer;font-weight:600;font-size:0.85rem;font-family:inherit;">Buyer Requests</button>
+                    <button id="showingsTabRealtor" onclick="switchShowingsTab('realtor')" style="background:#f3f4f6;color:#374151;border:none;border-radius:6px;padding:0.4rem 1rem;cursor:pointer;font-weight:600;font-size:0.85rem;font-family:inherit;">My Requests</button>
+                </div>
+                <div id="showingsList" class="bids-list"></div>
+                <div id="realtorShowingsList" class="bids-list" style="display:none;"></div>
             </div>
         </section>
 
         <!-- Saved Listings View -->
-        <section id="saved-view" class="view-section">
-            <h2 style="font-family: 'Crimson Pro', serif; font-size: 2rem; margin-bottom: 0.5rem;">Saved Listings</h2>
-            <p style="color:var(--muted);margin-bottom:2rem;font-size:0.95rem;">Listings you've bookmarked for later. Click the bookmark icon on any listing card to save it.</p>
-            <div class="listings-grid" id="savedListingsGrid"></div>
-        </section>
-
         <!-- Analytics View -->
         <section id="analytics-view" class="view-section">
             <div style="max-width:800px;">
@@ -1320,100 +1376,415 @@
         </section>
 
         <!-- Showings View -->
-        <section id="showings-view" class="view-section">
-            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem;">
-                <div>
-                    <h2 style="font-family:'Crimson Pro',serif;font-size:2rem;margin-bottom:0.25rem;">Showings</h2>
-                    <p style="color:#666;font-size:0.95rem;">Buyer showing requests &amp; your realtor showing requests</p>
+        <!-- Profile Hub View -->
+        <section id="profile-hub-view" class="view-section">
+            <div class="hub-subnav">
+                <button class="hub-btn active" onclick="switchProfileTab('profile')">My Profile</button>
+                <button class="hub-btn" onclick="switchProfileTab('reviews')">Reviews</button>
+                <button class="hub-btn" onclick="switchProfileTab('referrals')">Referrals</button>
+                <button class="hub-btn" onclick="switchProfileTab('saved')">Saved</button>
+            </div>
+
+            <!-- Profile sub-section -->
+            <div id="phub-profile" class="hub-section active">
+                <h2 style="font-family: 'Crimson Pro', serif; font-size: 2rem; margin-bottom: 2rem;">My Profile</h2>
+                <div id="profileBadgesRow" style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-bottom:1.5rem;max-width:600px;"></div>
+                <div style="max-width:600px;">
+                    <!-- Profile photo -->
+                    <div style="display:flex;align-items:center;gap:1.5rem;margin-bottom:2rem;padding:1.5rem;background:white;border-radius:14px;border:1px solid var(--border);">
+                        <div id="profilePhotoWrap" style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,var(--ink),#2a2a2a);display:flex;align-items:center;justify-content:center;font-family:'Crimson Pro',serif;font-size:2rem;font-weight:900;color:white;flex-shrink:0;overflow:hidden;">
+                            <span id="profilePhotoInitials"></span>
+                        </div>
+                        <div style="flex:1;">
+                            <div style="font-weight:600;margin-bottom:0.4rem;">Profile Photo</div>
+                            <div style="font-size:0.85rem;color:var(--muted);margin-bottom:0.75rem;">Shown on your public profile. JPG or PNG, max 5MB.</div>
+                            <label style="cursor:pointer;display:inline-block;padding:0.45rem 1rem;border:1.5px solid var(--border);border-radius:8px;font-size:0.85rem;font-weight:600;color:var(--ink);">
+                                Choose Photo
+                                <input type="file" id="photoInput" accept="image/*" style="display:none;" onchange="uploadProfilePhoto(this)">
+                            </label>
+                            <span id="photoStatus" style="font-size:0.8rem;color:var(--muted);margin-left:0.75rem;"></span>
+                        </div>
+                    </div>
+                    <div id="profileMessage" style="display:none;padding:0.875rem 1rem;border-radius:8px;margin-bottom:1rem;font-weight:500;font-size:0.9rem;"></div>
+                    <form id="profileForm">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Phone</label>
+                                <input type="tel" name="phone" placeholder="(555) 555-5555">
+                            </div>
+                            <div class="form-group">
+                                <label>License Number</label>
+                                <input type="text" name="licenseNumber" placeholder="RE-123456">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Years of Experience</label>
+                                <input type="number" name="yearsExperience" placeholder="5" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label>Service Areas</label>
+                                <input type="text" name="serviceAreas" placeholder="Boston, Cambridge, Brookline">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Bio</label>
+                            <textarea name="bio" rows="4" style="width:100%;padding:0.875rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:1rem;resize:vertical;" placeholder="Tell sellers about yourself and your experience…"></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary" style="padding:1rem 2rem;">Save Profile</button>
+                    </form>
+
+                    <!-- License Document -->
+                    <div id="licenseDocSection" style="background:white;border-radius:12px;border:1px solid var(--border);padding:1.5rem;margin-top:1.5rem;">
+                        <h3 style="font-family:'Crimson Pro',serif;font-size:1.3rem;font-weight:700;margin-bottom:0.5rem;color:var(--ink);">License Document</h3>
+                        <p style="font-size:0.85rem;color:#666;margin-bottom:1rem;">Upload your real estate license document for verification. Verified realtors display a green badge on their profile.</p>
+                        <div id="licenseDocStatus" style="margin-bottom:1rem;"></div>
+                        <div id="licenseDocUploadArea">
+                            <label style="cursor:pointer;display:inline-block;padding:0.55rem 1.25rem;border:1.5px solid var(--border);border-radius:8px;font-size:0.875rem;font-weight:600;color:var(--ink);">
+                                Choose Document
+                                <input type="file" id="licenseDocInput" accept="image/*,.pdf" style="display:none;" onchange="uploadLicenseDoc(this)">
+                            </label>
+                            <span id="licenseDocUploadStatus" style="font-size:0.8rem;color:var(--muted);margin-left:0.75rem;"></span>
+                        </div>
+                    </div>
+
+                    <!-- Email Preferences -->
+                    <div style="background:white;border-radius:12px;border:1px solid var(--border);padding:1.5rem;margin-top:1.5rem;">
+                        <h3 style="font-family:'Crimson Pro',serif;font-size:1.3rem;font-weight:700;margin-bottom:1rem;color:var(--ink);">Email Preferences</h3>
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;">
+                            <div>
+                                <div style="font-weight:600;font-size:0.95rem;margin-bottom:0.25rem;">New Listing Alerts</div>
+                                <div style="font-size:0.85rem;color:#666;">Get emailed when a new listing appears within 25 miles of your ZIP code.</div>
+                            </div>
+                            <label style="position:relative;display:inline-block;width:48px;height:26px;flex-shrink:0;">
+                                <input type="checkbox" id="emailAlertsToggle" style="opacity:0;width:0;height:0;" onchange="saveEmailAlerts(this.checked)">
+                                <span id="emailAlertsSlider" style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#ccc;border-radius:26px;transition:.3s;"></span>
+                            </label>
+                        </div>
+                        <div id="emailAlertsSaved" style="display:none;color:#059669;font-size:0.85rem;margin-top:0.5rem;">✓ Saved</div>
+                    </div>
+
+                    <!-- Profile Completeness Widget -->
+                    <div id="profileCompletenessWidget" style="background:white;border-radius:12px;border:1px solid var(--border);padding:1.5rem;margin-top:1.5rem;display:none;">
+                        <h3 style="font-family:'Crimson Pro',serif;font-size:1.3rem;font-weight:700;margin-bottom:1rem;color:var(--ink);">Profile Completeness</h3>
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem;">
+                            <span id="completenessLabel" style="font-size:0.95rem;font-weight:600;color:#374151;">Loading…</span>
+                            <span id="completenessPercent" style="font-size:1.1rem;font-weight:700;color:#FF6B35;">—</span>
+                        </div>
+                        <div style="height:10px;background:#e5e7eb;border-radius:6px;overflow:hidden;margin-bottom:1rem;">
+                            <div id="completenessBar" style="height:100%;width:0%;border-radius:6px;transition:width 0.5s,background 0.5s;"></div>
+                        </div>
+                        <div id="completenessItems" style="display:flex;flex-direction:column;gap:0.5rem;"></div>
+                    </div>
+
+                    <!-- Public Profile Link -->
+                    <div style="background:white;border-radius:12px;border:1px solid var(--border);padding:1.5rem;margin-top:1.5rem;">
+                        <h3 style="font-family:'Crimson Pro',serif;font-size:1.3rem;font-weight:700;margin-bottom:0.25rem;color:var(--ink);">Your Public Profile</h3>
+                        <p style="font-size:0.875rem;color:#6b7280;margin-bottom:0.75rem;">Share this link with clients or on social media.</p>
+                        <div style="display:flex;align-items:center;gap:0.5rem;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:0.6rem 1rem;">
+                            <span id="publicProfileUrl" style="font-size:0.875rem;color:#374151;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Loading…</span>
+                            <button onclick="copyProfileUrl()" style="background:var(--accent);color:white;border:none;padding:0.4rem 0.9rem;border-radius:6px;font-size:0.8rem;font-weight:600;cursor:pointer;flex-shrink:0;font-family:inherit;">Copy</button>
+                            <a id="publicProfileLink" href="#" target="_blank" style="background:#f3f4f6;color:#374151;border:none;padding:0.4rem 0.9rem;border-radius:6px;font-size:0.8rem;font-weight:600;text-decoration:none;flex-shrink:0;">View →</a>
+                        </div>
+                        <div id="profileUrlCopied" style="display:none;font-size:0.8rem;color:#059669;margin-top:0.4rem;">✓ Copied to clipboard</div>
+                    </div>
+
+                    <!-- Subscription & Billing -->
+                    <div style="background:white;border-radius:12px;border:1px solid var(--border);padding:1.5rem;margin-top:1.5rem;">
+                        <h3 style="font-family:'Crimson Pro',serif;font-size:1.3rem;font-weight:700;margin-bottom:0.5rem;color:var(--ink);">Subscription</h3>
+                        <p style="font-size:0.9rem;color:#666;margin-bottom:1rem;">Manage your plan and billing.</p>
+                        <button onclick="openBillingPortal()" style="background:var(--accent);color:white;border:none;padding:0.7rem 1.5rem;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.95rem;font-family:inherit;">Manage Subscription →</button>
+                    </div>
+
+                    <!-- Change Password -->
+                    <div style="background:white;border-radius:12px;border:1px solid var(--border);padding:1.5rem;margin-top:1.5rem;">
+                        <h3 style="font-family:'Crimson Pro',serif;font-size:1.3rem;font-weight:700;margin-bottom:1rem;color:var(--ink);">Change Password</h3>
+                        <div style="display:flex;flex-direction:column;gap:0.75rem;max-width:400px;">
+                            <input type="password" id="currentPassword" placeholder="Current password" style="padding:0.7rem 1rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.95rem;">
+                            <input type="password" id="newPassword" placeholder="New password (min 8 characters)" style="padding:0.7rem 1rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.95rem;">
+                            <input type="password" id="confirmPassword" placeholder="Confirm new password" style="padding:0.7rem 1rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.95rem;">
+                            <div id="passwordError" style="display:none;color:#dc2626;font-size:0.85rem;"></div>
+                            <div id="passwordSuccess" style="display:none;color:#059669;font-size:0.85rem;">✓ Password changed successfully!</div>
+                            <button onclick="changePassword()" style="background:var(--accent);color:white;border:none;padding:0.7rem 1.5rem;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.95rem;align-self:flex-start;">Update Password</button>
+                        </div>
+                    </div>
                 </div>
-                <button onclick="openRealtorShowingModal()" style="background:var(--accent);color:white;border:none;border-radius:8px;padding:0.65rem 1.25rem;font-weight:600;cursor:pointer;font-size:0.9rem;font-family:inherit;">+ Request Showing</button>
             </div>
-            <div style="display:flex;gap:0.5rem;margin-bottom:1.5rem;">
-                <button id="showingsTabBuyer" onclick="switchShowingsTab('buyer')" style="background:var(--primary);color:white;border:none;border-radius:6px;padding:0.4rem 1rem;cursor:pointer;font-weight:600;font-size:0.85rem;font-family:inherit;">Buyer Requests</button>
-                <button id="showingsTabRealtor" onclick="switchShowingsTab('realtor')" style="background:#f3f4f6;color:#374151;border:none;border-radius:6px;padding:0.4rem 1rem;cursor:pointer;font-weight:600;font-size:0.85rem;font-family:inherit;">My Requests</button>
+
+            <!-- Reviews sub-section -->
+            <div id="phub-reviews" class="hub-section">
+                <div id="reviewsPanel" class="view-panel" style="display:block;">
+                    <h2 style="font-family:'Playfair Display',serif;font-size:1.8rem;margin-bottom:0.5rem;">My Reviews</h2>
+                    <p style="color:#666;margin-bottom:2rem;">What clients say about working with you.</p>
+                    <div id="reviewsSummary" style="background:white;border-radius:12px;padding:1.5rem;border:1px solid var(--border);margin-bottom:1.5rem;display:flex;align-items:center;gap:2rem;flex-wrap:wrap;">
+                        <div style="text-align:center;">
+                            <div id="reviewsAvgRating" style="font-size:3rem;font-weight:700;color:var(--accent);">—</div>
+                            <div id="reviewsStars" style="font-size:1.5rem;color:#F59E0B;margin:0.25rem 0;">☆☆☆☆☆</div>
+                            <div id="reviewsCount" style="color:#666;font-size:0.9rem;">No reviews yet</div>
+                        </div>
+                        <div style="flex:1;min-width:200px;" id="reviewsRatingBars"></div>
+                    </div>
+                    <div id="reviewsList" style="display:flex;flex-direction:column;gap:1rem;"></div>
+                </div>
             </div>
-            <div id="showingsList" class="bids-list"></div>
-            <div id="realtorShowingsList" class="bids-list" style="display:none;"></div>
+
+            <!-- Referrals sub-section -->
+            <div id="phub-referrals" class="hub-section">
+                <div class="section-header">
+                    <h2>Referrals</h2>
+                    <p style="color:#666;margin-top:4px;">Earn <strong>$25 in account credits</strong> for every realtor you refer who subscribes to a paid plan</p>
+                </div>
+                <!-- How it works banner -->
+                <div style="background:linear-gradient(135deg,#fff7ed 0%,#fef3c7 100%);border:1.5px solid #fed7aa;border-radius:16px;padding:1.5rem 2rem;margin-top:1.25rem;display:flex;gap:2rem;flex-wrap:wrap;align-items:flex-start;">
+                    <div style="flex:1;min-width:200px;">
+                        <div style="font-weight:700;font-size:1rem;color:#92400e;margin-bottom:0.75rem;">How the referral program works</div>
+                        <ol style="padding-left:1.25rem;display:flex;flex-direction:column;gap:0.5rem;color:#78350f;font-size:0.875rem;line-height:1.5;">
+                            <li>Copy your unique referral link below and share it with other real estate agents</li>
+                            <li>When they sign up and subscribe to any paid plan, you automatically earn <strong>$25 in account credits</strong></li>
+                            <li>Credits are applied automatically to your next invoice — no action needed</li>
+                            <li>There's no cap — refer 4 agents and your Basic plan is free for a month</li>
+                        </ol>
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:0.75rem;flex-shrink:0;">
+                        <div style="background:white;border-radius:12px;padding:0.875rem 1.25rem;border:1px solid #fed7aa;text-align:center;">
+                            <div style="font-size:1.6rem;font-weight:900;color:#f59e0b;">$25</div>
+                            <div style="font-size:0.72rem;color:#92400e;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">per referral</div>
+                        </div>
+                        <div style="background:white;border-radius:12px;padding:0.875rem 1.25rem;border:1px solid #fed7aa;text-align:center;">
+                            <div style="font-size:1rem;font-weight:700;color:#d97706;">No limit</div>
+                            <div style="font-size:0.72rem;color:#92400e;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">on earnings</div>
+                        </div>
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:0.5rem;flex-shrink:0;justify-content:center;">
+                        <div style="font-size:0.8rem;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:0.05em;">Tier rewards</div>
+                        <div style="display:flex;flex-direction:column;gap:0.35rem;font-size:0.82rem;color:#78350f;">
+                            <div>⭐ <strong>Rising Star</strong> — 1 referral</div>
+                            <div>🔵 <strong>Connector</strong> — 3 referrals</div>
+                            <div>🌟 <strong>Top Referrer</strong> — 5 referrals</div>
+                            <div>🏆 <strong>Ambassador</strong> — 10 referrals</div>
+                        </div>
+                    </div>
+                </div>
+                <div id="referralsWidget" style="margin-top:1.5rem;"></div>
+            </div>
+
+            <!-- Saved sub-section -->
+            <div id="phub-saved" class="hub-section">
+                <h2 style="font-family: 'Crimson Pro', serif; font-size: 2rem; margin-bottom: 0.5rem;">Saved Listings</h2>
+                <p style="color:var(--muted);margin-bottom:2rem;font-size:0.95rem;">Listings you've bookmarked for later. Click the bookmark icon on any listing card to save it.</p>
+                <div class="listings-grid" id="savedListingsGrid"></div>
+            </div>
         </section>
 
-        <!-- My Proposals View (Feature 1) -->
-        <section id="my-proposals-view" class="view-section">
-            <div class="section-header">
-                <h2>My Proposals</h2>
-                <p style="color:#666;margin-top:4px;">All proposals you've submitted, with their current status</p>
+        <!-- Profile View -->
+        <!-- Settings Hub View -->
+        <section id="settings-hub-view" class="view-section">
+            <div class="hub-subnav">
+                <button class="hub-btn active" onclick="switchSettingsTab('account')">Account</button>
+                <button class="hub-btn" onclick="switchSettingsTab('tools')">Tools</button>
+                <button class="hub-btn" onclick="switchSettingsTab('availability')">Availability</button>
+                <button class="hub-btn" onclick="switchSettingsTab('company')">Company</button>
             </div>
-            <div id="pendingCountersBanner" style="display:none;background:#FEF9C3;border:1px solid #FDE047;border-radius:12px;padding:1.25rem 1.5rem;margin-top:1.5rem;margin-bottom:0.5rem;">
-                <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
-                    <span style="font-size:1.25rem;">⚡</span>
-                    <div style="flex:1;">
-                        <div style="font-weight:700;color:#713F12;font-size:0.95rem;" id="pendingCountersTitle">Counter-offers need your response</div>
-                        <div style="color:#78350F;font-size:0.85rem;margin-top:0.2rem;">Sellers have countered your proposals. Respond before they expire.</div>
-                    </div>
-                    <button onclick="scrollToFirstCounter()" style="background:#F59E0B;color:white;border:none;padding:0.5rem 1.25rem;border-radius:6px;font-weight:600;cursor:pointer;font-size:0.85rem;white-space:nowrap;">View Counters ↓</button>
-                </div>
-            </div>
-            <div id="myProposalsList" style="margin-top:1.5rem;"></div>
-        </section>
 
-        <!-- Reviews Panel -->
-        <section id="reviews-view" class="view-section">
-            <div id="reviewsPanel" class="view-panel" style="display:block;">
-                <h2 style="font-family:'Playfair Display',serif;font-size:1.8rem;margin-bottom:0.5rem;">My Reviews</h2>
-                <p style="color:#666;margin-bottom:2rem;">What clients say about working with you.</p>
-                <div id="reviewsSummary" style="background:white;border-radius:12px;padding:1.5rem;border:1px solid var(--border);margin-bottom:1.5rem;display:flex;align-items:center;gap:2rem;flex-wrap:wrap;">
-                    <div style="text-align:center;">
-                        <div id="reviewsAvgRating" style="font-size:3rem;font-weight:700;color:var(--accent);">—</div>
-                        <div id="reviewsStars" style="font-size:1.5rem;color:#F59E0B;margin:0.25rem 0;">☆☆☆☆☆</div>
-                        <div id="reviewsCount" style="color:#666;font-size:0.9rem;">No reviews yet</div>
-                    </div>
-                    <div style="flex:1;min-width:200px;" id="reviewsRatingBars"></div>
-                </div>
-                <div id="reviewsList" style="display:flex;flex-direction:column;gap:1rem;"></div>
-            </div>
-        </section>
+            <!-- Account sub-section -->
+            <div id="shub-account" class="hub-section active">
+            <div style="max-width:680px;display:flex;flex-direction:column;gap:1.5rem;">
 
-        <!-- Referrals View (Feature 4) -->
-        <section id="referrals-view" class="view-section">
-            <div class="section-header">
-                <h2>Referrals</h2>
-                <p style="color:#666;margin-top:4px;">Earn <strong>$25 in account credits</strong> for every realtor you refer who subscribes to a paid plan</p>
-            </div>
-            <!-- How it works banner -->
-            <div style="background:linear-gradient(135deg,#fff7ed 0%,#fef3c7 100%);border:1.5px solid #fed7aa;border-radius:16px;padding:1.5rem 2rem;margin-top:1.25rem;display:flex;gap:2rem;flex-wrap:wrap;align-items:flex-start;">
-                <div style="flex:1;min-width:200px;">
-                    <div style="font-weight:700;font-size:1rem;color:#92400e;margin-bottom:0.75rem;">How the referral program works</div>
-                    <ol style="padding-left:1.25rem;display:flex;flex-direction:column;gap:0.5rem;color:#78350f;font-size:0.875rem;line-height:1.5;">
-                        <li>Copy your unique referral link below and share it with other real estate agents</li>
-                        <li>When they sign up and subscribe to any paid plan, you automatically earn <strong>$25 in account credits</strong></li>
-                        <li>Credits are applied automatically to your next invoice — no action needed</li>
-                        <li>There's no cap — refer 4 agents and your Basic plan is free for a month</li>
-                    </ol>
-                </div>
-                <div style="display:flex;flex-direction:column;gap:0.75rem;flex-shrink:0;">
-                    <div style="background:white;border-radius:12px;padding:0.875rem 1.25rem;border:1px solid #fed7aa;text-align:center;">
-                        <div style="font-size:1.6rem;font-weight:900;color:#f59e0b;">$25</div>
-                        <div style="font-size:0.72rem;color:#92400e;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">per referral</div>
+                <!-- Plan & Credits Usage Bar -->
+                <div class="plan-usage-bar" id="planUsageBar">
+                    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;margin-bottom:0.25rem;">
+                        <h3 id="planUsagePlanName">Loading plan…</h3>
+                        <span id="planUsageProposalText" style="font-size:0.85rem;color:#666;"></span>
                     </div>
-                    <div style="background:white;border-radius:12px;padding:0.875rem 1.25rem;border:1px solid #fed7aa;text-align:center;">
-                        <div style="font-size:1rem;font-weight:700;color:#d97706;">No limit</div>
-                        <div style="font-size:0.72rem;color:#92400e;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">on earnings</div>
+                    <div class="plan-usage-meter">
+                        <div class="plan-usage-fill" id="planUsageFill" style="width:0%"></div>
+                    </div>
+                    <div class="plan-usage-row">
+                        <span class="credits-balance" id="planCreditsBalance" style="display:none;">
+                            🪙 <span id="planCreditsCount">0</span> lead credits
+                        </span>
+                        <button onclick="openBuyCreditsModal()" class="btn btn-primary" style="padding:0.55rem 1.25rem;font-size:0.875rem;">Buy Credits</button>
                     </div>
                 </div>
-                <div style="display:flex;flex-direction:column;gap:0.5rem;flex-shrink:0;justify-content:center;">
-                    <div style="font-size:0.8rem;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:0.05em;">Tier rewards</div>
-                    <div style="display:flex;flex-direction:column;gap:0.35rem;font-size:0.82rem;color:#78350f;">
-                        <div>⭐ <strong>Rising Star</strong> — 1 referral</div>
-                        <div>🔵 <strong>Connector</strong> — 3 referrals</div>
-                        <div>🌟 <strong>Top Referrer</strong> — 5 referrals</div>
-                        <div>🏆 <strong>Ambassador</strong> — 10 referrals</div>
-                    </div>
-                </div>
-            </div>
-            <div id="referralsWidget" style="margin-top:1.5rem;"></div>
-        </section>
 
-        <!-- Company View -->
-        <section id="company-view" class="view-section">
+                <!-- Subscription card (rendered dynamically by renderSubscriptionCard()) -->
+                <div id="subscriptionCard"></div>
+
+                <!-- Notification Preferences -->
+                <div style="background:white;border-radius:12px;border:1px solid var(--border);padding:1.5rem;">
+                    <h3 style="font-family:'Crimson Pro',serif;font-size:1.3rem;font-weight:700;margin-bottom:0.5rem;color:var(--ink);">Email Notifications</h3>
+                    <p style="color:#6b7280;font-size:0.875rem;margin-bottom:1.25rem;">Choose which emails you receive from RealtorFinder.</p>
+                    <div id="rNotifPrefsLoading" style="color:#9ca3af;font-size:0.9rem;">Loading…</div>
+                    <div id="rNotifPrefsForm" style="display:none;flex-direction:column;gap:0.75rem;">
+                        <label style="display:flex;align-items:center;gap:0.75rem;cursor:pointer;"><input type="checkbox" id="rnp-new-proposal" style="width:16px;height:16px;accent-color:var(--accent);"> <span>New listings matching my service areas</span></label>
+                        <label style="display:flex;align-items:center;gap:0.75rem;cursor:pointer;"><input type="checkbox" id="rnp-messages" style="width:16px;height:16px;accent-color:var(--accent);"> <span>Messages from sellers</span></label>
+                        <label style="display:flex;align-items:center;gap:0.75rem;cursor:pointer;"><input type="checkbox" id="rnp-weekly-digest" style="width:16px;height:16px;accent-color:var(--accent);"> <span>Weekly activity digest</span></label>
+                        <label style="display:flex;align-items:center;gap:0.75rem;cursor:pointer;"><input type="checkbox" id="rnp-listing-alerts" style="width:16px;height:16px;accent-color:var(--accent);"> <span>Listing alerts &amp; opportunity notifications</span></label>
+                        <label style="display:flex;align-items:center;gap:0.75rem;cursor:pointer;"><input type="checkbox" id="rnp-engagement" style="width:16px;height:16px;accent-color:var(--accent);"> <span>Activity reminders &amp; check-ins</span></label>
+                        <div id="rNotifPrefsSaved" style="display:none;color:#059669;font-size:0.85rem;">✓ Preferences saved</div>
+                        <button onclick="saveRNotifPrefs()" style="background:var(--accent);color:white;border:none;padding:0.65rem 1.5rem;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.9rem;align-self:flex-start;font-family:inherit;">Save Preferences</button>
+                    </div>
+                </div>
+
+                <!-- Profile Completeness Widget (Settings) -->
+                <!-- Profile Completeness Widget (Settings) -->
+                <div class="settings-completeness-widget" id="settingsCompletenessWidget" style="display:none;">
+                    <h3>Profile Completeness</h3>
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem;">
+                        <span id="settingsCompletenessLabel" style="font-size:0.95rem;font-weight:600;color:#374151;">Loading…</span>
+                        <span id="settingsCompletenessPercent" style="font-size:1.1rem;font-weight:700;color:#FF6B35;">—</span>
+                    </div>
+                    <div style="height:10px;background:#e5e7eb;border-radius:6px;overflow:hidden;margin-bottom:1rem;">
+                        <div id="settingsCompletenessBar" style="height:100%;width:0%;border-radius:6px;transition:width 0.5s,background 0.5s;background:var(--accent);"></div>
+                    </div>
+                    <div class="completeness-step-list" id="settingsCompletenessSteps"></div>
+                </div>
+
+                <!-- Premium Profile -->
+                <div class="premium-profile-card" id="premiumProfileCard">
+                    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;margin-bottom:0.25rem;">
+                        <h3>Premium Profile</h3>
+                        <span id="premiumStatusBadge" style="font-size:0.82rem;font-weight:600;padding:0.3rem 0.85rem;border-radius:20px;background:#f3f4f6;color:#374151;">Checking…</span>
+                    </div>
+                    <p style="font-size:0.875rem;color:#666;margin-bottom:1rem;">Premium profiles appear at the top of search results with a highlighted badge.</p>
+                    <div id="premiumUpgradeSection">
+                        <div class="premium-upgrade-grid">
+                            <button class="premium-duration-btn" onclick="premiumCheckout('monthly')">
+                                <div class="duration-name">1 Month</div>
+                                <div class="duration-price">$49</div>
+                            </button>
+                            <button class="premium-duration-btn" onclick="premiumCheckout('quarterly')">
+                                <div class="duration-name">3 Months</div>
+                                <div class="duration-price">$99</div>
+                                <div style="font-size:0.72rem;color:#10b981;font-weight:600;margin-top:2px;">Save 33%</div>
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Banner image upload -->
+                    <div style="margin-top:1.25rem;padding-top:1.25rem;border-top:1px solid var(--border);">
+                        <div style="font-weight:600;font-size:0.9rem;color:var(--ink);margin-bottom:0.4rem;">Banner Image</div>
+                        <div style="font-size:0.82rem;color:#666;margin-bottom:0.65rem;">Shown at the top of your public profile. JPG/PNG, max 5MB.</div>
+                        <label style="cursor:pointer;display:inline-block;padding:0.45rem 1rem;border:1.5px solid var(--border);border-radius:8px;font-size:0.85rem;font-weight:600;color:var(--ink);">
+                            Upload Banner
+                            <input type="file" id="bannerInput" accept="image/*" style="display:none;" onchange="uploadBannerImage(this)">
+                        </label>
+                        <span id="bannerUploadStatus" style="font-size:0.8rem;color:#666;margin-left:0.75rem;"></span>
+                    </div>
+                    <!-- Video URL -->
+                    <div style="margin-top:1rem;">
+                        <div style="font-weight:600;font-size:0.9rem;color:var(--ink);margin-bottom:0.4rem;">Profile Video URL</div>
+                        <div style="font-size:0.82rem;color:#666;margin-bottom:0.65rem;">YouTube or Vimeo link shown on your profile page.</div>
+                        <div style="display:flex;gap:0.5rem;">
+                            <input type="url" id="profileVideoUrl" placeholder="https://youtube.com/watch?v=…" style="flex:1;padding:0.6rem 0.875rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.875rem;">
+                            <button onclick="saveVideoUrl()" style="background:var(--accent);color:white;border:none;padding:0.6rem 1.1rem;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.875rem;font-family:inherit;white-space:nowrap;">Save</button>
+                        </div>
+                        <span id="videoSaveStatus" style="font-size:0.8rem;color:#059669;display:none;margin-top:0.35rem;">✓ Saved</span>
+                    </div>
+                </div>
+
+                <!-- Change Password -->
+                <div style="background:white;border-radius:12px;border:1px solid var(--border);padding:1.5rem;">
+                    <h3 style="font-family:'Crimson Pro',serif;font-size:1.3rem;font-weight:700;margin-bottom:1rem;color:var(--ink);">Change Password</h3>
+                    <div style="display:flex;flex-direction:column;gap:0.75rem;max-width:400px;">
+                        <input type="password" id="settingsCurrentPassword" placeholder="Current password" style="padding:0.7rem 1rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.95rem;">
+                        <input type="password" id="settingsNewPassword" placeholder="New password (min 8 characters)" style="padding:0.7rem 1rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.95rem;">
+                        <input type="password" id="settingsConfirmPassword" placeholder="Confirm new password" style="padding:0.7rem 1rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.95rem;">
+                        <div id="settingsPasswordError" style="display:none;color:#dc2626;font-size:0.85rem;"></div>
+                        <div id="settingsPasswordSuccess" style="display:none;color:#059669;font-size:0.85rem;">✓ Password changed successfully!</div>
+                        <button onclick="changePasswordSettings()" style="background:var(--accent);color:white;border:none;padding:0.7rem 1.5rem;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.95rem;align-self:flex-start;font-family:inherit;">Update Password</button>
+                    </div>
+                </div>
+            </div>
+            </div><!-- /shub-account -->
+
+
+            <!-- Tools sub-section -->
+            <div id="shub-tools" class="hub-section">
+            <div style="max-width:680px;display:flex;flex-direction:column;gap:1.5rem;">
+                <!-- Proposal Templates -->
+                <div style="background:white;border-radius:12px;border:1px solid var(--border);padding:1.5rem;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:0.75rem;">
+                        <div>
+                            <h3 style="font-family:'Crimson Pro',serif;font-size:1.3rem;font-weight:700;color:var(--ink);margin-bottom:0.25rem;">Proposal Templates</h3>
+                            <p style="color:#6b7280;font-size:0.875rem;">Save reusable cover notes to fill in when submitting proposals.</p>
+                        </div>
+                        <button onclick="openTemplateModal()" style="background:var(--accent);color:white;border:none;padding:0.6rem 1.25rem;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.875rem;font-family:inherit;white-space:nowrap;">+ New Template</button>
+                    </div>
+                    <div id="templatesLoading" style="color:#9ca3af;font-size:0.9rem;">Loading templates…</div>
+                    <div id="templatesList" style="display:none;display:flex;flex-direction:column;gap:0.75rem;"></div>
+                    <div id="templatesEmpty" style="display:none;color:#9ca3af;font-size:0.9rem;padding:1rem 0;">No templates yet. Create one to speed up your proposals.</div>
+                </div>
+
+                <!-- Saved Searches -->
+                <div style="background:white;border-radius:12px;border:1px solid var(--border);padding:1.5rem;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:0.75rem;">
+                        <div>
+                            <h3 style="font-family:'Crimson Pro',serif;font-size:1.3rem;font-weight:700;color:var(--ink);margin-bottom:0.25rem;">Saved Searches</h3>
+                            <p style="color:#6b7280;font-size:0.875rem;">Get emailed when new listings match your criteria.</p>
+                        </div>
+                        <button onclick="openSavedSearchModal()" style="background:var(--accent);color:white;border:none;padding:0.6rem 1.25rem;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.875rem;font-family:inherit;white-space:nowrap;">+ New Search Alert</button>
+                    </div>
+                    <div id="savedSearchesLoading" style="color:#9ca3af;font-size:0.9rem;">Loading…</div>
+                    <div id="savedSearchesList" style="display:none;flex-direction:column;gap:0.75rem;"></div>
+                    <div id="savedSearchesEmpty" style="display:none;color:#9ca3af;font-size:0.9rem;padding:0.5rem 0;">No saved searches yet. Create one to get alerts for new listings.</div>
+                </div>
+
+            </div>
+            </div>
+
+            <!-- Availability sub-section -->
+            <div id="shub-availability" class="hub-section">
+            <div style="max-width:680px;">
+                <!-- Availability -->
+                <div style="background:white;border-radius:12px;border:1px solid var(--border);padding:1.5rem;">
+                    <h3 style="font-family:'Crimson Pro',serif;font-size:1.3rem;font-weight:700;margin-bottom:0.25rem;color:var(--ink);">Availability</h3>
+                    <p style="color:#6b7280;font-size:0.875rem;margin-bottom:1rem;">Set the days and times you're available to meet with sellers.</p>
+                    <!-- Away/unavailable toggle -->
+                    <div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;padding:0.875rem 1rem;margin-bottom:1.25rem;">
+                        <label style="font-size:0.85rem;font-weight:600;color:#92400e;display:block;margin-bottom:0.5rem;">Mark as Away</label>
+                        <div style="display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap;">
+                            <label style="font-size:0.82rem;color:#78350f;">Away until:</label>
+                            <input type="date" id="unavailableUntil" style="padding:0.4rem 0.75rem;border:1px solid #fcd34d;border-radius:6px;font-family:inherit;font-size:0.875rem;background:white;">
+                            <button onclick="saveUnavailableUntil()" style="background:#d97706;color:white;border:none;border-radius:6px;padding:0.4rem 0.875rem;font-weight:600;cursor:pointer;font-size:0.82rem;font-family:inherit;">Save</button>
+                            <button onclick="clearUnavailableUntil()" style="background:white;color:#92400e;border:1px solid #fcd34d;border-radius:6px;padding:0.4rem 0.875rem;font-weight:600;cursor:pointer;font-size:0.82rem;font-family:inherit;">Clear</button>
+                            <span id="unavailSaved" style="display:none;color:#059669;font-size:0.82rem;">✓ Saved</span>
+                        </div>
+                        <p style="font-size:0.78rem;color:#92400e;margin-top:0.4rem;">Sellers will see an "Away" badge on your proposals until this date.</p>
+                    </div>
+                    <!-- Add slot form -->
+                    <div style="display:flex;gap:0.75rem;flex-wrap:wrap;align-items:flex-end;margin-bottom:1.25rem;">
+                        <div style="display:flex;flex-direction:column;gap:0.3rem;">
+                            <label style="font-size:0.8rem;font-weight:600;color:#374151;">Day</label>
+                            <select id="availDay" style="padding:0.6rem 0.75rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.875rem;">
+                                <option value="0">Sunday</option>
+                                <option value="1">Monday</option>
+                                <option value="2">Tuesday</option>
+                                <option value="3">Wednesday</option>
+                                <option value="4">Thursday</option>
+                                <option value="5">Friday</option>
+                                <option value="6">Saturday</option>
+                            </select>
+                        </div>
+                        <div style="display:flex;flex-direction:column;gap:0.3rem;">
+                            <label style="font-size:0.8rem;font-weight:600;color:#374151;">Start</label>
+                            <input type="time" id="availStart" style="padding:0.6rem 0.75rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.875rem;">
+                        </div>
+                        <div style="display:flex;flex-direction:column;gap:0.3rem;">
+                            <label style="font-size:0.8rem;font-weight:600;color:#374151;">End</label>
+                            <input type="time" id="availEnd" style="padding:0.6rem 0.75rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.875rem;">
+                        </div>
+                        <button onclick="addAvailabilitySlot()" style="background:var(--accent);color:white;border:none;padding:0.6rem 1.25rem;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.875rem;font-family:inherit;white-space:nowrap;">+ Add</button>
+                    </div>
+                    <div id="availabilityLoading" style="color:#9ca3af;font-size:0.9rem;">Loading…</div>
+                    <div id="availabilityList" style="display:none;flex-direction:column;gap:0.5rem;"></div>
+                    <div id="availabilityEmpty" style="display:none;color:#9ca3af;font-size:0.875rem;padding:0.5rem 0;">No availability slots yet. Add your first one above.</div>
+                </div>
+
+            </div>
+            </div>
+
+            <!-- Company sub-section -->
+            <div id="shub-company" class="hub-section">
             <div class="section-header">
                 <h2>My Company</h2>
                 <p id="companyPlanBadge" style="margin-top:4px;"></p>
@@ -1569,316 +1940,7 @@
                     <div id="assignmentsList"><p style="color:#9ca3af;font-size:14px;">Loading assignments…</p></div>
                 </div>
             </div>
-        </section>
-
-        <!-- Profile View -->
-        <section id="profile-view" class="view-section">
-            <h2 style="font-family: 'Crimson Pro', serif; font-size: 2rem; margin-bottom: 2rem;">My Profile</h2>
-            <div id="profileBadgesRow" style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-bottom:1.5rem;max-width:600px;"></div>
-            <div style="max-width:600px;">
-                <!-- Profile photo -->
-                <div style="display:flex;align-items:center;gap:1.5rem;margin-bottom:2rem;padding:1.5rem;background:white;border-radius:14px;border:1px solid var(--border);">
-                    <div id="profilePhotoWrap" style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,var(--ink),#2a2a2a);display:flex;align-items:center;justify-content:center;font-family:'Crimson Pro',serif;font-size:2rem;font-weight:900;color:white;flex-shrink:0;overflow:hidden;">
-                        <span id="profilePhotoInitials"></span>
-                    </div>
-                    <div style="flex:1;">
-                        <div style="font-weight:600;margin-bottom:0.4rem;">Profile Photo</div>
-                        <div style="font-size:0.85rem;color:var(--muted);margin-bottom:0.75rem;">Shown on your public profile. JPG or PNG, max 5MB.</div>
-                        <label style="cursor:pointer;display:inline-block;padding:0.45rem 1rem;border:1.5px solid var(--border);border-radius:8px;font-size:0.85rem;font-weight:600;color:var(--ink);">
-                            Choose Photo
-                            <input type="file" id="photoInput" accept="image/*" style="display:none;" onchange="uploadProfilePhoto(this)">
-                        </label>
-                        <span id="photoStatus" style="font-size:0.8rem;color:var(--muted);margin-left:0.75rem;"></span>
-                    </div>
-                </div>
-                <div id="profileMessage" style="display:none;padding:0.875rem 1rem;border-radius:8px;margin-bottom:1rem;font-weight:500;font-size:0.9rem;"></div>
-                <form id="profileForm">
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>Phone</label>
-                            <input type="tel" name="phone" placeholder="(555) 555-5555">
-                        </div>
-                        <div class="form-group">
-                            <label>License Number</label>
-                            <input type="text" name="licenseNumber" placeholder="RE-123456">
-                        </div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>Years of Experience</label>
-                            <input type="number" name="yearsExperience" placeholder="5" min="0">
-                        </div>
-                        <div class="form-group">
-                            <label>Service Areas</label>
-                            <input type="text" name="serviceAreas" placeholder="Boston, Cambridge, Brookline">
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label>Bio</label>
-                        <textarea name="bio" rows="4" style="width:100%;padding:0.875rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:1rem;resize:vertical;" placeholder="Tell sellers about yourself and your experience…"></textarea>
-                    </div>
-                    <button type="submit" class="btn btn-primary" style="padding:1rem 2rem;">Save Profile</button>
-                </form>
-
-                <!-- License Document -->
-                <div id="licenseDocSection" style="background:white;border-radius:12px;border:1px solid var(--border);padding:1.5rem;margin-top:1.5rem;">
-                    <h3 style="font-family:'Crimson Pro',serif;font-size:1.3rem;font-weight:700;margin-bottom:0.5rem;color:var(--ink);">License Document</h3>
-                    <p style="font-size:0.85rem;color:#666;margin-bottom:1rem;">Upload your real estate license document for verification. Verified realtors display a green badge on their profile.</p>
-                    <div id="licenseDocStatus" style="margin-bottom:1rem;"></div>
-                    <div id="licenseDocUploadArea">
-                        <label style="cursor:pointer;display:inline-block;padding:0.55rem 1.25rem;border:1.5px solid var(--border);border-radius:8px;font-size:0.875rem;font-weight:600;color:var(--ink);">
-                            Choose Document
-                            <input type="file" id="licenseDocInput" accept="image/*,.pdf" style="display:none;" onchange="uploadLicenseDoc(this)">
-                        </label>
-                        <span id="licenseDocUploadStatus" style="font-size:0.8rem;color:var(--muted);margin-left:0.75rem;"></span>
-                    </div>
-                </div>
-
-                <!-- Email Preferences -->
-                <div style="background:white;border-radius:12px;border:1px solid var(--border);padding:1.5rem;margin-top:1.5rem;">
-                    <h3 style="font-family:'Crimson Pro',serif;font-size:1.3rem;font-weight:700;margin-bottom:1rem;color:var(--ink);">Email Preferences</h3>
-                    <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;">
-                        <div>
-                            <div style="font-weight:600;font-size:0.95rem;margin-bottom:0.25rem;">New Listing Alerts</div>
-                            <div style="font-size:0.85rem;color:#666;">Get emailed when a new listing appears within 25 miles of your ZIP code.</div>
-                        </div>
-                        <label style="position:relative;display:inline-block;width:48px;height:26px;flex-shrink:0;">
-                            <input type="checkbox" id="emailAlertsToggle" style="opacity:0;width:0;height:0;" onchange="saveEmailAlerts(this.checked)">
-                            <span id="emailAlertsSlider" style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#ccc;border-radius:26px;transition:.3s;"></span>
-                        </label>
-                    </div>
-                    <div id="emailAlertsSaved" style="display:none;color:#059669;font-size:0.85rem;margin-top:0.5rem;">✓ Saved</div>
-                </div>
-
-                <!-- Profile Completeness Widget -->
-                <div id="profileCompletenessWidget" style="background:white;border-radius:12px;border:1px solid var(--border);padding:1.5rem;margin-top:1.5rem;display:none;">
-                    <h3 style="font-family:'Crimson Pro',serif;font-size:1.3rem;font-weight:700;margin-bottom:1rem;color:var(--ink);">Profile Completeness</h3>
-                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem;">
-                        <span id="completenessLabel" style="font-size:0.95rem;font-weight:600;color:#374151;">Loading…</span>
-                        <span id="completenessPercent" style="font-size:1.1rem;font-weight:700;color:#FF6B35;">—</span>
-                    </div>
-                    <div style="height:10px;background:#e5e7eb;border-radius:6px;overflow:hidden;margin-bottom:1rem;">
-                        <div id="completenessBar" style="height:100%;width:0%;border-radius:6px;transition:width 0.5s,background 0.5s;"></div>
-                    </div>
-                    <div id="completenessItems" style="display:flex;flex-direction:column;gap:0.5rem;"></div>
-                </div>
-
-                <!-- Public Profile Link -->
-                <div style="background:white;border-radius:12px;border:1px solid var(--border);padding:1.5rem;margin-top:1.5rem;">
-                    <h3 style="font-family:'Crimson Pro',serif;font-size:1.3rem;font-weight:700;margin-bottom:0.25rem;color:var(--ink);">Your Public Profile</h3>
-                    <p style="font-size:0.875rem;color:#6b7280;margin-bottom:0.75rem;">Share this link with clients or on social media.</p>
-                    <div style="display:flex;align-items:center;gap:0.5rem;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:0.6rem 1rem;">
-                        <span id="publicProfileUrl" style="font-size:0.875rem;color:#374151;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Loading…</span>
-                        <button onclick="copyProfileUrl()" style="background:var(--accent);color:white;border:none;padding:0.4rem 0.9rem;border-radius:6px;font-size:0.8rem;font-weight:600;cursor:pointer;flex-shrink:0;font-family:inherit;">Copy</button>
-                        <a id="publicProfileLink" href="#" target="_blank" style="background:#f3f4f6;color:#374151;border:none;padding:0.4rem 0.9rem;border-radius:6px;font-size:0.8rem;font-weight:600;text-decoration:none;flex-shrink:0;">View →</a>
-                    </div>
-                    <div id="profileUrlCopied" style="display:none;font-size:0.8rem;color:#059669;margin-top:0.4rem;">✓ Copied to clipboard</div>
-                </div>
-
-                <!-- Subscription & Billing -->
-                <div style="background:white;border-radius:12px;border:1px solid var(--border);padding:1.5rem;margin-top:1.5rem;">
-                    <h3 style="font-family:'Crimson Pro',serif;font-size:1.3rem;font-weight:700;margin-bottom:0.5rem;color:var(--ink);">Subscription</h3>
-                    <p style="font-size:0.9rem;color:#666;margin-bottom:1rem;">Manage your plan and billing.</p>
-                    <button onclick="openBillingPortal()" style="background:var(--accent);color:white;border:none;padding:0.7rem 1.5rem;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.95rem;font-family:inherit;">Manage Subscription →</button>
-                </div>
-
-                <!-- Change Password -->
-                <div style="background:white;border-radius:12px;border:1px solid var(--border);padding:1.5rem;margin-top:1.5rem;">
-                    <h3 style="font-family:'Crimson Pro',serif;font-size:1.3rem;font-weight:700;margin-bottom:1rem;color:var(--ink);">Change Password</h3>
-                    <div style="display:flex;flex-direction:column;gap:0.75rem;max-width:400px;">
-                        <input type="password" id="currentPassword" placeholder="Current password" style="padding:0.7rem 1rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.95rem;">
-                        <input type="password" id="newPassword" placeholder="New password (min 8 characters)" style="padding:0.7rem 1rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.95rem;">
-                        <input type="password" id="confirmPassword" placeholder="Confirm new password" style="padding:0.7rem 1rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.95rem;">
-                        <div id="passwordError" style="display:none;color:#dc2626;font-size:0.85rem;"></div>
-                        <div id="passwordSuccess" style="display:none;color:#059669;font-size:0.85rem;">✓ Password changed successfully!</div>
-                        <button onclick="changePassword()" style="background:var(--accent);color:white;border:none;padding:0.7rem 1.5rem;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.95rem;align-self:flex-start;">Update Password</button>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Settings View -->
-        <section id="settings-view" class="view-section">
-            <h2 style="font-family:'Crimson Pro',serif;font-size:2rem;margin-bottom:2rem;">Settings</h2>
-            <div style="max-width:680px;display:flex;flex-direction:column;gap:1.5rem;">
-
-                <!-- Plan & Credits Usage Bar -->
-                <div class="plan-usage-bar" id="planUsageBar">
-                    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;margin-bottom:0.25rem;">
-                        <h3 id="planUsagePlanName">Loading plan…</h3>
-                        <span id="planUsageProposalText" style="font-size:0.85rem;color:#666;"></span>
-                    </div>
-                    <div class="plan-usage-meter">
-                        <div class="plan-usage-fill" id="planUsageFill" style="width:0%"></div>
-                    </div>
-                    <div class="plan-usage-row">
-                        <span class="credits-balance" id="planCreditsBalance" style="display:none;">
-                            🪙 <span id="planCreditsCount">0</span> lead credits
-                        </span>
-                        <button onclick="openBuyCreditsModal()" class="btn btn-primary" style="padding:0.55rem 1.25rem;font-size:0.875rem;">Buy Credits</button>
-                    </div>
-                </div>
-
-                <!-- Subscription card (rendered dynamically by renderSubscriptionCard()) -->
-                <div id="subscriptionCard"></div>
-
-                <!-- Notification Preferences -->
-                <div style="background:white;border-radius:12px;border:1px solid var(--border);padding:1.5rem;">
-                    <h3 style="font-family:'Crimson Pro',serif;font-size:1.3rem;font-weight:700;margin-bottom:0.5rem;color:var(--ink);">Email Notifications</h3>
-                    <p style="color:#6b7280;font-size:0.875rem;margin-bottom:1.25rem;">Choose which emails you receive from RealtorFinder.</p>
-                    <div id="rNotifPrefsLoading" style="color:#9ca3af;font-size:0.9rem;">Loading…</div>
-                    <div id="rNotifPrefsForm" style="display:none;flex-direction:column;gap:0.75rem;">
-                        <label style="display:flex;align-items:center;gap:0.75rem;cursor:pointer;"><input type="checkbox" id="rnp-new-proposal" style="width:16px;height:16px;accent-color:var(--accent);"> <span>New listings matching my service areas</span></label>
-                        <label style="display:flex;align-items:center;gap:0.75rem;cursor:pointer;"><input type="checkbox" id="rnp-messages" style="width:16px;height:16px;accent-color:var(--accent);"> <span>Messages from sellers</span></label>
-                        <label style="display:flex;align-items:center;gap:0.75rem;cursor:pointer;"><input type="checkbox" id="rnp-weekly-digest" style="width:16px;height:16px;accent-color:var(--accent);"> <span>Weekly activity digest</span></label>
-                        <label style="display:flex;align-items:center;gap:0.75rem;cursor:pointer;"><input type="checkbox" id="rnp-listing-alerts" style="width:16px;height:16px;accent-color:var(--accent);"> <span>Listing alerts &amp; opportunity notifications</span></label>
-                        <label style="display:flex;align-items:center;gap:0.75rem;cursor:pointer;"><input type="checkbox" id="rnp-engagement" style="width:16px;height:16px;accent-color:var(--accent);"> <span>Activity reminders &amp; check-ins</span></label>
-                        <div id="rNotifPrefsSaved" style="display:none;color:#059669;font-size:0.85rem;">✓ Preferences saved</div>
-                        <button onclick="saveRNotifPrefs()" style="background:var(--accent);color:white;border:none;padding:0.65rem 1.5rem;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.9rem;align-self:flex-start;font-family:inherit;">Save Preferences</button>
-                    </div>
-                </div>
-
-                <!-- Proposal Templates -->
-                <div style="background:white;border-radius:12px;border:1px solid var(--border);padding:1.5rem;">
-                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:0.75rem;">
-                        <div>
-                            <h3 style="font-family:'Crimson Pro',serif;font-size:1.3rem;font-weight:700;color:var(--ink);margin-bottom:0.25rem;">Proposal Templates</h3>
-                            <p style="color:#6b7280;font-size:0.875rem;">Save reusable cover notes to fill in when submitting proposals.</p>
-                        </div>
-                        <button onclick="openTemplateModal()" style="background:var(--accent);color:white;border:none;padding:0.6rem 1.25rem;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.875rem;font-family:inherit;white-space:nowrap;">+ New Template</button>
-                    </div>
-                    <div id="templatesLoading" style="color:#9ca3af;font-size:0.9rem;">Loading templates…</div>
-                    <div id="templatesList" style="display:none;display:flex;flex-direction:column;gap:0.75rem;"></div>
-                    <div id="templatesEmpty" style="display:none;color:#9ca3af;font-size:0.9rem;padding:1rem 0;">No templates yet. Create one to speed up your proposals.</div>
-                </div>
-
-                <!-- Saved Searches -->
-                <div style="background:white;border-radius:12px;border:1px solid var(--border);padding:1.5rem;">
-                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:0.75rem;">
-                        <div>
-                            <h3 style="font-family:'Crimson Pro',serif;font-size:1.3rem;font-weight:700;color:var(--ink);margin-bottom:0.25rem;">Saved Searches</h3>
-                            <p style="color:#6b7280;font-size:0.875rem;">Get emailed when new listings match your criteria.</p>
-                        </div>
-                        <button onclick="openSavedSearchModal()" style="background:var(--accent);color:white;border:none;padding:0.6rem 1.25rem;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.875rem;font-family:inherit;white-space:nowrap;">+ New Search Alert</button>
-                    </div>
-                    <div id="savedSearchesLoading" style="color:#9ca3af;font-size:0.9rem;">Loading…</div>
-                    <div id="savedSearchesList" style="display:none;flex-direction:column;gap:0.75rem;"></div>
-                    <div id="savedSearchesEmpty" style="display:none;color:#9ca3af;font-size:0.9rem;padding:0.5rem 0;">No saved searches yet. Create one to get alerts for new listings.</div>
-                </div>
-
-                <!-- Availability -->
-                <div style="background:white;border-radius:12px;border:1px solid var(--border);padding:1.5rem;">
-                    <h3 style="font-family:'Crimson Pro',serif;font-size:1.3rem;font-weight:700;margin-bottom:0.25rem;color:var(--ink);">Availability</h3>
-                    <p style="color:#6b7280;font-size:0.875rem;margin-bottom:1rem;">Set the days and times you're available to meet with sellers.</p>
-                    <!-- Away/unavailable toggle -->
-                    <div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;padding:0.875rem 1rem;margin-bottom:1.25rem;">
-                        <label style="font-size:0.85rem;font-weight:600;color:#92400e;display:block;margin-bottom:0.5rem;">Mark as Away</label>
-                        <div style="display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap;">
-                            <label style="font-size:0.82rem;color:#78350f;">Away until:</label>
-                            <input type="date" id="unavailableUntil" style="padding:0.4rem 0.75rem;border:1px solid #fcd34d;border-radius:6px;font-family:inherit;font-size:0.875rem;background:white;">
-                            <button onclick="saveUnavailableUntil()" style="background:#d97706;color:white;border:none;border-radius:6px;padding:0.4rem 0.875rem;font-weight:600;cursor:pointer;font-size:0.82rem;font-family:inherit;">Save</button>
-                            <button onclick="clearUnavailableUntil()" style="background:white;color:#92400e;border:1px solid #fcd34d;border-radius:6px;padding:0.4rem 0.875rem;font-weight:600;cursor:pointer;font-size:0.82rem;font-family:inherit;">Clear</button>
-                            <span id="unavailSaved" style="display:none;color:#059669;font-size:0.82rem;">✓ Saved</span>
-                        </div>
-                        <p style="font-size:0.78rem;color:#92400e;margin-top:0.4rem;">Sellers will see an "Away" badge on your proposals until this date.</p>
-                    </div>
-                    <!-- Add slot form -->
-                    <div style="display:flex;gap:0.75rem;flex-wrap:wrap;align-items:flex-end;margin-bottom:1.25rem;">
-                        <div style="display:flex;flex-direction:column;gap:0.3rem;">
-                            <label style="font-size:0.8rem;font-weight:600;color:#374151;">Day</label>
-                            <select id="availDay" style="padding:0.6rem 0.75rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.875rem;">
-                                <option value="0">Sunday</option>
-                                <option value="1">Monday</option>
-                                <option value="2">Tuesday</option>
-                                <option value="3">Wednesday</option>
-                                <option value="4">Thursday</option>
-                                <option value="5">Friday</option>
-                                <option value="6">Saturday</option>
-                            </select>
-                        </div>
-                        <div style="display:flex;flex-direction:column;gap:0.3rem;">
-                            <label style="font-size:0.8rem;font-weight:600;color:#374151;">Start</label>
-                            <input type="time" id="availStart" style="padding:0.6rem 0.75rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.875rem;">
-                        </div>
-                        <div style="display:flex;flex-direction:column;gap:0.3rem;">
-                            <label style="font-size:0.8rem;font-weight:600;color:#374151;">End</label>
-                            <input type="time" id="availEnd" style="padding:0.6rem 0.75rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.875rem;">
-                        </div>
-                        <button onclick="addAvailabilitySlot()" style="background:var(--accent);color:white;border:none;padding:0.6rem 1.25rem;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.875rem;font-family:inherit;white-space:nowrap;">+ Add</button>
-                    </div>
-                    <div id="availabilityLoading" style="color:#9ca3af;font-size:0.9rem;">Loading…</div>
-                    <div id="availabilityList" style="display:none;flex-direction:column;gap:0.5rem;"></div>
-                    <div id="availabilityEmpty" style="display:none;color:#9ca3af;font-size:0.875rem;padding:0.5rem 0;">No availability slots yet. Add your first one above.</div>
-                </div>
-
-                <!-- Profile Completeness Widget (Settings) -->
-                <div class="settings-completeness-widget" id="settingsCompletenessWidget" style="display:none;">
-                    <h3>Profile Completeness</h3>
-                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem;">
-                        <span id="settingsCompletenessLabel" style="font-size:0.95rem;font-weight:600;color:#374151;">Loading…</span>
-                        <span id="settingsCompletenessPercent" style="font-size:1.1rem;font-weight:700;color:#FF6B35;">—</span>
-                    </div>
-                    <div style="height:10px;background:#e5e7eb;border-radius:6px;overflow:hidden;margin-bottom:1rem;">
-                        <div id="settingsCompletenessBar" style="height:100%;width:0%;border-radius:6px;transition:width 0.5s,background 0.5s;background:var(--accent);"></div>
-                    </div>
-                    <div class="completeness-step-list" id="settingsCompletenessSteps"></div>
-                </div>
-
-                <!-- Premium Profile -->
-                <div class="premium-profile-card" id="premiumProfileCard">
-                    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;margin-bottom:0.25rem;">
-                        <h3>Premium Profile</h3>
-                        <span id="premiumStatusBadge" style="font-size:0.82rem;font-weight:600;padding:0.3rem 0.85rem;border-radius:20px;background:#f3f4f6;color:#374151;">Checking…</span>
-                    </div>
-                    <p style="font-size:0.875rem;color:#666;margin-bottom:1rem;">Premium profiles appear at the top of search results with a highlighted badge.</p>
-                    <div id="premiumUpgradeSection">
-                        <div class="premium-upgrade-grid">
-                            <button class="premium-duration-btn" onclick="premiumCheckout('monthly')">
-                                <div class="duration-name">1 Month</div>
-                                <div class="duration-price">$49</div>
-                            </button>
-                            <button class="premium-duration-btn" onclick="premiumCheckout('quarterly')">
-                                <div class="duration-name">3 Months</div>
-                                <div class="duration-price">$99</div>
-                                <div style="font-size:0.72rem;color:#10b981;font-weight:600;margin-top:2px;">Save 33%</div>
-                            </button>
-                        </div>
-                    </div>
-                    <!-- Banner image upload -->
-                    <div style="margin-top:1.25rem;padding-top:1.25rem;border-top:1px solid var(--border);">
-                        <div style="font-weight:600;font-size:0.9rem;color:var(--ink);margin-bottom:0.4rem;">Banner Image</div>
-                        <div style="font-size:0.82rem;color:#666;margin-bottom:0.65rem;">Shown at the top of your public profile. JPG/PNG, max 5MB.</div>
-                        <label style="cursor:pointer;display:inline-block;padding:0.45rem 1rem;border:1.5px solid var(--border);border-radius:8px;font-size:0.85rem;font-weight:600;color:var(--ink);">
-                            Upload Banner
-                            <input type="file" id="bannerInput" accept="image/*" style="display:none;" onchange="uploadBannerImage(this)">
-                        </label>
-                        <span id="bannerUploadStatus" style="font-size:0.8rem;color:#666;margin-left:0.75rem;"></span>
-                    </div>
-                    <!-- Video URL -->
-                    <div style="margin-top:1rem;">
-                        <div style="font-weight:600;font-size:0.9rem;color:var(--ink);margin-bottom:0.4rem;">Profile Video URL</div>
-                        <div style="font-size:0.82rem;color:#666;margin-bottom:0.65rem;">YouTube or Vimeo link shown on your profile page.</div>
-                        <div style="display:flex;gap:0.5rem;">
-                            <input type="url" id="profileVideoUrl" placeholder="https://youtube.com/watch?v=…" style="flex:1;padding:0.6rem 0.875rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.875rem;">
-                            <button onclick="saveVideoUrl()" style="background:var(--accent);color:white;border:none;padding:0.6rem 1.1rem;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.875rem;font-family:inherit;white-space:nowrap;">Save</button>
-                        </div>
-                        <span id="videoSaveStatus" style="font-size:0.8rem;color:#059669;display:none;margin-top:0.35rem;">✓ Saved</span>
-                    </div>
-                </div>
-
-                <!-- Change Password -->
-                <div style="background:white;border-radius:12px;border:1px solid var(--border);padding:1.5rem;">
-                    <h3 style="font-family:'Crimson Pro',serif;font-size:1.3rem;font-weight:700;margin-bottom:1rem;color:var(--ink);">Change Password</h3>
-                    <div style="display:flex;flex-direction:column;gap:0.75rem;max-width:400px;">
-                        <input type="password" id="settingsCurrentPassword" placeholder="Current password" style="padding:0.7rem 1rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.95rem;">
-                        <input type="password" id="settingsNewPassword" placeholder="New password (min 8 characters)" style="padding:0.7rem 1rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.95rem;">
-                        <input type="password" id="settingsConfirmPassword" placeholder="Confirm new password" style="padding:0.7rem 1rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.95rem;">
-                        <div id="settingsPasswordError" style="display:none;color:#dc2626;font-size:0.85rem;"></div>
-                        <div id="settingsPasswordSuccess" style="display:none;color:#059669;font-size:0.85rem;">✓ Password changed successfully!</div>
-                        <button onclick="changePasswordSettings()" style="background:var(--accent);color:white;border:none;padding:0.7rem 1.5rem;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.95rem;align-self:flex-start;font-family:inherit;">Update Password</button>
-                    </div>
-                </div>
-            </div>
+                    </div><!-- /shub-company -->
         </section>
 
         <!-- Template Modal -->
@@ -2227,29 +2289,83 @@
                 document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
                 document.getElementById(`${view}-view`).classList.add('active');
 
-                if (view === 'map') {
-                    // Small delay so the container is visible before Leaflet measures it
-                    setTimeout(() => {
-                        if (!map) {
-                            initMap();
-                        } else {
-                            map.invalidateSize();
-                        }
-                    }, 50);
-                }
-
                 if (view === 'buyer-requests') loadBuyerRequests();
-                if (view === 'showings') loadShowings();
-                if (view === 'company') { window.location.href = '/dashboard/company'; return; }
-                if (view === 'saved') loadSavedListings();
                 if (view === 'analytics') loadAnalytics();
-                if (view === 'profile') { loadEmailAlerts(); loadProfileCompleteness(); }
-                if (view === 'messages') { window.location.href = '/inbox'; return; }
-                if (view === 'reviews') loadReviews();
-                if (view === 'referrals') loadReferrals();
-                if (view === 'settings') { renderSubscriptionCard(); loadRNotifPrefs(); loadTemplates(); loadSavedSearches(); loadSubscriptionLimits(); loadPremiumStatus(); loadSettingsCompleteness(); loadAvailability(); }
+                if (view === 'messages') { loadConversations(); }
+                if (view === 'pipeline') {
+                    loadDashboard();
+                    loadMyProposals();
+                    loadShowings();
+                }
+                if (view === 'profile-hub') {
+                    loadEmailAlerts();
+                    loadProfileCompleteness();
+                    loadReviews();
+                    loadReferrals();
+                    loadSavedListings();
+                }
+                if (view === 'settings-hub') {
+                    renderSubscriptionCard();
+                    loadRNotifPrefs();
+                    loadTemplates();
+                    loadSavedSearches();
+                    loadSubscriptionLimits();
+                    loadPremiumStatus();
+                    loadSettingsCompleteness();
+                    loadAvailability();
+                    loadCompany();
+                }
             });
         });
+
+        function switchPipelineTab(sub) {
+            document.querySelectorAll('#pipeline-view .hub-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('#pipeline-view .hub-section').forEach(s => s.classList.remove('active'));
+            document.querySelector(`#pipeline-view .hub-btn[onclick*="${sub}"]`).classList.add('active');
+            document.getElementById(`pipeline-${sub}`).classList.add('active');
+            if (sub === 'showings') loadShowings();
+        }
+
+        function switchProfileTab(sub) {
+            document.querySelectorAll('#profile-hub-view .hub-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('#profile-hub-view .hub-section').forEach(s => s.classList.remove('active'));
+            document.querySelector(`#profile-hub-view .hub-btn[onclick*="${sub}"]`).classList.add('active');
+            document.getElementById(`phub-${sub}`).classList.add('active');
+            if (sub === 'reviews') loadReviews();
+            if (sub === 'referrals') loadReferrals();
+            if (sub === 'saved') loadSavedListings();
+        }
+
+        function switchSettingsTab(sub) {
+            document.querySelectorAll('#settings-hub-view .hub-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('#settings-hub-view .hub-section').forEach(s => s.classList.remove('active'));
+            document.querySelector(`#settings-hub-view .hub-btn[onclick*="${sub}"]`).classList.add('active');
+            document.getElementById(`shub-${sub}`).classList.add('active');
+            if (sub === 'company') loadCompany();
+        }
+
+        function setBrowseMode(mode) {
+            const grid = document.getElementById('browseGridContent');
+            const map = document.getElementById('browseMapContent');
+            const gridBtn = document.getElementById('browseGridBtn');
+            const mapBtn = document.getElementById('browseMapBtn');
+            if (mode === 'grid') {
+                grid.style.display = '';
+                map.style.display = 'none';
+                gridBtn.style.background = 'var(--accent)';
+                gridBtn.style.color = 'white';
+                mapBtn.style.background = '#f3f4f6';
+                mapBtn.style.color = '#374151';
+            } else {
+                grid.style.display = 'none';
+                map.style.display = '';
+                mapBtn.style.background = 'var(--accent)';
+                mapBtn.style.color = 'white';
+                gridBtn.style.background = '#f3f4f6';
+                gridBtn.style.color = '#374151';
+                setTimeout(() => { if (!window._leafletMap) initMap(); else window._leafletMap.invalidateSize(); }, 50);
+            }
+        }
 
         // Modal Functions
         function openBidModal(listingId, address) {
@@ -2376,6 +2492,7 @@
                 const activeBids = myBidsData.filter(b => b.status === 'pending' || !b.status);
                 document.getElementById('statMyBids').textContent = activeBids.length;
 
+                window._lastMyBidsData = myBidsData;
                 renderMyBids(myBidsData);
                 renderWonListings(myBidsData);
                 await loadListings();
@@ -2610,7 +2727,7 @@
             const statusEl = document.getElementById('mapStatusText');
             const zip = currentUser?.zipCode;
             if (!zip) {
-                statusEl.innerHTML = 'Add your ZIP code in <a href="#" onclick="document.querySelector(\'[data-view=profile]\').click();return false;" style="color:var(--accent);">My Profile</a> to see listings near you.';
+                statusEl.innerHTML = 'Add your ZIP code in <a href="#" onclick="document.querySelector(\'[data-view=profile-hub]\').click();return false;" style="color:var(--accent);">My Profile</a> to see listings near you.';
                 return;
             }
             statusEl.textContent = `Locating ZIP code ${zip}…`;
@@ -2708,7 +2825,7 @@
             nudge.innerHTML = `
                 <div class="profile-nudge-header">
                     <p><strong>Complete your profile</strong> — Sellers are more likely to accept proposals from realtors with full profiles. Your profile is ${pct}% complete.</p>
-                    <button class="btn btn-secondary" style="padding:0.4rem 1rem;font-size:0.85rem;white-space:nowrap;" onclick="document.querySelector('[data-view=profile]').click()">Update Profile →</button>
+                    <button class="btn btn-secondary" style="padding:0.4rem 1rem;font-size:0.85rem;white-space:nowrap;" onclick="document.querySelector('[data-view=profile-hub]').click()">Update Profile →</button>
                 </div>
                 <div class="profile-nudge-bar"><div class="profile-nudge-fill" style="width:${pct}%"></div></div>
                 <div class="profile-nudge-missing">Missing: ${missing.map(f => `<span class="profile-nudge-chip">${f.label}</span>`).join('')}</div>
@@ -2751,7 +2868,7 @@
                     ${item(hasLicense, 'License number added')}
                 </div>
                 <div style="margin-top:1rem;">
-                    <button class="btn btn-primary" onclick="document.querySelector('[data-view=profile]').click()" style="padding:0.5rem 1.25rem;font-size:0.875rem;background:#d97706;border-color:#d97706;">Update Profile →</button>
+                    <button class="btn btn-primary" onclick="document.querySelector('[data-view=profile-hub]').click()" style="padding:0.5rem 1.25rem;font-size:0.875rem;background:#d97706;border-color:#d97706;">Update Profile →</button>
                 </div>
             `;
             document.querySelector('.dashboard-container').prepend(panel);
@@ -4777,7 +4894,7 @@
                     banner.style.display = 'none';
                 }
                 // Update tab badge
-                const tabBadge = document.querySelector('[data-view="my-proposals"] .counter-badge');
+                const tabBadge = document.getElementById('pipelineBadge');
                 if (tabBadge) {
                     if (pendingCounters.length > 0) { tabBadge.textContent = pendingCounters.length; tabBadge.style.display = 'inline-flex'; }
                     else tabBadge.style.display = 'none';
@@ -5580,7 +5697,7 @@
                 showToast('Deal updated!');
                 closeDealModal();
                 // Re-render won listings
-                document.querySelector('[data-view="won"]').click();
+                document.querySelector('[data-view="pipeline"]').click(); setTimeout(() => switchPipelineTab('won'), 50);
             } catch(e) { showToast('Network error', 'error'); }
         }
 
@@ -5899,18 +6016,7 @@
 
         // Hook new tabs into tab-switching logic
         document.addEventListener('DOMContentLoaded', () => {
-            document.querySelectorAll('.tab[data-view="my-proposals"]').forEach(el => {
-                el.addEventListener('click', loadMyProposals);
-            });
-            document.querySelectorAll('.tab[data-view="reviews"]').forEach(el => {
-                el.addEventListener('click', loadReviews);
-            });
-            document.querySelectorAll('.tab[data-view="referrals"]').forEach(el => {
-                el.addEventListener('click', loadReferrals);
-            });
-            document.querySelectorAll('.tab[data-view="showings"]').forEach(el => {
-                el.addEventListener('click', () => { loadShowings(); _currentShowingsTab = 'buyer'; });
-            });
+            // Old per-tab hooks replaced by hub-level loading in main tab handler
 
             // Load Stripe publishable key
             fetch('/api/config/stripe-key').then(r => r.ok ? r.json() : null).then(d => {
