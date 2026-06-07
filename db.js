@@ -59,13 +59,13 @@ const db = {
 
     // Create new listing
     async createListing(listingData) {
-        const { address, city, state, zip, price, zestimate, type, bedrooms, bathrooms, sqft, description, ownerName, ownerEmail, ownerPhone, userId, latitude, longitude } = listingData;
+        const { address, city, state, zip, price, zestimate, type, bedrooms, bathrooms, sqft, description, ownerName, ownerEmail, ownerPhone, userId, latitude, longitude, proposal_deadline, video_url } = listingData;
 
         const result = await pool.query(
-            `INSERT INTO listings (address, city, state, zip, price, zestimate, property_type, bedrooms, bathrooms, sqft, description, owner_name, owner_email, owner_phone, user_id, latitude, longitude)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+            `INSERT INTO listings (address, city, state, zip, price, zestimate, property_type, bedrooms, bathrooms, sqft, description, owner_name, owner_email, owner_phone, user_id, latitude, longitude, proposal_deadline, video_url)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
              RETURNING *`,
-            [address, city, state, zip, price, zestimate || null, type, bedrooms, bathrooms, sqft, description, ownerName, ownerEmail, ownerPhone, userId, latitude || null, longitude || null]
+            [address, city, state, zip, price, zestimate || null, type, bedrooms, bathrooms, sqft, description, ownerName, ownerEmail, ownerPhone, userId, latitude || null, longitude || null, proposal_deadline || null, video_url || null]
         );
         return result.rows[0];
     },
@@ -121,13 +121,14 @@ const db = {
 
     // Update listing fields
     async updateListing(id, data) {
-        const { price, type, bedrooms, bathrooms, sqft, description } = data;
+        const { price, type, bedrooms, bathrooms, sqft, description, proposal_deadline, video_url } = data;
         const result = await pool.query(
             `UPDATE listings
-             SET price=$1, property_type=$2, bedrooms=$3, bathrooms=$4, sqft=$5, description=$6, updated_at=NOW()
-             WHERE id=$7
+             SET price=$1, property_type=$2, bedrooms=$3, bathrooms=$4, sqft=$5, description=$6,
+                 proposal_deadline=$7, video_url=$8, updated_at=NOW()
+             WHERE id=$9
              RETURNING *`,
-            [price, type, parseInt(bedrooms), parseFloat(bathrooms), parseInt(sqft), description, id]
+            [price, type, parseInt(bedrooms), parseFloat(bathrooms), parseInt(sqft), description, proposal_deadline || null, video_url || null, id]
         );
         return result.rows[0];
     },
@@ -359,14 +360,15 @@ const db = {
 
     // Update realtor profile fields
     async updateProfile(userId, data) {
-        const { phone, licenseNumber, bio, yearsExperience, serviceAreas } = data;
+        const { phone, licenseNumber, bio, yearsExperience, serviceAreas, unavailable_until } = data;
         const result = await pool.query(
-            `UPDATE users SET phone=$1, license_number=$2, bio=$3, years_experience=$4, service_areas=$5
-             WHERE id=$6 RETURNING id, email, user_type, first_name, last_name, zip_code,
+            `UPDATE users SET phone=$1, license_number=$2, bio=$3, years_experience=$4, service_areas=$5, unavailable_until=$6
+             WHERE id=$7 RETURNING id, email, user_type, first_name, last_name, zip_code,
                     phone, license_number, bio, years_experience, service_areas,
-                    company_id, company_name, subscription_plan, company_role`,
+                    company_id, company_name, subscription_plan, company_role, unavailable_until`,
             [phone || null, licenseNumber || null, bio || null,
-             yearsExperience ? parseInt(yearsExperience) : null, serviceAreas || null, userId]
+             yearsExperience ? parseInt(yearsExperience) : null, serviceAreas || null,
+             unavailable_until || null, userId]
         );
         return result.rows[0];
     },

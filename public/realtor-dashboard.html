@@ -143,6 +143,34 @@
             border-bottom-color: var(--accent);
         }
 
+        /* Hub sub-navigation */
+        .hub-subnav {
+            display: flex;
+            gap: 0.4rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 0;
+        }
+        .hub-btn {
+            background: none;
+            border: none;
+            border-bottom: 3px solid transparent;
+            padding: 0.65rem 1.1rem;
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #666;
+            cursor: pointer;
+            font-family: inherit;
+            margin-bottom: -1px;
+            transition: color 0.15s, border-color 0.15s;
+            white-space: nowrap;
+        }
+        .hub-btn:hover { color: var(--ink); }
+        .hub-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+        .hub-section { display: none; }
+        .hub-section.active { display: block; animation: fadeIn 0.2s ease-out; }
+
         /* Main Layout */
         .dashboard-container {
             max-width: 1600px;
@@ -1040,21 +1068,13 @@
 
     <div class="tabs-container">
         <div class="tabs">
-            <div class="tab active" data-view="browse">Browse Listings</div>
-            <div class="tab" data-view="map">Map View</div>
-            <div class="tab" data-view="mybids">My Bids</div>
-            <div class="tab" data-view="won">Won Listings</div>
-            <div class="tab" data-view="saved">Saved</div>
-            <div class="tab" data-view="analytics">Analytics</div>
-            <div class="tab" data-view="profile">My Profile</div>
+            <div class="tab active" data-view="browse">Browse</div>
+            <div class="tab" data-view="pipeline">Pipeline <span id="pipelineBadge" style="display:none;background:var(--accent);color:white;border-radius:50%;width:16px;height:16px;font-size:0.65rem;font-weight:700;text-align:center;line-height:16px;margin-left:4px;vertical-align:middle;"></span></div>
             <div class="tab" data-view="buyer-requests">Buyer Requests <span id="buyerMatchBadge" style="display:none;background:var(--accent);color:white;border-radius:50%;width:16px;height:16px;font-size:0.65rem;font-weight:700;text-align:center;line-height:16px;margin-left:4px;vertical-align:middle;"></span></div>
-            <div class="tab" data-view="showings">Showings</div>
-            <div class="tab" data-view="my-proposals">My Proposals <span class="counter-badge" style="display:none;background:#f59e0b;color:white;border-radius:50%;width:16px;height:16px;font-size:0.65rem;font-weight:700;text-align:center;line-height:16px;margin-left:4px;vertical-align:middle;"></span></div>
-            <div class="tab" data-view="reviews">Reviews</div>
-            <div class="tab" data-view="referrals">Referrals</div>
-            <div class="tab" data-view="company">My Company</div>
-            <div class="tab" data-view="settings">Settings</div>
-            <div class="tab" data-view="messages" id="msgTab">Messages <span id="msgTabBadge" style="display:none;background:var(--accent);color:white;border-radius:50%;width:16px;height:16px;font-size:0.65rem;font-weight:700;text-align:center;line-height:16px;display:none;margin-left:4px;vertical-align:middle;"></span></div>
+            <div class="tab" data-view="messages" id="msgTab">Messages <span id="msgTabBadge" style="display:none;background:var(--accent);color:white;border-radius:50%;width:16px;height:16px;font-size:0.65rem;font-weight:700;text-align:center;line-height:16px;margin-left:4px;vertical-align:middle;"></span></div>
+            <div class="tab" data-view="analytics">Analytics</div>
+            <div class="tab" data-view="profile-hub">Profile</div>
+            <div class="tab" data-view="settings-hub">Settings</div>
         </div>
     </div>
 
@@ -1140,51 +1160,127 @@
                 </div>
             </div>
 
-            <h2 style="font-family: 'Crimson Pro', serif; font-size: 2rem; margin-bottom: 2rem;">Available Properties</h2>
-            <div class="listings-grid" id="availableListings"></div>
-            <div class="pagination" id="listingPagination" style="display:none;">
-                <button class="btn btn-outline" id="prevPage" onclick="changePage(-1)">← Prev</button>
-                <span class="page-info" id="pageInfo">Page 1 of 1</span>
-                <button class="btn btn-outline" id="nextPage" onclick="changePage(1)">Next →</button>
-            </div>
-        </section>
-
-        <!-- Map View -->
-        <section id="map-view" class="view-section">
-            <div class="map-status-bar">
-                <div>
-                    <div style="font-family: 'Crimson Pro', serif; font-size: 1.6rem; font-weight: 700; margin-bottom: 0.25rem;">Listings Near You</div>
-                    <div class="map-status-text" id="mapStatusText">Click the Map View tab to load.</div>
-                </div>
-                <div style="text-align: right;">
-                    <div class="map-nearby-count" id="mapNearbyCount">--</div>
-                    <div style="font-size: 0.8rem; color: #999; margin-top: 2px;">within 25 miles</div>
-                </div>
-            </div>
-            <div id="map-container"></div>
-        </section>
-
-        <!-- My Bids View -->
-        <section id="mybids-view" class="view-section">
-            <h2 style="font-family: 'Crimson Pro', serif; font-size: 2rem; margin-bottom: 2rem;">My Bids</h2>
-            <div class="bids-list" id="myBidsList"></div>
-        </section>
-
-        <!-- Won Listings View -->
-        <section id="won-view" class="view-section">
             <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem;">
-                <h2 style="font-family: 'Crimson Pro', serif; font-size: 2rem;">Won Listings &amp; Deals</h2>
+                <h2 style="font-family: 'Crimson Pro', serif; font-size: 2rem;">Available Properties</h2>
+                <div style="display:flex;gap:0.4rem;">
+                    <button id="browseGridBtn" onclick="setBrowseMode('grid')" style="background:var(--accent);color:white;border:none;border-radius:8px;padding:0.45rem 1rem;font-size:0.85rem;font-weight:600;cursor:pointer;font-family:inherit;">⊞ Grid</button>
+                    <button id="browseMapBtn" onclick="setBrowseMode('map')" style="background:#f3f4f6;color:#374151;border:1px solid var(--border);border-radius:8px;padding:0.45rem 1rem;font-size:0.85rem;font-weight:600;cursor:pointer;font-family:inherit;">🗺 Map</button>
+                </div>
             </div>
-            <div class="bids-list" id="wonListingsList"></div>
+            <div id="browseGridContent">
+                <div class="listings-grid" id="availableListings"></div>
+                <div class="pagination" id="listingPagination" style="display:none;">
+                    <button class="btn btn-outline" id="prevPage" onclick="changePage(-1)">← Prev</button>
+                    <span class="page-info" id="pageInfo">Page 1 of 1</span>
+                    <button class="btn btn-outline" id="nextPage" onclick="changePage(1)">Next →</button>
+                </div>
+            </div>
+            <div id="browseMapContent" style="display:none;">
+                <div class="map-status-bar">
+                    <div>
+                        <div style="font-family: 'Crimson Pro', serif; font-size: 1.6rem; font-weight: 700; margin-bottom: 0.25rem;">Listings Near You</div>
+                        <div class="map-status-text" id="mapStatusText">Loading map…</div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div class="map-nearby-count" id="mapNearbyCount">--</div>
+                        <div style="font-size: 0.8rem; color: #999; margin-top: 2px;">within 25 miles</div>
+                    </div>
+                </div>
+                <div id="map-container"></div>
+            </div>
+        </section>
+
+        <!-- Pipeline View -->
+        <section id="pipeline-view" class="view-section">
+            <div class="hub-subnav">
+                <button class="hub-btn active" onclick="switchPipelineTab('proposals')">My Proposals</button>
+                <button class="hub-btn" onclick="switchPipelineTab('won')">Won Listings</button>
+                <button class="hub-btn" onclick="switchPipelineTab('showings')">Showings</button>
+            </div>
+
+            <!-- Proposals sub-section -->
+            <div id="pipeline-proposals" class="hub-section active">
+                <div id="pendingCountersBanner" style="display:none;background:#FEF9C3;border:1px solid #FDE047;border-radius:12px;padding:1.25rem 1.5rem;margin-bottom:1rem;">
+                    <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+                        <span style="font-size:1.25rem;">⚡</span>
+                        <div style="flex:1;">
+                            <div style="font-weight:700;color:#713F12;font-size:0.95rem;" id="pendingCountersTitle">Counter-offers need your response</div>
+                            <div style="color:#78350F;font-size:0.85rem;margin-top:0.2rem;">Sellers have countered your proposals. Respond before they expire.</div>
+                        </div>
+                        <button onclick="scrollToFirstCounter()" style="background:#F59E0B;color:white;border:none;padding:0.5rem 1.25rem;border-radius:6px;font-weight:600;cursor:pointer;font-size:0.85rem;white-space:nowrap;">View Counters ↓</button>
+                    </div>
+                </div>
+                <h3 style="font-family:'Crimson Pro',serif;font-size:1.4rem;font-weight:700;color:var(--ink);margin-bottom:1rem;">Structured Proposals</h3>
+                <div id="myProposalsList"></div>
+                <h3 style="font-family:'Crimson Pro',serif;font-size:1.4rem;font-weight:700;color:var(--ink);margin:2rem 0 1rem;">Classic Bids</h3>
+                <div class="bids-list" id="myBidsList"></div>
+            </div>
+
+            <!-- Won Listings sub-section -->
+            <div id="pipeline-won" class="hub-section">
+                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem;">
+                    <h2 style="font-family: 'Crimson Pro', serif; font-size: 2rem;">Won Listings &amp; Deals</h2>
+                </div>
+                <div class="bids-list" id="wonListingsList"></div>
+                <div style="margin-top:2.5rem;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;margin-bottom:1rem;">
+                        <h3 style="font-family:'Crimson Pro',serif;font-size:1.5rem;font-weight:700;color:var(--ink);">Open Houses</h3>
+                        <button onclick="document.getElementById('openHouseForm').style.display=document.getElementById('openHouseForm').style.display==='none'?'block':'none'" style="background:var(--accent);color:white;border:none;border-radius:8px;padding:0.5rem 1.25rem;font-weight:600;cursor:pointer;font-size:0.875rem;font-family:inherit;">+ Schedule Open House</button>
+                    </div>
+                    <div id="openHouseForm" style="display:none;background:#f8f9fa;border:1px solid var(--border);border-radius:12px;padding:1.25rem;margin-bottom:1.25rem;">
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:0.75rem;">
+                            <div>
+                                <label style="font-size:0.8rem;font-weight:600;color:#374151;display:block;margin-bottom:0.3rem;">Listing</label>
+                                <select id="ohListingId" style="width:100%;padding:0.55rem 0.75rem;border:1px solid var(--border);border-radius:7px;font-family:inherit;font-size:0.875rem;"></select>
+                            </div>
+                            <div>
+                                <label style="font-size:0.8rem;font-weight:600;color:#374151;display:block;margin-bottom:0.3rem;">Date &amp; Time</label>
+                                <input type="datetime-local" id="ohScheduledAt" style="width:100%;padding:0.55rem 0.75rem;border:1px solid var(--border);border-radius:7px;font-family:inherit;font-size:0.875rem;">
+                            </div>
+                            <div>
+                                <label style="font-size:0.8rem;font-weight:600;color:#374151;display:block;margin-bottom:0.3rem;">Duration (min)</label>
+                                <select id="ohDuration" style="width:100%;padding:0.55rem 0.75rem;border:1px solid var(--border);border-radius:7px;font-family:inherit;font-size:0.875rem;">
+                                    <option value="30">30 min</option>
+                                    <option value="60" selected>1 hour</option>
+                                    <option value="90">1.5 hours</option>
+                                    <option value="120">2 hours</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style="font-size:0.8rem;font-weight:600;color:#374151;display:block;margin-bottom:0.3rem;">Notes (optional)</label>
+                                <input type="text" id="ohNotes" placeholder="e.g. Refreshments provided" style="width:100%;padding:0.55rem 0.75rem;border:1px solid var(--border);border-radius:7px;font-family:inherit;font-size:0.875rem;">
+                            </div>
+                        </div>
+                        <div style="display:flex;gap:0.75rem;align-items:center;">
+                            <button onclick="createOpenHouse()" style="background:#0a2540;color:white;border:none;border-radius:8px;padding:0.55rem 1.25rem;font-weight:600;cursor:pointer;font-size:0.875rem;font-family:inherit;">Schedule</button>
+                            <span id="ohMsg" style="font-size:0.85rem;"></span>
+                        </div>
+                    </div>
+                    <div id="openHousesList" style="display:flex;flex-direction:column;gap:0.75rem;">
+                        <div style="color:#9ca3af;font-size:0.875rem;">Loading…</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Showings sub-section -->
+            <div id="pipeline-showings" class="hub-section">
+                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem;">
+                    <div>
+                        <h2 style="font-family:'Crimson Pro',serif;font-size:2rem;margin-bottom:0.25rem;">Showings</h2>
+                        <p style="color:#666;font-size:0.95rem;">Buyer showing requests &amp; your realtor showing requests</p>
+                    </div>
+                    <button onclick="openRealtorShowingModal()" style="background:var(--accent);color:white;border:none;border-radius:8px;padding:0.65rem 1.25rem;font-weight:600;cursor:pointer;font-size:0.9rem;font-family:inherit;">+ Request Showing</button>
+                </div>
+                <div style="display:flex;gap:0.5rem;margin-bottom:1.5rem;">
+                    <button id="showingsTabBuyer" onclick="switchShowingsTab('buyer')" style="background:var(--primary);color:white;border:none;border-radius:6px;padding:0.4rem 1rem;cursor:pointer;font-weight:600;font-size:0.85rem;font-family:inherit;">Buyer Requests</button>
+                    <button id="showingsTabRealtor" onclick="switchShowingsTab('realtor')" style="background:#f3f4f6;color:#374151;border:none;border-radius:6px;padding:0.4rem 1rem;cursor:pointer;font-weight:600;font-size:0.85rem;font-family:inherit;">My Requests</button>
+                </div>
+                <div id="showingsList" class="bids-list"></div>
+                <div id="realtorShowingsList" class="bids-list" style="display:none;"></div>
+            </div>
         </section>
 
         <!-- Saved Listings View -->
-        <section id="saved-view" class="view-section">
-            <h2 style="font-family: 'Crimson Pro', serif; font-size: 2rem; margin-bottom: 0.5rem;">Saved Listings</h2>
-            <p style="color:var(--muted);margin-bottom:2rem;font-size:0.95rem;">Listings you've bookmarked for later. Click the bookmark icon on any listing card to save it.</p>
-            <div class="listings-grid" id="savedListingsGrid"></div>
-        </section>
-
         <!-- Analytics View -->
         <section id="analytics-view" class="view-section">
             <div style="max-width:800px;">
@@ -1226,6 +1322,13 @@
                     <div style="font-weight:600;color:#c2410c;margin-bottom:0.25rem;">Basic Plan Proposal Limit</div>
                     <div id="planLimitText" style="font-size:0.9rem;color:#c2410c;"></div>
                     <a href="/pricing" style="font-size:0.85rem;color:#FF6B35;font-weight:600;text-decoration:none;display:inline-block;margin-top:0.5rem;">Upgrade to Professional →</a>
+                </div>
+
+                <!-- Monthly win-rate trend -->
+                <div id="winRateTrend" style="display:none;background:#fff;border:1px solid var(--border);border-radius:12px;padding:1.25rem;margin-top:1.5rem;">
+                    <h3 style="font-size:1rem;font-weight:700;color:var(--ink);margin:0 0 1rem;">Win Rate Trend — Last 6 Months</h3>
+                    <div id="winRateBars" style="display:flex;align-items:flex-end;gap:12px;height:80px;"></div>
+                    <div id="winRateLabels" style="display:flex;gap:12px;margin-top:6px;font-size:0.72rem;color:#999;"></div>
                 </div>
             </div>
         </section>
@@ -1273,305 +1376,218 @@
         </section>
 
         <!-- Showings View -->
-        <section id="showings-view" class="view-section">
-            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem;">
-                <div>
-                    <h2 style="font-family:'Crimson Pro',serif;font-size:2rem;margin-bottom:0.25rem;">Showings</h2>
-                    <p style="color:#666;font-size:0.95rem;">Buyer showing requests &amp; your realtor showing requests</p>
-                </div>
-                <button onclick="openRealtorShowingModal()" style="background:var(--accent);color:white;border:none;border-radius:8px;padding:0.65rem 1.25rem;font-weight:600;cursor:pointer;font-size:0.9rem;font-family:inherit;">+ Request Showing</button>
-            </div>
-            <div style="display:flex;gap:0.5rem;margin-bottom:1.5rem;">
-                <button id="showingsTabBuyer" onclick="switchShowingsTab('buyer')" style="background:var(--primary);color:white;border:none;border-radius:6px;padding:0.4rem 1rem;cursor:pointer;font-weight:600;font-size:0.85rem;font-family:inherit;">Buyer Requests</button>
-                <button id="showingsTabRealtor" onclick="switchShowingsTab('realtor')" style="background:#f3f4f6;color:#374151;border:none;border-radius:6px;padding:0.4rem 1rem;cursor:pointer;font-weight:600;font-size:0.85rem;font-family:inherit;">My Requests</button>
-            </div>
-            <div id="showingsList" class="bids-list"></div>
-            <div id="realtorShowingsList" class="bids-list" style="display:none;"></div>
-        </section>
-
-        <!-- My Proposals View (Feature 1) -->
-        <section id="my-proposals-view" class="view-section">
-            <div class="section-header">
-                <h2>My Proposals</h2>
-                <p style="color:#666;margin-top:4px;">All proposals you've submitted, with their current status</p>
-            </div>
-            <div id="pendingCountersBanner" style="display:none;background:#FEF9C3;border:1px solid #FDE047;border-radius:12px;padding:1.25rem 1.5rem;margin-top:1.5rem;margin-bottom:0.5rem;">
-                <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
-                    <span style="font-size:1.25rem;">⚡</span>
-                    <div style="flex:1;">
-                        <div style="font-weight:700;color:#713F12;font-size:0.95rem;" id="pendingCountersTitle">Counter-offers need your response</div>
-                        <div style="color:#78350F;font-size:0.85rem;margin-top:0.2rem;">Sellers have countered your proposals. Respond before they expire.</div>
-                    </div>
-                    <button onclick="scrollToFirstCounter()" style="background:#F59E0B;color:white;border:none;padding:0.5rem 1.25rem;border-radius:6px;font-weight:600;cursor:pointer;font-size:0.85rem;white-space:nowrap;">View Counters ↓</button>
-                </div>
-            </div>
-            <div id="myProposalsList" style="margin-top:1.5rem;"></div>
-        </section>
-
-        <!-- Reviews Panel -->
-        <section id="reviews-view" class="view-section">
-            <div id="reviewsPanel" class="view-panel" style="display:block;">
-                <h2 style="font-family:'Playfair Display',serif;font-size:1.8rem;margin-bottom:0.5rem;">My Reviews</h2>
-                <p style="color:#666;margin-bottom:2rem;">What clients say about working with you.</p>
-                <div id="reviewsSummary" style="background:white;border-radius:12px;padding:1.5rem;border:1px solid var(--border);margin-bottom:1.5rem;display:flex;align-items:center;gap:2rem;flex-wrap:wrap;">
-                    <div style="text-align:center;">
-                        <div id="reviewsAvgRating" style="font-size:3rem;font-weight:700;color:var(--accent);">—</div>
-                        <div id="reviewsStars" style="font-size:1.5rem;color:#F59E0B;margin:0.25rem 0;">☆☆☆☆☆</div>
-                        <div id="reviewsCount" style="color:#666;font-size:0.9rem;">No reviews yet</div>
-                    </div>
-                    <div style="flex:1;min-width:200px;" id="reviewsRatingBars"></div>
-                </div>
-                <div id="reviewsList" style="display:flex;flex-direction:column;gap:1rem;"></div>
-            </div>
-        </section>
-
-        <!-- Referrals View (Feature 4) -->
-        <section id="referrals-view" class="view-section">
-            <div class="section-header">
-                <h2>Referrals</h2>
-                <p style="color:#666;margin-top:4px;">Earn <strong>$25 in account credits</strong> for every realtor you refer who subscribes to a paid plan</p>
-            </div>
-            <!-- How it works banner -->
-            <div style="background:linear-gradient(135deg,#fff7ed 0%,#fef3c7 100%);border:1.5px solid #fed7aa;border-radius:16px;padding:1.5rem 2rem;margin-top:1.25rem;display:flex;gap:2rem;flex-wrap:wrap;align-items:flex-start;">
-                <div style="flex:1;min-width:200px;">
-                    <div style="font-weight:700;font-size:1rem;color:#92400e;margin-bottom:0.75rem;">How the referral program works</div>
-                    <ol style="padding-left:1.25rem;display:flex;flex-direction:column;gap:0.5rem;color:#78350f;font-size:0.875rem;line-height:1.5;">
-                        <li>Copy your unique referral link below and share it with other real estate agents</li>
-                        <li>When they sign up and subscribe to any paid plan, you automatically earn <strong>$25 in account credits</strong></li>
-                        <li>Credits are applied automatically to your next invoice — no action needed</li>
-                        <li>There's no cap — refer 4 agents and your Basic plan is free for a month</li>
-                    </ol>
-                </div>
-                <div style="display:flex;flex-direction:column;gap:0.75rem;flex-shrink:0;">
-                    <div style="background:white;border-radius:12px;padding:0.875rem 1.25rem;border:1px solid #fed7aa;text-align:center;">
-                        <div style="font-size:1.6rem;font-weight:900;color:#f59e0b;">$25</div>
-                        <div style="font-size:0.72rem;color:#92400e;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">per referral</div>
-                    </div>
-                    <div style="background:white;border-radius:12px;padding:0.875rem 1.25rem;border:1px solid #fed7aa;text-align:center;">
-                        <div style="font-size:1rem;font-weight:700;color:#d97706;">No limit</div>
-                        <div style="font-size:0.72rem;color:#92400e;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">on earnings</div>
-                    </div>
-                </div>
-                <div style="display:flex;flex-direction:column;gap:0.5rem;flex-shrink:0;justify-content:center;">
-                    <div style="font-size:0.8rem;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:0.05em;">Tier rewards</div>
-                    <div style="display:flex;flex-direction:column;gap:0.35rem;font-size:0.82rem;color:#78350f;">
-                        <div>⭐ <strong>Rising Star</strong> — 1 referral</div>
-                        <div>🔵 <strong>Connector</strong> — 3 referrals</div>
-                        <div>🌟 <strong>Top Referrer</strong> — 5 referrals</div>
-                        <div>🏆 <strong>Ambassador</strong> — 10 referrals</div>
-                    </div>
-                </div>
-            </div>
-            <div id="referralsWidget" style="margin-top:1.5rem;"></div>
-        </section>
-
-        <!-- Company View -->
-        <section id="company-view" class="view-section">
-            <div class="section-header">
-                <h2>My Company</h2>
-                <p id="companyPlanBadge" style="margin-top:4px;"></p>
+        <!-- Profile Hub View -->
+        <section id="profile-hub-view" class="view-section">
+            <div class="hub-subnav">
+                <button class="hub-btn active" onclick="switchProfileTab('profile')">My Profile</button>
+                <button class="hub-btn" onclick="switchProfileTab('reviews')">Reviews</button>
+                <button class="hub-btn" onclick="switchProfileTab('referrals')">Referrals</button>
+                <button class="hub-btn" onclick="switchProfileTab('saved')">Saved</button>
             </div>
 
-            <!-- No company state -->
-            <div id="noCompanyState" style="display:none; text-align:center; padding:60px 20px;">
-                <p style="color:#6b7280; margin-bottom:16px;">You don't have a company set up yet.</p>
-            </div>
-
-            <!-- Company overview -->
-            <div id="companyOverview">
-                <div class="stats-grid" style="margin-bottom:32px;">
-                    <div class="stat-card">
-                        <div class="stat-number" id="companyMemberCount">—</div>
-                        <div class="stat-label">Team Members</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-number" id="companyLocationCount">—</div>
-                        <div class="stat-label">Locations</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-number" id="companyPlanDisplay">—</div>
-                        <div class="stat-label">Current Plan</div>
-                    </div>
-                </div>
-
-                <!-- Plan upgrade (shown for non-firm owners) -->
-                <div id="upgradeBanner" style="display:none; background:#fff8f0; border:1px solid #FF6B35; border-radius:12px; padding:20px 24px; margin-bottom:28px; display:flex; align-items:center; gap:16px;">
-                    <div style="flex:1;">
-                        <strong style="color:#FF6B35;">Upgrade to the Firm Plan</strong>
-                        <p style="margin:4px 0 0; color:#374151; font-size:14px;">Add unlimited agents per location at $499/location/month. Perfect for brokerages.</p>
-                    </div>
-                    <button class="btn-primary" onclick="upgradePlan('firm')" style="white-space:nowrap;">Upgrade — $499/location</button>
-                </div>
-
-                <!-- Team Members -->
-                <div style="background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:24px; margin-bottom:28px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-                        <h3 style="margin:0; font-size:18px;">Team Members</h3>
-                        <button class="btn-primary" id="addAgentBtn" onclick="showAddAgentForm()" style="font-size:13px; padding:8px 16px;">+ Add Agent</button>
-                    </div>
-                    <!-- Add agent form (hidden by default) -->
-                    <div id="addAgentForm" style="display:none; background:#f9fafb; border-radius:8px; padding:16px; margin-bottom:16px;">
-                        <p style="margin:0 0 12px; font-size:14px; color:#374151;">Enter the email of a registered realtor to add them to your company.</p>
-                        <div style="display:flex; gap:10px; flex-wrap:wrap;">
-                            <input type="email" id="agentEmail" placeholder="agent@example.com" style="flex:1; min-width:200px; padding:8px 12px; border:1px solid #d1d5db; border-radius:8px; font-size:14px;">
-                            <input type="text" id="agentZip" placeholder="Their ZIP code" maxlength="10" style="width:140px; padding:8px 12px; border:1px solid #d1d5db; border-radius:8px; font-size:14px;">
-                            <button class="btn-primary" onclick="addAgent()" style="font-size:13px; padding:8px 16px;">Add</button>
-                            <button onclick="hideAddAgentForm()" style="background:none; border:1px solid #d1d5db; border-radius:8px; padding:8px 14px; cursor:pointer; font-size:13px;">Cancel</button>
+            <!-- Profile sub-section -->
+            <div id="phub-profile" class="hub-section active">
+                <h2 style="font-family: 'Crimson Pro', serif; font-size: 2rem; margin-bottom: 2rem;">My Profile</h2>
+                <div id="profileBadgesRow" style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-bottom:1.5rem;max-width:600px;"></div>
+                <div style="max-width:600px;">
+                    <!-- Profile photo -->
+                    <div style="display:flex;align-items:center;gap:1.5rem;margin-bottom:2rem;padding:1.5rem;background:white;border-radius:14px;border:1px solid var(--border);">
+                        <div id="profilePhotoWrap" style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,var(--ink),#2a2a2a);display:flex;align-items:center;justify-content:center;font-family:'Crimson Pro',serif;font-size:2rem;font-weight:900;color:white;flex-shrink:0;overflow:hidden;">
+                            <span id="profilePhotoInitials"></span>
                         </div>
-                        <p id="addAgentError" style="display:none; color:#ef4444; font-size:13px; margin:8px 0 0;"></p>
-                    </div>
-                    <div id="membersList" style="display:flex; flex-direction:column; gap:10px;"></div>
-                </div>
-
-                <!-- Locations (firm plan only) -->
-                <div id="locationsSection" style="display:none; background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:24px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-                        <h3 style="margin:0; font-size:18px;">Office Locations</h3>
-                        <button class="btn-primary" onclick="showAddLocationForm()" style="font-size:13px; padding:8px 16px;">+ Add Location</button>
-                    </div>
-                    <div id="addLocationForm" style="display:none; background:#f9fafb; border-radius:8px; padding:16px; margin-bottom:16px;">
-                        <div style="display:flex; gap:10px; flex-wrap:wrap;">
-                            <input type="text" id="locationZip" placeholder="ZIP code" maxlength="10" style="width:140px; padding:8px 12px; border:1px solid #d1d5db; border-radius:8px; font-size:14px;">
-                            <input type="text" id="locationLabel" placeholder="Label (e.g. Downtown Office)" style="flex:1; min-width:200px; padding:8px 12px; border:1px solid #d1d5db; border-radius:8px; font-size:14px;">
-                            <button class="btn-primary" onclick="addLocation()" style="font-size:13px; padding:8px 16px;">Add</button>
-                            <button onclick="hideAddLocationForm()" style="background:none; border:1px solid #d1d5db; border-radius:8px; padding:8px 14px; cursor:pointer; font-size:13px;">Cancel</button>
+                        <div style="flex:1;">
+                            <div style="font-weight:600;margin-bottom:0.4rem;">Profile Photo</div>
+                            <div style="font-size:0.85rem;color:var(--muted);margin-bottom:0.75rem;">Shown on your public profile. JPG or PNG, max 5MB.</div>
+                            <label style="cursor:pointer;display:inline-block;padding:0.45rem 1rem;border:1.5px solid var(--border);border-radius:8px;font-size:0.85rem;font-weight:600;color:var(--ink);">
+                                Choose Photo
+                                <input type="file" id="photoInput" accept="image/*" style="display:none;" onchange="uploadProfilePhoto(this)">
+                            </label>
+                            <span id="photoStatus" style="font-size:0.8rem;color:var(--muted);margin-left:0.75rem;"></span>
                         </div>
-                        <p id="addLocationError" style="display:none; color:#ef4444; font-size:13px; margin:8px 0 0;"></p>
                     </div>
-                    <div id="locationsList" style="display:flex; flex-direction:column; gap:10px;"></div>
+                    <div id="profileMessage" style="display:none;padding:0.875rem 1rem;border-radius:8px;margin-bottom:1rem;font-weight:500;font-size:0.9rem;"></div>
+                    <form id="profileForm">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Phone</label>
+                                <input type="tel" name="phone" placeholder="(555) 555-5555">
+                            </div>
+                            <div class="form-group">
+                                <label>License Number</label>
+                                <input type="text" name="licenseNumber" placeholder="RE-123456">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Years of Experience</label>
+                                <input type="number" name="yearsExperience" placeholder="5" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label>Service Areas</label>
+                                <input type="text" name="serviceAreas" placeholder="Boston, Cambridge, Brookline">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Bio</label>
+                            <textarea name="bio" rows="4" style="width:100%;padding:0.875rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:1rem;resize:vertical;" placeholder="Tell sellers about yourself and your experience…"></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary" style="padding:1rem 2rem;">Save Profile</button>
+                    </form>
+
+                    <!-- License Document -->
+                    <div id="licenseDocSection" style="background:white;border-radius:12px;border:1px solid var(--border);padding:1.5rem;margin-top:1.5rem;">
+                        <h3 style="font-family:'Crimson Pro',serif;font-size:1.3rem;font-weight:700;margin-bottom:0.5rem;color:var(--ink);">License Document</h3>
+                        <p style="font-size:0.85rem;color:#666;margin-bottom:1rem;">Upload your real estate license document for verification. Verified realtors display a green badge on their profile.</p>
+                        <div id="licenseDocStatus" style="margin-bottom:1rem;"></div>
+                        <div id="licenseDocUploadArea">
+                            <label style="cursor:pointer;display:inline-block;padding:0.55rem 1.25rem;border:1.5px solid var(--border);border-radius:8px;font-size:0.875rem;font-weight:600;color:var(--ink);">
+                                Choose Document
+                                <input type="file" id="licenseDocInput" accept="image/*,.pdf" style="display:none;" onchange="uploadLicenseDoc(this)">
+                            </label>
+                            <span id="licenseDocUploadStatus" style="font-size:0.8rem;color:var(--muted);margin-left:0.75rem;"></span>
+                        </div>
+                    </div>
+
+                    <!-- Email Preferences -->
+                    <div style="background:white;border-radius:12px;border:1px solid var(--border);padding:1.5rem;margin-top:1.5rem;">
+                        <h3 style="font-family:'Crimson Pro',serif;font-size:1.3rem;font-weight:700;margin-bottom:1rem;color:var(--ink);">Email Preferences</h3>
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;">
+                            <div>
+                                <div style="font-weight:600;font-size:0.95rem;margin-bottom:0.25rem;">New Listing Alerts</div>
+                                <div style="font-size:0.85rem;color:#666;">Get emailed when a new listing appears within 25 miles of your ZIP code.</div>
+                            </div>
+                            <label style="position:relative;display:inline-block;width:48px;height:26px;flex-shrink:0;">
+                                <input type="checkbox" id="emailAlertsToggle" style="opacity:0;width:0;height:0;" onchange="saveEmailAlerts(this.checked)">
+                                <span id="emailAlertsSlider" style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#ccc;border-radius:26px;transition:.3s;"></span>
+                            </label>
+                        </div>
+                        <div id="emailAlertsSaved" style="display:none;color:#059669;font-size:0.85rem;margin-top:0.5rem;">✓ Saved</div>
+                    </div>
+
+                    <!-- Profile Completeness Widget -->
+                    <div id="profileCompletenessWidget" style="background:white;border-radius:12px;border:1px solid var(--border);padding:1.5rem;margin-top:1.5rem;display:none;">
+                        <h3 style="font-family:'Crimson Pro',serif;font-size:1.3rem;font-weight:700;margin-bottom:1rem;color:var(--ink);">Profile Completeness</h3>
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem;">
+                            <span id="completenessLabel" style="font-size:0.95rem;font-weight:600;color:#374151;">Loading…</span>
+                            <span id="completenessPercent" style="font-size:1.1rem;font-weight:700;color:#FF6B35;">—</span>
+                        </div>
+                        <div style="height:10px;background:#e5e7eb;border-radius:6px;overflow:hidden;margin-bottom:1rem;">
+                            <div id="completenessBar" style="height:100%;width:0%;border-radius:6px;transition:width 0.5s,background 0.5s;"></div>
+                        </div>
+                        <div id="completenessItems" style="display:flex;flex-direction:column;gap:0.5rem;"></div>
+                    </div>
+
+                    <!-- Public Profile Link -->
+                    <div style="background:white;border-radius:12px;border:1px solid var(--border);padding:1.5rem;margin-top:1.5rem;">
+                        <h3 style="font-family:'Crimson Pro',serif;font-size:1.3rem;font-weight:700;margin-bottom:0.25rem;color:var(--ink);">Your Public Profile</h3>
+                        <p style="font-size:0.875rem;color:#6b7280;margin-bottom:0.75rem;">Share this link with clients or on social media.</p>
+                        <div style="display:flex;align-items:center;gap:0.5rem;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:0.6rem 1rem;">
+                            <span id="publicProfileUrl" style="font-size:0.875rem;color:#374151;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Loading…</span>
+                            <button onclick="copyProfileUrl()" style="background:var(--accent);color:white;border:none;padding:0.4rem 0.9rem;border-radius:6px;font-size:0.8rem;font-weight:600;cursor:pointer;flex-shrink:0;font-family:inherit;">Copy</button>
+                            <a id="publicProfileLink" href="#" target="_blank" style="background:#f3f4f6;color:#374151;border:none;padding:0.4rem 0.9rem;border-radius:6px;font-size:0.8rem;font-weight:600;text-decoration:none;flex-shrink:0;">View →</a>
+                        </div>
+                        <div id="profileUrlCopied" style="display:none;font-size:0.8rem;color:#059669;margin-top:0.4rem;">✓ Copied to clipboard</div>
+                    </div>
+
+                    <!-- Subscription & Billing -->
+                    <div style="background:white;border-radius:12px;border:1px solid var(--border);padding:1.5rem;margin-top:1.5rem;">
+                        <h3 style="font-family:'Crimson Pro',serif;font-size:1.3rem;font-weight:700;margin-bottom:0.5rem;color:var(--ink);">Subscription</h3>
+                        <p style="font-size:0.9rem;color:#666;margin-bottom:1rem;">Manage your plan and billing.</p>
+                        <button onclick="openBillingPortal()" style="background:var(--accent);color:white;border:none;padding:0.7rem 1.5rem;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.95rem;font-family:inherit;">Manage Subscription →</button>
+                    </div>
+
+                    <!-- Change Password -->
+                    <div style="background:white;border-radius:12px;border:1px solid var(--border);padding:1.5rem;margin-top:1.5rem;">
+                        <h3 style="font-family:'Crimson Pro',serif;font-size:1.3rem;font-weight:700;margin-bottom:1rem;color:var(--ink);">Change Password</h3>
+                        <div style="display:flex;flex-direction:column;gap:0.75rem;max-width:400px;">
+                            <input type="password" id="currentPassword" placeholder="Current password" style="padding:0.7rem 1rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.95rem;">
+                            <input type="password" id="newPassword" placeholder="New password (min 8 characters)" style="padding:0.7rem 1rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.95rem;">
+                            <input type="password" id="confirmPassword" placeholder="Confirm new password" style="padding:0.7rem 1rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.95rem;">
+                            <div id="passwordError" style="display:none;color:#dc2626;font-size:0.85rem;"></div>
+                            <div id="passwordSuccess" style="display:none;color:#059669;font-size:0.85rem;">✓ Password changed successfully!</div>
+                            <button onclick="changePassword()" style="background:var(--accent);color:white;border:none;padding:0.7rem 1.5rem;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.95rem;align-self:flex-start;">Update Password</button>
+                        </div>
+                    </div>
                 </div>
+            </div>
+
+            <!-- Reviews sub-section -->
+            <div id="phub-reviews" class="hub-section">
+                <div id="reviewsPanel" class="view-panel" style="display:block;">
+                    <h2 style="font-family:'Playfair Display',serif;font-size:1.8rem;margin-bottom:0.5rem;">My Reviews</h2>
+                    <p style="color:#666;margin-bottom:2rem;">What clients say about working with you.</p>
+                    <div id="reviewsSummary" style="background:white;border-radius:12px;padding:1.5rem;border:1px solid var(--border);margin-bottom:1.5rem;display:flex;align-items:center;gap:2rem;flex-wrap:wrap;">
+                        <div style="text-align:center;">
+                            <div id="reviewsAvgRating" style="font-size:3rem;font-weight:700;color:var(--accent);">—</div>
+                            <div id="reviewsStars" style="font-size:1.5rem;color:#F59E0B;margin:0.25rem 0;">☆☆☆☆☆</div>
+                            <div id="reviewsCount" style="color:#666;font-size:0.9rem;">No reviews yet</div>
+                        </div>
+                        <div style="flex:1;min-width:200px;" id="reviewsRatingBars"></div>
+                    </div>
+                    <div id="reviewsList" style="display:flex;flex-direction:column;gap:1rem;"></div>
+                </div>
+            </div>
+
+            <!-- Referrals sub-section -->
+            <div id="phub-referrals" class="hub-section">
+                <div class="section-header">
+                    <h2>Referrals</h2>
+                    <p style="color:#666;margin-top:4px;">Earn <strong>$25 in account credits</strong> for every realtor you refer who subscribes to a paid plan</p>
+                </div>
+                <!-- How it works banner -->
+                <div style="background:linear-gradient(135deg,#fff7ed 0%,#fef3c7 100%);border:1.5px solid #fed7aa;border-radius:16px;padding:1.5rem 2rem;margin-top:1.25rem;display:flex;gap:2rem;flex-wrap:wrap;align-items:flex-start;">
+                    <div style="flex:1;min-width:200px;">
+                        <div style="font-weight:700;font-size:1rem;color:#92400e;margin-bottom:0.75rem;">How the referral program works</div>
+                        <ol style="padding-left:1.25rem;display:flex;flex-direction:column;gap:0.5rem;color:#78350f;font-size:0.875rem;line-height:1.5;">
+                            <li>Copy your unique referral link below and share it with other real estate agents</li>
+                            <li>When they sign up and subscribe to any paid plan, you automatically earn <strong>$25 in account credits</strong></li>
+                            <li>Credits are applied automatically to your next invoice — no action needed</li>
+                            <li>There's no cap — refer 4 agents and your Basic plan is free for a month</li>
+                        </ol>
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:0.75rem;flex-shrink:0;">
+                        <div style="background:white;border-radius:12px;padding:0.875rem 1.25rem;border:1px solid #fed7aa;text-align:center;">
+                            <div style="font-size:1.6rem;font-weight:900;color:#f59e0b;">$25</div>
+                            <div style="font-size:0.72rem;color:#92400e;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">per referral</div>
+                        </div>
+                        <div style="background:white;border-radius:12px;padding:0.875rem 1.25rem;border:1px solid #fed7aa;text-align:center;">
+                            <div style="font-size:1rem;font-weight:700;color:#d97706;">No limit</div>
+                            <div style="font-size:0.72rem;color:#92400e;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">on earnings</div>
+                        </div>
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:0.5rem;flex-shrink:0;justify-content:center;">
+                        <div style="font-size:0.8rem;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:0.05em;">Tier rewards</div>
+                        <div style="display:flex;flex-direction:column;gap:0.35rem;font-size:0.82rem;color:#78350f;">
+                            <div>⭐ <strong>Rising Star</strong> — 1 referral</div>
+                            <div>🔵 <strong>Connector</strong> — 3 referrals</div>
+                            <div>🌟 <strong>Top Referrer</strong> — 5 referrals</div>
+                            <div>🏆 <strong>Ambassador</strong> — 10 referrals</div>
+                        </div>
+                    </div>
+                </div>
+                <div id="referralsWidget" style="margin-top:1.5rem;"></div>
+            </div>
+
+            <!-- Saved sub-section -->
+            <div id="phub-saved" class="hub-section">
+                <h2 style="font-family: 'Crimson Pro', serif; font-size: 2rem; margin-bottom: 0.5rem;">Saved Listings</h2>
+                <p style="color:var(--muted);margin-bottom:2rem;font-size:0.95rem;">Listings you've bookmarked for later. Click the bookmark icon on any listing card to save it.</p>
+                <div class="listings-grid" id="savedListingsGrid"></div>
             </div>
         </section>
 
         <!-- Profile View -->
-        <section id="profile-view" class="view-section">
-            <h2 style="font-family: 'Crimson Pro', serif; font-size: 2rem; margin-bottom: 2rem;">My Profile</h2>
-            <div id="profileBadgesRow" style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-bottom:1.5rem;max-width:600px;"></div>
-            <div style="max-width:600px;">
-                <!-- Profile photo -->
-                <div style="display:flex;align-items:center;gap:1.5rem;margin-bottom:2rem;padding:1.5rem;background:white;border-radius:14px;border:1px solid var(--border);">
-                    <div id="profilePhotoWrap" style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,var(--ink),#2a2a2a);display:flex;align-items:center;justify-content:center;font-family:'Crimson Pro',serif;font-size:2rem;font-weight:900;color:white;flex-shrink:0;overflow:hidden;">
-                        <span id="profilePhotoInitials"></span>
-                    </div>
-                    <div style="flex:1;">
-                        <div style="font-weight:600;margin-bottom:0.4rem;">Profile Photo</div>
-                        <div style="font-size:0.85rem;color:var(--muted);margin-bottom:0.75rem;">Shown on your public profile. JPG or PNG, max 5MB.</div>
-                        <label style="cursor:pointer;display:inline-block;padding:0.45rem 1rem;border:1.5px solid var(--border);border-radius:8px;font-size:0.85rem;font-weight:600;color:var(--ink);">
-                            Choose Photo
-                            <input type="file" id="photoInput" accept="image/*" style="display:none;" onchange="uploadProfilePhoto(this)">
-                        </label>
-                        <span id="photoStatus" style="font-size:0.8rem;color:var(--muted);margin-left:0.75rem;"></span>
-                    </div>
-                </div>
-                <div id="profileMessage" style="display:none;padding:0.875rem 1rem;border-radius:8px;margin-bottom:1rem;font-weight:500;font-size:0.9rem;"></div>
-                <form id="profileForm">
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>Phone</label>
-                            <input type="tel" name="phone" placeholder="(555) 555-5555">
-                        </div>
-                        <div class="form-group">
-                            <label>License Number</label>
-                            <input type="text" name="licenseNumber" placeholder="RE-123456">
-                        </div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>Years of Experience</label>
-                            <input type="number" name="yearsExperience" placeholder="5" min="0">
-                        </div>
-                        <div class="form-group">
-                            <label>Service Areas</label>
-                            <input type="text" name="serviceAreas" placeholder="Boston, Cambridge, Brookline">
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label>Bio</label>
-                        <textarea name="bio" rows="4" style="width:100%;padding:0.875rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:1rem;resize:vertical;" placeholder="Tell sellers about yourself and your experience…"></textarea>
-                    </div>
-                    <button type="submit" class="btn btn-primary" style="padding:1rem 2rem;">Save Profile</button>
-                </form>
-
-                <!-- License Document -->
-                <div id="licenseDocSection" style="background:white;border-radius:12px;border:1px solid var(--border);padding:1.5rem;margin-top:1.5rem;">
-                    <h3 style="font-family:'Crimson Pro',serif;font-size:1.3rem;font-weight:700;margin-bottom:0.5rem;color:var(--ink);">License Document</h3>
-                    <p style="font-size:0.85rem;color:#666;margin-bottom:1rem;">Upload your real estate license document for verification. Verified realtors display a green badge on their profile.</p>
-                    <div id="licenseDocStatus" style="margin-bottom:1rem;"></div>
-                    <div id="licenseDocUploadArea">
-                        <label style="cursor:pointer;display:inline-block;padding:0.55rem 1.25rem;border:1.5px solid var(--border);border-radius:8px;font-size:0.875rem;font-weight:600;color:var(--ink);">
-                            Choose Document
-                            <input type="file" id="licenseDocInput" accept="image/*,.pdf" style="display:none;" onchange="uploadLicenseDoc(this)">
-                        </label>
-                        <span id="licenseDocUploadStatus" style="font-size:0.8rem;color:var(--muted);margin-left:0.75rem;"></span>
-                    </div>
-                </div>
-
-                <!-- Email Preferences -->
-                <div style="background:white;border-radius:12px;border:1px solid var(--border);padding:1.5rem;margin-top:1.5rem;">
-                    <h3 style="font-family:'Crimson Pro',serif;font-size:1.3rem;font-weight:700;margin-bottom:1rem;color:var(--ink);">Email Preferences</h3>
-                    <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;">
-                        <div>
-                            <div style="font-weight:600;font-size:0.95rem;margin-bottom:0.25rem;">New Listing Alerts</div>
-                            <div style="font-size:0.85rem;color:#666;">Get emailed when a new listing appears within 25 miles of your ZIP code.</div>
-                        </div>
-                        <label style="position:relative;display:inline-block;width:48px;height:26px;flex-shrink:0;">
-                            <input type="checkbox" id="emailAlertsToggle" style="opacity:0;width:0;height:0;" onchange="saveEmailAlerts(this.checked)">
-                            <span id="emailAlertsSlider" style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#ccc;border-radius:26px;transition:.3s;"></span>
-                        </label>
-                    </div>
-                    <div id="emailAlertsSaved" style="display:none;color:#059669;font-size:0.85rem;margin-top:0.5rem;">✓ Saved</div>
-                </div>
-
-                <!-- Profile Completeness Widget -->
-                <div id="profileCompletenessWidget" style="background:white;border-radius:12px;border:1px solid var(--border);padding:1.5rem;margin-top:1.5rem;display:none;">
-                    <h3 style="font-family:'Crimson Pro',serif;font-size:1.3rem;font-weight:700;margin-bottom:1rem;color:var(--ink);">Profile Completeness</h3>
-                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem;">
-                        <span id="completenessLabel" style="font-size:0.95rem;font-weight:600;color:#374151;">Loading…</span>
-                        <span id="completenessPercent" style="font-size:1.1rem;font-weight:700;color:#FF6B35;">—</span>
-                    </div>
-                    <div style="height:10px;background:#e5e7eb;border-radius:6px;overflow:hidden;margin-bottom:1rem;">
-                        <div id="completenessBar" style="height:100%;width:0%;border-radius:6px;transition:width 0.5s,background 0.5s;"></div>
-                    </div>
-                    <div id="completenessItems" style="display:flex;flex-direction:column;gap:0.5rem;"></div>
-                </div>
-
-                <!-- Public Profile Link -->
-                <div style="background:white;border-radius:12px;border:1px solid var(--border);padding:1.5rem;margin-top:1.5rem;">
-                    <h3 style="font-family:'Crimson Pro',serif;font-size:1.3rem;font-weight:700;margin-bottom:0.25rem;color:var(--ink);">Your Public Profile</h3>
-                    <p style="font-size:0.875rem;color:#6b7280;margin-bottom:0.75rem;">Share this link with clients or on social media.</p>
-                    <div style="display:flex;align-items:center;gap:0.5rem;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:0.6rem 1rem;">
-                        <span id="publicProfileUrl" style="font-size:0.875rem;color:#374151;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Loading…</span>
-                        <button onclick="copyProfileUrl()" style="background:var(--accent);color:white;border:none;padding:0.4rem 0.9rem;border-radius:6px;font-size:0.8rem;font-weight:600;cursor:pointer;flex-shrink:0;font-family:inherit;">Copy</button>
-                        <a id="publicProfileLink" href="#" target="_blank" style="background:#f3f4f6;color:#374151;border:none;padding:0.4rem 0.9rem;border-radius:6px;font-size:0.8rem;font-weight:600;text-decoration:none;flex-shrink:0;">View →</a>
-                    </div>
-                    <div id="profileUrlCopied" style="display:none;font-size:0.8rem;color:#059669;margin-top:0.4rem;">✓ Copied to clipboard</div>
-                </div>
-
-                <!-- Subscription & Billing -->
-                <div style="background:white;border-radius:12px;border:1px solid var(--border);padding:1.5rem;margin-top:1.5rem;">
-                    <h3 style="font-family:'Crimson Pro',serif;font-size:1.3rem;font-weight:700;margin-bottom:0.5rem;color:var(--ink);">Subscription</h3>
-                    <p style="font-size:0.9rem;color:#666;margin-bottom:1rem;">Manage your plan and billing.</p>
-                    <button onclick="openBillingPortal()" style="background:var(--accent);color:white;border:none;padding:0.7rem 1.5rem;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.95rem;font-family:inherit;">Manage Subscription →</button>
-                </div>
-
-                <!-- Change Password -->
-                <div style="background:white;border-radius:12px;border:1px solid var(--border);padding:1.5rem;margin-top:1.5rem;">
-                    <h3 style="font-family:'Crimson Pro',serif;font-size:1.3rem;font-weight:700;margin-bottom:1rem;color:var(--ink);">Change Password</h3>
-                    <div style="display:flex;flex-direction:column;gap:0.75rem;max-width:400px;">
-                        <input type="password" id="currentPassword" placeholder="Current password" style="padding:0.7rem 1rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.95rem;">
-                        <input type="password" id="newPassword" placeholder="New password (min 8 characters)" style="padding:0.7rem 1rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.95rem;">
-                        <input type="password" id="confirmPassword" placeholder="Confirm new password" style="padding:0.7rem 1rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.95rem;">
-                        <div id="passwordError" style="display:none;color:#dc2626;font-size:0.85rem;"></div>
-                        <div id="passwordSuccess" style="display:none;color:#059669;font-size:0.85rem;">✓ Password changed successfully!</div>
-                        <button onclick="changePassword()" style="background:var(--accent);color:white;border:none;padding:0.7rem 1.5rem;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.95rem;align-self:flex-start;">Update Password</button>
-                    </div>
-                </div>
+        <!-- Settings Hub View -->
+        <section id="settings-hub-view" class="view-section">
+            <div class="hub-subnav">
+                <button class="hub-btn active" onclick="switchSettingsTab('account')">Account</button>
+                <button class="hub-btn" onclick="switchSettingsTab('tools')">Tools</button>
+                <button class="hub-btn" onclick="switchSettingsTab('availability')">Availability</button>
+                <button class="hub-btn" onclick="switchSettingsTab('company')">Company</button>
             </div>
-        </section>
 
-        <!-- Settings View -->
-        <section id="settings-view" class="view-section">
-            <h2 style="font-family:'Crimson Pro',serif;font-size:2rem;margin-bottom:2rem;">Settings</h2>
+            <!-- Account sub-section -->
+            <div id="shub-account" class="hub-section active">
             <div style="max-width:680px;display:flex;flex-direction:column;gap:1.5rem;">
 
                 <!-- Plan & Credits Usage Bar -->
@@ -1610,67 +1626,7 @@
                     </div>
                 </div>
 
-                <!-- Proposal Templates -->
-                <div style="background:white;border-radius:12px;border:1px solid var(--border);padding:1.5rem;">
-                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:0.75rem;">
-                        <div>
-                            <h3 style="font-family:'Crimson Pro',serif;font-size:1.3rem;font-weight:700;color:var(--ink);margin-bottom:0.25rem;">Proposal Templates</h3>
-                            <p style="color:#6b7280;font-size:0.875rem;">Save reusable cover notes to fill in when submitting proposals.</p>
-                        </div>
-                        <button onclick="openTemplateModal()" style="background:var(--accent);color:white;border:none;padding:0.6rem 1.25rem;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.875rem;font-family:inherit;white-space:nowrap;">+ New Template</button>
-                    </div>
-                    <div id="templatesLoading" style="color:#9ca3af;font-size:0.9rem;">Loading templates…</div>
-                    <div id="templatesList" style="display:none;display:flex;flex-direction:column;gap:0.75rem;"></div>
-                    <div id="templatesEmpty" style="display:none;color:#9ca3af;font-size:0.9rem;padding:1rem 0;">No templates yet. Create one to speed up your proposals.</div>
-                </div>
-
-                <!-- Saved Searches -->
-                <div style="background:white;border-radius:12px;border:1px solid var(--border);padding:1.5rem;">
-                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:0.75rem;">
-                        <div>
-                            <h3 style="font-family:'Crimson Pro',serif;font-size:1.3rem;font-weight:700;color:var(--ink);margin-bottom:0.25rem;">Saved Searches</h3>
-                            <p style="color:#6b7280;font-size:0.875rem;">Get emailed when new listings match your criteria.</p>
-                        </div>
-                        <button onclick="openSavedSearchModal()" style="background:var(--accent);color:white;border:none;padding:0.6rem 1.25rem;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.875rem;font-family:inherit;white-space:nowrap;">+ New Search Alert</button>
-                    </div>
-                    <div id="savedSearchesLoading" style="color:#9ca3af;font-size:0.9rem;">Loading…</div>
-                    <div id="savedSearchesList" style="display:none;flex-direction:column;gap:0.75rem;"></div>
-                    <div id="savedSearchesEmpty" style="display:none;color:#9ca3af;font-size:0.9rem;padding:0.5rem 0;">No saved searches yet. Create one to get alerts for new listings.</div>
-                </div>
-
-                <!-- Availability -->
-                <div style="background:white;border-radius:12px;border:1px solid var(--border);padding:1.5rem;">
-                    <h3 style="font-family:'Crimson Pro',serif;font-size:1.3rem;font-weight:700;margin-bottom:0.25rem;color:var(--ink);">Availability</h3>
-                    <p style="color:#6b7280;font-size:0.875rem;margin-bottom:1.25rem;">Set the days and times you're available to meet with sellers.</p>
-                    <!-- Add slot form -->
-                    <div style="display:flex;gap:0.75rem;flex-wrap:wrap;align-items:flex-end;margin-bottom:1.25rem;">
-                        <div style="display:flex;flex-direction:column;gap:0.3rem;">
-                            <label style="font-size:0.8rem;font-weight:600;color:#374151;">Day</label>
-                            <select id="availDay" style="padding:0.6rem 0.75rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.875rem;">
-                                <option value="0">Sunday</option>
-                                <option value="1">Monday</option>
-                                <option value="2">Tuesday</option>
-                                <option value="3">Wednesday</option>
-                                <option value="4">Thursday</option>
-                                <option value="5">Friday</option>
-                                <option value="6">Saturday</option>
-                            </select>
-                        </div>
-                        <div style="display:flex;flex-direction:column;gap:0.3rem;">
-                            <label style="font-size:0.8rem;font-weight:600;color:#374151;">Start</label>
-                            <input type="time" id="availStart" style="padding:0.6rem 0.75rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.875rem;">
-                        </div>
-                        <div style="display:flex;flex-direction:column;gap:0.3rem;">
-                            <label style="font-size:0.8rem;font-weight:600;color:#374151;">End</label>
-                            <input type="time" id="availEnd" style="padding:0.6rem 0.75rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.875rem;">
-                        </div>
-                        <button onclick="addAvailabilitySlot()" style="background:var(--accent);color:white;border:none;padding:0.6rem 1.25rem;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.875rem;font-family:inherit;white-space:nowrap;">+ Add</button>
-                    </div>
-                    <div id="availabilityLoading" style="color:#9ca3af;font-size:0.9rem;">Loading…</div>
-                    <div id="availabilityList" style="display:none;flex-direction:column;gap:0.5rem;"></div>
-                    <div id="availabilityEmpty" style="display:none;color:#9ca3af;font-size:0.875rem;padding:0.5rem 0;">No availability slots yet. Add your first one above.</div>
-                </div>
-
+                <!-- Profile Completeness Widget (Settings) -->
                 <!-- Profile Completeness Widget (Settings) -->
                 <div class="settings-completeness-widget" id="settingsCompletenessWidget" style="display:none;">
                     <h3>Profile Completeness</h3>
@@ -1739,6 +1695,252 @@
                     </div>
                 </div>
             </div>
+            </div><!-- /shub-account -->
+
+
+            <!-- Tools sub-section -->
+            <div id="shub-tools" class="hub-section">
+            <div style="max-width:680px;display:flex;flex-direction:column;gap:1.5rem;">
+                <!-- Proposal Templates -->
+                <div style="background:white;border-radius:12px;border:1px solid var(--border);padding:1.5rem;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:0.75rem;">
+                        <div>
+                            <h3 style="font-family:'Crimson Pro',serif;font-size:1.3rem;font-weight:700;color:var(--ink);margin-bottom:0.25rem;">Proposal Templates</h3>
+                            <p style="color:#6b7280;font-size:0.875rem;">Save reusable cover notes to fill in when submitting proposals.</p>
+                        </div>
+                        <button onclick="openTemplateModal()" style="background:var(--accent);color:white;border:none;padding:0.6rem 1.25rem;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.875rem;font-family:inherit;white-space:nowrap;">+ New Template</button>
+                    </div>
+                    <div id="templatesLoading" style="color:#9ca3af;font-size:0.9rem;">Loading templates…</div>
+                    <div id="templatesList" style="display:none;display:flex;flex-direction:column;gap:0.75rem;"></div>
+                    <div id="templatesEmpty" style="display:none;color:#9ca3af;font-size:0.9rem;padding:1rem 0;">No templates yet. Create one to speed up your proposals.</div>
+                </div>
+
+                <!-- Saved Searches -->
+                <div style="background:white;border-radius:12px;border:1px solid var(--border);padding:1.5rem;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:0.75rem;">
+                        <div>
+                            <h3 style="font-family:'Crimson Pro',serif;font-size:1.3rem;font-weight:700;color:var(--ink);margin-bottom:0.25rem;">Saved Searches</h3>
+                            <p style="color:#6b7280;font-size:0.875rem;">Get emailed when new listings match your criteria.</p>
+                        </div>
+                        <button onclick="openSavedSearchModal()" style="background:var(--accent);color:white;border:none;padding:0.6rem 1.25rem;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.875rem;font-family:inherit;white-space:nowrap;">+ New Search Alert</button>
+                    </div>
+                    <div id="savedSearchesLoading" style="color:#9ca3af;font-size:0.9rem;">Loading…</div>
+                    <div id="savedSearchesList" style="display:none;flex-direction:column;gap:0.75rem;"></div>
+                    <div id="savedSearchesEmpty" style="display:none;color:#9ca3af;font-size:0.9rem;padding:0.5rem 0;">No saved searches yet. Create one to get alerts for new listings.</div>
+                </div>
+
+            </div>
+            </div>
+
+            <!-- Availability sub-section -->
+            <div id="shub-availability" class="hub-section">
+            <div style="max-width:680px;">
+                <!-- Availability -->
+                <div style="background:white;border-radius:12px;border:1px solid var(--border);padding:1.5rem;">
+                    <h3 style="font-family:'Crimson Pro',serif;font-size:1.3rem;font-weight:700;margin-bottom:0.25rem;color:var(--ink);">Availability</h3>
+                    <p style="color:#6b7280;font-size:0.875rem;margin-bottom:1rem;">Set the days and times you're available to meet with sellers.</p>
+                    <!-- Away/unavailable toggle -->
+                    <div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;padding:0.875rem 1rem;margin-bottom:1.25rem;">
+                        <label style="font-size:0.85rem;font-weight:600;color:#92400e;display:block;margin-bottom:0.5rem;">Mark as Away</label>
+                        <div style="display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap;">
+                            <label style="font-size:0.82rem;color:#78350f;">Away until:</label>
+                            <input type="date" id="unavailableUntil" style="padding:0.4rem 0.75rem;border:1px solid #fcd34d;border-radius:6px;font-family:inherit;font-size:0.875rem;background:white;">
+                            <button onclick="saveUnavailableUntil()" style="background:#d97706;color:white;border:none;border-radius:6px;padding:0.4rem 0.875rem;font-weight:600;cursor:pointer;font-size:0.82rem;font-family:inherit;">Save</button>
+                            <button onclick="clearUnavailableUntil()" style="background:white;color:#92400e;border:1px solid #fcd34d;border-radius:6px;padding:0.4rem 0.875rem;font-weight:600;cursor:pointer;font-size:0.82rem;font-family:inherit;">Clear</button>
+                            <span id="unavailSaved" style="display:none;color:#059669;font-size:0.82rem;">✓ Saved</span>
+                        </div>
+                        <p style="font-size:0.78rem;color:#92400e;margin-top:0.4rem;">Sellers will see an "Away" badge on your proposals until this date.</p>
+                    </div>
+                    <!-- Add slot form -->
+                    <div style="display:flex;gap:0.75rem;flex-wrap:wrap;align-items:flex-end;margin-bottom:1.25rem;">
+                        <div style="display:flex;flex-direction:column;gap:0.3rem;">
+                            <label style="font-size:0.8rem;font-weight:600;color:#374151;">Day</label>
+                            <select id="availDay" style="padding:0.6rem 0.75rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.875rem;">
+                                <option value="0">Sunday</option>
+                                <option value="1">Monday</option>
+                                <option value="2">Tuesday</option>
+                                <option value="3">Wednesday</option>
+                                <option value="4">Thursday</option>
+                                <option value="5">Friday</option>
+                                <option value="6">Saturday</option>
+                            </select>
+                        </div>
+                        <div style="display:flex;flex-direction:column;gap:0.3rem;">
+                            <label style="font-size:0.8rem;font-weight:600;color:#374151;">Start</label>
+                            <input type="time" id="availStart" style="padding:0.6rem 0.75rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.875rem;">
+                        </div>
+                        <div style="display:flex;flex-direction:column;gap:0.3rem;">
+                            <label style="font-size:0.8rem;font-weight:600;color:#374151;">End</label>
+                            <input type="time" id="availEnd" style="padding:0.6rem 0.75rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.875rem;">
+                        </div>
+                        <button onclick="addAvailabilitySlot()" style="background:var(--accent);color:white;border:none;padding:0.6rem 1.25rem;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.875rem;font-family:inherit;white-space:nowrap;">+ Add</button>
+                    </div>
+                    <div id="availabilityLoading" style="color:#9ca3af;font-size:0.9rem;">Loading…</div>
+                    <div id="availabilityList" style="display:none;flex-direction:column;gap:0.5rem;"></div>
+                    <div id="availabilityEmpty" style="display:none;color:#9ca3af;font-size:0.875rem;padding:0.5rem 0;">No availability slots yet. Add your first one above.</div>
+                </div>
+
+            </div>
+            </div>
+
+            <!-- Company sub-section -->
+            <div id="shub-company" class="hub-section">
+            <div class="section-header">
+                <h2>My Company</h2>
+                <p id="companyPlanBadge" style="margin-top:4px;"></p>
+            </div>
+
+            <!-- No company state -->
+            <div id="noCompanyState" style="display:none; text-align:center; padding:60px 20px;">
+                <p style="color:#6b7280; margin-bottom:16px;">You don't have a company set up yet.</p>
+            </div>
+
+            <!-- Company overview -->
+            <div id="companyOverview">
+                <div class="stats-grid" style="margin-bottom:32px;">
+                    <div class="stat-card">
+                        <div class="stat-number" id="companyMemberCount">—</div>
+                        <div class="stat-label">Team Members</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="companyLocationCount">—</div>
+                        <div class="stat-label">Locations</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="companyPlanDisplay">—</div>
+                        <div class="stat-label">Current Plan</div>
+                    </div>
+                </div>
+
+                <!-- Plan upgrade (shown for non-firm owners) -->
+                <div id="upgradeBanner" style="display:none; background:#fff8f0; border:1px solid #FF6B35; border-radius:12px; padding:20px 24px; margin-bottom:28px; display:flex; align-items:center; gap:16px;">
+                    <div style="flex:1;">
+                        <strong style="color:#FF6B35;">Upgrade to the Firm Plan</strong>
+                        <p style="margin:4px 0 0; color:#374151; font-size:14px;">Add unlimited agents per location at $499/location/month. Perfect for brokerages.</p>
+                    </div>
+                    <button class="btn-primary" onclick="upgradePlan('firm')" style="white-space:nowrap;">Upgrade — $499/location</button>
+                </div>
+
+                <!-- Team Members -->
+                <div style="background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:24px; margin-bottom:28px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                        <h3 style="margin:0; font-size:18px;">Team Members</h3>
+                        <div style="display:flex;gap:8px;align-items:center;">
+                            <button class="btn-primary" id="addAgentBtn" onclick="showAddAgentForm()" style="font-size:13px; padding:8px 16px;">+ Add Agent</button>
+                            <button class="btn-primary" id="inviteAgentBtn" onclick="showInviteForm()" style="font-size:13px;padding:8px 16px;">✉ Invite</button>
+                        </div>
+                    </div>
+                    <!-- Invite agent form (hidden by default) -->
+                    <div id="inviteAgentForm" style="display:none;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:16px;margin-bottom:16px;">
+                        <p style="margin:0 0 10px;font-size:14px;color:#374151;">Send an email invite — the recipient signs up and joins your team automatically.</p>
+                        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                            <input type="email" id="inviteEmail" placeholder="colleague@example.com" style="flex:1;min-width:200px;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;">
+                            <button class="btn-primary" onclick="sendInvite()" style="font-size:13px;padding:8px 16px;">Send Invite</button>
+                            <button onclick="hideInviteForm()" style="background:none;border:1px solid #d1d5db;border-radius:8px;padding:8px 14px;cursor:pointer;font-size:13px;">Cancel</button>
+                        </div>
+                        <p id="inviteError" style="display:none;color:#ef4444;font-size:13px;margin:8px 0 0;"></p>
+                        <p id="inviteSuccess" style="display:none;color:#059669;font-size:13px;margin:8px 0 0;"></p>
+                    </div>
+                    <!-- Add agent form (hidden by default) -->
+                    <div id="addAgentForm" style="display:none; background:#f9fafb; border-radius:8px; padding:16px; margin-bottom:16px;">
+                        <p style="margin:0 0 12px; font-size:14px; color:#374151;">Enter the email address of a registered realtor to add them.</p>
+                        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                            <input type="email" id="agentEmail" placeholder="agent@example.com" style="flex:1; min-width:200px; padding:8px 12px; border:1px solid #d1d5db; border-radius:8px; font-size:14px;">
+                            <button class="btn-primary" onclick="addAgent()" style="font-size:13px; padding:8px 16px;">Add</button>
+                            <button onclick="hideAddAgentForm()" style="background:none; border:1px solid #d1d5db; border-radius:8px; padding:8px 14px; cursor:pointer; font-size:13px;">Cancel</button>
+                        </div>
+                        <p id="addAgentError" style="display:none; color:#ef4444; font-size:13px; margin:8px 0 0;"></p>
+                    </div>
+                    <div id="membersList" style="display:flex; flex-direction:column; gap:10px;"></div>
+                </div>
+
+                <!-- Locations (firm plan only) -->
+                <div id="locationsSection" style="display:none; background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:24px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                        <h3 style="margin:0; font-size:18px;">Office Locations</h3>
+                        <button class="btn-primary" onclick="showAddLocationForm()" style="font-size:13px; padding:8px 16px;">+ Add Location</button>
+                    </div>
+                    <div id="addLocationForm" style="display:none; background:#f9fafb; border-radius:8px; padding:16px; margin-bottom:16px;">
+                        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                            <input type="text" id="locationZip" placeholder="ZIP code" maxlength="10" style="width:140px; padding:8px 12px; border:1px solid #d1d5db; border-radius:8px; font-size:14px;">
+                            <input type="text" id="locationLabel" placeholder="Label (e.g. Downtown Office)" style="flex:1; min-width:200px; padding:8px 12px; border:1px solid #d1d5db; border-radius:8px; font-size:14px;">
+                            <button class="btn-primary" onclick="addLocation()" style="font-size:13px; padding:8px 16px;">Add</button>
+                            <button onclick="hideAddLocationForm()" style="background:none; border:1px solid #d1d5db; border-radius:8px; padding:8px 14px; cursor:pointer; font-size:13px;">Cancel</button>
+                        </div>
+                        <p id="addLocationError" style="display:none; color:#ef4444; font-size:13px; margin:8px 0 0;"></p>
+                    </div>
+                    <div id="locationsList" style="display:flex; flex-direction:column; gap:10px;"></div>
+                </div>
+
+                <!-- Team Proposals (firm owners and admins only) -->
+                <div id="teamProposalsSection" style="display:none; background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:24px; margin-top:28px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                        <h3 style="margin:0; font-size:18px;">Team Proposals</h3>
+                        <button onclick="loadTeamProposals()" style="background:none;border:1px solid #d1d5db;border-radius:8px;padding:6px 14px;cursor:pointer;font-size:13px;color:#374151;">&#x21BB; Refresh</button>
+                    </div>
+                    <div id="teamProposalsList"></div>
+                </div>
+
+                <!-- Team Leaderboard -->
+                <div id="teamLeaderboardSection" style="display:none;background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:24px;margin-top:28px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                        <h3 style="margin:0;font-size:18px;">Team Leaderboard</h3>
+                        <button onclick="loadLeaderboard()" style="background:none;border:1px solid #d1d5db;border-radius:8px;padding:6px 14px;cursor:pointer;font-size:13px;color:#374151;">↻ Refresh</button>
+                    </div>
+                    <div id="leaderboardList"></div>
+                </div>
+
+                <!-- Shared Templates (all company members) -->
+                <div id="companyTemplatesSection" style="display:none;background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:24px;margin-top:28px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                        <h3 style="margin:0;font-size:18px;">Shared Templates</h3>
+                        <button id="newTemplateBtn" onclick="showNewTemplateForm()" style="display:none;background:#0A2540;color:white;border:none;border-radius:8px;padding:8px 16px;cursor:pointer;font-size:13px;">+ New Template</button>
+                    </div>
+                    <div id="newTemplateForm" style="display:none;background:#f9fafb;border-radius:8px;padding:16px;margin-bottom:16px;">
+                        <input type="text" id="templateName" placeholder="Template name" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;margin-bottom:8px;box-sizing:border-box;">
+                        <textarea id="templateContent" rows="4" placeholder="Marketing plan text..." style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;resize:vertical;box-sizing:border-box;"></textarea>
+                        <div style="display:flex;gap:8px;margin-top:8px;">
+                            <button onclick="saveCompanyTemplate()" style="background:#0A2540;color:white;border:none;border-radius:8px;padding:8px 16px;cursor:pointer;font-size:13px;">Save</button>
+                            <button onclick="hideNewTemplateForm()" style="background:none;border:1px solid #d1d5db;border-radius:8px;padding:8px 14px;cursor:pointer;font-size:13px;">Cancel</button>
+                        </div>
+                    </div>
+                    <div id="companyTemplatesList"><p style="color:#9ca3af;font-size:14px;">Loading templates…</p></div>
+                </div>
+
+                <!-- Team Notes (all company members) -->
+                <div id="teamNotesSection" style="display:none;background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:24px;margin-top:28px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                        <h3 style="margin:0;font-size:18px;">Team Notes</h3>
+                    </div>
+                    <div style="margin-bottom:16px;">
+                        <textarea id="newTeamNote" rows="3" placeholder="Share a note with your team…" style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;resize:vertical;box-sizing:border-box;"></textarea>
+                        <button onclick="postTeamNote()" style="margin-top:8px;background:#FF6B35;color:white;border:none;border-radius:8px;padding:8px 20px;cursor:pointer;font-size:13px;font-weight:600;">Post Note</button>
+                    </div>
+                    <div id="teamNotesList"><p style="color:#9ca3af;font-size:14px;">Loading notes…</p></div>
+                </div>
+
+                <!-- Listing Assignments (owner/admin only) -->
+                <div id="teamAssignmentsSection" style="display:none;background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:24px;margin-top:28px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                        <h3 style="margin:0;font-size:18px;">Listing Assignments</h3>
+                        <button onclick="showAssignForm()" style="background:#0A2540;color:white;border:none;border-radius:8px;padding:8px 16px;cursor:pointer;font-size:13px;">+ Assign Listing</button>
+                    </div>
+                    <div id="assignForm" style="display:none;background:#f9fafb;border-radius:8px;padding:16px;margin-bottom:16px;">
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+                            <input type="number" id="assignListingId" placeholder="Listing ID" style="padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;">
+                            <select id="assignRealtorId" style="padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;background:white;"></select>
+                        </div>
+                        <input type="text" id="assignNote" placeholder="Optional note for the agent" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;margin-bottom:10px;box-sizing:border-box;">
+                        <div style="display:flex;gap:8px;">
+                            <button onclick="submitAssignment()" style="background:#FF6B35;color:white;border:none;border-radius:8px;padding:8px 16px;cursor:pointer;font-size:13px;font-weight:600;">Assign</button>
+                            <button onclick="hideAssignForm()" style="background:none;border:1px solid #d1d5db;border-radius:8px;padding:8px 14px;cursor:pointer;font-size:13px;">Cancel</button>
+                        </div>
+                        <p id="assignError" style="display:none;color:#ef4444;font-size:13px;margin:8px 0 0;"></p>
+                    </div>
+                    <div id="assignmentsList"><p style="color:#9ca3af;font-size:14px;">Loading assignments…</p></div>
+                </div>
+            </div>
+                    </div><!-- /shub-company -->
         </section>
 
         <!-- Template Modal -->
@@ -2087,29 +2289,83 @@
                 document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
                 document.getElementById(`${view}-view`).classList.add('active');
 
-                if (view === 'map') {
-                    // Small delay so the container is visible before Leaflet measures it
-                    setTimeout(() => {
-                        if (!map) {
-                            initMap();
-                        } else {
-                            map.invalidateSize();
-                        }
-                    }, 50);
-                }
-
                 if (view === 'buyer-requests') loadBuyerRequests();
-                if (view === 'showings') loadShowings();
-                if (view === 'company') { window.location.href = '/dashboard/company'; return; }
-                if (view === 'saved') loadSavedListings();
                 if (view === 'analytics') loadAnalytics();
-                if (view === 'profile') { loadEmailAlerts(); loadProfileCompleteness(); }
-                if (view === 'messages') { window.location.href = '/inbox'; return; }
-                if (view === 'reviews') loadReviews();
-                if (view === 'referrals') loadReferrals();
-                if (view === 'settings') { renderSubscriptionCard(); loadRNotifPrefs(); loadTemplates(); loadSavedSearches(); loadSubscriptionLimits(); loadPremiumStatus(); loadSettingsCompleteness(); loadAvailability(); }
+                if (view === 'messages') { loadConversations(); }
+                if (view === 'pipeline') {
+                    loadDashboard();
+                    loadMyProposals();
+                    loadShowings();
+                }
+                if (view === 'profile-hub') {
+                    loadEmailAlerts();
+                    loadProfileCompleteness();
+                    loadReviews();
+                    loadReferrals();
+                    loadSavedListings();
+                }
+                if (view === 'settings-hub') {
+                    renderSubscriptionCard();
+                    loadRNotifPrefs();
+                    loadTemplates();
+                    loadSavedSearches();
+                    loadSubscriptionLimits();
+                    loadPremiumStatus();
+                    loadSettingsCompleteness();
+                    loadAvailability();
+                    loadCompany();
+                }
             });
         });
+
+        function switchPipelineTab(sub) {
+            document.querySelectorAll('#pipeline-view .hub-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('#pipeline-view .hub-section').forEach(s => s.classList.remove('active'));
+            document.querySelector(`#pipeline-view .hub-btn[onclick*="${sub}"]`).classList.add('active');
+            document.getElementById(`pipeline-${sub}`).classList.add('active');
+            if (sub === 'showings') loadShowings();
+        }
+
+        function switchProfileTab(sub) {
+            document.querySelectorAll('#profile-hub-view .hub-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('#profile-hub-view .hub-section').forEach(s => s.classList.remove('active'));
+            document.querySelector(`#profile-hub-view .hub-btn[onclick*="${sub}"]`).classList.add('active');
+            document.getElementById(`phub-${sub}`).classList.add('active');
+            if (sub === 'reviews') loadReviews();
+            if (sub === 'referrals') loadReferrals();
+            if (sub === 'saved') loadSavedListings();
+        }
+
+        function switchSettingsTab(sub) {
+            document.querySelectorAll('#settings-hub-view .hub-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('#settings-hub-view .hub-section').forEach(s => s.classList.remove('active'));
+            document.querySelector(`#settings-hub-view .hub-btn[onclick*="${sub}"]`).classList.add('active');
+            document.getElementById(`shub-${sub}`).classList.add('active');
+            if (sub === 'company') loadCompany();
+        }
+
+        function setBrowseMode(mode) {
+            const grid = document.getElementById('browseGridContent');
+            const map = document.getElementById('browseMapContent');
+            const gridBtn = document.getElementById('browseGridBtn');
+            const mapBtn = document.getElementById('browseMapBtn');
+            if (mode === 'grid') {
+                grid.style.display = '';
+                map.style.display = 'none';
+                gridBtn.style.background = 'var(--accent)';
+                gridBtn.style.color = 'white';
+                mapBtn.style.background = '#f3f4f6';
+                mapBtn.style.color = '#374151';
+            } else {
+                grid.style.display = 'none';
+                map.style.display = '';
+                mapBtn.style.background = 'var(--accent)';
+                mapBtn.style.color = 'white';
+                gridBtn.style.background = '#f3f4f6';
+                gridBtn.style.color = '#374151';
+                setTimeout(() => { if (!window._leafletMap) initMap(); else window._leafletMap.invalidateSize(); }, 50);
+            }
+        }
 
         // Modal Functions
         function openBidModal(listingId, address) {
@@ -2236,9 +2492,11 @@
                 const activeBids = myBidsData.filter(b => b.status === 'pending' || !b.status);
                 document.getElementById('statMyBids').textContent = activeBids.length;
 
+                window._lastMyBidsData = myBidsData;
                 renderMyBids(myBidsData);
                 renderWonListings(myBidsData);
                 await loadListings();
+                loadMyOpenHouses(myBidsData);
             } catch (error) {
                 console.error('Error loading dashboard:', error);
             }
@@ -2292,6 +2550,7 @@
                             <span>📏 ${listing.sqft.toLocaleString()} sqft</span>
                         </div>
                         <div class="listing-description">${listing.description}</div>
+                        ${renderDeadlineBadgeR(listing)}
                         ${isFreePlan && !hasPaidLead && !alreadyProposed ? `<div style="font-size:0.78rem;color:#6b7280;margin-bottom:0.5rem;">Start your free trial to submit proposals · <a href="/pricing" style="color:var(--accent);">See plans →</a></div>` : ''}
                         ${actionBtn}
                     </div>
@@ -2468,7 +2727,7 @@
             const statusEl = document.getElementById('mapStatusText');
             const zip = currentUser?.zipCode;
             if (!zip) {
-                statusEl.innerHTML = 'Add your ZIP code in <a href="#" onclick="document.querySelector(\'[data-view=profile]\').click();return false;" style="color:var(--accent);">My Profile</a> to see listings near you.';
+                statusEl.innerHTML = 'Add your ZIP code in <a href="#" onclick="document.querySelector(\'[data-view=profile-hub]\').click();return false;" style="color:var(--accent);">My Profile</a> to see listings near you.';
                 return;
             }
             statusEl.textContent = `Locating ZIP code ${zip}…`;
@@ -2566,7 +2825,7 @@
             nudge.innerHTML = `
                 <div class="profile-nudge-header">
                     <p><strong>Complete your profile</strong> — Sellers are more likely to accept proposals from realtors with full profiles. Your profile is ${pct}% complete.</p>
-                    <button class="btn btn-secondary" style="padding:0.4rem 1rem;font-size:0.85rem;white-space:nowrap;" onclick="document.querySelector('[data-view=profile]').click()">Update Profile →</button>
+                    <button class="btn btn-secondary" style="padding:0.4rem 1rem;font-size:0.85rem;white-space:nowrap;" onclick="document.querySelector('[data-view=profile-hub]').click()">Update Profile →</button>
                 </div>
                 <div class="profile-nudge-bar"><div class="profile-nudge-fill" style="width:${pct}%"></div></div>
                 <div class="profile-nudge-missing">Missing: ${missing.map(f => `<span class="profile-nudge-chip">${f.label}</span>`).join('')}</div>
@@ -2609,7 +2868,7 @@
                     ${item(hasLicense, 'License number added')}
                 </div>
                 <div style="margin-top:1rem;">
-                    <button class="btn btn-primary" onclick="document.querySelector('[data-view=profile]').click()" style="padding:0.5rem 1.25rem;font-size:0.875rem;background:#d97706;border-color:#d97706;">Update Profile →</button>
+                    <button class="btn btn-primary" onclick="document.querySelector('[data-view=profile-hub]').click()" style="padding:0.5rem 1.25rem;font-size:0.875rem;background:#d97706;border-color:#d97706;">Update Profile →</button>
                 </div>
             `;
             document.querySelector('.dashboard-container').prepend(panel);
@@ -3677,6 +3936,7 @@
         // ===== COMPANY / MY FIRM =====
         let companyData = null;
         let isCompanyOwner = false;
+        let isCompanyAdmin = false;
 
         async function loadCompany() {
             try {
@@ -3686,7 +3946,16 @@
                 if (!data) { document.getElementById('noCompanyState').style.display = 'block'; document.getElementById('companyOverview').style.display = 'none'; return; }
                 companyData = data;
                 isCompanyOwner = currentUser && data.company && data.company.owner_user_id === currentUser.id;
+                const me = data.members && currentUser ? data.members.find(m => m.id === currentUser.id) : null;
+                isCompanyAdmin = !isCompanyOwner && me && me.company_role === 'admin';
                 renderCompany(data);
+                loadTeamNotes();
+                loadCompanyTemplates();
+                if (isCompanyOwner || isCompanyAdmin) {
+                    loadTeamProposals();
+                    loadLeaderboard();
+                    loadAssignments();
+                }
             } catch (e) {
                 console.error('loadCompany error', e);
             }
@@ -3706,10 +3975,31 @@
             if (isCompanyOwner && company.plan !== 'firm') { upgradeBanner.style.display = 'flex'; } else { upgradeBanner.style.display = 'none'; }
 
             const addAgentBtn = document.getElementById('addAgentBtn');
-            if (addAgentBtn) addAgentBtn.style.display = isCompanyOwner ? 'inline-flex' : 'none';
+            if (addAgentBtn) addAgentBtn.style.display = (isCompanyOwner || isCompanyAdmin) ? 'inline-flex' : 'none';
+
+            const inviteAgentBtn = document.getElementById('inviteAgentBtn');
+            if (inviteAgentBtn) inviteAgentBtn.style.display = (isCompanyOwner || isCompanyAdmin) ? 'inline-flex' : 'none';
 
             const locationsSection = document.getElementById('locationsSection');
             if (company.plan === 'firm') { locationsSection.style.display = 'block'; renderLocations(locations); } else { locationsSection.style.display = 'none'; }
+
+            const teamProposalsSection = document.getElementById('teamProposalsSection');
+            if (teamProposalsSection) teamProposalsSection.style.display = (isCompanyOwner || isCompanyAdmin) ? 'block' : 'none';
+
+            const teamLeaderboardSection = document.getElementById('teamLeaderboardSection');
+            if (teamLeaderboardSection) teamLeaderboardSection.style.display = (isCompanyOwner || isCompanyAdmin) ? 'block' : 'none';
+
+            const companyTemplatesSection = document.getElementById('companyTemplatesSection');
+            if (companyTemplatesSection) companyTemplatesSection.style.display = 'block';
+
+            const newTemplateBtn = document.getElementById('newTemplateBtn');
+            if (newTemplateBtn) newTemplateBtn.style.display = (isCompanyOwner || isCompanyAdmin) ? 'inline-block' : 'none';
+
+            const teamNotesSection = document.getElementById('teamNotesSection');
+            if (teamNotesSection) teamNotesSection.style.display = 'block';
+
+            const teamAssignmentsSection = document.getElementById('teamAssignmentsSection');
+            if (teamAssignmentsSection) teamAssignmentsSection.style.display = (isCompanyOwner || isCompanyAdmin) ? 'block' : 'none';
 
             renderMembers(members, company);
         }
@@ -3717,7 +4007,22 @@
         function renderMembers(members, company) {
             const list = document.getElementById('membersList');
             if (!members.length) { list.innerHTML = '<p style="color:#6b7280;font-size:14px;">No team members yet.</p>'; return; }
-            list.innerHTML = members.map(m => `
+            list.innerHTML = members.map(m => {
+                let roleControls = '';
+                if (m.company_role === 'owner') {
+                    roleControls = `<span style="background:#dbeafe;color:#1d4ed8;border-radius:6px;padding:3px 10px;font-size:12px;font-weight:600;">Owner</span>`;
+                } else if (isCompanyOwner) {
+                    if (m.company_role === 'admin') {
+                        roleControls = `<span style="background:#f3e8ff;color:#7c3aed;border-radius:6px;padding:3px 10px;font-size:12px;font-weight:600;margin-right:6px;">Admin</span>` +
+                            `<button onclick="changeAgentRole(${m.id},'agent')" style="background:none;border:1px solid #e5e7eb;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;color:#6b7280;margin-right:6px;">Demote</button>`;
+                    } else {
+                        roleControls = `<button onclick="changeAgentRole(${m.id},'admin')" style="background:none;border:1px solid #7c3aed;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;color:#7c3aed;margin-right:6px;">Make Admin</button>`;
+                    }
+                    roleControls += `<button onclick="removeAgent(${m.id})" style="background:none;border:1px solid #e5e7eb;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;color:#6b7280;">Remove</button>`;
+                } else if (isCompanyAdmin && m.company_role !== 'owner') {
+                    roleControls = `<button onclick="removeAgent(${m.id})" style="background:none;border:1px solid #e5e7eb;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;color:#6b7280;">Remove</button>`;
+                }
+                return `
                 <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:#f9fafb;border-radius:8px;">
                     <div style="width:36px;height:36px;border-radius:50%;background:#0A2540;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;flex-shrink:0;">
                         ${(m.first_name || 'A').charAt(0).toUpperCase()}
@@ -3726,9 +4031,56 @@
                         <div style="font-weight:600;font-size:14px;">${m.first_name} ${m.last_name}</div>
                         <div style="font-size:12px;color:#6b7280;">${m.email} &nbsp;·&nbsp; ZIP ${m.zip_code || '—'} &nbsp;·&nbsp; <span style="text-transform:capitalize;">${m.company_role}</span></div>
                     </div>
-                    ${isCompanyOwner && m.company_role !== 'owner' ? `<button onclick="removeAgent(${m.id})" style="background:none;border:1px solid #e5e7eb;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;color:#6b7280;">Remove</button>` : ''}
-                </div>
-            `).join('');
+                    <div style="display:flex;align-items:center;gap:4px;">${roleControls}</div>
+                </div>`;
+            }).join('');
+        }
+
+        async function changeAgentRole(userId, role) {
+            try {
+                const res = await fetch(`${API_BASE_URL}/company/agents/${userId}/role`, {
+                    method: 'PUT', credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ role })
+                });
+                const data = await res.json();
+                if (!res.ok) { showToast(data.error || 'Failed to update role', 'error'); return; }
+                loadCompany();
+            } catch (e) { showToast('Network error. Please try again.', 'error'); }
+        }
+
+        async function loadTeamProposals() {
+            const listEl = document.getElementById('teamProposalsList');
+            if (!listEl) return;
+            listEl.innerHTML = '<p style="color:#6b7280;font-size:14px;">Loading...</p>';
+            try {
+                const res = await fetch(`${API_BASE_URL}/company/proposals`, { credentials: 'include' });
+                if (!res.ok) { listEl.innerHTML = '<p style="color:#ef4444;font-size:14px;">Failed to load proposals.</p>'; return; }
+                const rows = await res.json();
+                if (!rows.length) { listEl.innerHTML = '<p style="color:#6b7280;font-size:14px;">No proposals from your team yet.</p>'; return; }
+                const statusBadge = s => {
+                    const map = { pending: 'background:#fef3c7;color:#92400e;', accepted: 'background:#d1fae5;color:#065f46;', declined: 'background:#f3f4f6;color:#374151;' };
+                    return `<span style="${map[s] || map.pending}border-radius:6px;padding:2px 8px;font-size:11px;font-weight:600;text-transform:capitalize;">${s}</span>`;
+                };
+                listEl.innerHTML = `<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;">
+                    <thead><tr style="border-bottom:2px solid #e5e7eb;">
+                        <th style="text-align:left;padding:8px 10px;color:#6b7280;font-weight:600;">Agent</th>
+                        <th style="text-align:left;padding:8px 10px;color:#6b7280;font-weight:600;">Listing</th>
+                        <th style="text-align:right;padding:8px 10px;color:#6b7280;font-weight:600;">Price</th>
+                        <th style="text-align:right;padding:8px 10px;color:#6b7280;font-weight:600;">Commission %</th>
+                        <th style="text-align:center;padding:8px 10px;color:#6b7280;font-weight:600;">Status</th>
+                        <th style="text-align:left;padding:8px 10px;color:#6b7280;font-weight:600;">Date</th>
+                    </tr></thead>
+                    <tbody>${rows.map(p => `<tr style="border-bottom:1px solid #f3f4f6;">
+                        <td style="padding:8px 10px;">${p.agent_first} ${p.agent_last}<br><span style="color:#9ca3af;font-size:11px;">${p.agent_email}</span></td>
+                        <td style="padding:8px 10px;">${p.address}<br><span style="color:#9ca3af;font-size:11px;">${p.city}, ${p.state}</span></td>
+                        <td style="padding:8px 10px;text-align:right;">$${Number(p.price).toLocaleString()}</td>
+                        <td style="padding:8px 10px;text-align:right;">${p.commission_pct != null ? p.commission_pct + '%' : '—'}</td>
+                        <td style="padding:8px 10px;text-align:center;">${statusBadge(p.status)}</td>
+                        <td style="padding:8px 10px;white-space:nowrap;">${new Date(p.created_at).toLocaleDateString()}</td>
+                    </tr>`).join('')}</tbody>
+                </table></div>`;
+            } catch (e) { listEl.innerHTML = '<p style="color:#ef4444;font-size:14px;">Failed to load proposals.</p>'; }
         }
 
         function renderLocations(locations) {
@@ -3752,21 +4104,19 @@
 
         async function addAgent() {
             const email = document.getElementById('agentEmail').value.trim();
-            const zipCode = document.getElementById('agentZip').value.trim();
             const errEl = document.getElementById('addAgentError');
             errEl.style.display = 'none';
-            if (!email || !zipCode) { errEl.textContent = 'Both email and ZIP code are required.'; errEl.style.display = 'block'; return; }
+            if (!email) { errEl.textContent = 'Email is required.'; errEl.style.display = 'block'; return; }
             try {
                 const res = await fetch(`${API_BASE_URL}/company/agents`, {
                     method: 'POST', credentials: 'include',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, zipCode })
+                    body: JSON.stringify({ email })
                 });
                 const data = await res.json();
                 if (!res.ok) { errEl.textContent = data.error || 'Failed to add agent.'; errEl.style.display = 'block'; return; }
                 hideAddAgentForm();
                 document.getElementById('agentEmail').value = '';
-                document.getElementById('agentZip').value = '';
                 loadCompany();
             } catch (e) { errEl.textContent = 'Network error. Please try again.'; errEl.style.display = 'block'; }
         }
@@ -3802,6 +4152,278 @@
             if (!confirm('Remove this location? Agents at this location will remain in your company.')) return;
             await fetch(`${API_BASE_URL}/company/locations/${locationId}`, { method: 'DELETE', credentials: 'include' });
             loadCompany();
+        }
+
+        // ===== LEADERBOARD =====
+        async function loadLeaderboard() {
+            const listEl = document.getElementById('leaderboardList');
+            if (!listEl) return;
+            listEl.innerHTML = '<p style="color:#6b7280;font-size:14px;">Loading...</p>';
+            try {
+                const res = await fetch(`${API_BASE_URL}/company/leaderboard`, { credentials: 'include' });
+                if (!res.ok) { listEl.innerHTML = '<p style="color:#ef4444;font-size:14px;">Failed to load leaderboard.</p>'; return; }
+                const rows = await res.json();
+                if (!rows.length) { listEl.innerHTML = '<p style="color:#6b7280;font-size:14px;">No leaderboard data yet.</p>'; return; }
+                const rankStyles = [
+                    'background:#fffbeb;border:1px solid #fde68a;',
+                    'background:#f8fafc;border:1px solid #e2e8f0;',
+                    'background:#fff7ed;border:1px solid #fed7aa;'
+                ];
+                const rankLabels = ['🥇', '🥈', '🥉'];
+                const roleBadge = r => {
+                    const map = { owner: 'background:#dbeafe;color:#1d4ed8;', admin: 'background:#f3e8ff;color:#7c3aed;', agent: 'background:#f3f4f6;color:#374151;' };
+                    return `<span style="${map[r] || map.agent}border-radius:6px;padding:2px 8px;font-size:11px;font-weight:600;text-transform:capitalize;">${r}</span>`;
+                };
+                listEl.innerHTML = rows.map((agent, i) => {
+                    const style = rankStyles[i] || 'background:#f9fafb;border:1px solid #e5e7eb;';
+                    const medal = rankLabels[i] || `<span style="font-weight:700;color:#6b7280;">#${i + 1}</span>`;
+                    return `<div style="${style}border-radius:8px;padding:12px 16px;margin-bottom:8px;display:flex;align-items:center;gap:14px;">
+                        <div style="min-width:32px;text-align:center;font-size:18px;">${medal}</div>
+                        <div style="flex:1;">
+                            <div style="font-weight:600;font-size:14px;">${agent.first_name} ${agent.last_name} &nbsp;${roleBadge(agent.company_role)}</div>
+                            <div style="font-size:12px;color:#6b7280;margin-top:2px;">${agent.email}</div>
+                        </div>
+                        <div style="display:flex;gap:20px;text-align:center;">
+                            <div><div style="font-size:18px;font-weight:700;color:#059669;">${agent.accepted_proposals ?? 0}</div><div style="font-size:11px;color:#6b7280;">Accepted</div></div>
+                            <div><div style="font-size:18px;font-weight:700;color:#374151;">${agent.total_proposals ?? 0}</div><div style="font-size:11px;color:#6b7280;">Total Proposals</div></div>
+                            <div><div style="font-size:18px;font-weight:700;color:#0A2540;">${agent.active_listings ?? 0}</div><div style="font-size:11px;color:#6b7280;">Active Listings</div></div>
+                        </div>
+                    </div>`;
+                }).join('');
+            } catch (e) { listEl.innerHTML = '<p style="color:#ef4444;font-size:14px;">Failed to load leaderboard.</p>'; }
+        }
+
+        // ===== INVITE FLOW =====
+        function showInviteForm() {
+            document.getElementById('inviteAgentForm').style.display = 'block';
+            document.getElementById('inviteEmail').focus();
+            document.getElementById('inviteError').style.display = 'none';
+            document.getElementById('inviteSuccess').style.display = 'none';
+        }
+        function hideInviteForm() {
+            document.getElementById('inviteAgentForm').style.display = 'none';
+            document.getElementById('inviteEmail').value = '';
+            document.getElementById('inviteError').style.display = 'none';
+            document.getElementById('inviteSuccess').style.display = 'none';
+        }
+        async function sendInvite() {
+            const email = document.getElementById('inviteEmail').value.trim();
+            const errEl = document.getElementById('inviteError');
+            const sucEl = document.getElementById('inviteSuccess');
+            errEl.style.display = 'none';
+            sucEl.style.display = 'none';
+            if (!email) { errEl.textContent = 'Email is required.'; errEl.style.display = 'block'; return; }
+            try {
+                const res = await fetch(`${API_BASE_URL}/company/invite`, {
+                    method: 'POST', credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email })
+                });
+                const data = await res.json();
+                if (!res.ok) { errEl.textContent = data.error || 'Failed to send invite.'; errEl.style.display = 'block'; return; }
+                sucEl.textContent = data.message || 'Invite sent successfully!';
+                sucEl.style.display = 'block';
+                document.getElementById('inviteEmail').value = '';
+            } catch (e) { errEl.textContent = 'Network error. Please try again.'; errEl.style.display = 'block'; }
+        }
+
+        // ===== COMPANY TEMPLATES =====
+        async function loadCompanyTemplates() {
+            const listEl = document.getElementById('companyTemplatesList');
+            if (!listEl) return;
+            listEl.innerHTML = '<p style="color:#9ca3af;font-size:14px;">Loading templates…</p>';
+            try {
+                const res = await fetch(`${API_BASE_URL}/company/templates`, { credentials: 'include' });
+                if (!res.ok) { listEl.innerHTML = '<p style="color:#ef4444;font-size:14px;">Failed to load templates.</p>'; return; }
+                const rows = await res.json();
+                if (!rows.length) { listEl.innerHTML = '<p style="color:#6b7280;font-size:14px;">No shared templates yet.</p>'; return; }
+                listEl.innerHTML = rows.map(t => {
+                    const preview = t.content ? (t.content.length > 120 ? t.content.slice(0, 120) + '…' : t.content) : '';
+                    const canDelete = isCompanyOwner || isCompanyAdmin;
+                    return `<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:14px 16px;margin-bottom:10px;">
+                        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
+                            <div style="flex:1;">
+                                <div style="font-weight:600;font-size:14px;margin-bottom:4px;">${t.name || 'Untitled'}</div>
+                                <div style="font-size:13px;color:#6b7280;white-space:pre-wrap;">${preview}</div>
+                            </div>
+                            <div style="display:flex;gap:6px;flex-shrink:0;">
+                                <button onclick="useCompanyTemplate(${JSON.stringify(t.content || '').replace(/'/g, "\\'")})" style="background:#0A2540;color:white;border:none;border-radius:6px;padding:5px 12px;cursor:pointer;font-size:12px;">Use</button>
+                                ${canDelete ? `<button onclick="deleteCompanyTemplate(${t.id})" style="background:none;border:1px solid #e5e7eb;border-radius:6px;padding:5px 10px;cursor:pointer;font-size:12px;color:#6b7280;">Delete</button>` : ''}
+                            </div>
+                        </div>
+                    </div>`;
+                }).join('');
+            } catch (e) { listEl.innerHTML = '<p style="color:#ef4444;font-size:14px;">Failed to load templates.</p>'; }
+        }
+        function showNewTemplateForm() {
+            document.getElementById('newTemplateForm').style.display = 'block';
+            document.getElementById('templateName').focus();
+        }
+        function hideNewTemplateForm() {
+            document.getElementById('newTemplateForm').style.display = 'none';
+            document.getElementById('templateName').value = '';
+            document.getElementById('templateContent').value = '';
+        }
+        async function saveCompanyTemplate() {
+            const name = document.getElementById('templateName').value.trim();
+            const content = document.getElementById('templateContent').value.trim();
+            if (!name) { showToast('Template name is required.', 'error'); return; }
+            try {
+                const res = await fetch(`${API_BASE_URL}/company/templates`, {
+                    method: 'POST', credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, content })
+                });
+                const data = await res.json();
+                if (!res.ok) { showToast(data.error || 'Failed to save template.', 'error'); return; }
+                hideNewTemplateForm();
+                showToast('Template saved.', 'success');
+                loadCompanyTemplates();
+            } catch (e) { showToast('Network error. Please try again.', 'error'); }
+        }
+        async function deleteCompanyTemplate(id) {
+            if (!confirm('Delete this template?')) return;
+            try {
+                const res = await fetch(`${API_BASE_URL}/company/templates/${id}`, { method: 'DELETE', credentials: 'include' });
+                if (!res.ok) { showToast('Failed to delete template.', 'error'); return; }
+                showToast('Template deleted.', 'success');
+                loadCompanyTemplates();
+            } catch (e) { showToast('Network error. Please try again.', 'error'); }
+        }
+        function useCompanyTemplate(content) {
+            try { navigator.clipboard.writeText(content).then(() => showToast('Template copied to clipboard.', 'success')); }
+            catch (e) { showToast('Could not copy to clipboard.', 'error'); }
+        }
+
+        // ===== TEAM NOTES =====
+        async function loadTeamNotes() {
+            const listEl = document.getElementById('teamNotesList');
+            if (!listEl) return;
+            listEl.innerHTML = '<p style="color:#9ca3af;font-size:14px;">Loading notes…</p>';
+            try {
+                const res = await fetch(`${API_BASE_URL}/company/notes`, { credentials: 'include' });
+                if (!res.ok) { listEl.innerHTML = '<p style="color:#ef4444;font-size:14px;">Failed to load notes.</p>'; return; }
+                const rows = await res.json();
+                if (!rows.length) { listEl.innerHTML = '<p style="color:#6b7280;font-size:14px;">No team notes yet. Be the first to post!</p>'; return; }
+                listEl.innerHTML = rows.map(n => {
+                    const canDelete = (currentUser && n.author_id === currentUser.id) || isCompanyOwner || isCompanyAdmin;
+                    const dateStr = n.created_at ? new Date(n.created_at).toLocaleString() : '';
+                    return `<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:14px 16px;margin-bottom:10px;">
+                        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
+                            <div style="flex:1;">
+                                <div style="font-size:12px;color:#6b7280;margin-bottom:6px;"><strong style="color:#374151;">${n.author_name || 'Team Member'}</strong> &nbsp;·&nbsp; ${dateStr}</div>
+                                <div style="font-size:14px;white-space:pre-wrap;">${n.note || ''}</div>
+                            </div>
+                            ${canDelete ? `<button onclick="deleteTeamNote(${n.id})" style="background:none;border:1px solid #e5e7eb;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;color:#6b7280;flex-shrink:0;">Delete</button>` : ''}
+                        </div>
+                    </div>`;
+                }).join('');
+            } catch (e) { listEl.innerHTML = '<p style="color:#ef4444;font-size:14px;">Failed to load notes.</p>'; }
+        }
+        async function postTeamNote() {
+            const noteEl = document.getElementById('newTeamNote');
+            const note = noteEl.value.trim();
+            if (!note) { showToast('Please enter a note.', 'error'); return; }
+            try {
+                const res = await fetch(`${API_BASE_URL}/company/notes`, {
+                    method: 'POST', credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ note })
+                });
+                const data = await res.json();
+                if (!res.ok) { showToast(data.error || 'Failed to post note.', 'error'); return; }
+                noteEl.value = '';
+                showToast('Note posted.', 'success');
+                loadTeamNotes();
+            } catch (e) { showToast('Network error. Please try again.', 'error'); }
+        }
+        async function deleteTeamNote(id) {
+            if (!confirm('Delete this note?')) return;
+            try {
+                const res = await fetch(`${API_BASE_URL}/company/notes/${id}`, { method: 'DELETE', credentials: 'include' });
+                if (!res.ok) { showToast('Failed to delete note.', 'error'); return; }
+                showToast('Note deleted.', 'success');
+                loadTeamNotes();
+            } catch (e) { showToast('Network error. Please try again.', 'error'); }
+        }
+
+        // ===== LISTING ASSIGNMENTS =====
+        async function loadAssignments() {
+            const listEl = document.getElementById('assignmentsList');
+            if (!listEl) return;
+            listEl.innerHTML = '<p style="color:#9ca3af;font-size:14px;">Loading assignments…</p>';
+            try {
+                const res = await fetch(`${API_BASE_URL}/company/assignments`, { credentials: 'include' });
+                if (!res.ok) { listEl.innerHTML = '<p style="color:#ef4444;font-size:14px;">Failed to load assignments.</p>'; return; }
+                const rows = await res.json();
+                if (!rows.length) { listEl.innerHTML = '<p style="color:#6b7280;font-size:14px;">No listing assignments yet.</p>'; return; }
+                listEl.innerHTML = `<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;">
+                    <thead><tr style="border-bottom:2px solid #e5e7eb;">
+                        <th style="text-align:left;padding:8px 10px;color:#6b7280;font-weight:600;">Listing</th>
+                        <th style="text-align:left;padding:8px 10px;color:#6b7280;font-weight:600;">Agent</th>
+                        <th style="text-align:left;padding:8px 10px;color:#6b7280;font-weight:600;">Note</th>
+                        <th style="text-align:left;padding:8px 10px;color:#6b7280;font-weight:600;">Date</th>
+                        <th style="text-align:center;padding:8px 10px;color:#6b7280;font-weight:600;">Action</th>
+                    </tr></thead>
+                    <tbody>${rows.map(a => `<tr style="border-bottom:1px solid #f3f4f6;">
+                        <td style="padding:8px 10px;">${a.address || ('Listing #' + a.listing_id)}<br><span style="color:#9ca3af;font-size:11px;">ID: ${a.listing_id}</span></td>
+                        <td style="padding:8px 10px;">${a.agent_first || ''} ${a.agent_last || ''}<br><span style="color:#9ca3af;font-size:11px;">${a.agent_email || ''}</span></td>
+                        <td style="padding:8px 10px;color:#374151;">${a.note || '—'}</td>
+                        <td style="padding:8px 10px;white-space:nowrap;">${a.created_at ? new Date(a.created_at).toLocaleDateString() : '—'}</td>
+                        <td style="padding:8px 10px;text-align:center;"><button onclick="deleteAssignment(${a.id})" style="background:none;border:1px solid #e5e7eb;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;color:#6b7280;">Unassign</button></td>
+                    </tr>`).join('')}</tbody>
+                </table></div>`;
+            } catch (e) { listEl.innerHTML = '<p style="color:#ef4444;font-size:14px;">Failed to load assignments.</p>'; }
+        }
+        function showAssignForm() {
+            const select = document.getElementById('assignRealtorId');
+            select.innerHTML = '<option value="">Select agent…</option>';
+            const members = (companyData && companyData.members) ? companyData.members : [];
+            members.filter(m => m.company_role === 'agent' || m.company_role === 'admin').forEach(m => {
+                const opt = document.createElement('option');
+                opt.value = m.id;
+                opt.textContent = `${m.first_name} ${m.last_name} (${m.company_role})`;
+                select.appendChild(opt);
+            });
+            document.getElementById('assignForm').style.display = 'block';
+            document.getElementById('assignError').style.display = 'none';
+        }
+        function hideAssignForm() {
+            document.getElementById('assignForm').style.display = 'none';
+            document.getElementById('assignListingId').value = '';
+            document.getElementById('assignRealtorId').value = '';
+            document.getElementById('assignNote').value = '';
+            document.getElementById('assignError').style.display = 'none';
+        }
+        async function submitAssignment() {
+            const listing_id = document.getElementById('assignListingId').value.trim();
+            const realtor_id = document.getElementById('assignRealtorId').value;
+            const note = document.getElementById('assignNote').value.trim();
+            const errEl = document.getElementById('assignError');
+            errEl.style.display = 'none';
+            if (!listing_id) { errEl.textContent = 'Listing ID is required.'; errEl.style.display = 'block'; return; }
+            if (!realtor_id) { errEl.textContent = 'Please select an agent.'; errEl.style.display = 'block'; return; }
+            try {
+                const res = await fetch(`${API_BASE_URL}/company/assignments`, {
+                    method: 'POST', credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ listing_id: Number(listing_id), realtor_id: Number(realtor_id), note })
+                });
+                const data = await res.json();
+                if (!res.ok) { errEl.textContent = data.error || 'Failed to create assignment.'; errEl.style.display = 'block'; return; }
+                hideAssignForm();
+                showToast('Assignment created.', 'success');
+                loadAssignments();
+            } catch (e) { errEl.textContent = 'Network error. Please try again.'; errEl.style.display = 'block'; }
+        }
+        async function deleteAssignment(id) {
+            if (!confirm('Unassign this listing?')) return;
+            try {
+                const res = await fetch(`${API_BASE_URL}/company/assignments/${id}`, { method: 'DELETE', credentials: 'include' });
+                if (!res.ok) { showToast('Failed to unassign.', 'error'); return; }
+                showToast('Assignment removed.', 'success');
+                loadAssignments();
+            } catch (e) { showToast('Network error. Please try again.', 'error'); }
         }
 
         async function upgradePlan(plan) {
@@ -3906,10 +4528,11 @@
         // ===== ANALYTICS =====
         async function loadAnalytics() {
             try {
-                // Load both old and new analytics in parallel
-                const [resOld, resNew] = await Promise.all([
+                // Load analytics and win-rate trend in parallel
+                const [resOld, resNew, resTrend] = await Promise.all([
                     fetch(`${API_BASE_URL}/analytics/realtor`, { credentials: 'include' }),
-                    fetch(`${API_BASE_URL}/realtors/me/analytics`, { credentials: 'include' })
+                    fetch(`${API_BASE_URL}/realtors/me/analytics`, { credentials: 'include' }),
+                    fetch(`${API_BASE_URL}/realtors/me/win-rate-trend`, { credentials: 'include' })
                 ]);
 
                 if (resOld.ok) {
@@ -3967,6 +4590,28 @@
                         document.getElementById('proposalLegend').innerHTML = segments.map(x =>
                             `<span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${colors[x.s]};margin-right:4px;vertical-align:middle;"></span>${labels[x.s]}: ${x.cnt}</span>`
                         ).join('');
+                    }
+                }
+                // Win-rate trend
+                if (resTrend && resTrend.ok) {
+                    const trend = await resTrend.json();
+                    if (trend.length > 0) {
+                        document.getElementById('winRateTrend').style.display = 'block';
+                        const maxRate = Math.max(...trend.map(t => t.win_rate), 1);
+                        document.getElementById('winRateBars').innerHTML = trend.map(t => {
+                            const pct = Math.max(4, Math.round((t.win_rate / 100) * 100));
+                            const color = t.win_rate >= 50 ? '#10b981' : t.win_rate >= 25 ? '#f59e0b' : '#ef4444';
+                            return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;">
+                                <div style="font-size:0.7rem;font-weight:700;color:${color};">${t.win_rate}%</div>
+                                <div style="flex:1;display:flex;align-items:flex-end;width:100%;">
+                                    <div style="background:${color};width:100%;border-radius:4px 4px 0 0;height:${pct}%;min-height:4px;" title="${t.accepted}/${t.total} won"></div>
+                                </div>
+                            </div>`;
+                        }).join('');
+                        document.getElementById('winRateLabels').innerHTML = trend.map(t => {
+                            const d = new Date(t.month);
+                            return `<div style="flex:1;text-align:center;">${d.toLocaleDateString('en-US',{month:'short'})}</div>`;
+                        }).join('');
                     }
                 }
             } catch (err) { console.error('Analytics error:', err); }
@@ -4249,7 +4894,7 @@
                     banner.style.display = 'none';
                 }
                 // Update tab badge
-                const tabBadge = document.querySelector('[data-view="my-proposals"] .counter-badge');
+                const tabBadge = document.getElementById('pipelineBadge');
                 if (tabBadge) {
                     if (pendingCounters.length > 0) { tabBadge.textContent = pendingCounters.length; tabBadge.style.display = 'inline-flex'; }
                     else tabBadge.style.display = 'none';
@@ -4376,6 +5021,88 @@
             }
         }
 
+        // ─── Open Houses ─────────────────────────────────────────────────────────
+        async function loadMyOpenHouses(wonBids) {
+            const list = document.getElementById('openHousesList');
+            const sel = document.getElementById('ohListingId');
+            if (!list) return;
+            // Populate listing dropdown with accepted proposals
+            if (sel) {
+                const won = (wonBids || []).filter(b => b.status === 'accepted');
+                sel.innerHTML = won.length
+                    ? won.map(b => `<option value="${b.listing_id}">${b.address || 'Listing #' + b.listing_id}</option>`).join('')
+                    : '<option value="">No accepted proposals yet</option>';
+            }
+            try {
+                const res = await fetch('/api/realtors/me/open-houses', { credentials: 'include' });
+                const houses = res.ok ? await res.json() : [];
+                if (!houses.length) { list.innerHTML = '<div style="color:#9ca3af;font-size:0.875rem;">No open houses scheduled yet.</div>'; return; }
+                list.innerHTML = houses.map(oh => {
+                    const dt = new Date(oh.scheduled_at);
+                    const label = dt.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' }) + ' at ' + dt.toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit' });
+                    const addr = [oh.address, oh.city, oh.state].filter(Boolean).join(', ');
+                    const isPast = dt < new Date();
+                    return `<div style="background:white;border:1px solid var(--border);border-radius:10px;padding:1rem 1.25rem;display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;${isPast ? 'opacity:0.6;' : ''}">
+                        <div>
+                            <div style="font-weight:600;font-size:0.9rem;">${addr}</div>
+                            <div style="font-size:0.82rem;color:#6b7280;margin-top:0.2rem;">📅 ${label} · ${oh.duration_minutes} min · ${oh.rsvp_count} RSVP${oh.rsvp_count !== 1 ? 's' : ''}</div>
+                            ${oh.notes ? `<div style="font-size:0.8rem;color:#9ca3af;margin-top:0.15rem;">${oh.notes}</div>` : ''}
+                        </div>
+                        ${!isPast ? `<button onclick="deleteOpenHouse(${oh.id})" style="background:none;border:1px solid #e5e7eb;color:#ef4444;border-radius:6px;padding:0.35rem 0.75rem;cursor:pointer;font-size:0.8rem;font-family:inherit;">Cancel</button>` : '<span style="font-size:0.75rem;color:#9ca3af;">Past</span>'}
+                    </div>`;
+                }).join('');
+            } catch { list.innerHTML = '<div style="color:#9ca3af;font-size:0.875rem;">Could not load open houses.</div>'; }
+        }
+
+        async function createOpenHouse() {
+            const listingId = document.getElementById('ohListingId')?.value;
+            const scheduledAt = document.getElementById('ohScheduledAt')?.value;
+            const duration = document.getElementById('ohDuration')?.value;
+            const notes = document.getElementById('ohNotes')?.value;
+            const msg = document.getElementById('ohMsg');
+            if (!listingId || !scheduledAt) { msg.textContent = 'Please select a listing and date/time.'; msg.style.color = '#dc2626'; return; }
+            msg.textContent = 'Saving…'; msg.style.color = '#6b7280';
+            try {
+                const res = await fetch('/api/open-houses', {
+                    method: 'POST', credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ listing_id: listingId, scheduled_at: scheduledAt, duration_minutes: duration, notes })
+                });
+                const d = await res.json();
+                if (!res.ok) { msg.textContent = d.error || 'Failed'; msg.style.color = '#dc2626'; return; }
+                msg.textContent = '✓ Scheduled!'; msg.style.color = '#059669';
+                document.getElementById('ohNotes').value = '';
+                // Reload
+                const bidsRes = await fetch('/api/proposals/my', { credentials: 'include' });
+                const bids = bidsRes.ok ? await bidsRes.json() : [];
+                loadMyOpenHouses(bids);
+            } catch { msg.textContent = 'Error'; msg.style.color = '#dc2626'; }
+        }
+
+        async function deleteOpenHouse(id) {
+            if (!confirm('Cancel this open house?')) return;
+            await fetch(`/api/open-houses/${id}`, { method: 'DELETE', credentials: 'include' });
+            const bidsRes = await fetch('/api/proposals/my', { credentials: 'include' });
+            const bids = bidsRes.ok ? await bidsRes.json() : [];
+            loadMyOpenHouses(bids);
+        }
+
+        async function saveUnavailableUntil() {
+            const date = document.getElementById('unavailableUntil')?.value;
+            const saved = document.getElementById('unavailSaved');
+            await fetch('/api/profile', {
+                method: 'PUT', credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ unavailable_until: date || null })
+            });
+            if (saved) { saved.style.display = 'inline'; setTimeout(() => saved.style.display = 'none', 2000); }
+        }
+
+        async function clearUnavailableUntil() {
+            document.getElementById('unavailableUntil').value = '';
+            await saveUnavailableUntil();
+        }
+
         // ─── Availability ─────────────────────────────────────────────────────────
         const DAY_NAMES = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
         async function loadAvailability() {
@@ -4435,6 +5162,53 @@
             } catch(e) { showToast('Network error.', 'error'); }
         }
 
+        function renderDeadlineBadgeR(listing) {
+            if (!listing.proposal_deadline) return '';
+            const deadline = new Date(listing.proposal_deadline);
+            const daysLeft = Math.ceil((deadline - new Date()) / (1000*60*60*24));
+            if (daysLeft < 0) return '';
+            const color = daysLeft <= 2 ? '#dc2626' : daysLeft <= 5 ? '#d97706' : '#059669';
+            const bg = daysLeft <= 2 ? '#fee2e2' : daysLeft <= 5 ? '#fef3c7' : '#d1fae5';
+            return `<div style="display:inline-block;background:${bg};color:${color};font-size:0.73rem;font-weight:700;padding:2px 8px;border-radius:20px;margin:0.25rem 0 0.5rem;">⏰ ${daysLeft === 0 ? 'Deadline today' : daysLeft + 'd left'}</div>`;
+        }
+
+        async function loadComps() {
+            const listingId = document.getElementById('proposalListingId')?.value;
+            if (!listingId) return;
+            const loading = document.getElementById('compsLoading');
+            const panel = document.getElementById('compsPanel');
+            const body = document.getElementById('compsBody');
+            loading.style.display = 'inline'; panel.style.display = 'none';
+            try {
+                const res = await fetch(`/api/listings/${listingId}/comps`, { credentials: 'include' });
+                const comps = res.ok ? await res.json() : [];
+                loading.style.display = 'none';
+                if (!comps.length) { body.innerHTML = '<div style="color:#9ca3af;font-size:0.8rem;">No nearby listings found.</div>'; panel.style.display = 'block'; return; }
+                body.innerHTML = comps.map(c => `
+                    <div style="display:flex;justify-content:space-between;align-items:center;padding:0.3rem 0;border-bottom:1px solid #e5e7eb;font-size:0.8rem;">
+                        <span style="color:#374151;">${c.address} <span style="color:#9ca3af;">${c.distance_miles}mi</span></span>
+                        <span style="font-weight:700;color:#0a2540;">$${Number(c.price).toLocaleString()}</span>
+                        <span style="color:#6b7280;">${c.bedrooms}bd/${c.bathrooms}ba</span>
+                        <span style="background:${c.status==='active'?'#d1fae5':'#f3f4f6'};color:${c.status==='active'?'#065f46':'#374151'};padding:1px 6px;border-radius:10px;">${c.status}</span>
+                    </div>`).join('');
+                panel.style.display = 'block';
+            } catch { loading.style.display = 'none'; }
+        }
+
+        async function loadListingDocs(listingId) {
+            const panel = document.getElementById('listingDocsPanel');
+            const body = document.getElementById('listingDocsBody');
+            if (!panel || !body) return;
+            try {
+                const res = await fetch(`/api/listings/${listingId}/documents`, { credentials: 'include' });
+                if (!res.ok) return;
+                const docs = await res.json();
+                if (!docs.length) return;
+                panel.style.display = 'block';
+                body.innerHTML = docs.map(d => `<div style="font-size:0.82rem;padding:0.2rem 0;"><a href="${d.url}" target="_blank" style="color:#0284c7;text-decoration:none;">📎 ${d.name}</a></div>`).join('');
+            } catch { /* silent */ }
+        }
+
         function showProposalModal(listingId, listingAddress) {
             // Check if already submitted
             const existing = mySubmittedProposals.find(p => p.listing_id === listingId);
@@ -4446,9 +5220,14 @@
             if (!modal) return;
             document.getElementById('proposalListingId').value = listingId;
             document.getElementById('proposalListingAddr').textContent = listingAddress;
+            // Reset comps panel
+            const cp = document.getElementById('compsPanel'); if (cp) cp.style.display = 'none';
+            const dp = document.getElementById('listingDocsPanel'); if (dp) dp.style.display = 'none';
             modal.style.display = 'flex';
             // Load templates if not yet loaded
             if (!_templates.length) loadTemplates();
+            // Load docs for this listing
+            loadListingDocs(listingId);
         }
 
         function closeProposalModal() {
@@ -4918,7 +5697,7 @@
                 showToast('Deal updated!');
                 closeDealModal();
                 // Re-render won listings
-                document.querySelector('[data-view="won"]').click();
+                document.querySelector('[data-view="pipeline"]').click(); setTimeout(() => switchPipelineTab('won'), 50);
             } catch(e) { showToast('Network error', 'error'); }
         }
 
@@ -5237,18 +6016,7 @@
 
         // Hook new tabs into tab-switching logic
         document.addEventListener('DOMContentLoaded', () => {
-            document.querySelectorAll('.tab[data-view="my-proposals"]').forEach(el => {
-                el.addEventListener('click', loadMyProposals);
-            });
-            document.querySelectorAll('.tab[data-view="reviews"]').forEach(el => {
-                el.addEventListener('click', loadReviews);
-            });
-            document.querySelectorAll('.tab[data-view="referrals"]').forEach(el => {
-                el.addEventListener('click', loadReferrals);
-            });
-            document.querySelectorAll('.tab[data-view="showings"]').forEach(el => {
-                el.addEventListener('click', () => { loadShowings(); _currentShowingsTab = 'buyer'; });
-            });
+            // Old per-tab hooks replaced by hub-level loading in main tab handler
 
             // Load Stripe publishable key
             fetch('/api/config/stripe-key').then(r => r.ok ? r.json() : null).then(d => {
@@ -5263,7 +6031,21 @@
                 <h2 style="font-family:'Crimson Pro',serif;font-size:1.5rem;">Submit Proposal</h2>
                 <button onclick="closeProposalModal()" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:#666;">&times;</button>
             </div>
-            <p id="proposalListingAddr" style="color:#666;font-size:0.9rem;margin-bottom:1.5rem;font-style:italic;"></p>
+            <p id="proposalListingAddr" style="color:#666;font-size:0.9rem;margin-bottom:0.75rem;font-style:italic;"></p>
+            <!-- CMA Comps -->
+            <div style="margin-bottom:1rem;">
+                <button type="button" onclick="loadComps()" style="background:#f3f4f6;border:1px solid #e5e7eb;color:#374151;padding:0.4rem 0.9rem;border-radius:6px;font-size:0.8rem;font-weight:600;cursor:pointer;font-family:inherit;">📊 Get Nearby Comps</button>
+                <span id="compsLoading" style="display:none;font-size:0.8rem;color:#9ca3af;margin-left:0.5rem;">Loading…</span>
+            </div>
+            <div id="compsPanel" style="display:none;margin-bottom:1rem;background:#f8f9fa;border:1px solid #e5e7eb;border-radius:8px;padding:0.75rem;max-height:160px;overflow-y:auto;">
+                <div style="font-size:0.78rem;font-weight:700;color:#374151;margin-bottom:0.5rem;">NEARBY COMPARABLE LISTINGS</div>
+                <div id="compsBody"></div>
+            </div>
+            <!-- Listing Docs -->
+            <div id="listingDocsPanel" style="display:none;margin-bottom:1rem;background:#fdf4f2;border:1px solid var(--border,#e8ded8);border-radius:8px;padding:0.75rem;">
+                <div style="font-size:0.78rem;font-weight:700;color:#374151;margin-bottom:0.4rem;">📄 SELLER DOCUMENTS</div>
+                <div id="listingDocsBody"></div>
+            </div>
             <form onsubmit="submitProposalForm(event)">
                 <input type="hidden" id="proposalListingId">
                 <div style="margin-bottom:1rem;">

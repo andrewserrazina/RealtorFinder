@@ -778,6 +778,7 @@
         <button class="tab-btn" onclick="switchTab('campaigns', this)" style="color:#6366f1;font-weight:600;">Campaigns 📣</button>
         <button class="tab-btn" onclick="switchTab('health', this)" style="color:#0ea5e9;font-weight:600;">Health 🩺</button>
         <button class="tab-btn" onclick="switchTab('coverage-map', this)" style="color:#FF6B35;font-weight:600;">Coverage Map 🗺</button>
+        <button class="tab-btn" onclick="switchTab('blog', this)" style="color:#7c3aed;font-weight:600;">Blog ✍️</button>
     </div>
 
     <!-- Stats tab -->
@@ -1483,6 +1484,71 @@
         </div>
     </div>
 
+    <!-- Blog tab -->
+    <div class="tab-panel" id="tab-blog">
+        <div class="table-wrapper">
+            <div class="table-header">
+                <span class="table-title">Blog Posts</span>
+                <span class="table-count" id="blog-count">Loading…</span>
+                <button class="btn-action btn-reactivate" onclick="openBlogEditor(null)" style="margin-left:auto;">+ New Post</button>
+            </div>
+            <div class="table-scroll">
+                <table id="blog-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Title</th>
+                            <th>Slug</th>
+                            <th>Category</th>
+                            <th>Published</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="blog-tbody">
+                        <tr><td colspan="7" class="empty-state">Loading…</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Blog Editor Modal -->
+    <div id="blog-editor-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:998;" onclick="closeBlogEditor()"></div>
+    <div id="blog-editor-modal" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;border-radius:14px;padding:1.75rem;box-shadow:0 20px 60px rgba(0,0,0,0.2);z-index:999;width:780px;max-width:96vw;max-height:90vh;overflow-y:auto;flex-direction:column;gap:1rem;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+            <h3 id="blog-editor-title" style="font-size:1.05rem;font-weight:700;color:#0A2540;">New Post</h3>
+            <button onclick="closeBlogEditor()" style="background:none;border:none;font-size:1.2rem;cursor:pointer;color:#9ca3af;">✕</button>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+            <div style="grid-column:1/-1;"><label style="font-size:0.78rem;font-weight:600;color:#374151;display:block;margin-bottom:3px;">Title *</label>
+                <input id="blog-title" type="text" style="width:100%;padding:8px 10px;border:1px solid #e5e1db;border-radius:8px;font-family:inherit;font-size:0.9rem;box-sizing:border-box;" oninput="blogAutoSlug()"></div>
+            <div style="grid-column:1/-1;"><label style="font-size:0.78rem;font-weight:600;color:#374151;display:block;margin-bottom:3px;">Slug *</label>
+                <input id="blog-slug" type="text" style="width:100%;padding:8px 10px;border:1px solid #e5e1db;border-radius:8px;font-family:inherit;font-size:0.9rem;box-sizing:border-box;"></div>
+            <div><label style="font-size:0.78rem;font-weight:600;color:#374151;display:block;margin-bottom:3px;">Category</label>
+                <input id="blog-category" type="text" placeholder="e.g. Seller Tips" style="width:100%;padding:8px 10px;border:1px solid #e5e1db;border-radius:8px;font-family:inherit;font-size:0.9rem;box-sizing:border-box;"></div>
+            <div><label style="font-size:0.78rem;font-weight:600;color:#374151;display:block;margin-bottom:3px;">Author</label>
+                <input id="blog-author" type="text" placeholder="RealtorFinder Editorial Team" style="width:100%;padding:8px 10px;border:1px solid #e5e1db;border-radius:8px;font-family:inherit;font-size:0.9rem;box-sizing:border-box;"></div>
+            <div><label style="font-size:0.78rem;font-weight:600;color:#374151;display:block;margin-bottom:3px;">State Code</label>
+                <input id="blog-state" type="text" maxlength="2" placeholder="CA" style="width:100%;padding:8px 10px;border:1px solid #e5e1db;border-radius:8px;font-family:inherit;font-size:0.9rem;box-sizing:border-box;"></div>
+            <div><label style="font-size:0.78rem;font-weight:600;color:#374151;display:block;margin-bottom:3px;">Read Time (min)</label>
+                <input id="blog-readtime" type="number" min="1" placeholder="5" style="width:100%;padding:8px 10px;border:1px solid #e5e1db;border-radius:8px;font-family:inherit;font-size:0.9rem;box-sizing:border-box;"></div>
+            <div style="grid-column:1/-1;"><label style="font-size:0.78rem;font-weight:600;color:#374151;display:block;margin-bottom:3px;">Excerpt</label>
+                <textarea id="blog-excerpt" rows="2" style="width:100%;padding:8px 10px;border:1px solid #e5e1db;border-radius:8px;font-family:inherit;font-size:0.9rem;resize:vertical;box-sizing:border-box;"></textarea></div>
+            <div style="grid-column:1/-1;"><label style="font-size:0.78rem;font-weight:600;color:#374151;display:block;margin-bottom:3px;">Content (HTML) *</label>
+                <textarea id="blog-content" rows="12" style="width:100%;padding:8px 10px;border:1px solid #e5e1db;border-radius:8px;font-family:inherit;font-size:0.875rem;resize:vertical;box-sizing:border-box;font-family:monospace;"></textarea></div>
+            <div style="display:flex;align-items:center;gap:8px;">
+                <input type="checkbox" id="blog-published" checked>
+                <label for="blog-published" style="font-size:0.875rem;font-weight:500;color:#374151;cursor:pointer;">Published</label>
+            </div>
+        </div>
+        <div style="display:flex;gap:0.75rem;justify-content:flex-end;margin-top:1rem;border-top:1px solid #f3f4f6;padding-top:1rem;">
+            <button onclick="deleteBlogPost()" id="blog-delete-btn" style="display:none;background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5;border-radius:8px;padding:8px 18px;font-weight:600;cursor:pointer;font-size:0.875rem;">Delete Post</button>
+            <button onclick="closeBlogEditor()" style="background:#f3f4f6;color:#374151;border:none;border-radius:8px;padding:8px 18px;font-weight:600;cursor:pointer;font-size:0.875rem;">Cancel</button>
+            <button onclick="saveBlogPost()" style="background:#7c3aed;color:#fff;border:none;border-radius:8px;padding:8px 22px;font-weight:600;cursor:pointer;font-size:0.875rem;">Save Post</button>
+        </div>
+    </div>
+
     <!-- Impersonate tab -->
     <div class="tab-panel" id="tab-impersonate">
         <div class="table-wrapper" style="padding:2rem;max-width:500px;">
@@ -1505,6 +1571,75 @@
 </main>
 
 <!-- ── CRM Modals ──────────────────────────────────────────────────────────── -->
+
+    <!-- Blog Tab Panel -->
+    <div class="tab-panel" id="tab-blog">
+        <div class="table-wrapper" style="padding:1.5rem 2rem;">
+            <div class="table-header" style="margin-bottom:1.5rem;display:flex;align-items:center;justify-content:space-between;">
+                <span class="table-title">Blog Posts</span>
+                <button onclick="openBlogEditor(null)" style="background:#10b981;color:white;border:none;border-radius:8px;padding:0.55rem 1.25rem;font-weight:600;cursor:pointer;font-size:0.875rem;font-family:inherit;">+ New Post</button>
+            </div>
+            <div id="blog-post-list">Loading…</div>
+        </div>
+    </div>
+
+    <!-- Blog Editor Modal -->
+    <div id="blog-editor-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:990;" onclick="if(event.target===this)closeBlogEditor()"></div>
+    <div id="blog-editor-modal" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;border-radius:16px;padding:2rem;box-shadow:0 24px 80px rgba(0,0,0,0.25);z-index:991;width:780px;max-width:96vw;max-height:92vh;overflow-y:auto;flex-direction:column;gap:1rem;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+            <h3 id="blog-editor-title" style="font-size:1.1rem;font-weight:700;color:#0A2540;">New Post</h3>
+            <button onclick="closeBlogEditor()" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:#9ca3af;">✕</button>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
+            <div>
+                <label style="display:block;font-size:0.8rem;font-weight:600;color:#374151;margin-bottom:4px;">Title *</label>
+                <input id="be-title" type="text" placeholder="Post title" style="width:100%;padding:0.6rem 0.75rem;border:1px solid #e5e1db;border-radius:8px;font-family:inherit;font-size:0.9rem;">
+            </div>
+            <div>
+                <label style="display:block;font-size:0.8rem;font-weight:600;color:#374151;margin-bottom:4px;">Slug * (URL path)</label>
+                <input id="be-slug" type="text" placeholder="how-to-find-an-agent" style="width:100%;padding:0.6rem 0.75rem;border:1px solid #e5e1db;border-radius:8px;font-family:inherit;font-size:0.9rem;">
+            </div>
+            <div>
+                <label style="display:block;font-size:0.8rem;font-weight:600;color:#374151;margin-bottom:4px;">Category</label>
+                <select id="be-category" style="width:100%;padding:0.6rem 0.75rem;border:1px solid #e5e1db;border-radius:8px;font-family:inherit;font-size:0.9rem;">
+                    <option value="">Select…</option>
+                    <option>Seller Guides</option>
+                    <option>Buyer Guides</option>
+                    <option>Market Insights</option>
+                    <option>Agent Tips</option>
+                    <option>News</option>
+                </select>
+            </div>
+            <div>
+                <label style="display:block;font-size:0.8rem;font-weight:600;color:#374151;margin-bottom:4px;">Read Time (minutes)</label>
+                <input id="be-readtime" type="number" value="5" min="1" max="60" style="width:100%;padding:0.6rem 0.75rem;border:1px solid #e5e1db;border-radius:8px;font-family:inherit;font-size:0.9rem;">
+            </div>
+            <div>
+                <label style="display:block;font-size:0.8rem;font-weight:600;color:#374151;margin-bottom:4px;">Author</label>
+                <input id="be-author" type="text" value="RealtorFinder Editorial Team" style="width:100%;padding:0.6rem 0.75rem;border:1px solid #e5e1db;border-radius:8px;font-family:inherit;font-size:0.9rem;">
+            </div>
+            <div style="display:flex;align-items:flex-end;gap:0.75rem;padding-bottom:2px;">
+                <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;font-size:0.875rem;color:#374151;font-weight:500;">
+                    <input id="be-published" type="checkbox" checked style="accent-color:#10b981;width:15px;height:15px;">
+                    Published
+                </label>
+            </div>
+        </div>
+        <div style="margin-bottom:1rem;">
+            <label style="display:block;font-size:0.8rem;font-weight:600;color:#374151;margin-bottom:4px;">Excerpt (shown in blog listing)</label>
+            <textarea id="be-excerpt" rows="2" placeholder="One or two sentences summarising the post…" style="width:100%;padding:0.6rem 0.75rem;border:1px solid #e5e1db;border-radius:8px;font-family:inherit;font-size:0.9rem;resize:vertical;"></textarea>
+        </div>
+        <div style="margin-bottom:1.25rem;">
+            <label style="display:block;font-size:0.8rem;font-weight:600;color:#374151;margin-bottom:4px;">Content (HTML) *</label>
+            <textarea id="be-content" rows="20" placeholder="<p>Write your post content here. HTML is supported.</p>" style="width:100%;padding:0.6rem 0.75rem;border:1px solid #e5e1db;border-radius:8px;font-family:'Courier New',monospace;font-size:0.82rem;resize:vertical;line-height:1.5;"></textarea>
+        </div>
+        <div id="be-error" style="display:none;color:#dc2626;font-size:0.875rem;padding:0.5rem 0;"></div>
+        <div style="display:flex;gap:0.75rem;justify-content:flex-end;">
+            <button onclick="closeBlogEditor()" style="background:#f3f4f6;color:#374151;border:none;border-radius:8px;padding:0.6rem 1.25rem;font-weight:600;cursor:pointer;font-family:inherit;">Cancel</button>
+            <button id="be-delete-btn" onclick="deleteBlogPost()" style="display:none;background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;border-radius:8px;padding:0.6rem 1.25rem;font-weight:600;cursor:pointer;font-family:inherit;">Delete</button>
+            <button onclick="saveBlogPost()" style="background:#10b981;color:white;border:none;border-radius:8px;padding:0.6rem 1.5rem;font-weight:600;cursor:pointer;font-family:inherit;" id="be-save-btn">Save Post</button>
+        </div>
+    </div>
 
 <!-- Notes Modal -->
 <div id="notes-modal-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:998;" onclick="closeNotesModal()"></div>
@@ -2138,6 +2273,7 @@
             const activateBtn = active
                 ? `<button class="btn-action btn-deactivate" onclick="event.stopPropagation();deactivateUser(${u.id}, this)">Deactivate</button>`
                 : `<button class="btn-action btn-reactivate" onclick="event.stopPropagation();reactivateUser(${u.id}, this)">Reactivate</button>`;
+            const deleteBtn = `<button class="btn-action" onclick="event.stopPropagation();deleteUser(${u.id}, '${escHtml(u.email)}')" style="background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5;margin-left:4px;">Delete</button>`;
             const crmFlags = typeof u.crm_flags === 'string' ? JSON.parse(u.crm_flags || '{}') : (u.crm_flags || {});
 
             return `<tr onclick="openUserDetail(${u.id})">
@@ -2150,7 +2286,7 @@
                 <td style="text-align:center">${approved}</td>
                 <td>${statusBadge}</td>
                 <td class="td-muted">${fmtDate(u.created_at)}</td>
-                <td onclick="event.stopPropagation()">${approveBtn}${activateBtn}</td>
+                <td onclick="event.stopPropagation()">${approveBtn}${activateBtn}${deleteBtn}</td>
             </tr>`;
         }).join('');
     }
@@ -2221,6 +2357,23 @@
         } catch {
             showToast('Failed to reactivate user.', 'error');
             btn.disabled = false;
+        }
+    }
+
+    async function deleteUser(id, email) {
+        if (!confirm(`Permanently delete user "${email}"?\n\nThis will also soft-delete their listings and remove their proposals. This cannot be undone.`)) return;
+        if (!confirm(`Are you sure? This is irreversible.`)) return;
+        try {
+            const res = await fetch(`/api/admin/users/${id}`, {
+                method: 'DELETE',
+                credentials: 'include'
+            });
+            if (!res.ok) throw new Error((await res.json()).error || 'Failed');
+            usersData = usersData.filter(u => u.id !== id);
+            renderUsers();
+            showToast(`User ${email} deleted permanently.`, 'success');
+        } catch (err) {
+            showToast('Failed to delete user: ' + err.message, 'error');
         }
     }
 
@@ -3637,11 +3790,248 @@
         if (coverageMap) { coverageMap.remove(); coverageMap = null; }
         await initCoverageMap();
     }
+
+    // ── Blog ──────────────────────────────────────────────────────────────────
+
+    let blogData = [];
+    let _blogEditId = null;
+    let _blogSlugEdited = false;
+
+    async function loadBlogPosts() {
+        try {
+            const res = await fetch('/api/admin/blog', { credentials: 'include' });
+            if (!res.ok) { document.getElementById('blog-count').textContent = 'Error'; return; }
+            blogData = await res.json();
+            renderBlogPosts();
+        } catch (err) {
+            document.getElementById('blog-count').textContent = 'Error';
+        }
+    }
+
+    function renderBlogPosts() {
+        document.getElementById('blog-count').textContent = blogData.length + ' posts';
+        const tbody = document.getElementById('blog-tbody');
+        if (!blogData.length) {
+            tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No blog posts yet.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = blogData.map(p => `<tr>
+            <td class="id-cell">#${p.id}</td>
+            <td style="max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escHtml(p.title)}">${escHtml(p.title)}</td>
+            <td><code style="font-size:0.78rem;background:#f3f4f6;padding:2px 5px;border-radius:4px;">${escHtml(p.slug)}</code></td>
+            <td>${escHtml(p.category || '—')}</td>
+            <td class="td-muted">${fmtDate(p.published_at)}</td>
+            <td>${p.is_published ? '<span class="badge badge-active">Live</span>' : '<span class="badge badge-deactivated">Draft</span>'}</td>
+            <td><button class="btn-action" onclick="openBlogEditor(blogData.find(x=>x.id===${p.id}))">Edit</button></td>
+        </tr>`).join('');
+    }
+
+    function blogAutoSlug() {
+        if (_blogEditId || _blogSlugEdited) return;
+        const title = document.getElementById('blog-title').value;
+        document.getElementById('blog-slug').value = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    }
+
+    function openBlogEditor(post) {
+        _blogEditId = post ? post.id : null;
+        _blogSlugEdited = !!post;
+        document.getElementById('blog-editor-title').textContent = post ? 'Edit Post' : 'New Post';
+        document.getElementById('blog-title').value = post?.title || '';
+        document.getElementById('blog-slug').value = post?.slug || '';
+        document.getElementById('blog-category').value = post?.category || '';
+        document.getElementById('blog-author').value = post?.author || '';
+        document.getElementById('blog-state').value = post?.state_code || '';
+        document.getElementById('blog-readtime').value = post?.read_time_minutes || 5;
+        document.getElementById('blog-excerpt').value = post?.excerpt || '';
+        document.getElementById('blog-content').value = post?.content || '';
+        document.getElementById('blog-published').checked = post ? !!post.is_published : true;
+        document.getElementById('blog-delete-btn').style.display = post ? 'block' : 'none';
+        document.getElementById('blog-editor-overlay').style.display = 'block';
+        document.getElementById('blog-editor-modal').style.display = 'flex';
+    }
+
+    function closeBlogEditor() {
+        document.getElementById('blog-editor-overlay').style.display = 'none';
+        document.getElementById('blog-editor-modal').style.display = 'none';
+    }
+
+    async function saveBlogPost() {
+        const body = {
+            title: document.getElementById('blog-title').value.trim(),
+            slug: document.getElementById('blog-slug').value.trim(),
+            category: document.getElementById('blog-category').value.trim() || null,
+            author: document.getElementById('blog-author').value.trim() || null,
+            state_code: document.getElementById('blog-state').value.trim() || null,
+            read_time_minutes: parseInt(document.getElementById('blog-readtime').value) || 5,
+            excerpt: document.getElementById('blog-excerpt').value.trim() || null,
+            content: document.getElementById('blog-content').value.trim(),
+            is_published: document.getElementById('blog-published').checked
+        };
+        if (!body.title || !body.slug || !body.content) { showToast('Title, slug, and content are required.', 'error'); return; }
+        try {
+            const url = _blogEditId ? `/api/admin/blog/${_blogEditId}` : '/api/admin/blog';
+            const method = _blogEditId ? 'PUT' : 'POST';
+            const res = await fetch(url, { method, credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+            if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed'); }
+            closeBlogEditor();
+            showToast(_blogEditId ? 'Post updated.' : 'Post created.', 'success');
+            await loadBlogPosts();
+        } catch (err) {
+            showToast('Save failed: ' + err.message, 'error');
+        }
+    }
+
+    async function deleteBlogPost() {
+        if (!_blogEditId || !confirm('Delete this blog post permanently?')) return;
+        try {
+            const res = await fetch(`/api/admin/blog/${_blogEditId}`, { method: 'DELETE', credentials: 'include' });
+            if (!res.ok) throw new Error();
+            closeBlogEditor();
+            showToast('Post deleted.', 'success');
+            await loadBlogPosts();
+        } catch {
+            showToast('Failed to delete post.', 'error');
+        }
+    }
+
+    // Hook blog tab to load posts on activation
+    const _origSwitchTab = typeof switchTab === 'function' ? switchTab : null;
 </script>
+    <script>
+      // Override switchTab to lazy-load blog posts
+      const _st = window.switchTab;
+      window.switchTab = function(name, btn) {
+          _st(name, btn);
+          if (name === 'blog') loadBlogPosts();
+      };
+    </script>
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
       }
     </script>
+
+<script>
+// ── Blog Admin ────────────────────────────────────────────────────────────────
+let _blogEditId = null;
+
+async function loadBlogPosts() {
+    const el = document.getElementById('blog-post-list');
+    if (!el) return;
+    try {
+        const posts = await fetch('/api/admin/blog', { credentials: 'include' }).then(r => r.json());
+        if (!posts.length) { el.innerHTML = '<p style="color:#6b7280;padding:1rem 0;">No posts yet. Click "+ New Post" to create one.</p>'; return; }
+        el.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:0.875rem;">
+            <thead><tr style="background:#f8f9fa;">
+                <th style="text-align:left;padding:10px 12px;color:#374151;font-weight:600;border-bottom:1px solid #e5e1db;">Title</th>
+                <th style="text-align:left;padding:10px 12px;color:#374151;font-weight:600;border-bottom:1px solid #e5e1db;">Category</th>
+                <th style="text-align:left;padding:10px 12px;color:#374151;font-weight:600;border-bottom:1px solid #e5e1db;">Status</th>
+                <th style="text-align:left;padding:10px 12px;color:#374151;font-weight:600;border-bottom:1px solid #e5e1db;">Published</th>
+                <th style="padding:10px 12px;border-bottom:1px solid #e5e1db;"></th>
+            </tr></thead>
+            <tbody>${posts.map(p => `<tr style="border-bottom:1px solid #f3f4f6;">
+                <td style="padding:10px 12px;font-weight:500;color:#0A2540;max-width:320px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${p.title}</td>
+                <td style="padding:10px 12px;color:#6b7280;">${p.category || '—'}</td>
+                <td style="padding:10px 12px;">
+                    <span style="background:${p.is_published ? '#d1fae5' : '#f3f4f6'};color:${p.is_published ? '#065f46' : '#6b7280'};padding:2px 8px;border-radius:10px;font-size:0.78rem;font-weight:600;">
+                        ${p.is_published ? 'Published' : 'Draft'}
+                    </span>
+                </td>
+                <td style="padding:10px 12px;color:#6b7280;">${p.published_at ? new Date(p.published_at).toLocaleDateString() : '—'}</td>
+                <td style="padding:10px 12px;text-align:right;">
+                    <a href="/blog/${p.slug}" target="_blank" style="color:#6b7280;text-decoration:none;margin-right:12px;font-size:0.82rem;" title="View live post">View ↗</a>
+                    <button onclick='openBlogEditor(${JSON.stringify(p)})' style="background:#0A2540;color:white;border:none;border-radius:6px;padding:4px 12px;cursor:pointer;font-size:0.82rem;font-family:inherit;">Edit</button>
+                </td>
+            </tr>`).join('')}</tbody></table>`;
+    } catch { el.innerHTML = '<p style="color:#dc2626;">Failed to load blog posts.</p>'; }
+}
+
+async function openBlogEditor(post) {
+    _blogEditId = post ? post.id : null;
+    document.getElementById('blog-editor-title').textContent = post ? 'Edit Post' : 'New Post';
+    document.getElementById('be-title').value = post?.title || '';
+    document.getElementById('be-slug').value = post?.slug || '';
+    document.getElementById('be-excerpt').value = post?.excerpt || '';
+    document.getElementById('be-author').value = post?.author || 'RealtorFinder Editorial Team';
+    document.getElementById('be-category').value = post?.category || '';
+    document.getElementById('be-readtime').value = post?.read_time_minutes || 5;
+    document.getElementById('be-published').checked = post ? !!post.is_published : true;
+    document.getElementById('be-content').value = post?.content || '';
+    document.getElementById('be-error').style.display = 'none';
+    document.getElementById('be-delete-btn').style.display = post ? 'inline-block' : 'none';
+    document.getElementById('blog-editor-overlay').style.display = 'block';
+    document.getElementById('blog-editor-modal').style.display = 'flex';
+    // Auto-generate slug from title if new post
+    if (!post) {
+        document.getElementById('be-title').addEventListener('input', function() {
+            document.getElementById('be-slug').value = this.value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+        }, { once: false, passive: true });
+    }
+}
+
+function closeBlogEditor() {
+    document.getElementById('blog-editor-overlay').style.display = 'none';
+    document.getElementById('blog-editor-modal').style.display = 'none';
+    _blogEditId = null;
+}
+
+async function saveBlogPost() {
+    const errEl = document.getElementById('be-error');
+    const saveBtn = document.getElementById('be-save-btn');
+    errEl.style.display = 'none';
+    const body = {
+        title: document.getElementById('be-title').value.trim(),
+        slug: document.getElementById('be-slug').value.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-'),
+        excerpt: document.getElementById('be-excerpt').value.trim(),
+        author: document.getElementById('be-author').value.trim(),
+        category: document.getElementById('be-category').value,
+        read_time_minutes: parseInt(document.getElementById('be-readtime').value) || 5,
+        is_published: document.getElementById('be-published').checked,
+        content: document.getElementById('be-content').value.trim()
+    };
+    if (!body.title || !body.slug || !body.content) {
+        errEl.textContent = 'Title, slug, and content are required.';
+        errEl.style.display = 'block';
+        return;
+    }
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving…';
+    try {
+        const url = _blogEditId ? `/api/admin/blog/${_blogEditId}` : '/api/admin/blog';
+        const method = _blogEditId ? 'PUT' : 'POST';
+        const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify(body) });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Save failed');
+        closeBlogEditor();
+        loadBlogPosts();
+    } catch (err) {
+        errEl.textContent = err.message;
+        errEl.style.display = 'block';
+    } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save Post';
+    }
+}
+
+async function deleteBlogPost() {
+    if (!_blogEditId) return;
+    if (!confirm('Delete this post? This cannot be undone.')) return;
+    try {
+        await fetch(`/api/admin/blog/${_blogEditId}`, { method: 'DELETE', credentials: 'include' });
+        closeBlogEditor();
+        loadBlogPosts();
+    } catch { alert('Delete failed.'); }
+}
+
+// Load blog posts when blog tab is activated
+const _origSwitchTab = window.switchTab;
+if (typeof switchTab === 'function') {
+    const orig = switchTab;
+    window.switchTab = function(name, btn) {
+        orig(name, btn);
+        if (name === 'blog') loadBlogPosts();
+    };
+}
+</script>
 </body>
 </html>

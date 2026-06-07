@@ -446,6 +446,27 @@ app.post('/api/auth/signup', async (req, res) => {
             } catch(e) { console.error('Referral attribution error:', e.message); }
         }
 
+        // Handle company invite token (non-blocking — bad token must not break signup)
+        if (req.body.inviteToken && userType === 'realtor') {
+            try {
+                const { rows: inviteRows } = await pool.query(
+                    `SELECT ci.*, c.owner_user_id FROM company_invites ci
+                     JOIN companies c ON c.id = ci.company_id
+                     WHERE ci.token = $1 AND ci.used = FALSE AND ci.expires_at > NOW()`,
+                    [req.body.inviteToken]
+                );
+                if (inviteRows.length) {
+                    const invite = inviteRows[0];
+                    const { rows: ownerRows } = await pool.query(
+                        `SELECT zip_code FROM users WHERE id = $1`, [invite.owner_user_id]
+                    );
+                    const ownerZip = ownerRows[0]?.zip_code || user.zip_code;
+                    await db.addAgentToCompany(user.id, invite.company_id, ownerZip);
+                    await pool.query(`UPDATE company_invites SET used = TRUE WHERE token = $1`, [req.body.inviteToken]);
+                }
+            } catch(e) { console.error('Invite token processing error (non-fatal):', e.message); }
+        }
+
         // Create session
         req.session.userId = user.id;
         req.session.userType = user.user_type;
@@ -513,17 +534,20 @@ app.put('/api/company/plan', auth.requireAuth, async (req, res) => {
     }
 });
 
-// Add an agent to the company (owner only) — by email lookup
+// Add an agent to the company (owner or admin) — by email lookup
 app.post('/api/company/agents', auth.requireAuth, async (req, res) => {
     try {
         if (req.user.user_type !== 'realtor') return res.status(403).json({ error: 'Realtors only' });
-        const { email, zipCode } = req.body;
-        if (!email || !zipCode) return res.status(400).json({ error: 'email and zipCode required' });
+        const { email } = req.body;
+        if (!email) return res.status(400).json({ error: 'email required' });
 
         const owner = await db.getProfile(req.user.id);
-        if (!owner.company_id || owner.company_role !== 'owner') {
-            return res.status(403).json({ error: 'Only the company owner can add agents' });
+        if (!owner.company_id || !['owner', 'admin'].includes(owner.company_role)) {
+            return res.status(403).json({ error: 'Only the company owner or admin can add agents' });
         }
+
+        // Use the owner's zip_code as the agent's ZIP (company primary ZIP)
+        const zipCode = owner.zip_code;
 
         const agent = await db.getUserByEmail(email.toLowerCase().trim());
         if (!agent) return res.status(404).json({ error: 'No account found with that email' });
@@ -538,13 +562,13 @@ app.post('/api/company/agents', auth.requireAuth, async (req, res) => {
     }
 });
 
-// Remove an agent from the company (owner only)
+// Remove an agent from the company (owner or admin)
 app.delete('/api/company/agents/:userId', auth.requireAuth, async (req, res) => {
     try {
         if (req.user.user_type !== 'realtor') return res.status(403).json({ error: 'Realtors only' });
         const owner = await db.getProfile(req.user.id);
-        if (!owner.company_id || owner.company_role !== 'owner') {
-            return res.status(403).json({ error: 'Only the company owner can remove agents' });
+        if (!owner.company_id || !['owner', 'admin'].includes(owner.company_role)) {
+            return res.status(403).json({ error: 'Only the company owner or admin can remove agents' });
         }
         await db.removeAgentFromCompany(parseInt(req.params.userId), owner.company_id);
         res.json({ success: true });
@@ -586,6 +610,59 @@ app.delete('/api/company/locations/:locationId', auth.requireAuth, async (req, r
     } catch (err) {
         console.error('DELETE /api/company/locations error:', err);
         res.status(500).json({ error: 'Failed to remove location' });
+    }
+});
+
+// Get all proposals submitted by agents in the company (owner or admin)
+app.get('/api/company/proposals', auth.requireAuth, async (req, res) => {
+    try {
+        if (req.user.user_type !== 'realtor') return res.status(403).json({ error: 'Realtors only' });
+        const user = await db.getProfile(req.user.id);
+        if (!user.company_id || !['owner', 'admin'].includes(user.company_role)) {
+            return res.status(403).json({ error: 'Only the company owner or admin can view team proposals' });
+        }
+        const result = await pool.query(
+            `SELECT p.id, p.commission_pct, p.marketing_plan, p.personal_note, p.status, p.created_at,
+                    u.first_name AS agent_first, u.last_name AS agent_last, u.email AS agent_email,
+                    l.address, l.city, l.state, l.price,
+                    su.first_name AS seller_first, su.last_name AS seller_last
+             FROM proposals p
+             JOIN users u ON u.id = p.realtor_id
+             JOIN listings l ON l.id = p.listing_id
+             JOIN users su ON su.id = l.user_id
+             WHERE u.company_id = $1
+             ORDER BY p.created_at DESC
+             LIMIT 200`,
+            [user.company_id]
+        );
+        res.json(result.rows);
+    } catch (err) {
+        console.error('GET /api/company/proposals error:', err);
+        res.status(500).json({ error: 'Failed to load team proposals' });
+    }
+});
+
+// Update an agent's role within the company (owner only)
+app.put('/api/company/agents/:userId/role', auth.requireAuth, async (req, res) => {
+    try {
+        if (req.user.user_type !== 'realtor') return res.status(403).json({ error: 'Realtors only' });
+        const caller = await db.getProfile(req.user.id);
+        if (!caller.company_id || caller.company_role !== 'owner') {
+            return res.status(403).json({ error: 'Only the company owner can change agent roles' });
+        }
+        const { role } = req.body;
+        if (!['admin', 'agent'].includes(role)) {
+            return res.status(400).json({ error: 'Role must be admin or agent' });
+        }
+        const targetId = parseInt(req.params.userId);
+        await pool.query(
+            `UPDATE users SET company_role = $1 WHERE id = $2 AND company_id = $3 AND company_role != 'owner'`,
+            [role, targetId, caller.company_id]
+        );
+        res.json({ success: true });
+    } catch (err) {
+        console.error('PUT /api/company/agents/:userId/role error:', err);
+        res.status(500).json({ error: 'Failed to update agent role' });
     }
 });
 
@@ -727,6 +804,39 @@ app.delete('/api/buyer-requests/:id', auth.requireAuth, async (req, res) => {
     } catch (error) {
         console.error('Error deleting buyer request:', error);
         res.status(500).json({ error: 'Failed to delete buyer request' });
+    }
+});
+
+// Proactive realtor matches for buyer — realtors whose service areas match buyer's target areas
+app.get('/api/buyer-requests/matched-realtors', auth.requireAuth, async (req, res) => {
+    try {
+        if (req.user.user_type !== 'buyer') return res.status(403).json({ error: 'Buyers only' });
+        const request = await db.getBuyerRequestByUser(req.session.userId);
+        if (!request || !request.target_areas) return res.json([]);
+        const terms = String(request.target_areas).split(',').map(t => t.trim()).filter(Boolean).slice(0, 5);
+        if (!terms.length) return res.json([]);
+        const conditions = terms.map((_, i) => `u.service_areas ILIKE $${i + 1}`);
+        const params = terms.map(t => `%${t}%`);
+        const { rows } = await pool.query(`
+            SELECT u.id, u.first_name, u.last_name, u.profile_photo, u.brokerage,
+                   u.years_experience, u.service_areas, u.profile_slug, u.license_verified,
+                   COALESCE(
+                       (SELECT AVG(rating)::numeric(3,1) FROM realtor_reviews WHERE realtor_id = u.id),
+                       NULL
+                   ) AS avg_rating,
+                   (SELECT COUNT(*) FROM proposals WHERE realtor_id = u.id AND status = 'accepted') AS accepted_proposals
+            FROM users u
+            WHERE u.user_type = 'realtor'
+              AND u.is_approved = true
+              AND u.is_active IS NOT FALSE
+              AND (${conditions.join(' OR ')})
+            ORDER BY accepted_proposals DESC, avg_rating DESC NULLS LAST
+            LIMIT 8
+        `, params);
+        res.json(rows);
+    } catch (err) {
+        console.error('matched-realtors error:', err);
+        res.status(500).json({ error: 'Failed to fetch matched realtors' });
     }
 });
 
@@ -1204,6 +1314,11 @@ app.get('/api/listings/:id', async (req, res) => {
         }
         const isOwner = req.session?.userId && req.session.userId === listing.user_id;
         const isAdmin = req.user?.is_admin;
+        const isRealtor = req.user?.user_type === 'realtor';
+        // Increment view count when a realtor (not the owner) views this listing
+        if (isRealtor && !isOwner) {
+            pool.query(`UPDATE listings SET view_count = COALESCE(view_count,0)+1 WHERE id=$1`, [listing.id]).catch(() => {});
+        }
         const { owner_name, owner_email, owner_phone, ...publicListing } = listing;
         const payload = { ...publicListing, date: formatDate(listing.created_at) };
         if (isOwner || isAdmin) {
@@ -1223,7 +1338,7 @@ app.post('/api/listings', auth.requireAuth, async (req, res) => {
     try {
         if (!req.session.emailVerified && !req.user.email_verified) return res.status(403).json({ error: 'Please verify your email address before creating a listing. Check your inbox for a verification link.' });
         if (req.user.user_type !== 'seller') return res.status(403).json({ error: 'Only seller accounts can create listings' });
-        const { address, price, type, bedrooms, bathrooms, sqft, description, ownerName, ownerEmail, ownerPhone, zestimate, owner_attested } = req.body;
+        const { address, price, type, bedrooms, bathrooms, sqft, description, ownerName, ownerEmail, ownerPhone, zestimate, owner_attested, proposal_deadline, video_url } = req.body;
         
         // Parse address into components (basic parsing - could be enhanced with address validation API)
         const addressParts = address.split(',').map(s => s.trim());
@@ -1269,7 +1384,9 @@ app.post('/api/listings', auth.requireAuth, async (req, res) => {
             ownerPhone,
             userId: req.session.userId,
             latitude: coords?.latitude || null,
-            longitude: coords?.longitude || null
+            longitude: coords?.longitude || null,
+            proposal_deadline: proposal_deadline || null,
+            video_url: video_url || null
         };
 
         const newListing = await db.createListing(listingData);
@@ -1307,12 +1424,12 @@ app.put('/api/listings/:id', auth.requireAuth, async (req, res) => {
         if (!listing) return res.status(404).json({ error: 'Listing not found' });
         if (listing.user_id !== req.session.userId) return res.status(403).json({ error: 'Forbidden' });
 
-        const { price, type, bedrooms, bathrooms, sqft, description } = req.body;
+        const { price, type, bedrooms, bathrooms, sqft, description, proposal_deadline, video_url } = req.body;
         if (!price || !type || !bedrooms || !bathrooms || !sqft || !description) {
             return res.status(400).json({ error: 'All fields are required' });
         }
 
-        const updated = await db.updateListing(req.params.id, { price, type, bedrooms, bathrooms, sqft, description });
+        const updated = await db.updateListing(req.params.id, { price, type, bedrooms, bathrooms, sqft, description, proposal_deadline, video_url });
         res.json({ ...updated, date: formatDate(updated.created_at) });
     } catch (error) {
         console.error('Error updating listing:', error);
@@ -1471,10 +1588,30 @@ app.put('/api/listings/:id/status', auth.requireAuth, async (req, res) => {
         if (listing.user_id !== req.session.userId) return res.status(403).json({ error: 'Forbidden' });
 
         const { status } = req.body;
-        if (!['active', 'under_contract', 'sold'].includes(status)) {
+        if (!['active', 'reviewing', 'under_contract', 'sold'].includes(status)) {
             return res.status(400).json({ error: 'Invalid status' });
         }
         const updated = await db.updateListingStatus(req.params.id, status);
+
+        // Notify accepted realtor of status change
+        if (['reviewing', 'under_contract', 'sold'].includes(status)) {
+            (async () => {
+                try {
+                    const { rows: pRows } = await pool.query(
+                        `SELECT u.email, u.first_name, u.last_name FROM proposals p
+                         JOIN users u ON u.id = p.realtor_id
+                         WHERE p.listing_id = $1 AND p.status = 'accepted' LIMIT 1`,
+                        [parseInt(req.params.id)]
+                    );
+                    if (pRows.length) {
+                        const r = pRows[0];
+                        const lRes = await pool.query(`SELECT address, city, state FROM listings WHERE id=$1`, [parseInt(req.params.id)]);
+                        const addr = lRes.rows[0] ? [lRes.rows[0].address, lRes.rows[0].city, lRes.rows[0].state].filter(Boolean).join(', ') : '';
+                        await emailService.sendListingStatusEmail(r.email, `${r.first_name||''} ${r.last_name||''}`.trim(), status, addr);
+                    }
+                } catch(e) { console.error('Status change email failed:', e.message); }
+            })();
+        }
 
         // Feature 2: When marked sold/closed, request review from seller
         if (status === 'sold') {
@@ -2120,6 +2257,28 @@ app.put('/api/admin/users/:id/unapprove', requireAdmin, async (req, res) => {
     } catch (error) {
         console.error('Admin unapprove error:', error);
         res.status(500).json({ error: 'Failed to unapprove user' });
+    }
+});
+
+app.delete('/api/admin/users/:id', requireAdmin, async (req, res) => {
+    const userId = parseInt(req.params.id);
+    if (!userId) return res.status(400).json({ error: 'Invalid user id' });
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+        await client.query(`DELETE FROM session WHERE sess->>'userId' = $1::text`, [userId]);
+        await client.query(`DELETE FROM offers WHERE user_id = $1`, [userId]);
+        await client.query(`UPDATE listings SET deleted_at = NOW() WHERE user_id = $1 AND deleted_at IS NULL`, [userId]);
+        const { rows } = await client.query(`DELETE FROM users WHERE id = $1 RETURNING id, email`, [userId]);
+        if (!rows.length) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'User not found' }); }
+        await client.query('COMMIT');
+        res.json({ success: true, deleted: rows[0] });
+    } catch (error) {
+        await client.query('ROLLBACK').catch(() => {});
+        console.error('Admin delete user error:', error);
+        res.status(500).json({ error: 'Failed to delete user' });
+    } finally {
+        client.release();
     }
 });
 
@@ -4280,14 +4439,15 @@ app.get('/sitemap-index.xml', async (req, res) => {
     const today = new Date().toISOString().split('T')[0];
     let states = [];
     try { states = await db.getPublishedStates(); } catch (e) {}
-    const staticEntry = `  <sitemap><loc>${base}/sitemap-static.xml</loc><lastmod>${today}</lastmod></sitemap>`;
-    const blogEntry   = `  <sitemap><loc>${base}/sitemap-blog.xml</loc><lastmod>${today}</lastmod></sitemap>`;
-    const agentsEntry = `  <sitemap><loc>${base}/sitemap-agents.xml</loc><lastmod>${today}</lastmod></sitemap>`;
+    const staticEntry   = `  <sitemap><loc>${base}/sitemap-static.xml</loc><lastmod>${today}</lastmod></sitemap>`;
+    const blogEntry     = `  <sitemap><loc>${base}/sitemap-blog.xml</loc><lastmod>${today}</lastmod></sitemap>`;
+    const agentsEntry   = `  <sitemap><loc>${base}/sitemap-agents.xml</loc><lastmod>${today}</lastmod></sitemap>`;
+    const listingsEntry = `  <sitemap><loc>${base}/sitemap-listings.xml</loc><lastmod>${today}</lastmod></sitemap>`;
     const stateEntries = states.map(s =>
         `  <sitemap><loc>${base}/sitemap-${s.state_code.toLowerCase()}.xml</loc><lastmod>${today}</lastmod></sitemap>`
     ).join('\n');
     res.type('application/xml');
-    res.send(`<?xml version="1.0" encoding="UTF-8"?>\n<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${staticEntry}\n${blogEntry}\n${agentsEntry}\n${stateEntries}\n</sitemapindex>`);
+    res.send(`<?xml version="1.0" encoding="UTF-8"?>\n<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${staticEntry}\n${blogEntry}\n${agentsEntry}\n${listingsEntry}\n${stateEntries}\n</sitemapindex>`);
 });
 
 // Static pages sitemap
@@ -4328,6 +4488,24 @@ app.get('/sitemap-blog.xml', async (req, res) => {
     }).join('\n');
     res.type('application/xml');
     res.send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${indexEntry}\n${postEntries}\n</urlset>`);
+});
+
+// Active listing pages sitemap
+app.get('/sitemap-listings.xml', async (req, res) => {
+    const base = (process.env.FRONTEND_URL || 'https://realtorfinder.net').replace(/\/$/, '');
+    res.type('application/xml');
+    try {
+        const { rows } = await pool.query(
+            `SELECT id, updated_at FROM listings
+             WHERE (status = 'active' OR status IS NULL) AND deleted_at IS NULL
+             ORDER BY created_at DESC LIMIT 5000`
+        );
+        const entries = rows.map(r => {
+            const date = r.updated_at ? new Date(r.updated_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+            return `  <url><loc>${base}/listing/${r.id}</loc><lastmod>${date}</lastmod><priority>0.6</priority></url>`;
+        }).join('\n');
+        res.send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${entries}\n</urlset>`);
+    } catch { res.send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>`); }
 });
 
 // Agent profile sitemap — /agent/:slug URLs for approved realtors with slugs
@@ -5470,6 +5648,30 @@ app.get('/api/realtors/me/analytics', auth.requireAuth, async (req, res) => {
     }
 });
 
+// Monthly win-rate trend — last 6 months, grouped by month
+app.get('/api/realtors/me/win-rate-trend', auth.requireAuth, async (req, res) => {
+    try {
+        if (req.user.user_type !== 'realtor') return res.status(403).json({ error: 'Realtors only' });
+        const { rows } = await pool.query(`
+            SELECT DATE_TRUNC('month', created_at) AS month,
+                   COUNT(*) AS total,
+                   COUNT(*) FILTER (WHERE status = 'accepted') AS accepted
+            FROM proposals
+            WHERE realtor_id = $1 AND created_at >= NOW() - INTERVAL '6 months'
+            GROUP BY month ORDER BY month ASC
+        `, [req.session.userId]);
+        res.json(rows.map(r => ({
+            month: r.month,
+            total: parseInt(r.total),
+            accepted: parseInt(r.accepted),
+            win_rate: parseInt(r.total) > 0 ? Math.round((parseInt(r.accepted) / parseInt(r.total)) * 100) : 0
+        })));
+    } catch (err) {
+        console.error('Win-rate trend error:', err);
+        res.status(500).json({ error: 'Failed to fetch win-rate trend' });
+    }
+});
+
 // ===== FEATURE 4: SAVED REALTORS =====
 
 app.post('/api/saved-realtors/:realtorId', auth.requireAuth, async (req, res) => {
@@ -5612,6 +5814,215 @@ app.get('/api/listings/:id/boost-status', auth.requireAuth, async (req, res) => 
     }
 });
 
+// ===== DOCUMENT VAULT =====
+
+app.post('/api/listings/:id/documents', auth.requireAuth, uploadLimiter, uploadDoc.single('doc'), async (req, res) => {
+    try {
+        if (req.user.user_type !== 'seller') return res.status(403).json({ error: 'Sellers only' });
+        const listingId = parseInt(req.params.id);
+        const { rows: [l] } = await pool.query(`SELECT user_id FROM listings WHERE id=$1 AND deleted_at IS NULL`, [listingId]);
+        if (!l) return res.status(404).json({ error: 'Listing not found' });
+        if (l.user_id !== req.session.userId) return res.status(403).json({ error: 'Forbidden' });
+        if (!req.file) return res.status(400).json({ error: 'No file provided' });
+        const result = await uploadToCloudinaryDoc(req.file.buffer, req.file.originalname);
+        const name = req.body.name || req.file.originalname || 'Document';
+        const { rows } = await pool.query(
+            `INSERT INTO listing_documents (listing_id, uploaded_by, name, url) VALUES ($1,$2,$3,$4) RETURNING *`,
+            [listingId, req.session.userId, name.slice(0, 100), result.secure_url]
+        );
+        res.status(201).json(rows[0]);
+    } catch (err) {
+        console.error('Doc upload error:', err);
+        res.status(500).json({ error: 'Failed to upload document' });
+    }
+});
+
+app.get('/api/listings/:id/documents', auth.requireAuth, async (req, res) => {
+    try {
+        const listingId = parseInt(req.params.id);
+        const { rows: [l] } = await pool.query(`SELECT user_id FROM listings WHERE id=$1 AND deleted_at IS NULL`, [listingId]);
+        if (!l) return res.status(404).json({ error: 'Listing not found' });
+        // Seller sees own docs; realtors can view docs for any listing
+        if (req.user.user_type === 'seller' && l.user_id !== req.session.userId) return res.status(403).json({ error: 'Forbidden' });
+        if (!['seller', 'realtor'].includes(req.user.user_type)) return res.status(403).json({ error: 'Access denied' });
+        const { rows } = await pool.query(
+            `SELECT id, name, url, created_at FROM listing_documents WHERE listing_id=$1 ORDER BY created_at DESC`,
+            [listingId]
+        );
+        res.json(rows);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch documents' });
+    }
+});
+
+app.delete('/api/listings/:id/documents/:docId', auth.requireAuth, async (req, res) => {
+    try {
+        if (req.user.user_type !== 'seller') return res.status(403).json({ error: 'Sellers only' });
+        const { rows } = await pool.query(
+            `DELETE FROM listing_documents ld
+             USING listings l
+             WHERE ld.id=$1 AND ld.listing_id=$2 AND l.id=$2 AND l.user_id=$3
+             RETURNING ld.id`,
+            [parseInt(req.params.docId), parseInt(req.params.id), req.session.userId]
+        );
+        if (!rows.length) return res.status(404).json({ error: 'Document not found' });
+        res.json({ ok: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to delete document' });
+    }
+});
+
+// ===== CMA COMPS =====
+
+app.get('/api/listings/:id/comps', async (req, res) => {
+    try {
+        const { rows: [target] } = await pool.query(
+            `SELECT latitude, longitude, price, property_type, bedrooms, sqft, city, state
+             FROM listings WHERE id=$1 AND deleted_at IS NULL`,
+            [parseInt(req.params.id)]
+        );
+        if (!target) return res.status(404).json({ error: 'Listing not found' });
+        if (!target.latitude || !target.longitude) return res.json([]);
+        // Nearby listings within rough bounding box, then filter by haversine
+        const { rows } = await pool.query(`
+            SELECT id, address, city, state, price, property_type, bedrooms, bathrooms, sqft,
+                   status, latitude, longitude
+            FROM listings
+            WHERE id != $1 AND deleted_at IS NULL
+              AND latitude IS NOT NULL AND longitude IS NOT NULL
+              AND ABS(latitude - $2) < 0.12 AND ABS(longitude - $3) < 0.12
+            ORDER BY created_at DESC LIMIT 30
+        `, [parseInt(req.params.id), target.latitude, target.longitude]);
+        const comps = rows
+            .map(l => ({ ...l, distance_miles: Math.round(haversineMiles(target.latitude, target.longitude, l.latitude, l.longitude) * 10) / 10 }))
+            .filter(l => l.distance_miles <= 5)
+            .sort((a, b) => a.distance_miles - b.distance_miles)
+            .slice(0, 6);
+        res.json(comps);
+    } catch (err) {
+        console.error('Comps error:', err);
+        res.status(500).json({ error: 'Failed to fetch comps' });
+    }
+});
+
+// ===== OPEN HOUSES =====
+
+app.post('/api/open-houses', auth.requireAuth, async (req, res) => {
+    try {
+        if (req.user.user_type !== 'realtor') return res.status(403).json({ error: 'Realtors only' });
+        const { listing_id, scheduled_at, duration_minutes, notes } = req.body;
+        if (!listing_id || !scheduled_at) return res.status(400).json({ error: 'listing_id and scheduled_at required' });
+        const dt = new Date(scheduled_at);
+        if (isNaN(dt) || dt < new Date()) return res.status(400).json({ error: 'scheduled_at must be a future date/time' });
+        // Verify realtor has an accepted or pending proposal for this listing
+        const { rows: [prop] } = await pool.query(
+            `SELECT id FROM proposals WHERE listing_id=$1 AND realtor_id=$2`,
+            [parseInt(listing_id), req.session.userId]
+        );
+        if (!prop) return res.status(403).json({ error: 'You must have a proposal on this listing to schedule an open house' });
+        const { rows } = await pool.query(
+            `INSERT INTO open_houses (listing_id, realtor_id, scheduled_at, duration_minutes, notes)
+             VALUES ($1,$2,$3,$4,$5) RETURNING *`,
+            [parseInt(listing_id), req.session.userId, dt, parseInt(duration_minutes) || 60, notes || null]
+        );
+        res.status(201).json(rows[0]);
+    } catch (err) {
+        console.error('Open house create error:', err);
+        res.status(500).json({ error: 'Failed to create open house' });
+    }
+});
+
+app.get('/api/listings/:id/open-houses', async (req, res) => {
+    try {
+        const { rows } = await pool.query(`
+            SELECT oh.*, u.first_name, u.last_name, u.brokerage,
+                   (SELECT COUNT(*) FROM open_house_rsvps WHERE open_house_id = oh.id) AS rsvp_count
+            FROM open_houses oh
+            JOIN users u ON u.id = oh.realtor_id
+            WHERE oh.listing_id=$1 AND oh.scheduled_at >= NOW()
+            ORDER BY oh.scheduled_at ASC
+        `, [parseInt(req.params.id)]);
+        res.json(rows);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch open houses' });
+    }
+});
+
+app.delete('/api/open-houses/:id', auth.requireAuth, async (req, res) => {
+    try {
+        if (req.user.user_type !== 'realtor') return res.status(403).json({ error: 'Realtors only' });
+        const { rows } = await pool.query(
+            `DELETE FROM open_houses WHERE id=$1 AND realtor_id=$2 RETURNING id`,
+            [parseInt(req.params.id), req.session.userId]
+        );
+        if (!rows.length) return res.status(404).json({ error: 'Not found' });
+        res.json({ ok: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to delete open house' });
+    }
+});
+
+app.post('/api/open-houses/:id/rsvp', async (req, res) => {
+    try {
+        const { name, email } = req.body;
+        if (!name || !email) return res.status(400).json({ error: 'name and email required' });
+        const userId = req.session?.userId || null;
+        await pool.query(
+            `INSERT INTO open_house_rsvps (open_house_id, user_id, name, email)
+             VALUES ($1,$2,$3,$4) ON CONFLICT (open_house_id, email) DO NOTHING`,
+            [parseInt(req.params.id), userId, name.slice(0, 100), email.slice(0, 200)]
+        );
+        // Fire-and-forget RSVP confirmation email
+        (async () => {
+            try {
+                const ohRes = await pool.query(
+                    `SELECT oh.scheduled_at, l.address, l.city, l.state FROM open_houses oh
+                     JOIN listings l ON l.id = oh.listing_id WHERE oh.id = $1`,
+                    [parseInt(req.params.id)]
+                );
+                if (ohRes.rows.length) {
+                    const oh = ohRes.rows[0];
+                    const addr = [oh.address, oh.city, oh.state].filter(Boolean).join(', ');
+                    await emailService.sendRsvpConfirmation(email.slice(0,200), name.slice(0,100), addr, oh.scheduled_at);
+                }
+            } catch(_) {}
+        })();
+        res.json({ ok: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to RSVP' });
+    }
+});
+
+app.delete('/api/open-houses/:id/rsvp', auth.requireAuth, async (req, res) => {
+    try {
+        const uid = req.session.userId;
+        await pool.query(
+            `DELETE FROM open_house_rsvps WHERE open_house_id=$1 AND (user_id=$2 OR email=(SELECT email FROM users WHERE id=$2))`,
+            [parseInt(req.params.id), uid]
+        );
+        res.json({ ok: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to cancel RSVP' });
+    }
+});
+
+app.get('/api/realtors/me/open-houses', auth.requireAuth, async (req, res) => {
+    try {
+        if (req.user.user_type !== 'realtor') return res.status(403).json({ error: 'Realtors only' });
+        const { rows } = await pool.query(`
+            SELECT oh.*, l.address, l.city, l.state,
+                   (SELECT COUNT(*) FROM open_house_rsvps WHERE open_house_id = oh.id) AS rsvp_count
+            FROM open_houses oh
+            JOIN listings l ON l.id = oh.listing_id
+            WHERE oh.realtor_id=$1
+            ORDER BY oh.scheduled_at DESC
+        `, [req.session.userId]);
+        res.json(rows);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch open houses' });
+    }
+});
+
 // ===== BATCH 7: REALTOR AVAILABILITY =====
 
 app.get('/api/availability', auth.requireAuth, async (req, res) => {
@@ -5702,6 +6113,133 @@ app.post('/api/proposals/:id/followup', auth.requireAuth, async (req, res) => {
     } catch (err) {
         console.error('Follow-up error:', err);
         res.status(500).json({ error: 'Failed to send follow-up' });
+    }
+});
+
+// ===== BUYER FORMAL OFFERS =====
+
+app.post('/api/listings/:id/buyer-offers', async (req, res) => {
+    try {
+        const listingId = parseInt(req.params.id);
+        const { buyer_name, buyer_email, offer_price, contingencies, closing_date_target, notes } = req.body;
+        if (!buyer_name || !buyer_email || !offer_price) return res.status(400).json({ error: 'Name, email, and offer price are required' });
+        const listing = await db.getListingById(listingId);
+        if (!listing) return res.status(404).json({ error: 'Listing not found' });
+        const buyer_id = req.session?.userId || null;
+        const { rows } = await pool.query(
+            `INSERT INTO buyer_offers (listing_id, buyer_id, buyer_name, buyer_email, offer_price, contingencies, closing_date_target, notes)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
+            [listingId, buyer_id, buyer_name.trim().slice(0,200), buyer_email.trim().slice(0,255), parseFloat(offer_price),
+             contingencies || null, closing_date_target || null, notes || null]
+        );
+        sseNotify(listing.user_id, { type: 'buyer_offer', listingId, buyerName: buyer_name.trim(), offerPrice: offer_price });
+        // Email seller
+        (async () => {
+            try {
+                const sRes = await pool.query(`SELECT u.email, u.first_name FROM users u JOIN listings l ON l.user_id = u.id WHERE l.id=$1`, [listingId]);
+                if (sRes.rows.length) {
+                    const addr = [listing.address, listing.city, listing.state].filter(Boolean).join(', ');
+                    await emailService.sendBuyerOfferNotification(sRes.rows[0].email, sRes.rows[0].first_name, addr, buyer_name.trim(), offer_price);
+                }
+            } catch(_) {}
+        })();
+        res.status(201).json(rows[0]);
+    } catch (err) {
+        console.error('buyer-offers POST error:', err);
+        res.status(500).json({ error: 'Failed to submit offer' });
+    }
+});
+
+app.get('/api/listings/:id/buyer-offers', auth.requireAuth, async (req, res) => {
+    try {
+        const listing = await db.getListingById(req.params.id);
+        if (!listing) return res.status(404).json({ error: 'Listing not found' });
+        if (listing.user_id !== req.session.userId && !req.user?.is_admin) return res.status(403).json({ error: 'Forbidden' });
+        const { rows } = await pool.query(
+            `SELECT * FROM buyer_offers WHERE listing_id = $1 ORDER BY offer_price DESC, created_at DESC`,
+            [parseInt(req.params.id)]
+        );
+        res.json(rows);
+    } catch (err) {
+        console.error('buyer-offers GET error:', err);
+        res.status(500).json({ error: 'Failed to fetch offers' });
+    }
+});
+
+app.put('/api/buyer-offers/:id/status', auth.requireAuth, async (req, res) => {
+    try {
+        const { status } = req.body;
+        if (!['pending', 'accepted', 'declined'].includes(status)) return res.status(400).json({ error: 'Invalid status' });
+        const { rows } = await pool.query(
+            `UPDATE buyer_offers SET status=$1 WHERE id=$2
+             AND listing_id IN (SELECT id FROM listings WHERE user_id=$3) RETURNING *`,
+            [status, parseInt(req.params.id), req.session.userId]
+        );
+        if (!rows.length) return res.status(404).json({ error: 'Offer not found' });
+        res.json(rows[0]);
+    } catch (err) {
+        console.error('buyer-offers PUT error:', err);
+        res.status(500).json({ error: 'Failed to update offer' });
+    }
+});
+
+// ===== NEIGHBORHOOD SNAPSHOT =====
+
+app.get('/api/listings/:id/neighborhood', async (req, res) => {
+    try {
+        const listing = await db.getListingById(req.params.id);
+        if (!listing || !listing.latitude || !listing.longitude) {
+            return res.status(404).json({ error: 'Listing not found or missing coordinates' });
+        }
+        const lat = parseFloat(listing.latitude);
+        const lng = parseFloat(listing.longitude);
+        const radius = 1609; // ~1 mile in meters
+
+        const query = `[out:json][timeout:12];
+(
+  node["amenity"~"^(school|college|university)$"](around:${radius},${lat},${lng});
+  way["amenity"~"^(school|college|university)$"](around:${radius},${lat},${lng});
+  node["amenity"~"^(restaurant|cafe|fast_food|bar)$"](around:${radius},${lat},${lng});
+  node["leisure"~"^(park|garden|playground)$"](around:${radius},${lat},${lng});
+  way["leisure"~"^(park|garden|playground)$"](around:${radius},${lat},${lng});
+  node["shop"~"^(supermarket|grocery|convenience)$"](around:${radius},${lat},${lng});
+  node["amenity"="pharmacy"](around:${radius},${lat},${lng});
+);
+out tags;`;
+
+        const overpassData = await new Promise((resolve, reject) => {
+            const body = 'data=' + encodeURIComponent(query);
+            const options = {
+                hostname: 'overpass-api.de',
+                path: '/api/interpreter',
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': Buffer.byteLength(body), 'User-Agent': 'RealtorFinder/1.0' }
+            };
+            const httpReq = https.request(options, (resp) => {
+                let data = '';
+                resp.on('data', d => data += d);
+                resp.on('end', () => { try { resolve(JSON.parse(data)); } catch(e) { reject(e); } });
+            });
+            httpReq.on('error', reject);
+            httpReq.setTimeout(13000, () => { httpReq.destroy(); reject(new Error('timeout')); });
+            httpReq.write(body);
+            httpReq.end();
+        });
+
+        let schools = 0, dining = 0, parks = 0, grocery = 0, pharmacy = 0;
+        for (const el of (overpassData.elements || [])) {
+            const t = el.tags || {};
+            if (t.amenity === 'school' || t.amenity === 'college' || t.amenity === 'university') schools++;
+            else if (t.amenity === 'restaurant' || t.amenity === 'cafe' || t.amenity === 'fast_food' || t.amenity === 'bar') dining++;
+            else if (t.leisure === 'park' || t.leisure === 'garden' || t.leisure === 'playground') parks++;
+            else if (t.shop === 'supermarket' || t.shop === 'grocery' || t.shop === 'convenience') grocery++;
+            else if (t.amenity === 'pharmacy') pharmacy++;
+        }
+
+        res.json({ schools, dining, parks, grocery, pharmacy, radius_miles: 1 });
+    } catch (err) {
+        console.error('neighborhood error:', err.message);
+        res.status(500).json({ error: 'Failed to load neighborhood data' });
     }
 });
 
@@ -8551,8 +9089,428 @@ async function runWaitlistNurtureJob() {
     } catch(e) { console.error('Waitlist nurture job error:', e.message); }
 }
 
+// ===== COMPANY INVITE ROUTES =====
+
+// POST /api/company/invite — send an invite email to a new agent
+app.post('/api/company/invite', auth.requireAuth, async (req, res) => {
+    try {
+        const { email } = req.body;
+        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            return res.status(400).json({ error: 'Valid email is required' });
+        }
+        const caller = await db.getProfile(req.user.id);
+        if (!caller.company_id || !['owner', 'admin'].includes(caller.company_role)) {
+            return res.status(403).json({ error: 'Only company owner or admin can send invites' });
+        }
+        const company = await db.getCompany(caller.company_id);
+        if (!company) return res.status(404).json({ error: 'Company not found' });
+
+        const token = crypto.randomBytes(24).toString('hex');
+        const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+        await pool.query(
+            `INSERT INTO company_invites (company_id, email, token, invited_by, expires_at)
+             VALUES ($1, $2, $3, $4, $5)`,
+            [caller.company_id, email.toLowerCase().trim(), token, caller.id, expiresAt]
+        );
+
+        const baseUrl = process.env.FRONTEND_URL || `http://localhost:${PORT}`;
+        const inviteUrl = `${baseUrl}/login?tab=signup&type=realtor&invite=${token}`;
+        const inviterName = `${caller.first_name} ${caller.last_name}`.trim();
+        await emailService.sendCompanyInvite(email.toLowerCase().trim(), inviterName, company.name, inviteUrl);
+
+        res.json({ success: true });
+    } catch (err) {
+        console.error('POST /api/company/invite error:', err);
+        res.status(500).json({ error: 'Failed to send invite' });
+    }
+});
+
+// GET /api/company/invite/:token — validate invite token (public)
+app.get('/api/company/invite/:token', async (req, res) => {
+    try {
+        const { rows } = await pool.query(
+            `SELECT ci.email, c.name AS company_name
+             FROM company_invites ci
+             JOIN companies c ON c.id = ci.company_id
+             WHERE ci.token = $1 AND ci.used = FALSE AND ci.expires_at > NOW()`,
+            [req.params.token]
+        );
+        if (!rows.length) return res.json({ valid: false });
+        res.json({ valid: true, companyName: rows[0].company_name, email: rows[0].email });
+    } catch (err) {
+        console.error('GET /api/company/invite/:token error:', err);
+        res.status(500).json({ error: 'Failed to validate invite' });
+    }
+});
+
+// ===== TEAM NOTES ROUTES =====
+
+// GET /api/company/notes
+app.get('/api/company/notes', auth.requireAuth, async (req, res) => {
+    try {
+        const caller = await db.getProfile(req.user.id);
+        if (!caller.company_id) return res.status(403).json({ error: 'Not a company member' });
+
+        const params = [caller.company_id];
+        let listingFilter = '';
+        if (req.query.listing_id) {
+            params.push(parseInt(req.query.listing_id));
+            listingFilter = `AND tn.listing_id = $${params.length}`;
+        }
+
+        const { rows } = await pool.query(
+            `SELECT tn.id, tn.listing_id, tn.note, tn.created_at,
+                    u.first_name AS author_first_name, u.last_name AS author_last_name,
+                    tn.author_id
+             FROM team_notes tn
+             LEFT JOIN users u ON u.id = tn.author_id
+             WHERE tn.company_id = $1 ${listingFilter}
+             ORDER BY tn.created_at DESC
+             LIMIT 100`,
+            params
+        );
+        res.json(rows);
+    } catch (err) {
+        console.error('GET /api/company/notes error:', err);
+        res.status(500).json({ error: 'Failed to load notes' });
+    }
+});
+
+// POST /api/company/notes
+app.post('/api/company/notes', auth.requireAuth, async (req, res) => {
+    try {
+        const caller = await db.getProfile(req.user.id);
+        if (!caller.company_id) return res.status(403).json({ error: 'Not a company member' });
+
+        const { listing_id, note } = req.body;
+        if (!note || !String(note).trim()) return res.status(400).json({ error: 'note is required' });
+
+        const { rows } = await pool.query(
+            `INSERT INTO team_notes (company_id, listing_id, author_id, note)
+             VALUES ($1, $2, $3, $4)
+             RETURNING *`,
+            [caller.company_id, listing_id ? parseInt(listing_id) : null, caller.id, String(note).trim()]
+        );
+        const newNote = rows[0];
+
+        // Fetch author info to return complete object
+        const { rows: authorRows } = await pool.query(
+            `SELECT first_name AS author_first_name, last_name AS author_last_name FROM users WHERE id = $1`,
+            [caller.id]
+        );
+        res.json({ ...newNote, ...authorRows[0] });
+    } catch (err) {
+        console.error('POST /api/company/notes error:', err);
+        res.status(500).json({ error: 'Failed to create note' });
+    }
+});
+
+// DELETE /api/company/notes/:id
+app.delete('/api/company/notes/:id', auth.requireAuth, async (req, res) => {
+    try {
+        const noteId = parseInt(req.params.id);
+        const userId = req.user.id;
+        const { rows } = await pool.query(
+            `DELETE FROM team_notes
+             WHERE id = $1
+               AND (author_id = $2
+                    OR company_id IN (
+                        SELECT company_id FROM users WHERE id = $2
+                          AND company_role IN ('owner', 'admin')
+                    ))
+             RETURNING id`,
+            [noteId, userId]
+        );
+        if (!rows.length) return res.status(404).json({ error: 'Note not found or not authorized' });
+        res.json({ success: true });
+    } catch (err) {
+        console.error('DELETE /api/company/notes/:id error:', err);
+        res.status(500).json({ error: 'Failed to delete note' });
+    }
+});
+
+// ===== LISTING ASSIGNMENT ROUTES =====
+
+// POST /api/company/assignments
+app.post('/api/company/assignments', auth.requireAuth, async (req, res) => {
+    try {
+        const caller = await db.getProfile(req.user.id);
+        if (!caller.company_id || !['owner', 'admin'].includes(caller.company_role)) {
+            return res.status(403).json({ error: 'Only company owner or admin can assign listings' });
+        }
+        const { listing_id, realtor_id, note } = req.body;
+        if (!listing_id || !realtor_id) return res.status(400).json({ error: 'listing_id and realtor_id are required' });
+
+        // Verify realtor is a member of caller's company
+        const { rows: memberRows } = await pool.query(
+            `SELECT id FROM users WHERE id = $1 AND company_id = $2`,
+            [parseInt(realtor_id), caller.company_id]
+        );
+        if (!memberRows.length) return res.status(400).json({ error: 'Realtor is not a member of your company' });
+
+        const { rows } = await pool.query(
+            `INSERT INTO listing_assignments (listing_id, realtor_id, assigned_by, company_id, note)
+             VALUES ($1, $2, $3, $4, $5)
+             ON CONFLICT (listing_id, realtor_id) DO UPDATE SET note = EXCLUDED.note
+             RETURNING *`,
+            [parseInt(listing_id), parseInt(realtor_id), caller.id, caller.company_id, note || null]
+        );
+        res.json(rows[0]);
+    } catch (err) {
+        console.error('POST /api/company/assignments error:', err);
+        res.status(500).json({ error: 'Failed to create assignment' });
+    }
+});
+
+// GET /api/company/assignments
+app.get('/api/company/assignments', auth.requireAuth, async (req, res) => {
+    try {
+        const caller = await db.getProfile(req.user.id);
+        if (!caller.company_id) return res.status(403).json({ error: 'Not a company member' });
+
+        const params = [caller.company_id];
+        let listingFilter = '';
+        if (req.query.listing_id) {
+            params.push(parseInt(req.query.listing_id));
+            listingFilter = `AND la.listing_id = $${params.length}`;
+        }
+
+        const { rows } = await pool.query(
+            `SELECT la.id, la.listing_id, la.realtor_id, la.note, la.created_at,
+                    u.first_name AS realtor_first_name, u.last_name AS realtor_last_name,
+                    u.email AS realtor_email, u.profile_photo AS realtor_profile_photo,
+                    l.address AS listing_address, l.city AS listing_city, l.price AS listing_price
+             FROM listing_assignments la
+             JOIN users u ON u.id = la.realtor_id
+             JOIN listings l ON l.id = la.listing_id
+             WHERE la.company_id = $1 ${listingFilter}
+             ORDER BY la.created_at DESC`,
+            params
+        );
+        res.json(rows);
+    } catch (err) {
+        console.error('GET /api/company/assignments error:', err);
+        res.status(500).json({ error: 'Failed to load assignments' });
+    }
+});
+
+// DELETE /api/company/assignments/:id
+app.delete('/api/company/assignments/:id', auth.requireAuth, async (req, res) => {
+    try {
+        const caller = await db.getProfile(req.user.id);
+        if (!caller.company_id || !['owner', 'admin'].includes(caller.company_role)) {
+            return res.status(403).json({ error: 'Only company owner or admin can remove assignments' });
+        }
+        const { rows } = await pool.query(
+            `DELETE FROM listing_assignments WHERE id = $1 AND company_id = $2 RETURNING id`,
+            [parseInt(req.params.id), caller.company_id]
+        );
+        if (!rows.length) return res.status(404).json({ error: 'Assignment not found' });
+        res.json({ success: true });
+    } catch (err) {
+        console.error('DELETE /api/company/assignments/:id error:', err);
+        res.status(500).json({ error: 'Failed to delete assignment' });
+    }
+});
+
+// ===== PROPOSAL TEMPLATE ROUTES =====
+
+// GET /api/company/templates
+app.get('/api/company/templates', auth.requireAuth, async (req, res) => {
+    try {
+        const caller = await db.getProfile(req.user.id);
+        if (!caller.company_id) return res.status(403).json({ error: 'Not a company member' });
+
+        const { rows } = await pool.query(
+            `SELECT * FROM company_proposal_templates WHERE company_id = $1 ORDER BY created_at DESC`,
+            [caller.company_id]
+        );
+        res.json(rows);
+    } catch (err) {
+        console.error('GET /api/company/templates error:', err);
+        res.status(500).json({ error: 'Failed to load templates' });
+    }
+});
+
+// POST /api/company/templates
+app.post('/api/company/templates', auth.requireAuth, async (req, res) => {
+    try {
+        const caller = await db.getProfile(req.user.id);
+        if (!caller.company_id || !['owner', 'admin'].includes(caller.company_role)) {
+            return res.status(403).json({ error: 'Only company owner or admin can create templates' });
+        }
+        const { name, content } = req.body;
+        if (!name || !content) return res.status(400).json({ error: 'name and content are required' });
+
+        const { rows } = await pool.query(
+            `INSERT INTO company_proposal_templates (company_id, name, content, created_by)
+             VALUES ($1, $2, $3, $4) RETURNING *`,
+            [caller.company_id, String(name).substring(0, 200), String(content), caller.id]
+        );
+        res.json(rows[0]);
+    } catch (err) {
+        console.error('POST /api/company/templates error:', err);
+        res.status(500).json({ error: 'Failed to create template' });
+    }
+});
+
+// PUT /api/company/templates/:id
+app.put('/api/company/templates/:id', auth.requireAuth, async (req, res) => {
+    try {
+        const caller = await db.getProfile(req.user.id);
+        if (!caller.company_id || !['owner', 'admin'].includes(caller.company_role)) {
+            return res.status(403).json({ error: 'Only company owner or admin can update templates' });
+        }
+        const { name, content } = req.body;
+        if (!name || !content) return res.status(400).json({ error: 'name and content are required' });
+
+        const { rows } = await pool.query(
+            `UPDATE company_proposal_templates
+             SET name = $1, content = $2, updated_at = NOW()
+             WHERE id = $3 AND company_id = $4
+             RETURNING *`,
+            [String(name).substring(0, 200), String(content), parseInt(req.params.id), caller.company_id]
+        );
+        if (!rows.length) return res.status(404).json({ error: 'Template not found' });
+        res.json(rows[0]);
+    } catch (err) {
+        console.error('PUT /api/company/templates/:id error:', err);
+        res.status(500).json({ error: 'Failed to update template' });
+    }
+});
+
+// DELETE /api/company/templates/:id
+app.delete('/api/company/templates/:id', auth.requireAuth, async (req, res) => {
+    try {
+        const caller = await db.getProfile(req.user.id);
+        if (!caller.company_id || !['owner', 'admin'].includes(caller.company_role)) {
+            return res.status(403).json({ error: 'Only company owner or admin can delete templates' });
+        }
+        const { rows } = await pool.query(
+            `DELETE FROM company_proposal_templates WHERE id = $1 AND company_id = $2 RETURNING id`,
+            [parseInt(req.params.id), caller.company_id]
+        );
+        if (!rows.length) return res.status(404).json({ error: 'Template not found' });
+        res.json({ success: true });
+    } catch (err) {
+        console.error('DELETE /api/company/templates/:id error:', err);
+        res.status(500).json({ error: 'Failed to delete template' });
+    }
+});
+
+// ===== FIRM LEADERBOARD ROUTE =====
+
+// GET /api/company/leaderboard
+app.get('/api/company/leaderboard', auth.requireAuth, async (req, res) => {
+    try {
+        const caller = await db.getProfile(req.user.id);
+        if (!caller.company_id) return res.status(403).json({ error: 'Not a company member' });
+
+        const { rows } = await pool.query(
+            `SELECT u.id, u.first_name, u.last_name, u.email, u.profile_photo, u.company_role,
+                    COUNT(DISTINCT CASE WHEN p.status = 'accepted' THEN p.id END) AS accepted_proposals,
+                    COUNT(DISTINCT p.id) AS total_proposals,
+                    COUNT(DISTINCT CASE WHEN l.status = 'active' AND l.deleted_at IS NULL THEN l.id END) AS active_listings
+             FROM users u
+             LEFT JOIN proposals p ON p.realtor_id = u.id
+             LEFT JOIN listings l ON l.user_id = u.id
+             WHERE u.company_id = $1 AND (u.is_active IS NULL OR u.is_active = TRUE)
+             GROUP BY u.id, u.first_name, u.last_name, u.email, u.profile_photo, u.company_role
+             ORDER BY accepted_proposals DESC, total_proposals DESC`,
+            [caller.company_id]
+        );
+        res.json(rows);
+    } catch (err) {
+        console.error('GET /api/company/leaderboard error:', err);
+        res.status(500).json({ error: 'Failed to load leaderboard' });
+    }
+});
+
+// ===== FIRM PUBLIC PROFILE ROUTES =====
+
+// Serve firms.html for /firms/:slug
+app.get('/firms/:slug', (req, res) => res.sendFile(path.join(__dirname, 'public/firms.html')));
+
+// GET /api/firms/:slug — public JSON firm profile
+app.get('/api/firms/:slug', async (req, res) => {
+    try {
+        const { rows: companyRows } = await pool.query(
+            `SELECT id, name, slug, description, website, logo_url, plan, created_at
+             FROM companies
+             WHERE slug = $1 AND is_active = TRUE`,
+            [req.params.slug]
+        );
+        if (!companyRows.length) return res.status(404).json({ error: 'Firm not found' });
+        const company = companyRows[0];
+
+        const { rows: agents } = await pool.query(
+            `SELECT id, first_name, last_name, profile_photo, bio, license_verified, profile_slug, company_role
+             FROM users
+             WHERE company_id = $1 AND (is_active IS NULL OR is_active = TRUE) AND user_type = 'realtor'
+             ORDER BY company_role DESC`,
+            [company.id]
+        );
+
+        // Aggregate stats: avg rating, total accepted proposals
+        const { rows: statsRows } = await pool.query(
+            `SELECT
+                COALESCE(AVG(r.rating), 0)::numeric(3,1) AS avg_rating,
+                COUNT(r.id) AS review_count,
+                COUNT(DISTINCT CASE WHEN p.status = 'accepted' THEN p.id END) AS total_accepted
+             FROM users u
+             LEFT JOIN realtor_reviews r ON r.realtor_id = u.id
+             LEFT JOIN proposals p ON p.realtor_id = u.id
+             WHERE u.company_id = $1 AND (u.is_active IS NULL OR u.is_active = TRUE)`,
+            [company.id]
+        );
+        const stats = {
+            agent_count: agents.length,
+            avg_rating: parseFloat(statsRows[0].avg_rating) || 0,
+            review_count: parseInt(statsRows[0].review_count) || 0,
+            total_accepted: parseInt(statsRows[0].total_accepted) || 0
+        };
+
+        res.json({ company, agents, stats });
+    } catch (err) {
+        console.error('GET /api/firms/:slug error:', err);
+        res.status(500).json({ error: 'Failed to load firm profile' });
+    }
+});
+
 _schemaMigrations.push(
     `ALTER TABLE buyer_requests ADD COLUMN IF NOT EXISTS selected_realtor_id INTEGER REFERENCES users(id)`
+);
+
+_schemaMigrations.push(
+    `ALTER TABLE listings ADD COLUMN IF NOT EXISTS proposal_deadline DATE`,
+    `ALTER TABLE listings ADD COLUMN IF NOT EXISTS video_url TEXT`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS unavailable_until DATE`,
+    `CREATE TABLE IF NOT EXISTS listing_documents (
+        id SERIAL PRIMARY KEY,
+        listing_id INTEGER NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
+        uploaded_by INTEGER NOT NULL REFERENCES users(id),
+        name TEXT NOT NULL,
+        url TEXT NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+    )`,
+    `CREATE TABLE IF NOT EXISTS open_houses (
+        id SERIAL PRIMARY KEY,
+        listing_id INTEGER NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
+        realtor_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        scheduled_at TIMESTAMPTZ NOT NULL,
+        duration_minutes INTEGER NOT NULL DEFAULT 60,
+        notes TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+    )`,
+    `CREATE TABLE IF NOT EXISTS open_house_rsvps (
+        id SERIAL PRIMARY KEY,
+        open_house_id INTEGER NOT NULL REFERENCES open_houses(id) ON DELETE CASCADE,
+        user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        name TEXT NOT NULL,
+        email TEXT NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE(open_house_id, email)
+    )`
 );
 
 _schemaMigrations.push(
@@ -8590,6 +9548,86 @@ async function backfillProfileSlugs() {
     }
 }
 
+// ===== NEW COMPANY / TEAM SCHEMA MIGRATIONS =====
+_schemaMigrations.push(
+    `ALTER TABLE companies ADD COLUMN IF NOT EXISTS slug VARCHAR(100) UNIQUE`,
+    `ALTER TABLE companies ADD COLUMN IF NOT EXISTS description TEXT`,
+    `ALTER TABLE companies ADD COLUMN IF NOT EXISTS website TEXT`,
+    `ALTER TABLE companies ADD COLUMN IF NOT EXISTS logo_url TEXT`
+);
+
+_schemaMigrations.push(`
+    CREATE TABLE IF NOT EXISTS company_invites (
+        id SERIAL PRIMARY KEY,
+        company_id INTEGER NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+        email VARCHAR(255) NOT NULL,
+        token TEXT UNIQUE NOT NULL,
+        invited_by INTEGER REFERENCES users(id),
+        used BOOLEAN DEFAULT FALSE,
+        expires_at TIMESTAMPTZ NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+`);
+
+_schemaMigrations.push(`
+    CREATE TABLE IF NOT EXISTS team_notes (
+        id SERIAL PRIMARY KEY,
+        company_id INTEGER NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+        listing_id INTEGER REFERENCES listings(id) ON DELETE CASCADE,
+        author_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        note TEXT NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+`);
+
+_schemaMigrations.push(`
+    CREATE TABLE IF NOT EXISTS listing_assignments (
+        id SERIAL PRIMARY KEY,
+        listing_id INTEGER NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
+        realtor_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        assigned_by INTEGER REFERENCES users(id),
+        company_id INTEGER REFERENCES companies(id) ON DELETE CASCADE,
+        note TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE(listing_id, realtor_id)
+    )
+`);
+
+_schemaMigrations.push(`
+    CREATE TABLE IF NOT EXISTS company_proposal_templates (
+        id SERIAL PRIMARY KEY,
+        company_id INTEGER NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+        name VARCHAR(200) NOT NULL,
+        content TEXT NOT NULL,
+        created_by INTEGER REFERENCES users(id),
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+    )
+`);
+
+_schemaMigrations.push(`
+    CREATE TABLE IF NOT EXISTS buyer_offers (
+        id SERIAL PRIMARY KEY,
+        listing_id INTEGER NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
+        buyer_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        buyer_name TEXT NOT NULL,
+        buyer_email TEXT NOT NULL,
+        offer_price NUMERIC(12,2) NOT NULL,
+        contingencies TEXT,
+        closing_date_target DATE,
+        notes TEXT,
+        status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending','accepted','declined')),
+        created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+`);
+
+// Backfill company slugs for any companies created before the slug column was added
+_schemaMigrations.push(`
+    UPDATE companies
+    SET slug = LOWER(REGEXP_REPLACE(name, '[^a-zA-Z0-9]+', '-', 'g')) || '-' || id
+    WHERE slug IS NULL
+`);
+
 // Run all schema migrations then start listening
 async function startServer() {
     for (const sql of _schemaMigrations) {
@@ -8603,6 +9641,7 @@ async function startServer() {
         }
     }
     await backfillProfileSlugs();
+    await seedBlogPosts();
     app.listen(PORT, () => {
         console.log(`🏠 RealtorFinder server running on port ${PORT}`);
         console.log(`📍 http://localhost:${PORT}`);
@@ -8613,9 +9652,6 @@ async function startServer() {
         console.log(`   /dashboard/seller → Seller dashboard`);
         console.log(`   /dashboard/realtor → Realtor dashboard`);
         console.log(`   /app → Main application (legacy)`);
-
-        // Seed blog posts if table is empty
-        await seedBlogPosts();
 
         // Schedule background jobs — run after migrations so tables exist
         runListingExpiryJob();
