@@ -1369,6 +1369,64 @@ const emailService = {
             await send({ to: email, subject: `You've been invited to join ${companyName} on RealtorFinder`, html: emailWrap('Team Invite', body + btn(inviteUrl, 'Accept Invite & Join Team')) });
         } catch (error) { logSendgridError('Company invite email', error); throw error; }
     },
+
+    async sendRsvpConfirmation(toEmail, name, listingAddress, scheduledAt) {
+        const dt = new Date(scheduledAt);
+        const dtStr = dt.toLocaleString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+        const body = `
+            ${h1("You're Registered for the Open House! 🏡")}
+            ${p(`Hi ${name}, you're confirmed for the open house at <strong>${listingAddress}</strong>.`)}
+            ${infoBox([
+                ['Property', listingAddress],
+                ['Date & Time', dtStr]
+            ])}
+            ${p("We look forward to seeing you there. Add it to your calendar — this event is not automatically added.")}
+            ${btn(`${BASE_URL}/dashboard/buyer`, 'View My Dashboard')}
+            ${divider()}
+            <p style="color:#999;font-size:13px;margin:0;">The RealtorFinder Team</p>
+        `;
+        try {
+            await send({ to: toEmail, subject: `Open House Confirmed — ${listingAddress}`, html: emailWrap('Open House', body) });
+        } catch (error) { logSendgridError('RSVP confirmation', error); }
+    },
+
+    async sendBuyerOfferNotification(sellerEmail, sellerName, listingAddress, buyerName, offerPrice) {
+        const price = '$' + Number(offerPrice).toLocaleString();
+        const body = `
+            ${h1("New Buyer Offer Received! 💰")}
+            ${p(`Hi ${sellerName}, a buyer has submitted a formal offer on your property at <strong>${listingAddress}</strong>.`)}
+            ${infoBox([
+                ['Buyer', buyerName],
+                ['Offer Price', price],
+                ['Property', listingAddress]
+            ])}
+            ${p("Log in to your seller dashboard to review the full offer details, including contingencies and their proposed closing date.")}
+            ${btn(`${BASE_URL}/dashboard/seller`, 'Review Offer')}
+            ${divider()}
+            <p style="color:#999;font-size:13px;margin:0;">The RealtorFinder Team</p>
+        `;
+        try {
+            await send({ to: sellerEmail, subject: `New Buyer Offer on ${listingAddress} — ${price}`, html: emailWrap('For Sellers', body) });
+        } catch (error) { logSendgridError('Buyer offer notification', error); }
+    },
+
+    async sendListingStatusEmail(realtorEmail, realtorName, status, listingAddress) {
+        const statusLabels = { reviewing: 'Reviewing Proposals', under_contract: 'Under Contract', sold: 'Sold' };
+        const label = statusLabels[status] || status;
+        const body = `
+            ${h1(`Listing Update: ${label}`)}
+            ${p(`Hi ${realtorName}, the seller at <strong>${listingAddress}</strong> has updated the listing status to <strong>${label}</strong>.`)}
+            ${status === 'sold'
+                ? p("Congratulations on the sale! If you were the accepted agent on this listing, the deal is officially closed.")
+                : p("Log in to your dashboard to view the latest status and stay up to date on this listing.")}
+            ${btn(`${BASE_URL}/dashboard/realtor`, 'View My Dashboard')}
+            ${divider()}
+            <p style="color:#999;font-size:13px;margin:0;">The RealtorFinder Team</p>
+        `;
+        try {
+            await send({ to: realtorEmail, subject: `Listing Status Update: ${label} — ${listingAddress}`, html: emailWrap('For Realtors', body) });
+        } catch (error) { logSendgridError('Listing status email', error); }
+    },
 };
 
 module.exports = emailService;
