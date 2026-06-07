@@ -859,6 +859,26 @@
             white-space: nowrap;
         }
 
+        /* Proposal compare bar & modal */
+        .proposal-compare-bar { position: fixed; bottom: 0; left: 0; right: 0; background: #0a2540; color: white; padding: 0.875rem 2rem; display: flex; align-items: center; gap: 1.5rem; z-index: 200; box-shadow: 0 -4px 20px rgba(0,0,0,0.25); transition: transform 0.3s; }
+        .proposal-compare-bar.hidden { transform: translateY(100%); }
+        .proposal-compare-bar-label { font-weight: 600; font-size: 0.9rem; white-space: nowrap; }
+        .proposal-compare-btn { background: #FF6B35; color: white; border: none; border-radius: 8px; padding: 0.5rem 1.25rem; font-weight: 700; cursor: pointer; font-size: 0.9rem; font-family: inherit; }
+        .proposal-compare-btn:hover { background: #e85d2a; }
+        .compare-chip { background: rgba(255,255,255,0.15); border-radius: 20px; padding: 0.25rem 0.75rem; font-size: 0.8rem; display: flex; align-items: center; gap: 0.5rem; }
+        .compare-chip-remove { background: none; border: none; color: white; cursor: pointer; font-size: 1rem; padding: 0; line-height: 1; }
+        .proposal-compare-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 300; align-items: center; justify-content: center; }
+        .proposal-compare-modal.active { display: flex; }
+        .proposal-compare-modal-inner { background: white; border-radius: 16px; padding: 2rem; max-width: 900px; width: 95vw; max-height: 90vh; overflow-y: auto; }
+        .compare-grid { display: grid; gap: 0; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin-top: 1.5rem; }
+        .compare-grid-row { display: grid; border-bottom: 1px solid var(--border); }
+        .compare-grid-row:last-child { border-bottom: none; }
+        .compare-grid-row.header-row { background: #f8f9fa; }
+        .compare-cell { padding: 0.75rem 1rem; font-size: 0.9rem; border-right: 1px solid var(--border); }
+        .compare-cell:last-child { border-right: none; }
+        .compare-cell.label-cell { font-weight: 600; color: #666; font-size: 0.8rem; background: #f8f9fa; }
+        .compare-cell.winner { background: #f0fdf4; font-weight: 700; color: #065f46; }
+
         /* Boost modal */
         .boost-option-card {
             border: 2px solid var(--border);
@@ -2560,6 +2580,89 @@
 
         // ===== PROPOSALS (Feature 1) =====
 
+        let _proposalCompareList = [];
+
+        function _propCompareKey(p) { return `${p.realtor_id}-${p.listing_id}`; }
+
+        function addToProposalCompare(pJson) {
+            const p = JSON.parse(decodeURIComponent(pJson));
+            if (_proposalCompareList.find(c => _propCompareKey(c) === _propCompareKey(p))) return;
+            if (_proposalCompareList.length >= 3) { showToast('Max 3 proposals can be compared at once', 'error'); return; }
+            _proposalCompareList.push(p);
+            updateProposalCompareBar();
+        }
+
+        function removeFromProposalCompare(key) {
+            _proposalCompareList = _proposalCompareList.filter(c => _propCompareKey(c) !== key);
+            updateProposalCompareBar();
+        }
+
+        function clearProposalCompare() {
+            _proposalCompareList = [];
+            updateProposalCompareBar();
+        }
+
+        function updateProposalCompareBar() {
+            const bar = document.getElementById('proposalCompareBar');
+            if (!bar) return;
+            if (!_proposalCompareList.length) { bar.classList.add('hidden'); return; }
+            bar.classList.remove('hidden');
+            document.getElementById('proposalCompareChips').innerHTML = _proposalCompareList.map(p => {
+                const name = `${p.first_name || ''} ${p.last_name || ''}`.trim() || 'Realtor';
+                const key = _propCompareKey(p);
+                return `<span class="compare-chip">${esc(name)} <button class="compare-chip-remove" onclick="removeFromProposalCompare('${esc(key)}')">&times;</button></span>`;
+            }).join('');
+            document.getElementById('proposalCompareCount').textContent = _proposalCompareList.length;
+        }
+
+        function openProposalCompareModal() {
+            if (_proposalCompareList.length < 2) { showToast('Select at least 2 proposals to compare', 'error'); return; }
+            const modal = document.getElementById('proposalCompareModal');
+            modal.classList.add('active');
+            const cols = _proposalCompareList.length + 1;
+            const rows = [
+                { label: 'Realtor', fn: p => esc(`${p.first_name || ''} ${p.last_name || ''}`.trim() || 'Agent') },
+                { label: 'Brokerage', fn: p => esc(p.brokerage || '—') },
+                { label: 'Experience', fn: p => p.years_experience != null ? p.years_experience + ' yrs' : '—' },
+                { label: 'Rating', fn: p => p.rating != null ? '★ ' + parseFloat(p.rating).toFixed(1) : '—' },
+                { label: 'License', fn: p => p.license_verified ? '<span style="color:#059669;font-weight:600;">✓ Verified</span>' : '—' },
+                { label: 'Commission', fn: p => `<strong>${p.commission_pct}%</strong>`, winFn: ps => ps.reduce((best, p) => parseFloat(p.commission_pct) < parseFloat(best.commission_pct) ? p : best, ps[0]) },
+                { label: 'Timeline', fn: p => esc(p.timeline || '—') },
+                { label: 'Pitch / Note', fn: p => `<span style="font-size:0.85rem;color:#555;">${esc(p.cover_note || '—')}</span>` },
+            ];
+            const winnerMap = {};
+            for (const row of rows) {
+                if (row.winFn) {
+                    const winner = row.winFn(_proposalCompareList);
+                    winnerMap[row.label] = _propCompareKey(winner);
+                }
+            }
+            const gridRows = rows.map(row => {
+                const cells = _proposalCompareList.map(p => {
+                    const isWinner = winnerMap[row.label] && winnerMap[row.label] === _propCompareKey(p);
+                    return `<div class="compare-cell${isWinner ? ' winner' : ''}">${row.fn(p)}</div>`;
+                }).join('');
+                return `<div class="compare-grid-row" style="grid-template-columns: 120px repeat(${_proposalCompareList.length}, 1fr);">
+                    <div class="compare-cell label-cell">${row.label}</div>${cells}
+                </div>`;
+            }).join('');
+            const headers = _proposalCompareList.map(p => {
+                const name = esc(`${p.first_name || ''} ${p.last_name || ''}`.trim() || 'Agent');
+                return `<div class="compare-cell" style="font-weight:700;font-size:0.95rem;">${name}</div>`;
+            }).join('');
+            document.getElementById('proposalCompareBody').innerHTML = `
+                <div class="compare-grid">
+                    <div class="compare-grid-row header-row" style="grid-template-columns: 120px repeat(${_proposalCompareList.length}, 1fr);">
+                        <div class="compare-cell label-cell"></div>${headers}
+                    </div>
+                    ${gridRows}
+                </div>`;
+        }
+
+        function closeProposalCompareModal() {
+            document.getElementById('proposalCompareModal').classList.remove('active');
+        }
+
         async function loadProposals() {
             try {
                 const listingsRes = await fetch('/api/listings', { credentials: 'include' });
@@ -2602,6 +2705,14 @@
                             const counterBtn = p.status === 'pending' ? `<button onclick="openCounterModal(${p.id}, ${p.commission_pct})" style="background:white;border:1px solid var(--accent);color:var(--accent);padding:0.5rem 1rem;border-radius:6px;font-weight:600;cursor:pointer;font-size:0.85rem;">Counter</button>` : '';
                             const realtorDisplayName = `${p.first_name || ''} ${p.last_name || ''}`.trim() || 'this realtor';
                             const acceptBtn = p.status === 'pending' ? `<button onclick="acceptProposal(${p.id}, ${listing.id}, ${p.realtor_id}, ${JSON.stringify(realtorDisplayName)})" style="background:var(--accent);color:white;border:none;border-radius:6px;padding:6px 14px;cursor:pointer;font-size:0.85rem;">Accept</button>` : status;
+                            const pData = encodeURIComponent(JSON.stringify({
+                                realtor_id: p.realtor_id, listing_id: p.listing_id,
+                                first_name: p.first_name, last_name: p.last_name,
+                                brokerage: p.brokerage, years_experience: p.years_experience,
+                                rating: p.rating, license_verified: p.license_verified,
+                                commission_pct: p.commission_pct, timeline: p.timeline, cover_note: p.cover_note
+                            }));
+                            const compareBtn = `<button onclick="addToProposalCompare('${pData}')" style="background:white;border:1px solid #6366f1;color:#6366f1;padding:5px 10px;border-radius:6px;font-weight:600;cursor:pointer;font-size:0.8rem;">⚖️</button>`;
                             return `<tr style="${isLowest ? 'background:#f0fdf4;' : ''}">
                                 <td style="padding:10px 12px;font-weight:600;">${name}${badge}${verifiedBadge}</td>
                                 <td style="padding:10px 12px;font-weight:700;color:${isLowest ? '#065f46' : 'var(--accent)'};">${p.commission_pct}%</td>
@@ -2609,7 +2720,7 @@
                                 <td style="padding:10px 12px;color:#444;font-size:0.85rem;max-width:200px;">${esc(p.cover_note || '—').slice(0, 80)}${(p.cover_note || '').length > 80 ? '…' : ''}
                                     ${(p.attachments || []).length ? '<div style="margin-top:4px;">' + (p.attachments||[]).map(a => { const att = typeof a === 'string' ? (() => { try { return JSON.parse(a); } catch { return {url:a,name:'file'}; } })() : a; return `<a href="${esc(att.url)}" target="_blank" style="font-size:0.75rem;color:#0284c7;display:inline-block;margin-right:4px;">📎 ${esc(att.name||'doc')}</a>`; }).join('') + '</div>' : ''}
                                 </td>
-                                <td style="padding:10px 12px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;">${acceptBtn}${counterBtn}${counterBadge}</td>
+                                <td style="padding:10px 12px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;">${acceptBtn}${counterBtn}${counterBadge}${compareBtn}</td>
                             </tr>`;
                         }).join('');
                         card.innerHTML = `
@@ -3031,6 +3142,30 @@
                 <button onclick="closeListingAnalyticsModal()" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:#666;">&times;</button>
             </div>
             <div id="listingAnalyticsBody"></div>
+        </div>
+    </div>
+
+    <!-- Proposal Compare Bar -->
+    <div id="proposalCompareBar" class="proposal-compare-bar hidden">
+        <span class="proposal-compare-bar-label">⚖️ <span id="proposalCompareCount">0</span> selected</span>
+        <div id="proposalCompareChips" style="display:flex;gap:0.5rem;flex-wrap:wrap;flex:1;"></div>
+        <button class="proposal-compare-btn" onclick="openProposalCompareModal()">Compare Now</button>
+        <button onclick="clearProposalCompare()" style="background:rgba(255,255,255,0.15);color:white;border:none;border-radius:8px;padding:0.5rem 1rem;cursor:pointer;font-size:0.85rem;font-family:inherit;">Clear</button>
+    </div>
+
+    <!-- Proposal Compare Modal -->
+    <div id="proposalCompareModal" class="proposal-compare-modal" onclick="if(event.target===this)closeProposalCompareModal()">
+        <div class="proposal-compare-modal-inner">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.25rem;">
+                <h2 style="font-family:'Crimson Pro',serif;font-size:1.8rem;color:#0a2540;">Compare Proposals</h2>
+                <button onclick="closeProposalCompareModal()" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:#aaa;">&times;</button>
+            </div>
+            <p style="color:#666;font-size:0.9rem;margin-bottom:0;">Side-by-side comparison. Green highlight = best value.</p>
+            <div id="proposalCompareBody"></div>
+            <div style="margin-top:1.5rem;display:flex;gap:1rem;">
+                <button onclick="clearProposalCompare();closeProposalCompareModal();" style="background:#f3f4f6;color:#374151;border:none;border-radius:8px;padding:0.6rem 1.25rem;font-weight:600;cursor:pointer;font-family:inherit;">Clear & Close</button>
+                <button onclick="closeProposalCompareModal()" style="background:#0a2540;color:white;border:none;border-radius:8px;padding:0.6rem 1.25rem;font-weight:600;cursor:pointer;font-family:inherit;">Done</button>
+            </div>
         </div>
     </div>
 

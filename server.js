@@ -807,6 +807,39 @@ app.delete('/api/buyer-requests/:id', auth.requireAuth, async (req, res) => {
     }
 });
 
+// Proactive realtor matches for buyer — realtors whose service areas match buyer's target areas
+app.get('/api/buyer-requests/matched-realtors', auth.requireAuth, async (req, res) => {
+    try {
+        if (req.user.user_type !== 'buyer') return res.status(403).json({ error: 'Buyers only' });
+        const request = await db.getBuyerRequestByUser(req.session.userId);
+        if (!request || !request.target_areas) return res.json([]);
+        const terms = String(request.target_areas).split(',').map(t => t.trim()).filter(Boolean).slice(0, 5);
+        if (!terms.length) return res.json([]);
+        const conditions = terms.map((_, i) => `u.service_areas ILIKE $${i + 1}`);
+        const params = terms.map(t => `%${t}%`);
+        const { rows } = await pool.query(`
+            SELECT u.id, u.first_name, u.last_name, u.profile_photo, u.brokerage,
+                   u.years_experience, u.service_areas, u.profile_slug, u.license_verified,
+                   COALESCE(
+                       (SELECT AVG(rating)::numeric(3,1) FROM realtor_reviews WHERE realtor_id = u.id),
+                       NULL
+                   ) AS avg_rating,
+                   (SELECT COUNT(*) FROM proposals WHERE realtor_id = u.id AND status = 'accepted') AS accepted_proposals
+            FROM users u
+            WHERE u.user_type = 'realtor'
+              AND u.is_approved = true
+              AND u.is_active IS NOT FALSE
+              AND (${conditions.join(' OR ')})
+            ORDER BY accepted_proposals DESC, avg_rating DESC NULLS LAST
+            LIMIT 8
+        `, params);
+        res.json(rows);
+    } catch (err) {
+        console.error('matched-realtors error:', err);
+        res.status(500).json({ error: 'Failed to fetch matched realtors' });
+    }
+});
+
 // Realtor responds to a buyer request
 app.post('/api/buyer-requests/:id/respond', auth.requireAuth, async (req, res) => {
     try {
@@ -5470,6 +5503,30 @@ app.get('/api/realtors/me/analytics', auth.requireAuth, async (req, res) => {
     } catch (err) {
         console.error('GET /api/realtors/me/analytics error:', err);
         res.status(500).json({ error: 'Failed to fetch analytics' });
+    }
+});
+
+// Monthly win-rate trend — last 6 months, grouped by month
+app.get('/api/realtors/me/win-rate-trend', auth.requireAuth, async (req, res) => {
+    try {
+        if (req.user.user_type !== 'realtor') return res.status(403).json({ error: 'Realtors only' });
+        const { rows } = await pool.query(`
+            SELECT DATE_TRUNC('month', created_at) AS month,
+                   COUNT(*) AS total,
+                   COUNT(*) FILTER (WHERE status = 'accepted') AS accepted
+            FROM proposals
+            WHERE realtor_id = $1 AND created_at >= NOW() - INTERVAL '6 months'
+            GROUP BY month ORDER BY month ASC
+        `, [req.session.userId]);
+        res.json(rows.map(r => ({
+            month: r.month,
+            total: parseInt(r.total),
+            accepted: parseInt(r.accepted),
+            win_rate: parseInt(r.total) > 0 ? Math.round((parseInt(r.accepted) / parseInt(r.total)) * 100) : 0
+        })));
+    } catch (err) {
+        console.error('Win-rate trend error:', err);
+        res.status(500).json({ error: 'Failed to fetch win-rate trend' });
     }
 });
 

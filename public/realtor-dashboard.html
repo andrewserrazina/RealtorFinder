@@ -1227,6 +1227,13 @@
                     <div id="planLimitText" style="font-size:0.9rem;color:#c2410c;"></div>
                     <a href="/pricing" style="font-size:0.85rem;color:#FF6B35;font-weight:600;text-decoration:none;display:inline-block;margin-top:0.5rem;">Upgrade to Professional →</a>
                 </div>
+
+                <!-- Monthly win-rate trend -->
+                <div id="winRateTrend" style="display:none;background:#fff;border:1px solid var(--border);border-radius:12px;padding:1.25rem;margin-top:1.5rem;">
+                    <h3 style="font-size:1rem;font-weight:700;color:var(--ink);margin:0 0 1rem;">Win Rate Trend — Last 6 Months</h3>
+                    <div id="winRateBars" style="display:flex;align-items:flex-end;gap:12px;height:80px;"></div>
+                    <div id="winRateLabels" style="display:flex;gap:12px;margin-top:6px;font-size:0.72rem;color:#999;"></div>
+                </div>
             </div>
         </section>
 
@@ -4350,10 +4357,11 @@
         // ===== ANALYTICS =====
         async function loadAnalytics() {
             try {
-                // Load both old and new analytics in parallel
-                const [resOld, resNew] = await Promise.all([
+                // Load analytics and win-rate trend in parallel
+                const [resOld, resNew, resTrend] = await Promise.all([
                     fetch(`${API_BASE_URL}/analytics/realtor`, { credentials: 'include' }),
-                    fetch(`${API_BASE_URL}/realtors/me/analytics`, { credentials: 'include' })
+                    fetch(`${API_BASE_URL}/realtors/me/analytics`, { credentials: 'include' }),
+                    fetch(`${API_BASE_URL}/realtors/me/win-rate-trend`, { credentials: 'include' })
                 ]);
 
                 if (resOld.ok) {
@@ -4411,6 +4419,28 @@
                         document.getElementById('proposalLegend').innerHTML = segments.map(x =>
                             `<span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${colors[x.s]};margin-right:4px;vertical-align:middle;"></span>${labels[x.s]}: ${x.cnt}</span>`
                         ).join('');
+                    }
+                }
+                // Win-rate trend
+                if (resTrend && resTrend.ok) {
+                    const trend = await resTrend.json();
+                    if (trend.length > 0) {
+                        document.getElementById('winRateTrend').style.display = 'block';
+                        const maxRate = Math.max(...trend.map(t => t.win_rate), 1);
+                        document.getElementById('winRateBars').innerHTML = trend.map(t => {
+                            const pct = Math.max(4, Math.round((t.win_rate / 100) * 100));
+                            const color = t.win_rate >= 50 ? '#10b981' : t.win_rate >= 25 ? '#f59e0b' : '#ef4444';
+                            return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;">
+                                <div style="font-size:0.7rem;font-weight:700;color:${color};">${t.win_rate}%</div>
+                                <div style="flex:1;display:flex;align-items:flex-end;width:100%;">
+                                    <div style="background:${color};width:100%;border-radius:4px 4px 0 0;height:${pct}%;min-height:4px;" title="${t.accepted}/${t.total} won"></div>
+                                </div>
+                            </div>`;
+                        }).join('');
+                        document.getElementById('winRateLabels').innerHTML = trend.map(t => {
+                            const d = new Date(t.month);
+                            return `<div style="flex:1;text-align:center;">${d.toLocaleDateString('en-US',{month:'short'})}</div>`;
+                        }).join('');
                     }
                 }
             } catch (err) { console.error('Analytics error:', err); }
