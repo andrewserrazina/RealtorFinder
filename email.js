@@ -1352,6 +1352,23 @@ const emailService = {
             await send({ to: email, subject, html: emailWrap(isSeller ? 'For Sellers' : 'For Realtors', body) });
         } catch (error) { logSendgridError('Waitlist nurture', error); }
     },
+
+    // ─── Company / Team Emails ────────────────────────────────────────────────
+
+    async sendCompanyInvite(email, inviterName, companyName, inviteUrl) {
+        const body = `
+            <p style="color:#374151;font-size:15px;line-height:1.6;">Hi there,</p>
+            <p style="color:#374151;font-size:15px;line-height:1.6;">
+                <strong>${inviterName}</strong> has invited you to join <strong>${companyName}</strong> on RealtorFinder.
+            </p>
+            <p style="color:#374151;font-size:15px;line-height:1.6;">
+                Click the button below to create your account and join the team. This invite expires in 7 days.
+            </p>
+        `;
+        try {
+            await send({ to: email, subject: `You've been invited to join ${companyName} on RealtorFinder`, html: emailWrap('Team Invite', body + btn(inviteUrl, 'Accept Invite & Join Team')) });
+        } catch (error) { logSendgridError('Company invite email', error); throw error; }
+    },
 };
 
 module.exports = emailService;

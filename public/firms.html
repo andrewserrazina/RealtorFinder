@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Firm Profile — RealtorFinder</title>
+    <style>
+        :root {
+            --primary: #0A2540;
+            --accent: #FF6B35;
+            --soft-bg: #F8F6F3;
+            --border: #E5E1DB;
+            --text: #374151;
+            --text-muted: #6B7280;
+            --white: #ffffff;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background: var(--soft-bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        /* ── Nav ── */
+        .nav {
+            background: var(--primary);
+            padding: 0 24px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+        }
+        .nav a {
+            font-family: Georgia, 'Times New Roman', serif;
+            font-size: 22px;
+            font-weight: 900;
+            color: white;
+            text-decoration: none;
+            letter-spacing: -0.5px;
+        }
+        .nav a span { color: var(--accent); }
+
+        /* ── Main container ── */
+        .container {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 40px 20px 80px;
+        }
+
+        /* ── Loading / error states ── */
+        .state-msg {
+            text-align: center;
+            padding: 80px 20px;
+            color: var(--text-muted);
+            font-size: 16px;
+        }
+        .state-msg h2 {
+            font-size: 28px;
+            color: var(--primary);
+            margin-bottom: 12px;
+        }
+
+        /* ── Firm header card ── */
+        .firm-header {
+            background: var(--white);
+            border-radius: 16px;
+            padding: 40px;
+            display: flex;
+            gap: 28px;
+            align-items: flex-start;
+            border: 1px solid var(--border);
+            margin-bottom: 28px;
+        }
+        .firm-avatar {
+            width: 96px;
+            height: 96px;
+            border-radius: 16px;
+            object-fit: cover;
+            flex-shrink: 0;
+        }
+        .firm-initials {
+            width: 96px;
+            height: 96px;
+            border-radius: 16px;
+            background: var(--primary);
+            color: white;
+            font-family: Georgia, serif;
+            font-size: 32px;
+            font-weight: 900;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .firm-info { flex: 1; min-width: 0; }
+        .firm-name {
+            font-family: Georgia, 'Times New Roman', serif;
+            font-size: 28px;
+            font-weight: 900;
+            color: var(--primary);
+            letter-spacing: -0.5px;
+            margin-bottom: 8px;
+        }
+        .plan-badge {
+            display: inline-block;
+            background: var(--accent);
+            color: white;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 3px 10px;
+            border-radius: 20px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 12px;
+        }
+        .plan-badge.basic { background: #6B7280; }
+        .plan-badge.professional { background: #0369a1; }
+        .plan-badge.firm { background: var(--accent); }
+
+        .firm-description {
+            color: var(--text);
+            font-size: 15px;
+            line-height: 1.7;
+            margin-bottom: 12px;
+        }
+        .firm-website {
+            color: var(--accent);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .firm-website:hover { text-decoration: underline; }
+
+        /* ── Stats bar ── */
+        .stats-bar {
+            background: var(--white);
+            border-radius: 12px;
+            padding: 20px 28px;
+            display: flex;
+            gap: 0;
+            border: 1px solid var(--border);
+            margin-bottom: 32px;
+        }
+        .stat-item {
+            flex: 1;
+            text-align: center;
+            padding: 0 16px;
+            border-right: 1px solid var(--border);
+        }
+        .stat-item:last-child { border-right: none; }
+        .stat-value {
+            font-family: Georgia, serif;
+            font-size: 26px;
+            font-weight: 900;
+            color: var(--primary);
+            display: block;
+        }
+        .stat-label {
+            font-size: 12px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-top: 2px;
+        }
+
+        /* ── Agents section ── */
+        .section-title {
+            font-family: Georgia, serif;
+            font-size: 20px;
+            font-weight: 900;
+            color: var(--primary);
+            margin-bottom: 16px;
+        }
+
+        .agents-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 16px;
+        }
+
+        .agent-card {
+            background: var(--white);
+            border-radius: 12px;
+            padding: 24px;
+            border: 1px solid var(--border);
+            text-align: center;
+            text-decoration: none;
+            color: inherit;
+            display: block;
+            transition: box-shadow 0.15s, transform 0.15s;
+        }
+        .agent-card:hover {
+            box-shadow: 0 4px 20px rgba(0,0,0,0.10);
+            transform: translateY(-2px);
+        }
+
+        .agent-photo {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin: 0 auto 12px;
+            display: block;
+        }
+        .agent-initials {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: white;
+            font-size: 22px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 12px;
+        }
+
+        .agent-name {
+            font-weight: 700;
+            font-size: 16px;
+            color: var(--primary);
+            margin-bottom: 6px;
+        }
+
+        .badge-row {
+            display: flex;
+            gap: 6px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 10px;
+        }
+        .role-badge {
+            font-size: 11px;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 20px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .role-badge.owner { background: #fef3c7; color: #92400e; }
+        .role-badge.admin { background: #e0f2fe; color: #075985; }
+        .role-badge.agent { background: #f0fdf4; color: #166534; }
+
+        .verified-badge {
+            font-size: 11px;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 20px;
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .agent-bio {
+            font-size: 13px;
+            color: var(--text-muted);
+            line-height: 1.5;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        /* ── Responsive ── */
+        @media (max-width: 600px) {
+            .firm-header { flex-direction: column; }
+            .stats-bar { flex-direction: column; gap: 16px; }
+            .stat-item { border-right: none; border-bottom: 1px solid var(--border); padding: 12px 0; }
+            .stat-item:last-child { border-bottom: none; }
+        }
+    </style>
+</head>
+<body>
+
+<nav class="nav">
+    <a href="/"><span>Realtor</span>Finder</a>
+</nav>
+
+<div class="container">
+    <div id="loading" class="state-msg">Loading firm profile…</div>
+    <div id="not-found" class="state-msg" style="display:none;">
+        <h2>Firm Not Found</h2>
+        <p>This firm profile doesn't exist or is no longer active.</p>
+    </div>
+    <div id="content" style="display:none;">
+        <!-- Firm header -->
+        <div class="firm-header" id="firm-header"></div>
+
+        <!-- Stats bar -->
+        <div class="stats-bar" id="stats-bar"></div>
+
+        <!-- Agents grid -->
+        <div class="section-title" id="agents-title"></div>
+        <div class="agents-grid" id="agents-grid"></div>
+    </div>
+</div>
+
+<script>
+(async function () {
+    // Extract slug from pathname: /firms/[slug]
+    const parts = window.location.pathname.replace(/\/$/, '').split('/');
+    const slug = parts[parts.length - 1];
+
+    if (!slug || slug === 'firms') {
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('not-found').style.display = 'block';
+        return;
+    }
+
+    let data;
+    try {
+        const resp = await fetch(`/api/firms/${encodeURIComponent(slug)}`);
+        if (resp.status === 404) {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('not-found').style.display = 'block';
+            return;
+        }
+        data = await resp.json();
+    } catch (err) {
+        document.getElementById('loading').innerHTML = 'Failed to load firm profile. Please try again.';
+        return;
+    }
+
+    const { company, agents, stats } = data;
+
+    // Update page title
+    document.title = `${company.name} — RealtorFinder`;
+
+    // Build firm header
+    const logoHtml = company.logo_url
+        ? `<img src="${esc(company.logo_url)}" alt="${esc(company.name)}" class="firm-avatar">`
+        : `<div class="firm-initials">${initials(company.name)}</div>`;
+
+    const planLabel = { basic: 'Basic', professional: 'Pro', firm: 'Firm' }[company.plan] || company.plan || 'Basic';
+    const planClass = company.plan || 'basic';
+
+    const websiteHtml = company.website
+        ? `<a href="${esc(company.website)}" target="_blank" rel="noopener noreferrer" class="firm-website">${esc(company.website.replace(/^https?:\/\//, ''))}</a>`
+        : '';
+
+    document.getElementById('firm-header').innerHTML = `
+        ${logoHtml}
+        <div class="firm-info">
+            <div class="firm-name">${esc(company.name)}</div>
+            <span class="plan-badge ${planClass}">${esc(planLabel)}</span>
+            ${company.description ? `<p class="firm-description">${esc(company.description)}</p>` : ''}
+            ${websiteHtml}
+        </div>
+    `;
+
+    // Build stats bar
+    const ratingDisplay = stats.avg_rating > 0 ? `${stats.avg_rating.toFixed(1)} ★` : '—';
+    document.getElementById('stats-bar').innerHTML = `
+        <div class="stat-item">
+            <span class="stat-value">${stats.agent_count}</span>
+            <span class="stat-label">Agents</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-value">${stats.total_accepted}</span>
+            <span class="stat-label">Accepted Deals</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-value">${ratingDisplay}</span>
+            <span class="stat-label">Avg Rating</span>
+        </div>
+    `;
+
+    // Build agents grid
+    document.getElementById('agents-title').textContent = `Team (${agents.length})`;
+
+    const agentsGrid = document.getElementById('agents-grid');
+    if (!agents.length) {
+        agentsGrid.innerHTML = '<p style="color:var(--text-muted);font-size:14px;">No agents listed yet.</p>';
+    } else {
+        agentsGrid.innerHTML = agents.map(agent => {
+            const name = [agent.first_name, agent.last_name].filter(Boolean).join(' ') || 'Agent';
+            const photoHtml = agent.profile_photo
+                ? `<img src="${esc(agent.profile_photo)}" alt="${esc(name)}" class="agent-photo">`
+                : `<div class="agent-initials">${initials(name)}</div>`;
+
+            const roleLabel = { owner: 'Owner', admin: 'Admin', agent: 'Agent' }[agent.company_role] || 'Agent';
+            const roleClass = agent.company_role || 'agent';
+
+            const verifiedBadge = agent.license_verified
+                ? `<span class="verified-badge">✓ Verified</span>`
+                : '';
+
+            const bioHtml = agent.bio ? `<p class="agent-bio">${esc(agent.bio)}</p>` : '';
+
+            const href = agent.profile_slug ? `/agent/${esc(agent.profile_slug)}` : '#';
+
+            return `
+                <a href="${href}" class="agent-card">
+                    ${photoHtml}
+                    <div class="agent-name">${esc(name)}</div>
+                    <div class="badge-row">
+                        <span class="role-badge ${roleClass}">${esc(roleLabel)}</span>
+                        ${verifiedBadge}
+                    </div>
+                    ${bioHtml}
+                </a>
+            `;
+        }).join('');
+    }
+
+    // Show content
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('content').style.display = 'block';
+
+    function esc(str) {
+        return String(str == null ? '' : str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#x27;');
+    }
+
+    function initials(str) {
+        if (!str) return '?';
+        const words = String(str).trim().split(/\s+/);
+        if (words.length === 1) return words[0].charAt(0).toUpperCase();
+        return (words[0].charAt(0) + words[words.length - 1].charAt(0)).toUpperCase();
+    }
+})();
+</script>
+
+</body>
+</html>

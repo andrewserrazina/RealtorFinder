@@ -1407,14 +1407,27 @@
                 <div style="background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:24px; margin-bottom:28px;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
                         <h3 style="margin:0; font-size:18px;">Team Members</h3>
-                        <button class="btn-primary" id="addAgentBtn" onclick="showAddAgentForm()" style="font-size:13px; padding:8px 16px;">+ Add Agent</button>
+                        <div style="display:flex;gap:8px;align-items:center;">
+                            <button class="btn-primary" id="addAgentBtn" onclick="showAddAgentForm()" style="font-size:13px; padding:8px 16px;">+ Add Agent</button>
+                            <button class="btn-primary" id="inviteAgentBtn" onclick="showInviteForm()" style="font-size:13px;padding:8px 16px;">✉ Invite</button>
+                        </div>
+                    </div>
+                    <!-- Invite agent form (hidden by default) -->
+                    <div id="inviteAgentForm" style="display:none;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:16px;margin-bottom:16px;">
+                        <p style="margin:0 0 10px;font-size:14px;color:#374151;">Send an email invite — the recipient signs up and joins your team automatically.</p>
+                        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                            <input type="email" id="inviteEmail" placeholder="colleague@example.com" style="flex:1;min-width:200px;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;">
+                            <button class="btn-primary" onclick="sendInvite()" style="font-size:13px;padding:8px 16px;">Send Invite</button>
+                            <button onclick="hideInviteForm()" style="background:none;border:1px solid #d1d5db;border-radius:8px;padding:8px 14px;cursor:pointer;font-size:13px;">Cancel</button>
+                        </div>
+                        <p id="inviteError" style="display:none;color:#ef4444;font-size:13px;margin:8px 0 0;"></p>
+                        <p id="inviteSuccess" style="display:none;color:#059669;font-size:13px;margin:8px 0 0;"></p>
                     </div>
                     <!-- Add agent form (hidden by default) -->
                     <div id="addAgentForm" style="display:none; background:#f9fafb; border-radius:8px; padding:16px; margin-bottom:16px;">
-                        <p style="margin:0 0 12px; font-size:14px; color:#374151;">Enter the email of a registered realtor to add them to your company.</p>
+                        <p style="margin:0 0 12px; font-size:14px; color:#374151;">Enter the email address of a registered realtor to add them.</p>
                         <div style="display:flex; gap:10px; flex-wrap:wrap;">
                             <input type="email" id="agentEmail" placeholder="agent@example.com" style="flex:1; min-width:200px; padding:8px 12px; border:1px solid #d1d5db; border-radius:8px; font-size:14px;">
-                            <input type="text" id="agentZip" placeholder="Their ZIP code" maxlength="10" style="width:140px; padding:8px 12px; border:1px solid #d1d5db; border-radius:8px; font-size:14px;">
                             <button class="btn-primary" onclick="addAgent()" style="font-size:13px; padding:8px 16px;">Add</button>
                             <button onclick="hideAddAgentForm()" style="background:none; border:1px solid #d1d5db; border-radius:8px; padding:8px 14px; cursor:pointer; font-size:13px;">Cancel</button>
                         </div>
@@ -1439,6 +1452,74 @@
                         <p id="addLocationError" style="display:none; color:#ef4444; font-size:13px; margin:8px 0 0;"></p>
                     </div>
                     <div id="locationsList" style="display:flex; flex-direction:column; gap:10px;"></div>
+                </div>
+
+                <!-- Team Proposals (firm owners and admins only) -->
+                <div id="teamProposalsSection" style="display:none; background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:24px; margin-top:28px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                        <h3 style="margin:0; font-size:18px;">Team Proposals</h3>
+                        <button onclick="loadTeamProposals()" style="background:none;border:1px solid #d1d5db;border-radius:8px;padding:6px 14px;cursor:pointer;font-size:13px;color:#374151;">&#x21BB; Refresh</button>
+                    </div>
+                    <div id="teamProposalsList"></div>
+                </div>
+
+                <!-- Team Leaderboard -->
+                <div id="teamLeaderboardSection" style="display:none;background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:24px;margin-top:28px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                        <h3 style="margin:0;font-size:18px;">Team Leaderboard</h3>
+                        <button onclick="loadLeaderboard()" style="background:none;border:1px solid #d1d5db;border-radius:8px;padding:6px 14px;cursor:pointer;font-size:13px;color:#374151;">↻ Refresh</button>
+                    </div>
+                    <div id="leaderboardList"></div>
+                </div>
+
+                <!-- Shared Templates (all company members) -->
+                <div id="companyTemplatesSection" style="display:none;background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:24px;margin-top:28px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                        <h3 style="margin:0;font-size:18px;">Shared Templates</h3>
+                        <button id="newTemplateBtn" onclick="showNewTemplateForm()" style="display:none;background:#0A2540;color:white;border:none;border-radius:8px;padding:8px 16px;cursor:pointer;font-size:13px;">+ New Template</button>
+                    </div>
+                    <div id="newTemplateForm" style="display:none;background:#f9fafb;border-radius:8px;padding:16px;margin-bottom:16px;">
+                        <input type="text" id="templateName" placeholder="Template name" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;margin-bottom:8px;box-sizing:border-box;">
+                        <textarea id="templateContent" rows="4" placeholder="Marketing plan text..." style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;resize:vertical;box-sizing:border-box;"></textarea>
+                        <div style="display:flex;gap:8px;margin-top:8px;">
+                            <button onclick="saveCompanyTemplate()" style="background:#0A2540;color:white;border:none;border-radius:8px;padding:8px 16px;cursor:pointer;font-size:13px;">Save</button>
+                            <button onclick="hideNewTemplateForm()" style="background:none;border:1px solid #d1d5db;border-radius:8px;padding:8px 14px;cursor:pointer;font-size:13px;">Cancel</button>
+                        </div>
+                    </div>
+                    <div id="companyTemplatesList"><p style="color:#9ca3af;font-size:14px;">Loading templates…</p></div>
+                </div>
+
+                <!-- Team Notes (all company members) -->
+                <div id="teamNotesSection" style="display:none;background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:24px;margin-top:28px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                        <h3 style="margin:0;font-size:18px;">Team Notes</h3>
+                    </div>
+                    <div style="margin-bottom:16px;">
+                        <textarea id="newTeamNote" rows="3" placeholder="Share a note with your team…" style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;resize:vertical;box-sizing:border-box;"></textarea>
+                        <button onclick="postTeamNote()" style="margin-top:8px;background:#FF6B35;color:white;border:none;border-radius:8px;padding:8px 20px;cursor:pointer;font-size:13px;font-weight:600;">Post Note</button>
+                    </div>
+                    <div id="teamNotesList"><p style="color:#9ca3af;font-size:14px;">Loading notes…</p></div>
+                </div>
+
+                <!-- Listing Assignments (owner/admin only) -->
+                <div id="teamAssignmentsSection" style="display:none;background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:24px;margin-top:28px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                        <h3 style="margin:0;font-size:18px;">Listing Assignments</h3>
+                        <button onclick="showAssignForm()" style="background:#0A2540;color:white;border:none;border-radius:8px;padding:8px 16px;cursor:pointer;font-size:13px;">+ Assign Listing</button>
+                    </div>
+                    <div id="assignForm" style="display:none;background:#f9fafb;border-radius:8px;padding:16px;margin-bottom:16px;">
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+                            <input type="number" id="assignListingId" placeholder="Listing ID" style="padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;">
+                            <select id="assignRealtorId" style="padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;background:white;"></select>
+                        </div>
+                        <input type="text" id="assignNote" placeholder="Optional note for the agent" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;margin-bottom:10px;box-sizing:border-box;">
+                        <div style="display:flex;gap:8px;">
+                            <button onclick="submitAssignment()" style="background:#FF6B35;color:white;border:none;border-radius:8px;padding:8px 16px;cursor:pointer;font-size:13px;font-weight:600;">Assign</button>
+                            <button onclick="hideAssignForm()" style="background:none;border:1px solid #d1d5db;border-radius:8px;padding:8px 14px;cursor:pointer;font-size:13px;">Cancel</button>
+                        </div>
+                        <p id="assignError" style="display:none;color:#ef4444;font-size:13px;margin:8px 0 0;"></p>
+                    </div>
+                    <div id="assignmentsList"><p style="color:#9ca3af;font-size:14px;">Loading assignments…</p></div>
                 </div>
             </div>
         </section>
@@ -3677,6 +3758,7 @@
         // ===== COMPANY / MY FIRM =====
         let companyData = null;
         let isCompanyOwner = false;
+        let isCompanyAdmin = false;
 
         async function loadCompany() {
             try {
@@ -3686,7 +3768,16 @@
                 if (!data) { document.getElementById('noCompanyState').style.display = 'block'; document.getElementById('companyOverview').style.display = 'none'; return; }
                 companyData = data;
                 isCompanyOwner = currentUser && data.company && data.company.owner_user_id === currentUser.id;
+                const me = data.members && currentUser ? data.members.find(m => m.id === currentUser.id) : null;
+                isCompanyAdmin = !isCompanyOwner && me && me.company_role === 'admin';
                 renderCompany(data);
+                loadTeamNotes();
+                loadCompanyTemplates();
+                if (isCompanyOwner || isCompanyAdmin) {
+                    loadTeamProposals();
+                    loadLeaderboard();
+                    loadAssignments();
+                }
             } catch (e) {
                 console.error('loadCompany error', e);
             }
@@ -3706,10 +3797,31 @@
             if (isCompanyOwner && company.plan !== 'firm') { upgradeBanner.style.display = 'flex'; } else { upgradeBanner.style.display = 'none'; }
 
             const addAgentBtn = document.getElementById('addAgentBtn');
-            if (addAgentBtn) addAgentBtn.style.display = isCompanyOwner ? 'inline-flex' : 'none';
+            if (addAgentBtn) addAgentBtn.style.display = (isCompanyOwner || isCompanyAdmin) ? 'inline-flex' : 'none';
+
+            const inviteAgentBtn = document.getElementById('inviteAgentBtn');
+            if (inviteAgentBtn) inviteAgentBtn.style.display = (isCompanyOwner || isCompanyAdmin) ? 'inline-flex' : 'none';
 
             const locationsSection = document.getElementById('locationsSection');
             if (company.plan === 'firm') { locationsSection.style.display = 'block'; renderLocations(locations); } else { locationsSection.style.display = 'none'; }
+
+            const teamProposalsSection = document.getElementById('teamProposalsSection');
+            if (teamProposalsSection) teamProposalsSection.style.display = (isCompanyOwner || isCompanyAdmin) ? 'block' : 'none';
+
+            const teamLeaderboardSection = document.getElementById('teamLeaderboardSection');
+            if (teamLeaderboardSection) teamLeaderboardSection.style.display = (isCompanyOwner || isCompanyAdmin) ? 'block' : 'none';
+
+            const companyTemplatesSection = document.getElementById('companyTemplatesSection');
+            if (companyTemplatesSection) companyTemplatesSection.style.display = 'block';
+
+            const newTemplateBtn = document.getElementById('newTemplateBtn');
+            if (newTemplateBtn) newTemplateBtn.style.display = (isCompanyOwner || isCompanyAdmin) ? 'inline-block' : 'none';
+
+            const teamNotesSection = document.getElementById('teamNotesSection');
+            if (teamNotesSection) teamNotesSection.style.display = 'block';
+
+            const teamAssignmentsSection = document.getElementById('teamAssignmentsSection');
+            if (teamAssignmentsSection) teamAssignmentsSection.style.display = (isCompanyOwner || isCompanyAdmin) ? 'block' : 'none';
 
             renderMembers(members, company);
         }
@@ -3717,7 +3829,22 @@
         function renderMembers(members, company) {
             const list = document.getElementById('membersList');
             if (!members.length) { list.innerHTML = '<p style="color:#6b7280;font-size:14px;">No team members yet.</p>'; return; }
-            list.innerHTML = members.map(m => `
+            list.innerHTML = members.map(m => {
+                let roleControls = '';
+                if (m.company_role === 'owner') {
+                    roleControls = `<span style="background:#dbeafe;color:#1d4ed8;border-radius:6px;padding:3px 10px;font-size:12px;font-weight:600;">Owner</span>`;
+                } else if (isCompanyOwner) {
+                    if (m.company_role === 'admin') {
+                        roleControls = `<span style="background:#f3e8ff;color:#7c3aed;border-radius:6px;padding:3px 10px;font-size:12px;font-weight:600;margin-right:6px;">Admin</span>` +
+                            `<button onclick="changeAgentRole(${m.id},'agent')" style="background:none;border:1px solid #e5e7eb;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;color:#6b7280;margin-right:6px;">Demote</button>`;
+                    } else {
+                        roleControls = `<button onclick="changeAgentRole(${m.id},'admin')" style="background:none;border:1px solid #7c3aed;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;color:#7c3aed;margin-right:6px;">Make Admin</button>`;
+                    }
+                    roleControls += `<button onclick="removeAgent(${m.id})" style="background:none;border:1px solid #e5e7eb;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;color:#6b7280;">Remove</button>`;
+                } else if (isCompanyAdmin && m.company_role !== 'owner') {
+                    roleControls = `<button onclick="removeAgent(${m.id})" style="background:none;border:1px solid #e5e7eb;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;color:#6b7280;">Remove</button>`;
+                }
+                return `
                 <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:#f9fafb;border-radius:8px;">
                     <div style="width:36px;height:36px;border-radius:50%;background:#0A2540;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;flex-shrink:0;">
                         ${(m.first_name || 'A').charAt(0).toUpperCase()}
@@ -3726,9 +3853,56 @@
                         <div style="font-weight:600;font-size:14px;">${m.first_name} ${m.last_name}</div>
                         <div style="font-size:12px;color:#6b7280;">${m.email} &nbsp;·&nbsp; ZIP ${m.zip_code || '—'} &nbsp;·&nbsp; <span style="text-transform:capitalize;">${m.company_role}</span></div>
                     </div>
-                    ${isCompanyOwner && m.company_role !== 'owner' ? `<button onclick="removeAgent(${m.id})" style="background:none;border:1px solid #e5e7eb;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;color:#6b7280;">Remove</button>` : ''}
-                </div>
-            `).join('');
+                    <div style="display:flex;align-items:center;gap:4px;">${roleControls}</div>
+                </div>`;
+            }).join('');
+        }
+
+        async function changeAgentRole(userId, role) {
+            try {
+                const res = await fetch(`${API_BASE_URL}/company/agents/${userId}/role`, {
+                    method: 'PUT', credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ role })
+                });
+                const data = await res.json();
+                if (!res.ok) { showToast(data.error || 'Failed to update role', 'error'); return; }
+                loadCompany();
+            } catch (e) { showToast('Network error. Please try again.', 'error'); }
+        }
+
+        async function loadTeamProposals() {
+            const listEl = document.getElementById('teamProposalsList');
+            if (!listEl) return;
+            listEl.innerHTML = '<p style="color:#6b7280;font-size:14px;">Loading...</p>';
+            try {
+                const res = await fetch(`${API_BASE_URL}/company/proposals`, { credentials: 'include' });
+                if (!res.ok) { listEl.innerHTML = '<p style="color:#ef4444;font-size:14px;">Failed to load proposals.</p>'; return; }
+                const rows = await res.json();
+                if (!rows.length) { listEl.innerHTML = '<p style="color:#6b7280;font-size:14px;">No proposals from your team yet.</p>'; return; }
+                const statusBadge = s => {
+                    const map = { pending: 'background:#fef3c7;color:#92400e;', accepted: 'background:#d1fae5;color:#065f46;', declined: 'background:#f3f4f6;color:#374151;' };
+                    return `<span style="${map[s] || map.pending}border-radius:6px;padding:2px 8px;font-size:11px;font-weight:600;text-transform:capitalize;">${s}</span>`;
+                };
+                listEl.innerHTML = `<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;">
+                    <thead><tr style="border-bottom:2px solid #e5e7eb;">
+                        <th style="text-align:left;padding:8px 10px;color:#6b7280;font-weight:600;">Agent</th>
+                        <th style="text-align:left;padding:8px 10px;color:#6b7280;font-weight:600;">Listing</th>
+                        <th style="text-align:right;padding:8px 10px;color:#6b7280;font-weight:600;">Price</th>
+                        <th style="text-align:right;padding:8px 10px;color:#6b7280;font-weight:600;">Commission %</th>
+                        <th style="text-align:center;padding:8px 10px;color:#6b7280;font-weight:600;">Status</th>
+                        <th style="text-align:left;padding:8px 10px;color:#6b7280;font-weight:600;">Date</th>
+                    </tr></thead>
+                    <tbody>${rows.map(p => `<tr style="border-bottom:1px solid #f3f4f6;">
+                        <td style="padding:8px 10px;">${p.agent_first} ${p.agent_last}<br><span style="color:#9ca3af;font-size:11px;">${p.agent_email}</span></td>
+                        <td style="padding:8px 10px;">${p.address}<br><span style="color:#9ca3af;font-size:11px;">${p.city}, ${p.state}</span></td>
+                        <td style="padding:8px 10px;text-align:right;">$${Number(p.price).toLocaleString()}</td>
+                        <td style="padding:8px 10px;text-align:right;">${p.commission_pct != null ? p.commission_pct + '%' : '—'}</td>
+                        <td style="padding:8px 10px;text-align:center;">${statusBadge(p.status)}</td>
+                        <td style="padding:8px 10px;white-space:nowrap;">${new Date(p.created_at).toLocaleDateString()}</td>
+                    </tr>`).join('')}</tbody>
+                </table></div>`;
+            } catch (e) { listEl.innerHTML = '<p style="color:#ef4444;font-size:14px;">Failed to load proposals.</p>'; }
         }
 
         function renderLocations(locations) {
@@ -3752,21 +3926,19 @@
 
         async function addAgent() {
             const email = document.getElementById('agentEmail').value.trim();
-            const zipCode = document.getElementById('agentZip').value.trim();
             const errEl = document.getElementById('addAgentError');
             errEl.style.display = 'none';
-            if (!email || !zipCode) { errEl.textContent = 'Both email and ZIP code are required.'; errEl.style.display = 'block'; return; }
+            if (!email) { errEl.textContent = 'Email is required.'; errEl.style.display = 'block'; return; }
             try {
                 const res = await fetch(`${API_BASE_URL}/company/agents`, {
                     method: 'POST', credentials: 'include',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, zipCode })
+                    body: JSON.stringify({ email })
                 });
                 const data = await res.json();
                 if (!res.ok) { errEl.textContent = data.error || 'Failed to add agent.'; errEl.style.display = 'block'; return; }
                 hideAddAgentForm();
                 document.getElementById('agentEmail').value = '';
-                document.getElementById('agentZip').value = '';
                 loadCompany();
             } catch (e) { errEl.textContent = 'Network error. Please try again.'; errEl.style.display = 'block'; }
         }
@@ -3802,6 +3974,278 @@
             if (!confirm('Remove this location? Agents at this location will remain in your company.')) return;
             await fetch(`${API_BASE_URL}/company/locations/${locationId}`, { method: 'DELETE', credentials: 'include' });
             loadCompany();
+        }
+
+        // ===== LEADERBOARD =====
+        async function loadLeaderboard() {
+            const listEl = document.getElementById('leaderboardList');
+            if (!listEl) return;
+            listEl.innerHTML = '<p style="color:#6b7280;font-size:14px;">Loading...</p>';
+            try {
+                const res = await fetch(`${API_BASE_URL}/company/leaderboard`, { credentials: 'include' });
+                if (!res.ok) { listEl.innerHTML = '<p style="color:#ef4444;font-size:14px;">Failed to load leaderboard.</p>'; return; }
+                const rows = await res.json();
+                if (!rows.length) { listEl.innerHTML = '<p style="color:#6b7280;font-size:14px;">No leaderboard data yet.</p>'; return; }
+                const rankStyles = [
+                    'background:#fffbeb;border:1px solid #fde68a;',
+                    'background:#f8fafc;border:1px solid #e2e8f0;',
+                    'background:#fff7ed;border:1px solid #fed7aa;'
+                ];
+                const rankLabels = ['🥇', '🥈', '🥉'];
+                const roleBadge = r => {
+                    const map = { owner: 'background:#dbeafe;color:#1d4ed8;', admin: 'background:#f3e8ff;color:#7c3aed;', agent: 'background:#f3f4f6;color:#374151;' };
+                    return `<span style="${map[r] || map.agent}border-radius:6px;padding:2px 8px;font-size:11px;font-weight:600;text-transform:capitalize;">${r}</span>`;
+                };
+                listEl.innerHTML = rows.map((agent, i) => {
+                    const style = rankStyles[i] || 'background:#f9fafb;border:1px solid #e5e7eb;';
+                    const medal = rankLabels[i] || `<span style="font-weight:700;color:#6b7280;">#${i + 1}</span>`;
+                    return `<div style="${style}border-radius:8px;padding:12px 16px;margin-bottom:8px;display:flex;align-items:center;gap:14px;">
+                        <div style="min-width:32px;text-align:center;font-size:18px;">${medal}</div>
+                        <div style="flex:1;">
+                            <div style="font-weight:600;font-size:14px;">${agent.first_name} ${agent.last_name} &nbsp;${roleBadge(agent.company_role)}</div>
+                            <div style="font-size:12px;color:#6b7280;margin-top:2px;">${agent.email}</div>
+                        </div>
+                        <div style="display:flex;gap:20px;text-align:center;">
+                            <div><div style="font-size:18px;font-weight:700;color:#059669;">${agent.accepted_proposals ?? 0}</div><div style="font-size:11px;color:#6b7280;">Accepted</div></div>
+                            <div><div style="font-size:18px;font-weight:700;color:#374151;">${agent.total_proposals ?? 0}</div><div style="font-size:11px;color:#6b7280;">Total Proposals</div></div>
+                            <div><div style="font-size:18px;font-weight:700;color:#0A2540;">${agent.active_listings ?? 0}</div><div style="font-size:11px;color:#6b7280;">Active Listings</div></div>
+                        </div>
+                    </div>`;
+                }).join('');
+            } catch (e) { listEl.innerHTML = '<p style="color:#ef4444;font-size:14px;">Failed to load leaderboard.</p>'; }
+        }
+
+        // ===== INVITE FLOW =====
+        function showInviteForm() {
+            document.getElementById('inviteAgentForm').style.display = 'block';
+            document.getElementById('inviteEmail').focus();
+            document.getElementById('inviteError').style.display = 'none';
+            document.getElementById('inviteSuccess').style.display = 'none';
+        }
+        function hideInviteForm() {
+            document.getElementById('inviteAgentForm').style.display = 'none';
+            document.getElementById('inviteEmail').value = '';
+            document.getElementById('inviteError').style.display = 'none';
+            document.getElementById('inviteSuccess').style.display = 'none';
+        }
+        async function sendInvite() {
+            const email = document.getElementById('inviteEmail').value.trim();
+            const errEl = document.getElementById('inviteError');
+            const sucEl = document.getElementById('inviteSuccess');
+            errEl.style.display = 'none';
+            sucEl.style.display = 'none';
+            if (!email) { errEl.textContent = 'Email is required.'; errEl.style.display = 'block'; return; }
+            try {
+                const res = await fetch(`${API_BASE_URL}/company/invite`, {
+                    method: 'POST', credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email })
+                });
+                const data = await res.json();
+                if (!res.ok) { errEl.textContent = data.error || 'Failed to send invite.'; errEl.style.display = 'block'; return; }
+                sucEl.textContent = data.message || 'Invite sent successfully!';
+                sucEl.style.display = 'block';
+                document.getElementById('inviteEmail').value = '';
+            } catch (e) { errEl.textContent = 'Network error. Please try again.'; errEl.style.display = 'block'; }
+        }
+
+        // ===== COMPANY TEMPLATES =====
+        async function loadCompanyTemplates() {
+            const listEl = document.getElementById('companyTemplatesList');
+            if (!listEl) return;
+            listEl.innerHTML = '<p style="color:#9ca3af;font-size:14px;">Loading templates…</p>';
+            try {
+                const res = await fetch(`${API_BASE_URL}/company/templates`, { credentials: 'include' });
+                if (!res.ok) { listEl.innerHTML = '<p style="color:#ef4444;font-size:14px;">Failed to load templates.</p>'; return; }
+                const rows = await res.json();
+                if (!rows.length) { listEl.innerHTML = '<p style="color:#6b7280;font-size:14px;">No shared templates yet.</p>'; return; }
+                listEl.innerHTML = rows.map(t => {
+                    const preview = t.content ? (t.content.length > 120 ? t.content.slice(0, 120) + '…' : t.content) : '';
+                    const canDelete = isCompanyOwner || isCompanyAdmin;
+                    return `<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:14px 16px;margin-bottom:10px;">
+                        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
+                            <div style="flex:1;">
+                                <div style="font-weight:600;font-size:14px;margin-bottom:4px;">${t.name || 'Untitled'}</div>
+                                <div style="font-size:13px;color:#6b7280;white-space:pre-wrap;">${preview}</div>
+                            </div>
+                            <div style="display:flex;gap:6px;flex-shrink:0;">
+                                <button onclick="useCompanyTemplate(${JSON.stringify(t.content || '').replace(/'/g, "\\'")})" style="background:#0A2540;color:white;border:none;border-radius:6px;padding:5px 12px;cursor:pointer;font-size:12px;">Use</button>
+                                ${canDelete ? `<button onclick="deleteCompanyTemplate(${t.id})" style="background:none;border:1px solid #e5e7eb;border-radius:6px;padding:5px 10px;cursor:pointer;font-size:12px;color:#6b7280;">Delete</button>` : ''}
+                            </div>
+                        </div>
+                    </div>`;
+                }).join('');
+            } catch (e) { listEl.innerHTML = '<p style="color:#ef4444;font-size:14px;">Failed to load templates.</p>'; }
+        }
+        function showNewTemplateForm() {
+            document.getElementById('newTemplateForm').style.display = 'block';
+            document.getElementById('templateName').focus();
+        }
+        function hideNewTemplateForm() {
+            document.getElementById('newTemplateForm').style.display = 'none';
+            document.getElementById('templateName').value = '';
+            document.getElementById('templateContent').value = '';
+        }
+        async function saveCompanyTemplate() {
+            const name = document.getElementById('templateName').value.trim();
+            const content = document.getElementById('templateContent').value.trim();
+            if (!name) { showToast('Template name is required.', 'error'); return; }
+            try {
+                const res = await fetch(`${API_BASE_URL}/company/templates`, {
+                    method: 'POST', credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, content })
+                });
+                const data = await res.json();
+                if (!res.ok) { showToast(data.error || 'Failed to save template.', 'error'); return; }
+                hideNewTemplateForm();
+                showToast('Template saved.', 'success');
+                loadCompanyTemplates();
+            } catch (e) { showToast('Network error. Please try again.', 'error'); }
+        }
+        async function deleteCompanyTemplate(id) {
+            if (!confirm('Delete this template?')) return;
+            try {
+                const res = await fetch(`${API_BASE_URL}/company/templates/${id}`, { method: 'DELETE', credentials: 'include' });
+                if (!res.ok) { showToast('Failed to delete template.', 'error'); return; }
+                showToast('Template deleted.', 'success');
+                loadCompanyTemplates();
+            } catch (e) { showToast('Network error. Please try again.', 'error'); }
+        }
+        function useCompanyTemplate(content) {
+            try { navigator.clipboard.writeText(content).then(() => showToast('Template copied to clipboard.', 'success')); }
+            catch (e) { showToast('Could not copy to clipboard.', 'error'); }
+        }
+
+        // ===== TEAM NOTES =====
+        async function loadTeamNotes() {
+            const listEl = document.getElementById('teamNotesList');
+            if (!listEl) return;
+            listEl.innerHTML = '<p style="color:#9ca3af;font-size:14px;">Loading notes…</p>';
+            try {
+                const res = await fetch(`${API_BASE_URL}/company/notes`, { credentials: 'include' });
+                if (!res.ok) { listEl.innerHTML = '<p style="color:#ef4444;font-size:14px;">Failed to load notes.</p>'; return; }
+                const rows = await res.json();
+                if (!rows.length) { listEl.innerHTML = '<p style="color:#6b7280;font-size:14px;">No team notes yet. Be the first to post!</p>'; return; }
+                listEl.innerHTML = rows.map(n => {
+                    const canDelete = (currentUser && n.author_id === currentUser.id) || isCompanyOwner || isCompanyAdmin;
+                    const dateStr = n.created_at ? new Date(n.created_at).toLocaleString() : '';
+                    return `<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:14px 16px;margin-bottom:10px;">
+                        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
+                            <div style="flex:1;">
+                                <div style="font-size:12px;color:#6b7280;margin-bottom:6px;"><strong style="color:#374151;">${n.author_name || 'Team Member'}</strong> &nbsp;·&nbsp; ${dateStr}</div>
+                                <div style="font-size:14px;white-space:pre-wrap;">${n.note || ''}</div>
+                            </div>
+                            ${canDelete ? `<button onclick="deleteTeamNote(${n.id})" style="background:none;border:1px solid #e5e7eb;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;color:#6b7280;flex-shrink:0;">Delete</button>` : ''}
+                        </div>
+                    </div>`;
+                }).join('');
+            } catch (e) { listEl.innerHTML = '<p style="color:#ef4444;font-size:14px;">Failed to load notes.</p>'; }
+        }
+        async function postTeamNote() {
+            const noteEl = document.getElementById('newTeamNote');
+            const note = noteEl.value.trim();
+            if (!note) { showToast('Please enter a note.', 'error'); return; }
+            try {
+                const res = await fetch(`${API_BASE_URL}/company/notes`, {
+                    method: 'POST', credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ note })
+                });
+                const data = await res.json();
+                if (!res.ok) { showToast(data.error || 'Failed to post note.', 'error'); return; }
+                noteEl.value = '';
+                showToast('Note posted.', 'success');
+                loadTeamNotes();
+            } catch (e) { showToast('Network error. Please try again.', 'error'); }
+        }
+        async function deleteTeamNote(id) {
+            if (!confirm('Delete this note?')) return;
+            try {
+                const res = await fetch(`${API_BASE_URL}/company/notes/${id}`, { method: 'DELETE', credentials: 'include' });
+                if (!res.ok) { showToast('Failed to delete note.', 'error'); return; }
+                showToast('Note deleted.', 'success');
+                loadTeamNotes();
+            } catch (e) { showToast('Network error. Please try again.', 'error'); }
+        }
+
+        // ===== LISTING ASSIGNMENTS =====
+        async function loadAssignments() {
+            const listEl = document.getElementById('assignmentsList');
+            if (!listEl) return;
+            listEl.innerHTML = '<p style="color:#9ca3af;font-size:14px;">Loading assignments…</p>';
+            try {
+                const res = await fetch(`${API_BASE_URL}/company/assignments`, { credentials: 'include' });
+                if (!res.ok) { listEl.innerHTML = '<p style="color:#ef4444;font-size:14px;">Failed to load assignments.</p>'; return; }
+                const rows = await res.json();
+                if (!rows.length) { listEl.innerHTML = '<p style="color:#6b7280;font-size:14px;">No listing assignments yet.</p>'; return; }
+                listEl.innerHTML = `<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;">
+                    <thead><tr style="border-bottom:2px solid #e5e7eb;">
+                        <th style="text-align:left;padding:8px 10px;color:#6b7280;font-weight:600;">Listing</th>
+                        <th style="text-align:left;padding:8px 10px;color:#6b7280;font-weight:600;">Agent</th>
+                        <th style="text-align:left;padding:8px 10px;color:#6b7280;font-weight:600;">Note</th>
+                        <th style="text-align:left;padding:8px 10px;color:#6b7280;font-weight:600;">Date</th>
+                        <th style="text-align:center;padding:8px 10px;color:#6b7280;font-weight:600;">Action</th>
+                    </tr></thead>
+                    <tbody>${rows.map(a => `<tr style="border-bottom:1px solid #f3f4f6;">
+                        <td style="padding:8px 10px;">${a.address || ('Listing #' + a.listing_id)}<br><span style="color:#9ca3af;font-size:11px;">ID: ${a.listing_id}</span></td>
+                        <td style="padding:8px 10px;">${a.agent_first || ''} ${a.agent_last || ''}<br><span style="color:#9ca3af;font-size:11px;">${a.agent_email || ''}</span></td>
+                        <td style="padding:8px 10px;color:#374151;">${a.note || '—'}</td>
+                        <td style="padding:8px 10px;white-space:nowrap;">${a.created_at ? new Date(a.created_at).toLocaleDateString() : '—'}</td>
+                        <td style="padding:8px 10px;text-align:center;"><button onclick="deleteAssignment(${a.id})" style="background:none;border:1px solid #e5e7eb;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;color:#6b7280;">Unassign</button></td>
+                    </tr>`).join('')}</tbody>
+                </table></div>`;
+            } catch (e) { listEl.innerHTML = '<p style="color:#ef4444;font-size:14px;">Failed to load assignments.</p>'; }
+        }
+        function showAssignForm() {
+            const select = document.getElementById('assignRealtorId');
+            select.innerHTML = '<option value="">Select agent…</option>';
+            const members = (companyData && companyData.members) ? companyData.members : [];
+            members.filter(m => m.company_role === 'agent' || m.company_role === 'admin').forEach(m => {
+                const opt = document.createElement('option');
+                opt.value = m.id;
+                opt.textContent = `${m.first_name} ${m.last_name} (${m.company_role})`;
+                select.appendChild(opt);
+            });
+            document.getElementById('assignForm').style.display = 'block';
+            document.getElementById('assignError').style.display = 'none';
+        }
+        function hideAssignForm() {
+            document.getElementById('assignForm').style.display = 'none';
+            document.getElementById('assignListingId').value = '';
+            document.getElementById('assignRealtorId').value = '';
+            document.getElementById('assignNote').value = '';
+            document.getElementById('assignError').style.display = 'none';
+        }
+        async function submitAssignment() {
+            const listing_id = document.getElementById('assignListingId').value.trim();
+            const realtor_id = document.getElementById('assignRealtorId').value;
+            const note = document.getElementById('assignNote').value.trim();
+            const errEl = document.getElementById('assignError');
+            errEl.style.display = 'none';
+            if (!listing_id) { errEl.textContent = 'Listing ID is required.'; errEl.style.display = 'block'; return; }
+            if (!realtor_id) { errEl.textContent = 'Please select an agent.'; errEl.style.display = 'block'; return; }
+            try {
+                const res = await fetch(`${API_BASE_URL}/company/assignments`, {
+                    method: 'POST', credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ listing_id: Number(listing_id), realtor_id: Number(realtor_id), note })
+                });
+                const data = await res.json();
+                if (!res.ok) { errEl.textContent = data.error || 'Failed to create assignment.'; errEl.style.display = 'block'; return; }
+                hideAssignForm();
+                showToast('Assignment created.', 'success');
+                loadAssignments();
+            } catch (e) { errEl.textContent = 'Network error. Please try again.'; errEl.style.display = 'block'; }
+        }
+        async function deleteAssignment(id) {
+            if (!confirm('Unassign this listing?')) return;
+            try {
+                const res = await fetch(`${API_BASE_URL}/company/assignments/${id}`, { method: 'DELETE', credentials: 'include' });
+                if (!res.ok) { showToast('Failed to unassign.', 'error'); return; }
+                showToast('Assignment removed.', 'success');
+                loadAssignments();
+            } catch (e) { showToast('Network error. Please try again.', 'error'); }
         }
 
         async function upgradePlan(plan) {
