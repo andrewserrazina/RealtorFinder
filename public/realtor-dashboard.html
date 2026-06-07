@@ -1626,79 +1626,7 @@
                     </div>
                 </div>
 
-                <!-- Proposal Templates -->
-                <div style="background:white;border-radius:12px;border:1px solid var(--border);padding:1.5rem;">
-                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:0.75rem;">
-                        <div>
-                            <h3 style="font-family:'Crimson Pro',serif;font-size:1.3rem;font-weight:700;color:var(--ink);margin-bottom:0.25rem;">Proposal Templates</h3>
-                            <p style="color:#6b7280;font-size:0.875rem;">Save reusable cover notes to fill in when submitting proposals.</p>
-                        </div>
-                        <button onclick="openTemplateModal()" style="background:var(--accent);color:white;border:none;padding:0.6rem 1.25rem;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.875rem;font-family:inherit;white-space:nowrap;">+ New Template</button>
-                    </div>
-                    <div id="templatesLoading" style="color:#9ca3af;font-size:0.9rem;">Loading templates…</div>
-                    <div id="templatesList" style="display:none;display:flex;flex-direction:column;gap:0.75rem;"></div>
-                    <div id="templatesEmpty" style="display:none;color:#9ca3af;font-size:0.9rem;padding:1rem 0;">No templates yet. Create one to speed up your proposals.</div>
-                </div>
-
-                <!-- Saved Searches -->
-                <div style="background:white;border-radius:12px;border:1px solid var(--border);padding:1.5rem;">
-                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:0.75rem;">
-                        <div>
-                            <h3 style="font-family:'Crimson Pro',serif;font-size:1.3rem;font-weight:700;color:var(--ink);margin-bottom:0.25rem;">Saved Searches</h3>
-                            <p style="color:#6b7280;font-size:0.875rem;">Get emailed when new listings match your criteria.</p>
-                        </div>
-                        <button onclick="openSavedSearchModal()" style="background:var(--accent);color:white;border:none;padding:0.6rem 1.25rem;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.875rem;font-family:inherit;white-space:nowrap;">+ New Search Alert</button>
-                    </div>
-                    <div id="savedSearchesLoading" style="color:#9ca3af;font-size:0.9rem;">Loading…</div>
-                    <div id="savedSearchesList" style="display:none;flex-direction:column;gap:0.75rem;"></div>
-                    <div id="savedSearchesEmpty" style="display:none;color:#9ca3af;font-size:0.9rem;padding:0.5rem 0;">No saved searches yet. Create one to get alerts for new listings.</div>
-                </div>
-
-                <!-- Availability -->
-                <div style="background:white;border-radius:12px;border:1px solid var(--border);padding:1.5rem;">
-                    <h3 style="font-family:'Crimson Pro',serif;font-size:1.3rem;font-weight:700;margin-bottom:0.25rem;color:var(--ink);">Availability</h3>
-                    <p style="color:#6b7280;font-size:0.875rem;margin-bottom:1rem;">Set the days and times you're available to meet with sellers.</p>
-                    <!-- Away/unavailable toggle -->
-                    <div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;padding:0.875rem 1rem;margin-bottom:1.25rem;">
-                        <label style="font-size:0.85rem;font-weight:600;color:#92400e;display:block;margin-bottom:0.5rem;">Mark as Away</label>
-                        <div style="display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap;">
-                            <label style="font-size:0.82rem;color:#78350f;">Away until:</label>
-                            <input type="date" id="unavailableUntil" style="padding:0.4rem 0.75rem;border:1px solid #fcd34d;border-radius:6px;font-family:inherit;font-size:0.875rem;background:white;">
-                            <button onclick="saveUnavailableUntil()" style="background:#d97706;color:white;border:none;border-radius:6px;padding:0.4rem 0.875rem;font-weight:600;cursor:pointer;font-size:0.82rem;font-family:inherit;">Save</button>
-                            <button onclick="clearUnavailableUntil()" style="background:white;color:#92400e;border:1px solid #fcd34d;border-radius:6px;padding:0.4rem 0.875rem;font-weight:600;cursor:pointer;font-size:0.82rem;font-family:inherit;">Clear</button>
-                            <span id="unavailSaved" style="display:none;color:#059669;font-size:0.82rem;">✓ Saved</span>
-                        </div>
-                        <p style="font-size:0.78rem;color:#92400e;margin-top:0.4rem;">Sellers will see an "Away" badge on your proposals until this date.</p>
-                    </div>
-                    <!-- Add slot form -->
-                    <div style="display:flex;gap:0.75rem;flex-wrap:wrap;align-items:flex-end;margin-bottom:1.25rem;">
-                        <div style="display:flex;flex-direction:column;gap:0.3rem;">
-                            <label style="font-size:0.8rem;font-weight:600;color:#374151;">Day</label>
-                            <select id="availDay" style="padding:0.6rem 0.75rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.875rem;">
-                                <option value="0">Sunday</option>
-                                <option value="1">Monday</option>
-                                <option value="2">Tuesday</option>
-                                <option value="3">Wednesday</option>
-                                <option value="4">Thursday</option>
-                                <option value="5">Friday</option>
-                                <option value="6">Saturday</option>
-                            </select>
-                        </div>
-                        <div style="display:flex;flex-direction:column;gap:0.3rem;">
-                            <label style="font-size:0.8rem;font-weight:600;color:#374151;">Start</label>
-                            <input type="time" id="availStart" style="padding:0.6rem 0.75rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.875rem;">
-                        </div>
-                        <div style="display:flex;flex-direction:column;gap:0.3rem;">
-                            <label style="font-size:0.8rem;font-weight:600;color:#374151;">End</label>
-                            <input type="time" id="availEnd" style="padding:0.6rem 0.75rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.875rem;">
-                        </div>
-                        <button onclick="addAvailabilitySlot()" style="background:var(--accent);color:white;border:none;padding:0.6rem 1.25rem;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.875rem;font-family:inherit;white-space:nowrap;">+ Add</button>
-                    </div>
-                    <div id="availabilityLoading" style="color:#9ca3af;font-size:0.9rem;">Loading…</div>
-                    <div id="availabilityList" style="display:none;flex-direction:column;gap:0.5rem;"></div>
-                    <div id="availabilityEmpty" style="display:none;color:#9ca3af;font-size:0.875rem;padding:0.5rem 0;">No availability slots yet. Add your first one above.</div>
-                </div>
-
+                <!-- Profile Completeness Widget (Settings) -->
                 <!-- Profile Completeness Widget (Settings) -->
                 <div class="settings-completeness-widget" id="settingsCompletenessWidget" style="display:none;">
                     <h3>Profile Completeness</h3>
@@ -1768,6 +1696,92 @@
                 </div>
             </div>
             </div><!-- /shub-account -->
+
+
+            <!-- Tools sub-section -->
+            <div id="shub-tools" class="hub-section">
+            <div style="max-width:680px;display:flex;flex-direction:column;gap:1.5rem;">
+                <!-- Proposal Templates -->
+                <div style="background:white;border-radius:12px;border:1px solid var(--border);padding:1.5rem;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:0.75rem;">
+                        <div>
+                            <h3 style="font-family:'Crimson Pro',serif;font-size:1.3rem;font-weight:700;color:var(--ink);margin-bottom:0.25rem;">Proposal Templates</h3>
+                            <p style="color:#6b7280;font-size:0.875rem;">Save reusable cover notes to fill in when submitting proposals.</p>
+                        </div>
+                        <button onclick="openTemplateModal()" style="background:var(--accent);color:white;border:none;padding:0.6rem 1.25rem;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.875rem;font-family:inherit;white-space:nowrap;">+ New Template</button>
+                    </div>
+                    <div id="templatesLoading" style="color:#9ca3af;font-size:0.9rem;">Loading templates…</div>
+                    <div id="templatesList" style="display:none;display:flex;flex-direction:column;gap:0.75rem;"></div>
+                    <div id="templatesEmpty" style="display:none;color:#9ca3af;font-size:0.9rem;padding:1rem 0;">No templates yet. Create one to speed up your proposals.</div>
+                </div>
+
+                <!-- Saved Searches -->
+                <div style="background:white;border-radius:12px;border:1px solid var(--border);padding:1.5rem;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:0.75rem;">
+                        <div>
+                            <h3 style="font-family:'Crimson Pro',serif;font-size:1.3rem;font-weight:700;color:var(--ink);margin-bottom:0.25rem;">Saved Searches</h3>
+                            <p style="color:#6b7280;font-size:0.875rem;">Get emailed when new listings match your criteria.</p>
+                        </div>
+                        <button onclick="openSavedSearchModal()" style="background:var(--accent);color:white;border:none;padding:0.6rem 1.25rem;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.875rem;font-family:inherit;white-space:nowrap;">+ New Search Alert</button>
+                    </div>
+                    <div id="savedSearchesLoading" style="color:#9ca3af;font-size:0.9rem;">Loading…</div>
+                    <div id="savedSearchesList" style="display:none;flex-direction:column;gap:0.75rem;"></div>
+                    <div id="savedSearchesEmpty" style="display:none;color:#9ca3af;font-size:0.9rem;padding:0.5rem 0;">No saved searches yet. Create one to get alerts for new listings.</div>
+                </div>
+
+            </div>
+            </div>
+
+            <!-- Availability sub-section -->
+            <div id="shub-availability" class="hub-section">
+            <div style="max-width:680px;">
+                <!-- Availability -->
+                <div style="background:white;border-radius:12px;border:1px solid var(--border);padding:1.5rem;">
+                    <h3 style="font-family:'Crimson Pro',serif;font-size:1.3rem;font-weight:700;margin-bottom:0.25rem;color:var(--ink);">Availability</h3>
+                    <p style="color:#6b7280;font-size:0.875rem;margin-bottom:1rem;">Set the days and times you're available to meet with sellers.</p>
+                    <!-- Away/unavailable toggle -->
+                    <div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;padding:0.875rem 1rem;margin-bottom:1.25rem;">
+                        <label style="font-size:0.85rem;font-weight:600;color:#92400e;display:block;margin-bottom:0.5rem;">Mark as Away</label>
+                        <div style="display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap;">
+                            <label style="font-size:0.82rem;color:#78350f;">Away until:</label>
+                            <input type="date" id="unavailableUntil" style="padding:0.4rem 0.75rem;border:1px solid #fcd34d;border-radius:6px;font-family:inherit;font-size:0.875rem;background:white;">
+                            <button onclick="saveUnavailableUntil()" style="background:#d97706;color:white;border:none;border-radius:6px;padding:0.4rem 0.875rem;font-weight:600;cursor:pointer;font-size:0.82rem;font-family:inherit;">Save</button>
+                            <button onclick="clearUnavailableUntil()" style="background:white;color:#92400e;border:1px solid #fcd34d;border-radius:6px;padding:0.4rem 0.875rem;font-weight:600;cursor:pointer;font-size:0.82rem;font-family:inherit;">Clear</button>
+                            <span id="unavailSaved" style="display:none;color:#059669;font-size:0.82rem;">✓ Saved</span>
+                        </div>
+                        <p style="font-size:0.78rem;color:#92400e;margin-top:0.4rem;">Sellers will see an "Away" badge on your proposals until this date.</p>
+                    </div>
+                    <!-- Add slot form -->
+                    <div style="display:flex;gap:0.75rem;flex-wrap:wrap;align-items:flex-end;margin-bottom:1.25rem;">
+                        <div style="display:flex;flex-direction:column;gap:0.3rem;">
+                            <label style="font-size:0.8rem;font-weight:600;color:#374151;">Day</label>
+                            <select id="availDay" style="padding:0.6rem 0.75rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.875rem;">
+                                <option value="0">Sunday</option>
+                                <option value="1">Monday</option>
+                                <option value="2">Tuesday</option>
+                                <option value="3">Wednesday</option>
+                                <option value="4">Thursday</option>
+                                <option value="5">Friday</option>
+                                <option value="6">Saturday</option>
+                            </select>
+                        </div>
+                        <div style="display:flex;flex-direction:column;gap:0.3rem;">
+                            <label style="font-size:0.8rem;font-weight:600;color:#374151;">Start</label>
+                            <input type="time" id="availStart" style="padding:0.6rem 0.75rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.875rem;">
+                        </div>
+                        <div style="display:flex;flex-direction:column;gap:0.3rem;">
+                            <label style="font-size:0.8rem;font-weight:600;color:#374151;">End</label>
+                            <input type="time" id="availEnd" style="padding:0.6rem 0.75rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.875rem;">
+                        </div>
+                        <button onclick="addAvailabilitySlot()" style="background:var(--accent);color:white;border:none;padding:0.6rem 1.25rem;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.875rem;font-family:inherit;white-space:nowrap;">+ Add</button>
+                    </div>
+                    <div id="availabilityLoading" style="color:#9ca3af;font-size:0.9rem;">Loading…</div>
+                    <div id="availabilityList" style="display:none;flex-direction:column;gap:0.5rem;"></div>
+                    <div id="availabilityEmpty" style="display:none;color:#9ca3af;font-size:0.875rem;padding:0.5rem 0;">No availability slots yet. Add your first one above.</div>
+                </div>
+
+            </div>
+            </div>
 
             <!-- Company sub-section -->
             <div id="shub-company" class="hub-section">
