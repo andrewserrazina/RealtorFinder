@@ -34,10 +34,14 @@ const bcrypt = require('bcrypt');
 const { upload, uploadDoc, uploadToCloudinary, uploadToCloudinaryDoc } = require('./config/cloudinary');
 const stripe = process.env.STRIPE_SECRET_KEY ? require('stripe')(process.env.STRIPE_SECRET_KEY) : null;
 const webpush = require('web-push');
+if (!process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) {
+    console.error('FATAL: VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY env vars are required for push notifications. Generate with: node -e "const wp=require(\'web-push\');console.log(wp.generateVAPIDKeys())"');
+    process.exit(1);
+}
 webpush.setVapidDetails(
     'mailto:noreply@realtorfinder.net',
-    process.env.VAPID_PUBLIC_KEY  || 'BAS4ih_DOx3ibjkGz9fDk33PxLgtA9qzn8XdX9uz1gRndcEf6vNC-0wbeGnIIMiznXrFrDaceGypiiCZm6s6X00',
-    process.env.VAPID_PRIVATE_KEY || 'LojuQZ72YkG4AZJjxSEj1p5l-yzSdUFUlHDWRWYjr84'
+    process.env.VAPID_PUBLIC_KEY,
+    process.env.VAPID_PRIVATE_KEY
 );
 
 const { db, pool } = require('./db');
@@ -252,7 +256,6 @@ async function notifyNearbyRealtors(listing) {
                 if (notifiedIds.has(realtor.id)) continue;
                 await emailService.sendNewListingAlert(realtor, listing, 0);
                 sseNotify(realtor.id, { type: 'notification' });
-                pushNotify(realtor.id, 'New Listing Match', `${listing.address || 'A new listing'} in ${listing.city || 'your area'} is looking for a realtor.`, '/dashboard/realtor?tab=browse');
                 notifiedIds.add(realtor.id);
                 sent++;
             }
@@ -279,10 +282,30 @@ async function notifyNearbyRealtors(listing) {
                 if (dist <= RADIUS_MILES) {
                     await emailService.sendNewListingAlert(realtor, listing, dist);
                     sseNotify(realtor.id, { type: 'notification' });
-                    pushNotify(realtor.id, 'New Listing Match', `${listing.address || 'A new listing'} in ${listing.city || 'your area'} is looking for a realtor.`, '/dashboard/realtor?tab=browse');
                     notifiedIds.add(realtor.id);
                     sent++;
                 }
+            }
+        }
+
+        // Batch push notification for all matched realtors in one DB round-trip
+        if (notifiedIds.size > 0) {
+            const ids = Array.from(notifiedIds);
+            const pushTitle = 'New Listing Match';
+            const pushBody = `${listing.address || 'A new listing'} in ${listing.city || 'your area'} is looking for a realtor.`;
+            const pushUrl = '/dashboard/realtor?tab=browse';
+            const { rows: subs } = await pool.query(
+                `SELECT user_id, endpoint, p256dh, auth FROM push_subscriptions WHERE user_id = ANY($1::int[])`,
+                [ids]
+            );
+            const payload = JSON.stringify({ title: pushTitle, body: pushBody, url: pushUrl });
+            for (const sub of subs) {
+                webpush.sendNotification({ endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } }, payload)
+                    .catch(err => {
+                        if (err.statusCode === 410 || err.statusCode === 404) {
+                            pool.query('DELETE FROM push_subscriptions WHERE endpoint = $1', [sub.endpoint]).catch(() => {});
+                        }
+                    });
             }
         }
 
@@ -327,7 +350,7 @@ async function verifyRecaptcha(token) {
         const data = await resp.json();
         return data.success && data.score >= 0.5;
     } catch {
-        return true; // fail open on network error so real users aren't blocked
+        return false; // fail closed on network error — bots still blocked, real users can retry
     }
 }
 
@@ -589,11 +612,18 @@ app.post('/api/company/agents', auth.requireAuth, async (req, res) => {
 app.delete('/api/company/agents/:userId', auth.requireAuth, async (req, res) => {
     try {
         if (req.user.user_type !== 'realtor') return res.status(403).json({ error: 'Realtors only' });
-        const owner = await db.getProfile(req.user.id);
-        if (!owner.company_id || !['owner', 'admin'].includes(owner.company_role)) {
+        const caller = await db.getProfile(req.user.id);
+        if (!caller.company_id || !['owner', 'admin'].includes(caller.company_role)) {
             return res.status(403).json({ error: 'Only the company owner or admin can remove agents' });
         }
-        await db.removeAgentFromCompany(parseInt(req.params.userId), owner.company_id);
+        const targetId = parseInt(req.params.userId);
+        if (caller.company_role === 'admin') {
+            const target = await db.getProfile(targetId);
+            if (target && target.company_role === 'admin') {
+                return res.status(403).json({ error: 'Admins cannot remove other admins — only the owner can do that' });
+            }
+        }
+        await db.removeAgentFromCompany(targetId, caller.company_id);
         res.json({ success: true });
     } catch (err) {
         console.error('DELETE /api/company/agents error:', err);
@@ -2291,6 +2321,12 @@ app.delete('/api/admin/users/:id', requireAdmin, async (req, res) => {
     try {
         await client.query('BEGIN');
         await client.query(`DELETE FROM session WHERE sess->>'userId' = $1::text`, [userId]);
+        await client.query(`DELETE FROM notifications WHERE user_id = $1`, [userId]);
+        await client.query(`DELETE FROM push_subscriptions WHERE user_id = $1`, [userId]);
+        await client.query(`DELETE FROM messages WHERE from_user_id = $1 OR to_user_id = $1`, [userId]);
+        await client.query(`DELETE FROM reviews WHERE user_id = $1`, [userId]);
+        await client.query(`DELETE FROM realtor_reviews WHERE realtor_id = $1 OR reviewer_id = $1`, [userId]);
+        await client.query(`DELETE FROM proposals WHERE realtor_id = $1`, [userId]);
         await client.query(`DELETE FROM offers WHERE user_id = $1`, [userId]);
         await client.query(`UPDATE listings SET deleted_at = NOW() WHERE user_id = $1 AND deleted_at IS NULL`, [userId]);
         const { rows } = await client.query(`DELETE FROM users WHERE id = $1 RETURNING id, email`, [userId]);
@@ -2654,7 +2690,14 @@ app.post('/api/admin/users/:id/notes', requireAdmin, async (req, res) => {
 app.delete('/api/admin/notes/:noteId', requireAdmin, async (req, res) => {
     try {
         const noteId = parseInt(req.params.noteId);
-        await pool.query(`DELETE FROM admin_crm_notes WHERE id = $1`, [noteId]);
+        const userId = parseInt(req.query.userId || req.body?.userId);
+        if (!noteId) return res.status(400).json({ error: 'Invalid note id' });
+        const query = userId
+            ? `DELETE FROM admin_crm_notes WHERE id = $1 AND user_id = $2`
+            : `DELETE FROM admin_crm_notes WHERE id = $1`;
+        const params = userId ? [noteId, userId] : [noteId];
+        const { rowCount } = await pool.query(query, params);
+        if (!rowCount) return res.status(404).json({ error: 'Note not found' });
         res.json({ success: true });
     } catch (err) {
         console.error('Admin note DELETE error:', err);
@@ -3237,7 +3280,8 @@ app.post('/api/city-lead', waitlistLimiter, async (req, res) => {
         console.log(`🏠 City lead: ${normalizedType} in ${city_name}, ${state_code} — ${email}`);
 
         try {
-            await emailService.sendWaitlistConfirmation(email.trim().toLowerCase(), normalizedType);
+            const cityLeadToken = require('crypto').randomBytes(16).toString('hex');
+            await emailService.sendWaitlistConfirmation(email.trim().toLowerCase(), normalizedType, cityLeadToken);
         } catch (emailErr) {
             console.error('City lead email failed:', emailErr.message);
         }
@@ -5986,7 +6030,7 @@ app.delete('/api/open-houses/:id', auth.requireAuth, async (req, res) => {
     }
 });
 
-app.post('/api/open-houses/:id/rsvp', async (req, res) => {
+app.post('/api/open-houses/:id/rsvp', auth.requireAuth, async (req, res) => {
     try {
         const { name, email } = req.body;
         if (!name || !email) return res.status(400).json({ error: 'name and email required' });
@@ -6142,7 +6186,7 @@ app.post('/api/proposals/:id/followup', auth.requireAuth, async (req, res) => {
 
 // ===== BUYER FORMAL OFFERS =====
 
-app.post('/api/listings/:id/buyer-offers', async (req, res) => {
+app.post('/api/listings/:id/buyer-offers', auth.requireAuth, async (req, res) => {
     try {
         const listingId = parseInt(req.params.id);
         const { buyer_name, buyer_email, offer_price, contingencies, closing_date_target, notes } = req.body;
@@ -6695,9 +6739,11 @@ app.post('/api/messages', auth.requireAuth, async (req, res) => {
             INSERT INTO notifications (user_id, type, title, body, link)
             VALUES ($1, 'message', 'New Message', $2, '/dashboard/' || (SELECT user_type FROM users WHERE id=$1))
             ON CONFLICT DO NOTHING
-        `, [toUserId, `You have a new message`]).then(() => {
+        `, [toUserId, `You have a new message`]).then(async () => {
             sseNotify(toUserId, { type: 'new_message', fromUserId: uid, listingId: listingId || null, messageId: newMsgId });
-            pushNotify(toUserId, 'New Message', 'You have a new message', '/dashboard/realtor?tab=messages');
+            const { rows: [recipient] } = await pool.query('SELECT user_type FROM users WHERE id = $1', [toUserId]);
+            const dashTab = recipient && recipient.user_type === 'seller' ? '/dashboard/seller' : '/dashboard/realtor?tab=messages';
+            pushNotify(toUserId, 'New Message', 'You have a new message', dashTab);
         }).catch(() => {});
 
         // Fire-and-forget email notification
@@ -6769,7 +6815,7 @@ app.get('/api/messages/unread-count', auth.requireAuth, async (req, res) => {
 // ===== PUSH NOTIFICATION ROUTES =====
 
 app.get('/api/push/vapid-public-key', (req, res) => {
-    res.json({ publicKey: process.env.VAPID_PUBLIC_KEY || 'BAS4ih_DOx3ibjkGz9fDk33PxLgtA9qzn8XdX9uz1gRndcEf6vNC-0wbeGnIIMiznXrFrDaceGypiiCZm6s6X00' });
+    res.json({ publicKey: process.env.VAPID_PUBLIC_KEY });
 });
 
 app.post('/api/push/subscribe', auth.requireAuth, async (req, res) => {

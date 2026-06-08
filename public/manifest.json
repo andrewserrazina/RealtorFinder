@@ -2,7 +2,7 @@
   "name": "RealtorFinder",
   "short_name": "RealtorFinder",
   "description": "Browse listings, submit proposals, and manage your pipeline on the go",
-  "start_url": "/dashboard/realtor",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "background_color": "#0A2540",
