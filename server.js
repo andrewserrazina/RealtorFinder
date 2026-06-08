@@ -1848,6 +1848,46 @@ app.delete('/api/listings/:id', auth.requireAuth, async (req, res) => {
     }
 });
 
+// Seller invites a specific realtor to submit a proposal
+app.post('/api/listings/:id/invite-realtor', auth.requireAuth, async (req, res) => {
+    try {
+        const listingId = parseInt(req.params.id);
+        const sellerId = req.session.userId;
+        const { realtorId } = req.body;
+        if (!realtorId) return res.status(400).json({ error: 'realtorId required' });
+
+        // Verify the seller owns this listing
+        const { rows: [listing] } = await pool.query(
+            `SELECT id, address, city, state FROM listings WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL`,
+            [listingId, sellerId]
+        );
+        if (!listing) return res.status(404).json({ error: 'Listing not found' });
+
+        // Get the realtor's info
+        const { rows: [realtor] } = await pool.query(
+            `SELECT id, email, first_name FROM users WHERE id = $1 AND user_type = 'realtor' AND is_approved = true`,
+            [realtorId]
+        );
+        if (!realtor) return res.status(404).json({ error: 'Realtor not found' });
+
+        // Send notification + email
+        await pool.query(
+            `INSERT INTO notifications (user_id, type, title, body, link) VALUES ($1, 'listing_invite', 'Listing Invitation', $2, '/dashboard/realtor?tab=browse')`,
+            [realtorId, `A seller has invited you to submit a proposal on ${listing.address}`]
+        );
+        sseNotify(realtorId, { type: 'notification' });
+        pushNotify(realtorId, 'Listing Invitation', `You've been invited to submit a proposal on ${listing.address}`, '/dashboard/realtor?tab=browse');
+
+        // Fire-and-forget email
+        emailService.sendNewListingAlert(realtor, listing, 0).catch(() => {});
+
+        res.json({ ok: true });
+    } catch (err) {
+        console.error('invite-realtor error:', err);
+        res.status(500).json({ error: 'Failed to send invitation' });
+    }
+});
+
 // Get user profile
 app.get('/api/profile', auth.requireAuth, async (req, res) => {
     try {

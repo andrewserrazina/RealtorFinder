@@ -3536,15 +3536,31 @@
                     <div style="background:#f8f9fa;border:1px solid #e1e8ed;border-radius:10px;padding:1rem;margin-top:0.5rem;">
                         <div style="font-weight:600;font-size:0.85rem;color:#374151;margin-bottom:0.75rem;">📄 Documents & Disclosures</div>
                         <div id="docs-list-${listingId}">
-                            ${docs.length ? docs.map(d => `
-                                <div style="display:flex;align-items:center;justify-content:space-between;padding:0.35rem 0;border-bottom:1px solid #e5e7eb;font-size:0.85rem;">
-                                    <a href="${esc(d.url)}" target="_blank" style="color:#0284c7;text-decoration:none;">📎 ${esc(d.name)}</a>
-                                    <button onclick="deleteDoc(${listingId},${d.id})" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:0.85rem;padding:0 0.25rem;">✕</button>
-                                </div>`).join('') : '<div style="color:#9ca3af;font-size:0.83rem;">No documents yet.</div>'}
+                            ${docs.length ? docs.map(d => {
+                                const typeColors = { Contract: '#dbeafe', Disclosure: '#fef3c7', Inspection: '#d1fae5', Appraisal: '#ede9fe', Other: '#f3f4f6' };
+                                const typeTextColors = { Contract: '#1d4ed8', Disclosure: '#92400e', Inspection: '#065f46', Appraisal: '#5b21b6', Other: '#374151' };
+                                const dt = d.doc_type || 'Other';
+                                const badgeBg = typeColors[dt] || '#f3f4f6';
+                                const badgeText = typeTextColors[dt] || '#374151';
+                                return `<div style="display:flex;align-items:center;justify-content:space-between;padding:0.35rem 0;border-bottom:1px solid #e5e7eb;font-size:0.85rem;">
+                                    <div style="display:flex;align-items:center;gap:0.5rem;min-width:0;">
+                                        <span style="background:${badgeBg};color:${badgeText};border-radius:4px;padding:1px 6px;font-size:0.75rem;font-weight:600;white-space:nowrap;">${esc(dt)}</span>
+                                        <a href="${esc(d.url)}" target="_blank" style="color:#0284c7;text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">📎 ${esc(d.name)}</a>
+                                    </div>
+                                    <button onclick="deleteDoc(${listingId},${d.id})" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:0.85rem;padding:0 0.25rem;flex-shrink:0;">✕</button>
+                                </div>`;
+                            }).join('') : '<div style="color:#9ca3af;font-size:0.83rem;">No documents yet.</div>'}
                         </div>
                         <div style="margin-top:0.75rem;display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
                             <input type="file" id="docFile-${listingId}" accept=".pdf,.doc,.docx,.txt" style="font-size:0.82rem;color:#555;">
-                            <input type="text" id="docName-${listingId}" placeholder="Document name (optional)" style="padding:0.4rem 0.75rem;border:1px solid #d1d5db;border-radius:6px;font-size:0.82rem;font-family:inherit;flex:1;min-width:140px;">
+                            <select id="docType-${listingId}" style="padding:0.4rem 0.6rem;border:1px solid #d1d5db;border-radius:6px;font-size:0.82rem;font-family:inherit;color:#374151;">
+                                <option value="Other">Other</option>
+                                <option value="Contract">Contract</option>
+                                <option value="Disclosure">Disclosure</option>
+                                <option value="Inspection">Inspection</option>
+                                <option value="Appraisal">Appraisal</option>
+                            </select>
+                            <input type="text" id="docName-${listingId}" placeholder="Document name (optional)" style="padding:0.4rem 0.75rem;border:1px solid #d1d5db;border-radius:6px;font-size:0.82rem;font-family:inherit;flex:1;min-width:120px;">
                             <button onclick="uploadDoc(${listingId})" style="background:#0a2540;color:white;border:none;border-radius:6px;padding:0.4rem 0.9rem;font-size:0.82rem;font-weight:600;cursor:pointer;white-space:nowrap;font-family:inherit;">Upload</button>
                         </div>
                         <div id="docUploadMsg-${listingId}" style="font-size:0.8rem;margin-top:0.4rem;"></div>
@@ -3555,12 +3571,14 @@
         async function uploadDoc(listingId) {
             const fileEl = document.getElementById(`docFile-${listingId}`);
             const nameEl = document.getElementById(`docName-${listingId}`);
+            const typeEl = document.getElementById(`docType-${listingId}`);
             const msgEl = document.getElementById(`docUploadMsg-${listingId}`);
             if (!fileEl?.files[0]) { msgEl.textContent = 'Please select a file.'; msgEl.style.color = '#dc2626'; return; }
             msgEl.textContent = 'Uploading…'; msgEl.style.color = '#6b7280';
             const fd = new FormData();
             fd.append('doc', fileEl.files[0]);
             if (nameEl?.value.trim()) fd.append('name', nameEl.value.trim());
+            fd.append('doc_type', typeEl?.value || 'Other');
             try {
                 const res = await fetch(`/api/listings/${listingId}/documents`, { method: 'POST', credentials: 'include', body: fd });
                 if (!res.ok) { const d = await res.json(); msgEl.textContent = d.error || 'Upload failed.'; msgEl.style.color = '#dc2626'; return; }
