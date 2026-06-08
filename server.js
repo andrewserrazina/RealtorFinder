@@ -34,15 +34,21 @@ const bcrypt = require('bcrypt');
 const { upload, uploadDoc, uploadToCloudinary, uploadToCloudinaryDoc } = require('./config/cloudinary');
 const stripe = process.env.STRIPE_SECRET_KEY ? require('stripe')(process.env.STRIPE_SECRET_KEY) : null;
 const webpush = require('web-push');
-if (!process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) {
-    console.error('FATAL: VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY env vars are required for push notifications. Generate with: node -e "const wp=require(\'web-push\');console.log(wp.generateVAPIDKeys())"');
-    process.exit(1);
+let _webpushReady = false;
+try {
+    if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
+        webpush.setVapidDetails(
+            'mailto:noreply@realtorfinder.net',
+            process.env.VAPID_PUBLIC_KEY,
+            process.env.VAPID_PRIVATE_KEY
+        );
+        _webpushReady = true;
+    } else {
+        console.warn('⚠️  VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY not set — push notifications disabled');
+    }
+} catch (err) {
+    console.warn('⚠️  VAPID key config failed (push notifications disabled):', err.message);
 }
-webpush.setVapidDetails(
-    'mailto:noreply@realtorfinder.net',
-    process.env.VAPID_PUBLIC_KEY,
-    process.env.VAPID_PRIVATE_KEY
-);
 
 const { db, pool } = require('./db');
 const emailService = require('./email');
@@ -366,6 +372,7 @@ function sseNotify(userId, payload) {
 }
 
 async function pushNotify(userId, title, body, url = '/dashboard/realtor') {
+    if (!_webpushReady) return;
     try {
         const { rows } = await pool.query('SELECT endpoint, p256dh, auth FROM push_subscriptions WHERE user_id = $1', [userId]);
         const payload = JSON.stringify({ title, body, url });
