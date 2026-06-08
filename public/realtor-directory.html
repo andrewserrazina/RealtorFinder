@@ -234,7 +234,7 @@
         <a href="/about">About</a>
         <a href="/features">Features</a>
         <a href="/realtors/directory" style="color:var(--accent);">Find a Realtor</a>
-        <a href="/dashboard/buyer" class="btn btn-primary" style="padding:0.45rem 1rem;">Post a Request</a>
+        <a href="/login?tab=signup&type=seller" id="navCtaBtn" class="btn btn-primary" style="padding:0.45rem 1rem;">List My Home</a>
     </div>
 </nav>
 
@@ -307,6 +307,17 @@
     <button class="btn btn-outline" onclick="loadMore()" id="loadMoreBtn" style="min-width:160px;">Load More</button>
 </div>
 
+<section id="dirBottomCta" style="background:#0A2540;color:white;padding:4rem 2rem;text-align:center;">
+    <div style="max-width:640px;margin:0 auto;">
+        <h2 style="font-family:'Crimson Pro',serif;font-size:2.2rem;font-weight:900;margin-bottom:0.75rem;line-height:1.15;">Selling your home?</h2>
+        <p style="font-size:1.05rem;opacity:0.85;margin-bottom:2rem;line-height:1.6;">List free and let verified agents like these submit proposals. Compare commissions, marketing plans, and track records — then choose your favorite.</p>
+        <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;">
+            <a href="/login?tab=signup&type=seller" style="background:#FF6B35;color:white;padding:0.9rem 2rem;border-radius:10px;font-weight:700;text-decoration:none;font-size:1rem;">List My Home Free</a>
+            <a href="/login?tab=signup&type=realtor" style="background:transparent;color:white;border:2px solid rgba(255,255,255,0.35);padding:0.9rem 2rem;border-radius:10px;font-weight:600;text-decoration:none;font-size:1rem;">I'm a Realtor</a>
+        </div>
+    </div>
+</section>
+
 <footer>
     <p>&copy; 2025 RealtorFinder &nbsp;·&nbsp; <a href="/about">About</a> &nbsp;·&nbsp; <a href="/features">Features</a> &nbsp;·&nbsp; <a href="/realtors/directory">Find a Realtor</a> &nbsp;·&nbsp; <a href="/privacy">Privacy</a> &nbsp;·&nbsp; <a href="/terms">Terms</a> &nbsp;·&nbsp; <a href="/cookies">Cookies</a></p>
 </footer>
@@ -372,6 +383,11 @@
             if (!res.ok) return;
             const user = await res.json();
             currentUserId = user.id;
+            // Logged-in users: update nav and hide conversion CTA
+            const navBtn = document.getElementById('navCtaBtn');
+            if (navBtn) { navBtn.href = '/dashboard/seller'; navBtn.textContent = 'My Dashboard'; }
+            const bottomCta = document.getElementById('dirBottomCta');
+            if (bottomCta) bottomCta.style.display = 'none';
             const savedRes = await fetch('/api/saved-realtors', { credentials: 'include' });
             if (savedRes.ok) {
                 const saved = await savedRes.json();
@@ -484,7 +500,7 @@
                     ${areas ? `<div class="card-areas">📍 ${esc(areas)}</div>` : ''}
                     <div class="card-footer">
                         <a href="/realtor/${r.id}" class="btn btn-outline">View Profile</a>
-                        <a href="/dashboard/buyer" class="btn btn-primary">Request Match</a>
+                        <a href="${currentUserId ? '/dashboard/seller' : '/login?tab=signup&type=seller'}" class="btn btn-primary">List My Home</a>
                         ${heartBtn}
                     </div>
                 </div>
