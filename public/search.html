@@ -214,10 +214,40 @@
         .skeleton { background: linear-gradient(90deg, #f0ece8 25%, #e8e4e0 50%, #f0ece8 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 8px; }
         @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
 
+        .nav-hamburger {
+            display: none;
+            flex-direction: column;
+            gap: 5px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 4px;
+        }
+        .nav-hamburger span { display: block; width: 22px; height: 2px; background: var(--ink); border-radius: 2px; }
+        .mobile-menu {
+            display: none;
+            background: white;
+            border-bottom: 1px solid var(--border);
+            padding: 0.5rem 0;
+        }
+        .mobile-menu.open { display: block; }
+        .mobile-menu a {
+            display: block;
+            padding: 0.75rem 2rem;
+            color: var(--ink);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.95rem;
+            border-bottom: 1px solid var(--border);
+        }
+        .mobile-menu a:last-child { border-bottom: none; }
+        .mobile-menu a:hover { color: var(--accent); }
+        .mobile-menu .btn { margin: 0.75rem 2rem; display: block; text-align: center; }
         @media (max-width: 768px) {
             .filter-container { flex-direction: column; align-items: stretch; }
             .filter-container input, .filter-container select { width: 100%; }
             .header-nav { display: none; }
+            .nav-hamburger { display: flex; }
         }
     </style>
 </head>
@@ -233,9 +263,19 @@
             <div style="display:flex;gap:0.75rem;align-items:center;">
                 <a href="/login" class="btn-outline">Sign In</a>
                 <a href="/login?tab=signup" class="btn">Get Started</a>
+                <button class="nav-hamburger" id="navHamburger" aria-label="Open menu" aria-expanded="false">
+                    <span></span><span></span><span></span>
+                </button>
             </div>
         </div>
     </header>
+    <div class="mobile-menu" id="mobileMenu">
+        <a href="/realtors/directory">Find a Realtor</a>
+        <a href="/search">Browse Listings</a>
+        <a href="/login?tab=signup&type=seller">Post a Listing</a>
+        <a href="/login" class="btn-outline">Sign In</a>
+        <a href="/login?tab=signup" class="btn">Get Started</a>
+    </div>
 
     <div class="hero">
         <h1>Browse Homes For Sale</h1>
@@ -421,6 +461,14 @@
         document.getElementById('filterCity').addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(true); });
 
         doSearch(true);
+
+        // Mobile nav toggle
+        const _hamburger = document.getElementById('navHamburger');
+        const _mobileMenu = document.getElementById('mobileMenu');
+        _hamburger.addEventListener('click', () => {
+            const open = _mobileMenu.classList.toggle('open');
+            _hamburger.setAttribute('aria-expanded', open);
+        });
     </script>
 
 <section style="background:#0A2540;color:white;padding:4rem 2rem;text-align:center;">

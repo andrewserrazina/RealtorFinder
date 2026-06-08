@@ -31,6 +31,8 @@ if (process.env.NODE_ENV === 'production') {
 const https = require('https');
 const crypto = require('crypto');
 const bcrypt = require('bcrypt');
+const { OAuth2Client: _GoogleOAuth2Client } = require('google-auth-library');
+const _googleClient = process.env.GOOGLE_CLIENT_ID ? new _GoogleOAuth2Client(process.env.GOOGLE_CLIENT_ID) : null;
 const { upload, uploadDoc, uploadToCloudinary, uploadToCloudinaryDoc } = require('./config/cloudinary');
 const stripe = process.env.STRIPE_SECRET_KEY ? require('stripe')(process.env.STRIPE_SECRET_KEY) : null;
 const webpush = require('web-push');
@@ -1081,6 +1083,131 @@ app.get('/api/auth/me', (req, res) => {
         isApproved: req.user.is_admin ? true : (req.user.is_approved === true),
         subscription_plan: req.user.subscription_plan || 'free'
     });
+});
+
+// Public client-side config (non-secret values safe to expose to the browser)
+app.get('/api/config/public', (req, res) => {
+    res.json({
+        googleClientId: process.env.GOOGLE_CLIENT_ID || null
+    });
+});
+
+// Google OAuth — verify ID token issued by the GIS client-side flow
+app.post('/api/auth/google', async (req, res) => {
+    try {
+        if (!_googleClient) {
+            return res.status(503).json({ error: 'Google sign-in is not configured on this server' });
+        }
+
+        const { credential, userType, zipCode } = req.body;
+        if (!credential) return res.status(400).json({ error: 'Missing Google credential' });
+
+        // Verify the signed JWT
+        const ticket = await _googleClient.verifyIdToken({
+            idToken: credential,
+            audience: process.env.GOOGLE_CLIENT_ID
+        });
+        const payload = ticket.getPayload();
+        const googleId  = payload.sub;
+        const email     = payload.email;
+        const firstName = payload.given_name || (payload.name || '').split(' ')[0] || 'User';
+        const lastName  = payload.family_name || (payload.name || '').split(' ').slice(1).join(' ') || '';
+
+        // Look for existing account by google_id, then fall back to email
+        const { rows } = await pool.query(
+            `SELECT id, email, user_type, first_name, last_name, zip_code,
+                    is_active, is_approved, is_admin, google_id
+             FROM users
+             WHERE google_id = $1 OR (email = $2 AND google_id IS NULL)
+             ORDER BY (google_id = $1) DESC
+             LIMIT 1`,
+            [googleId, email]
+        );
+        let user = rows[0];
+
+        if (user) {
+            if (user.is_active === false) {
+                return res.status(403).json({ error: 'Account is deactivated' });
+            }
+            // Link google_id if this was an email-only account
+            if (!user.google_id) {
+                await pool.query(`UPDATE users SET google_id = $1, email_verified = TRUE WHERE id = $2`, [googleId, user.id]);
+            }
+            pool.query(`UPDATE users SET last_login_at = NOW() WHERE id = $1`, [user.id]).catch(() => {});
+        } else {
+            // New user — need account type; zip optional (prompt in dashboard if blank)
+            if (!userType || !['seller', 'realtor', 'buyer'].includes(userType)) {
+                return res.status(400).json({ error: 'Account type required for new registration', needsType: true });
+            }
+
+            // If no zip provided, ask the frontend to collect it before we create the account
+            const safeZip = (zipCode || '').replace(/\D/g, '').substring(0, 5);
+            if (!safeZip) {
+                return res.status(200).json({
+                    needsZip: true,
+                    firstName,
+                    lastName,
+                    email
+                });
+            }
+
+            const { rows: newRows } = await pool.query(
+                `INSERT INTO users (email, google_id, user_type, first_name, last_name, zip_code,
+                                    email_verified, is_active, is_approved, created_at)
+                 VALUES ($1, $2, $3, $4, $5, $6, TRUE, TRUE, FALSE, NOW())
+                 RETURNING id, email, user_type, first_name, last_name, zip_code, is_approved`,
+                [email, googleId, userType, firstName, lastName, safeZip]
+            );
+            user = newRows[0];
+
+            // Profile slug
+            const rawSlug = `${firstName}-${lastName}-${user.id}`.toLowerCase().replace(/[^a-z0-9-]/g, '');
+            pool.query(`UPDATE users SET profile_slug = $1, terms_accepted_at = NOW() WHERE id = $2`, [rawSlug, user.id]).catch(() => {});
+
+            // Company for realtors
+            if (userType === 'realtor') {
+                db.createCompany(`${firstName} ${lastName}`, user.id, 'basic').catch(e => console.error('Company creation (non-fatal):', e.message));
+            }
+
+            pool.query(`UPDATE users SET last_login_at = NOW() WHERE id = $1`, [user.id]).catch(() => {});
+
+            // Handle referral from cookie
+            const refCode = req.cookies?.ref_code;
+            if (refCode) {
+                pool.query(`SELECT id FROM users WHERE referral_code = $1 AND user_type = 'realtor'`, [refCode])
+                    .then(({ rows: rr }) => {
+                        if (rr.length) pool.query(`UPDATE users SET referred_by = $1 WHERE id = $2`, [rr[0].id, user.id]).catch(() => {});
+                    }).catch(() => {});
+            }
+        }
+
+        req.session.userId       = user.id;
+        req.session.userType     = user.user_type;
+        req.session.firstName    = user.first_name;
+        req.session.lastName     = user.last_name;
+        req.session.zipCode      = user.zip_code;
+        req.session.emailVerified = true;
+        req.session.isApproved   = user.is_approved || user.is_admin || false;
+
+        req.session.save(err => {
+            if (err) return res.status(500).json({ error: 'Session save failed' });
+            res.json({
+                success: true,
+                userId: user.id,
+                email: user.email,
+                userType: user.user_type,
+                firstName: user.first_name,
+                lastName: user.last_name,
+                zipCode: user.zip_code,
+                isApproved: user.is_approved || user.is_admin || false,
+                emailVerified: true
+            });
+        });
+
+    } catch (err) {
+        console.error('Google auth error:', err);
+        res.status(500).json({ error: 'Google sign-in failed. Please try again.' });
+    }
 });
 
 // Verify email via token link
@@ -4875,9 +5002,9 @@ app.post('/api/proposals', auth.requireAuth, async (req, res) => {
             }
         }
         const { rows } = await pool.query(
-            `INSERT INTO proposals (listing_id, realtor_id, commission_pct, cover_note, timeline)
-             VALUES ($1, $2, $3, $4, $5)
-             ON CONFLICT (listing_id, realtor_id) DO UPDATE SET commission_pct=$3, cover_note=$4, timeline=$5, status='pending'
+            `INSERT INTO proposals (listing_id, realtor_id, commission_pct, cover_note, timeline, expires_at)
+             VALUES ($1, $2, $3, $4, $5, NOW() + INTERVAL '30 days')
+             ON CONFLICT (listing_id, realtor_id) DO UPDATE SET commission_pct=$3, cover_note=$4, timeline=$5, status='pending', expires_at=NOW() + INTERVAL '30 days'
              RETURNING *`,
             [listing_id, req.session.userId, pct, cover_note || null, timeline || null]
         );
@@ -9751,6 +9878,11 @@ _schemaMigrations.push(
 );
 
 _schemaMigrations.push(
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id TEXT`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS users_google_id_idx ON users (google_id) WHERE google_id IS NOT NULL`
+);
+
+_schemaMigrations.push(
     `CREATE TABLE IF NOT EXISTS admin_crm_notes (
         id SERIAL PRIMARY KEY,
         user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -9872,6 +10004,25 @@ _schemaMigrations.push(`
     )
 `);
 
+_schemaMigrations.push(`ALTER TABLE proposals ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ`);
+_schemaMigrations.push(`UPDATE proposals SET expires_at = created_at + INTERVAL '30 days' WHERE expires_at IS NULL AND status = 'pending'`);
+
+// Auto-expire proposals whose expires_at has passed
+async function runProposalExpiryJob() {
+    try {
+        const { rowCount } = await pool.query(`
+            UPDATE proposals
+               SET status = 'expired', updated_at = NOW()
+             WHERE status = 'pending'
+               AND expires_at IS NOT NULL
+               AND expires_at < NOW()
+        `);
+        if (rowCount > 0) console.log(`⏰ Expired ${rowCount} proposal(s)`);
+    } catch (err) {
+        console.error('runProposalExpiryJob error:', err.message);
+    }
+}
+
 // Remind sellers about proposals they haven't responded to in 5+ days
 async function runProposalExpiryReminder() {
     try {
@@ -9943,6 +10094,8 @@ async function startServer() {
         setInterval(runReEngagementJob, 24 * 60 * 60 * 1000).unref();
         runSellerDigestJob();
         setInterval(runSellerDigestJob, 24 * 60 * 60 * 1000).unref();
+        runProposalExpiryJob();
+        setInterval(runProposalExpiryJob, 24 * 60 * 60 * 1000).unref();
         runProposalExpiryReminder();
         setInterval(() => runProposalExpiryReminder(), 24 * 60 * 60 * 1000).unref();
     });
