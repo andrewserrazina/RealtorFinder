@@ -252,6 +252,7 @@ async function notifyNearbyRealtors(listing) {
                 if (notifiedIds.has(realtor.id)) continue;
                 await emailService.sendNewListingAlert(realtor, listing, 0);
                 sseNotify(realtor.id, { type: 'notification' });
+                pushNotify(realtor.id, 'New Listing Match', `${listing.address || 'A new listing'} in ${listing.city || 'your area'} is looking for a realtor.`, '/dashboard/realtor?tab=browse');
                 notifiedIds.add(realtor.id);
                 sent++;
             }
@@ -278,6 +279,7 @@ async function notifyNearbyRealtors(listing) {
                 if (dist <= RADIUS_MILES) {
                     await emailService.sendNewListingAlert(realtor, listing, dist);
                     sseNotify(realtor.id, { type: 'notification' });
+                    pushNotify(realtor.id, 'New Listing Match', `${listing.address || 'A new listing'} in ${listing.city || 'your area'} is looking for a realtor.`, '/dashboard/realtor?tab=browse');
                     notifiedIds.add(realtor.id);
                     sent++;
                 }

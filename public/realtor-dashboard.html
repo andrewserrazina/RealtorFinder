@@ -4,6 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Realtor Dashboard - RealtorFinder</title>
+    <!-- PWA -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#0A2540">
+    <!-- iOS PWA -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="RealtorFinder">
+    <link rel="apple-touch-icon" href="/icon-192.png">
     <!-- Google Analytics 4 -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-BRGVVNKT65"></script>
     <script>
@@ -1042,12 +1050,18 @@
 </head>
 <body>
     <!-- PWA Install Banner -->
+    <!-- Android/Chrome install banner -->
     <div id="pwaInstallBanner" style="display:none;align-items:center;justify-content:space-between;gap:1rem;background:#0A2540;color:white;padding:0.75rem 1.25rem;font-size:0.875rem;flex-wrap:wrap;">
         <span>📱 <strong>Install RealtorFinder</strong> for instant access from your home screen.</span>
         <div style="display:flex;gap:0.5rem;flex-shrink:0;">
             <button id="pwaInstallBtn" style="background:#FF6B35;color:white;border:none;padding:0.45rem 1rem;border-radius:6px;font-weight:600;cursor:pointer;font-size:0.875rem;font-family:inherit;">Install</button>
             <button id="pwaInstallDismiss" style="background:transparent;color:rgba(255,255,255,0.7);border:1px solid rgba(255,255,255,0.3);padding:0.45rem 0.75rem;border-radius:6px;cursor:pointer;font-size:0.875rem;font-family:inherit;">✕</button>
         </div>
+    </div>
+    <!-- iOS Safari install tip -->
+    <div id="pwaIosBanner" style="display:none;align-items:center;justify-content:space-between;gap:1rem;background:#0A2540;color:white;padding:0.75rem 1.25rem;font-size:0.875rem;flex-wrap:wrap;">
+        <span>📱 <strong>Add to Home Screen:</strong> tap the Share button <span style="font-size:1rem;">⎋</span> then <em>Add to Home Screen</em> for the best experience.</span>
+        <button id="pwaIosDismiss" style="background:transparent;color:rgba(255,255,255,0.7);border:1px solid rgba(255,255,255,0.3);padding:0.45rem 0.75rem;border-radius:6px;cursor:pointer;font-size:0.875rem;font-family:inherit;flex-shrink:0;">✕</button>
     </div>
     <header>
         <div class="header-container">
@@ -4770,6 +4784,19 @@
                 localStorage.setItem('pwaInstallDismissed', '1');
                 const banner = document.getElementById('pwaInstallBanner');
                 if (banner) banner.style.display = 'none';
+            });
+
+            // iOS Safari: show "Add to Home Screen" tip since beforeinstallprompt never fires there
+            const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+            const isInStandaloneMode = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+            if (isIos && !isInStandaloneMode && !localStorage.getItem('pwaInstallDismissed')) {
+                const iosBanner = document.getElementById('pwaIosBanner');
+                if (iosBanner) iosBanner.style.display = 'flex';
+            }
+            document.getElementById('pwaIosDismiss') && document.getElementById('pwaIosDismiss').addEventListener('click', () => {
+                localStorage.setItem('pwaInstallDismissed', '1');
+                const b = document.getElementById('pwaIosBanner');
+                if (b) b.style.display = 'none';
             });
         });
 
