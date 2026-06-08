@@ -1410,6 +1410,23 @@ const emailService = {
         } catch (error) { logSendgridError('Buyer offer notification', error); }
     },
 
+    async sendProposalReminderEmail({ email, first_name, address, pending_count, listing_id }) {
+        const count = parseInt(pending_count) || 1;
+        const plural = count !== 1;
+        const body = `
+            ${h1(`You have ${count} proposal${plural ? 's' : ''} waiting`)}
+            ${p(`Hi ${first_name || 'there'},`)}
+            ${p(`You have <strong>${count} realtor proposal${plural ? 's' : ''}</strong> waiting on your listing at <strong>${address}</strong> that ${plural ? 'have' : 'has'} been pending for more than 5 days.`)}
+            ${p("Don't leave agents waiting — reviewing their proposals is the fastest way to get your home sold.")}
+            ${btn(`${BASE_URL}/dashboard/seller?tab=realtors`, 'Review Proposals Now')}
+            ${divider()}
+            <p style="color:#999;font-size:13px;margin:0;">The RealtorFinder Team</p>
+        `;
+        try {
+            await send({ to: email, subject: `You have ${count} proposal${plural ? 's' : ''} waiting on ${address}`, html: emailWrap('For Sellers', body) });
+        } catch (error) { logSendgridError('Proposal expiry reminder', error); }
+    },
+
     async sendListingStatusEmail(realtorEmail, realtorName, status, listingAddress) {
         const statusLabels = { reviewing: 'Reviewing Proposals', under_contract: 'Under Contract', sold: 'Sold' };
         const label = statusLabels[status] || status;

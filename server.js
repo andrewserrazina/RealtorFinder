@@ -5894,9 +5894,11 @@ app.post('/api/listings/:id/documents', auth.requireAuth, uploadLimiter, uploadD
         if (!req.file) return res.status(400).json({ error: 'No file provided' });
         const result = await uploadToCloudinaryDoc(req.file.buffer, req.file.originalname);
         const name = req.body.name || req.file.originalname || 'Document';
+        const allowedTypes = ['Contract', 'Disclosure', 'Inspection', 'Appraisal', 'Other'];
+        const docType = allowedTypes.includes(req.body.doc_type) ? req.body.doc_type : 'Other';
         const { rows } = await pool.query(
-            `INSERT INTO listing_documents (listing_id, uploaded_by, name, url) VALUES ($1,$2,$3,$4) RETURNING *`,
-            [listingId, req.session.userId, name.slice(0, 100), result.secure_url]
+            `INSERT INTO listing_documents (listing_id, uploaded_by, name, url, doc_type) VALUES ($1,$2,$3,$4,$5) RETURNING *`,
+            [listingId, req.session.userId, name.slice(0, 100), result.secure_url, docType]
         );
         res.status(201).json(rows[0]);
     } catch (err) {
@@ -5914,7 +5916,7 @@ app.get('/api/listings/:id/documents', auth.requireAuth, async (req, res) => {
         if (req.user.user_type === 'seller' && l.user_id !== req.session.userId) return res.status(403).json({ error: 'Forbidden' });
         if (!['seller', 'realtor'].includes(req.user.user_type)) return res.status(403).json({ error: 'Access denied' });
         const { rows } = await pool.query(
-            `SELECT id, name, url, created_at FROM listing_documents WHERE listing_id=$1 ORDER BY created_at DESC`,
+            `SELECT id, name, url, doc_type, created_at FROM listing_documents WHERE listing_id=$1 ORDER BY created_at DESC`,
             [listingId]
         );
         res.json(rows);
@@ -7246,6 +7248,83 @@ app.put('/api/realtor-showings/:id/respond', auth.requireAuth, async (req, res) 
     } catch (err) {
         console.error('Respond to showing error:', err);
         res.status(500).json({ error: 'Failed to respond to showing request' });
+    }
+});
+
+// Generate ICS calendar file for a confirmed showing
+app.get('/api/showings/:id/ics', auth.requireAuth, async (req, res) => {
+    try {
+        const showingId = parseInt(req.params.id);
+        const uid = req.session.userId;
+        // Try buyer showings table first, then realtor showing requests
+        let showing = null;
+        let address = '';
+        let startDate = null;
+        let endDate = null;
+        let title = '';
+
+        const { rows: buyerRows } = await pool.query(
+            `SELECT s.*, l.address, l.city, l.state, l.zip FROM showings s
+             JOIN listings l ON s.listing_id = l.id
+             WHERE s.id = $1 AND (s.buyer_id = $2 OR l.user_id = $2)`,
+            [showingId, uid]
+        );
+        if (buyerRows.length) {
+            showing = buyerRows[0];
+            address = [showing.address, showing.city, showing.state, showing.zip].filter(Boolean).join(', ');
+            // Parse date + time
+            const [hour, minute] = (showing.requested_time || '10:00').split(':').map(Number);
+            const d = new Date(showing.requested_date);
+            d.setHours(hour, minute || 0, 0, 0);
+            startDate = d;
+            endDate = new Date(d.getTime() + 60 * 60 * 1000); // 1 hour
+            title = `Property Showing: ${showing.address}`;
+        } else {
+            const { rows: realtorRows } = await pool.query(
+                `SELECT r.*, l.address, l.city, l.state, l.zip FROM realtor_showing_requests r
+                 JOIN listings l ON r.listing_id = l.id
+                 WHERE r.id = $1 AND (r.realtor_id = $2 OR l.user_id = $2)`,
+                [showingId, uid]
+            );
+            if (!realtorRows.length) return res.status(404).json({ error: 'Showing not found' });
+            showing = realtorRows[0];
+            address = [showing.address, showing.city, showing.state, showing.zip].filter(Boolean).join(', ');
+            // confirmed_slot is a JSONB object like { date: 'YYYY-MM-DD', time: 'HH:MM' }
+            const slot = showing.confirmed_slot || (showing.proposed_slots && showing.proposed_slots[0]) || {};
+            const [hour, minute] = (slot.time || '10:00').split(':').map(Number);
+            const d = new Date(slot.date || new Date());
+            d.setHours(hour, minute || 0, 0, 0);
+            startDate = d;
+            endDate = new Date(d.getTime() + 60 * 60 * 1000);
+            title = `Property Showing: ${showing.address}`;
+        }
+
+        const fmt = (d) => d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+        const uid_str = `showing-${showingId}@realtorfinder.net`;
+        const ics = [
+            'BEGIN:VCALENDAR',
+            'VERSION:2.0',
+            'PRODID:-//RealtorFinder//EN',
+            'CALSCALE:GREGORIAN',
+            'METHOD:PUBLISH',
+            'BEGIN:VEVENT',
+            `UID:${uid_str}`,
+            `DTSTAMP:${fmt(new Date())}`,
+            `DTSTART:${fmt(startDate)}`,
+            `DTEND:${fmt(endDate)}`,
+            `SUMMARY:${title}`,
+            `LOCATION:${address}`,
+            `DESCRIPTION:Property showing scheduled via RealtorFinder.`,
+            'END:VEVENT',
+            'END:VCALENDAR'
+        ].join('\r\n');
+
+        res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
+        res.setHeader('Content-Disposition', `attachment; filename="showing-${showingId}.ics"`);
+        res.send(ics);
+    } catch (err) {
+        console.error('ICS generation error:', err);
+        res.status(500).json({ error: 'Failed to generate calendar file' });
     }
 });
 
@@ -9729,6 +9808,8 @@ _schemaMigrations.push(`
     WHERE slug IS NULL
 `);
 
+_schemaMigrations.push(`ALTER TABLE listing_documents ADD COLUMN IF NOT EXISTS doc_type VARCHAR(30) DEFAULT 'Other'`);
+
 _schemaMigrations.push(`
     CREATE TABLE IF NOT EXISTS push_subscriptions (
         id SERIAL PRIMARY KEY,
@@ -9739,6 +9820,33 @@ _schemaMigrations.push(`
         created_at TIMESTAMPTZ DEFAULT NOW()
     )
 `);
+
+// Remind sellers about proposals they haven't responded to in 5+ days
+async function runProposalExpiryReminder() {
+    try {
+        const { rows } = await pool.query(`
+            SELECT DISTINCT l.user_id, l.address, l.id as listing_id,
+                   COUNT(o.id) as pending_count,
+                   u.email, u.first_name
+            FROM offers o
+            JOIN listings l ON o.listing_id = l.id
+            JOIN users u ON l.user_id = u.id
+            WHERE o.status = 'pending'
+              AND o.created_at < NOW() - INTERVAL '5 days'
+              AND l.deleted_at IS NULL
+              AND u.is_active IS NOT FALSE
+              AND u.email IS NOT NULL
+              AND (u.email_alerts IS NULL OR u.email_alerts = true)
+            GROUP BY l.user_id, l.address, l.id, u.email, u.first_name
+        `);
+        for (const row of rows) {
+            await emailService.sendProposalReminderEmail(row).catch(() => {});
+        }
+        if (rows.length > 0) console.log(`📬 Sent proposal reminders to ${rows.length} sellers`);
+    } catch (err) {
+        console.error('runProposalExpiryReminder error:', err.message);
+    }
+}
 
 // Run all schema migrations then start listening
 async function startServer() {
@@ -9784,6 +9892,8 @@ async function startServer() {
         setInterval(runReEngagementJob, 24 * 60 * 60 * 1000).unref();
         runSellerDigestJob();
         setInterval(runSellerDigestJob, 24 * 60 * 60 * 1000).unref();
+        runProposalExpiryReminder();
+        setInterval(() => runProposalExpiryReminder(), 24 * 60 * 60 * 1000).unref();
     });
 }
 startServer().catch(err => {

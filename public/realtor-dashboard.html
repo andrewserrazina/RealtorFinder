@@ -3931,7 +3931,8 @@
                             </div>
                             ${s.message ? `<div style="margin-top:0.5rem;color:#555;font-size:0.9rem;">"${s.message}"</div>` : ''}
                         </div>
-                        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+                        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
+                            ${s.status === 'confirmed' ? `<a href="/api/showings/${s.id}/ics" class="btn btn-outline" style="font-size:0.82rem;padding:0.45rem 0.9rem;text-decoration:none;">📅 Add to Calendar</a>` : ''}
                             ${s.status === 'pending' ? `<button class="btn btn-primary" onclick="confirmShowing(${s.id})" style="font-size:0.85rem;padding:0.5rem 1rem;">Confirm</button>` : ''}
                             ${s.status !== 'cancelled' ? `<button class="btn btn-outline" onclick="cancelShowing(${s.id})" style="font-size:0.85rem;padding:0.5rem 1rem;">Cancel</button>` : ''}
                         </div>
