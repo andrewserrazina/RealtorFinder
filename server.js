@@ -33,6 +33,12 @@ const crypto = require('crypto');
 const bcrypt = require('bcrypt');
 const { upload, uploadDoc, uploadToCloudinary, uploadToCloudinaryDoc } = require('./config/cloudinary');
 const stripe = process.env.STRIPE_SECRET_KEY ? require('stripe')(process.env.STRIPE_SECRET_KEY) : null;
+const webpush = require('web-push');
+webpush.setVapidDetails(
+    'mailto:noreply@realtorfinder.net',
+    process.env.VAPID_PUBLIC_KEY  || 'BAS4ih_DOx3ibjkGz9fDk33PxLgtA9qzn8XdX9uz1gRndcEf6vNC-0wbeGnIIMiznXrFrDaceGypiiCZm6s6X00',
+    process.env.VAPID_PRIVATE_KEY || 'LojuQZ72YkG4AZJjxSEj1p5l-yzSdUFUlHDWRWYjr84'
+);
 
 const { db, pool } = require('./db');
 const emailService = require('./email');
@@ -332,6 +338,21 @@ function sseNotify(userId, payload) {
     for (const r of clients) {
         try { r.write(line); } catch (_) {}
     }
+}
+
+async function pushNotify(userId, title, body, url = '/dashboard/realtor') {
+    try {
+        const { rows } = await pool.query('SELECT endpoint, p256dh, auth FROM push_subscriptions WHERE user_id = $1', [userId]);
+        const payload = JSON.stringify({ title, body, url });
+        for (const sub of rows) {
+            webpush.sendNotification({ endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } }, payload)
+                .catch(err => {
+                    if (err.statusCode === 410 || err.statusCode === 404) {
+                        pool.query('DELETE FROM push_subscriptions WHERE endpoint = $1', [sub.endpoint]).catch(() => {});
+                    }
+                });
+        }
+    } catch (_) {}
 }
 
 // ===== API ROUTES =====
@@ -1547,6 +1568,7 @@ app.put('/api/offers/:id/status', auth.requireAuth, async (req, res) => {
             if (offerRow.user_id) {
                 pool.query(`INSERT INTO notifications (user_id, type, title, body, link) VALUES ($1,'offer_accepted','Proposal Accepted!',$2,'/dashboard/realtor')`,
                     [offerRow.user_id, `Your proposal on ${offerRow.address} was accepted!`]).then(() => sseNotify(offerRow.user_id, { type: 'notification' })).catch(() => {});
+                pushNotify(offerRow.user_id, 'Proposal Accepted!', `Your proposal on ${offerRow.address} was accepted!`, '/dashboard/realtor?tab=pipeline');
             }
             declinedOffers.forEach(declined => {
                 emailService.sendOfferDeclinedEmail(declined, offerRow).catch(err =>
@@ -6671,7 +6693,10 @@ app.post('/api/messages', auth.requireAuth, async (req, res) => {
             INSERT INTO notifications (user_id, type, title, body, link)
             VALUES ($1, 'message', 'New Message', $2, '/dashboard/' || (SELECT user_type FROM users WHERE id=$1))
             ON CONFLICT DO NOTHING
-        `, [toUserId, `You have a new message`]).then(() => sseNotify(toUserId, { type: 'new_message', fromUserId: uid, listingId: listingId || null, messageId: newMsgId })).catch(() => {});
+        `, [toUserId, `You have a new message`]).then(() => {
+            sseNotify(toUserId, { type: 'new_message', fromUserId: uid, listingId: listingId || null, messageId: newMsgId });
+            pushNotify(toUserId, 'New Message', 'You have a new message', '/dashboard/realtor?tab=messages');
+        }).catch(() => {});
 
         // Fire-and-forget email notification
         (async () => {
@@ -6739,6 +6764,34 @@ app.get('/api/messages/unread-count', auth.requireAuth, async (req, res) => {
 // ===== NOTIFICATIONS =====
 
 // Get notifications for current user
+// ===== PUSH NOTIFICATION ROUTES =====
+
+app.get('/api/push/vapid-public-key', (req, res) => {
+    res.json({ publicKey: process.env.VAPID_PUBLIC_KEY || 'BAS4ih_DOx3ibjkGz9fDk33PxLgtA9qzn8XdX9uz1gRndcEf6vNC-0wbeGnIIMiznXrFrDaceGypiiCZm6s6X00' });
+});
+
+app.post('/api/push/subscribe', auth.requireAuth, async (req, res) => {
+    try {
+        const { endpoint, keys } = req.body;
+        if (!endpoint || !keys || !keys.p256dh || !keys.auth) return res.status(400).json({ error: 'Invalid subscription' });
+        await pool.query(`
+            INSERT INTO push_subscriptions (user_id, endpoint, p256dh, auth)
+            VALUES ($1, $2, $3, $4)
+            ON CONFLICT (endpoint) DO UPDATE SET user_id = EXCLUDED.user_id, p256dh = EXCLUDED.p256dh, auth = EXCLUDED.auth
+        `, [req.session.userId, endpoint, keys.p256dh, keys.auth]);
+        res.json({ ok: true });
+    } catch (err) { res.status(500).json({ error: 'Failed to save subscription' }); }
+});
+
+app.delete('/api/push/unsubscribe', auth.requireAuth, async (req, res) => {
+    try {
+        const { endpoint } = req.body;
+        if (!endpoint) return res.status(400).json({ error: 'Missing endpoint' });
+        await pool.query('DELETE FROM push_subscriptions WHERE user_id = $1 AND endpoint = $2', [req.session.userId, endpoint]);
+        res.json({ ok: true });
+    } catch (err) { res.status(500).json({ error: 'Failed to remove subscription' }); }
+});
+
 app.get('/api/notifications', auth.requireAuth, async (req, res) => {
     try {
         const { rows } = await pool.query(`
@@ -9626,6 +9679,17 @@ _schemaMigrations.push(`
     UPDATE companies
     SET slug = LOWER(REGEXP_REPLACE(name, '[^a-zA-Z0-9]+', '-', 'g')) || '-' || id
     WHERE slug IS NULL
+`);
+
+_schemaMigrations.push(`
+    CREATE TABLE IF NOT EXISTS push_subscriptions (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        endpoint TEXT NOT NULL UNIQUE,
+        p256dh TEXT NOT NULL,
+        auth TEXT NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+    )
 `);
 
 // Run all schema migrations then start listening
