@@ -33,6 +33,16 @@ const crypto = require('crypto');
 const bcrypt = require('bcrypt');
 const { upload, uploadDoc, uploadToCloudinary, uploadToCloudinaryDoc } = require('./config/cloudinary');
 const stripe = process.env.STRIPE_SECRET_KEY ? require('stripe')(process.env.STRIPE_SECRET_KEY) : null;
+const webpush = require('web-push');
+if (!process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) {
+    console.error('FATAL: VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY env vars are required for push notifications. Generate with: node -e "const wp=require(\'web-push\');console.log(wp.generateVAPIDKeys())"');
+    process.exit(1);
+}
+webpush.setVapidDetails(
+    'mailto:noreply@realtorfinder.net',
+    process.env.VAPID_PUBLIC_KEY,
+    process.env.VAPID_PRIVATE_KEY
+);
 
 const { db, pool } = require('./db');
 const emailService = require('./email');
@@ -278,6 +288,27 @@ async function notifyNearbyRealtors(listing) {
             }
         }
 
+        // Batch push notification for all matched realtors in one DB round-trip
+        if (notifiedIds.size > 0) {
+            const ids = Array.from(notifiedIds);
+            const pushTitle = 'New Listing Match';
+            const pushBody = `${listing.address || 'A new listing'} in ${listing.city || 'your area'} is looking for a realtor.`;
+            const pushUrl = '/dashboard/realtor?tab=browse';
+            const { rows: subs } = await pool.query(
+                `SELECT user_id, endpoint, p256dh, auth FROM push_subscriptions WHERE user_id = ANY($1::int[])`,
+                [ids]
+            );
+            const payload = JSON.stringify({ title: pushTitle, body: pushBody, url: pushUrl });
+            for (const sub of subs) {
+                webpush.sendNotification({ endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } }, payload)
+                    .catch(err => {
+                        if (err.statusCode === 410 || err.statusCode === 404) {
+                            pool.query('DELETE FROM push_subscriptions WHERE endpoint = $1', [sub.endpoint]).catch(() => {});
+                        }
+                    });
+            }
+        }
+
         if (sent > 0) console.log(`📬 Notified ${sent} realtors about listing ${listing.id}`);
     } catch (err) {
         console.error('notifyNearbyRealtors error:', err.message);
@@ -319,7 +350,7 @@ async function verifyRecaptcha(token) {
         const data = await resp.json();
         return data.success && data.score >= 0.5;
     } catch {
-        return true; // fail open on network error so real users aren't blocked
+        return false; // fail closed on network error — bots still blocked, real users can retry
     }
 }
 
@@ -332,6 +363,21 @@ function sseNotify(userId, payload) {
     for (const r of clients) {
         try { r.write(line); } catch (_) {}
     }
+}
+
+async function pushNotify(userId, title, body, url = '/dashboard/realtor') {
+    try {
+        const { rows } = await pool.query('SELECT endpoint, p256dh, auth FROM push_subscriptions WHERE user_id = $1', [userId]);
+        const payload = JSON.stringify({ title, body, url });
+        for (const sub of rows) {
+            webpush.sendNotification({ endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } }, payload)
+                .catch(err => {
+                    if (err.statusCode === 410 || err.statusCode === 404) {
+                        pool.query('DELETE FROM push_subscriptions WHERE endpoint = $1', [sub.endpoint]).catch(() => {});
+                    }
+                });
+        }
+    } catch (_) {}
 }
 
 // ===== API ROUTES =====
@@ -566,11 +612,18 @@ app.post('/api/company/agents', auth.requireAuth, async (req, res) => {
 app.delete('/api/company/agents/:userId', auth.requireAuth, async (req, res) => {
     try {
         if (req.user.user_type !== 'realtor') return res.status(403).json({ error: 'Realtors only' });
-        const owner = await db.getProfile(req.user.id);
-        if (!owner.company_id || !['owner', 'admin'].includes(owner.company_role)) {
+        const caller = await db.getProfile(req.user.id);
+        if (!caller.company_id || !['owner', 'admin'].includes(caller.company_role)) {
             return res.status(403).json({ error: 'Only the company owner or admin can remove agents' });
         }
-        await db.removeAgentFromCompany(parseInt(req.params.userId), owner.company_id);
+        const targetId = parseInt(req.params.userId);
+        if (caller.company_role === 'admin') {
+            const target = await db.getProfile(targetId);
+            if (target && target.company_role === 'admin') {
+                return res.status(403).json({ error: 'Admins cannot remove other admins — only the owner can do that' });
+            }
+        }
+        await db.removeAgentFromCompany(targetId, caller.company_id);
         res.json({ success: true });
     } catch (err) {
         console.error('DELETE /api/company/agents error:', err);
@@ -1547,6 +1600,7 @@ app.put('/api/offers/:id/status', auth.requireAuth, async (req, res) => {
             if (offerRow.user_id) {
                 pool.query(`INSERT INTO notifications (user_id, type, title, body, link) VALUES ($1,'offer_accepted','Proposal Accepted!',$2,'/dashboard/realtor')`,
                     [offerRow.user_id, `Your proposal on ${offerRow.address} was accepted!`]).then(() => sseNotify(offerRow.user_id, { type: 'notification' })).catch(() => {});
+                pushNotify(offerRow.user_id, 'Proposal Accepted!', `Your proposal on ${offerRow.address} was accepted!`, '/dashboard/realtor?tab=pipeline');
             }
             declinedOffers.forEach(declined => {
                 emailService.sendOfferDeclinedEmail(declined, offerRow).catch(err =>
@@ -1791,6 +1845,46 @@ app.delete('/api/listings/:id', auth.requireAuth, async (req, res) => {
     } catch (error) {
         console.error('Error deleting listing:', error);
         res.status(500).json({ error: 'Failed to delete listing' });
+    }
+});
+
+// Seller invites a specific realtor to submit a proposal
+app.post('/api/listings/:id/invite-realtor', auth.requireAuth, async (req, res) => {
+    try {
+        const listingId = parseInt(req.params.id);
+        const sellerId = req.session.userId;
+        const { realtorId } = req.body;
+        if (!realtorId) return res.status(400).json({ error: 'realtorId required' });
+
+        // Verify the seller owns this listing
+        const { rows: [listing] } = await pool.query(
+            `SELECT id, address, city, state FROM listings WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL`,
+            [listingId, sellerId]
+        );
+        if (!listing) return res.status(404).json({ error: 'Listing not found' });
+
+        // Get the realtor's info
+        const { rows: [realtor] } = await pool.query(
+            `SELECT id, email, first_name FROM users WHERE id = $1 AND user_type = 'realtor' AND is_approved = true`,
+            [realtorId]
+        );
+        if (!realtor) return res.status(404).json({ error: 'Realtor not found' });
+
+        // Send notification + email
+        await pool.query(
+            `INSERT INTO notifications (user_id, type, title, body, link) VALUES ($1, 'listing_invite', 'Listing Invitation', $2, '/dashboard/realtor?tab=browse')`,
+            [realtorId, `A seller has invited you to submit a proposal on ${listing.address}`]
+        );
+        sseNotify(realtorId, { type: 'notification' });
+        pushNotify(realtorId, 'Listing Invitation', `You've been invited to submit a proposal on ${listing.address}`, '/dashboard/realtor?tab=browse');
+
+        // Fire-and-forget email
+        emailService.sendNewListingAlert(realtor, listing, 0).catch(() => {});
+
+        res.json({ ok: true });
+    } catch (err) {
+        console.error('invite-realtor error:', err);
+        res.status(500).json({ error: 'Failed to send invitation' });
     }
 });
 
@@ -2267,6 +2361,12 @@ app.delete('/api/admin/users/:id', requireAdmin, async (req, res) => {
     try {
         await client.query('BEGIN');
         await client.query(`DELETE FROM session WHERE sess->>'userId' = $1::text`, [userId]);
+        await client.query(`DELETE FROM notifications WHERE user_id = $1`, [userId]);
+        await client.query(`DELETE FROM push_subscriptions WHERE user_id = $1`, [userId]);
+        await client.query(`DELETE FROM messages WHERE from_user_id = $1 OR to_user_id = $1`, [userId]);
+        await client.query(`DELETE FROM reviews WHERE user_id = $1`, [userId]);
+        await client.query(`DELETE FROM realtor_reviews WHERE realtor_id = $1 OR reviewer_id = $1`, [userId]);
+        await client.query(`DELETE FROM proposals WHERE realtor_id = $1`, [userId]);
         await client.query(`DELETE FROM offers WHERE user_id = $1`, [userId]);
         await client.query(`UPDATE listings SET deleted_at = NOW() WHERE user_id = $1 AND deleted_at IS NULL`, [userId]);
         const { rows } = await client.query(`DELETE FROM users WHERE id = $1 RETURNING id, email`, [userId]);
@@ -2571,7 +2671,7 @@ app.get('/api/admin/users/:id/detail', requireAdmin, async (req, res) => {
         const { rows: userRows } = await pool.query(
             `SELECT id, email, user_type, first_name, last_name, zip_code,
                     email_verified, is_active, is_admin, is_approved, created_at,
-                    crm_stage, crm_flags, subscription_plan, profile_photo_url
+                    crm_stage, crm_flags, subscription_plan, profile_photo
              FROM users WHERE id = $1`,
             [userId]
         );
@@ -2630,7 +2730,14 @@ app.post('/api/admin/users/:id/notes', requireAdmin, async (req, res) => {
 app.delete('/api/admin/notes/:noteId', requireAdmin, async (req, res) => {
     try {
         const noteId = parseInt(req.params.noteId);
-        await pool.query(`DELETE FROM admin_crm_notes WHERE id = $1`, [noteId]);
+        const userId = parseInt(req.query.userId || req.body?.userId);
+        if (!noteId) return res.status(400).json({ error: 'Invalid note id' });
+        const query = userId
+            ? `DELETE FROM admin_crm_notes WHERE id = $1 AND user_id = $2`
+            : `DELETE FROM admin_crm_notes WHERE id = $1`;
+        const params = userId ? [noteId, userId] : [noteId];
+        const { rowCount } = await pool.query(query, params);
+        if (!rowCount) return res.status(404).json({ error: 'Note not found' });
         res.json({ success: true });
     } catch (err) {
         console.error('Admin note DELETE error:', err);
@@ -3213,7 +3320,8 @@ app.post('/api/city-lead', waitlistLimiter, async (req, res) => {
         console.log(`🏠 City lead: ${normalizedType} in ${city_name}, ${state_code} — ${email}`);
 
         try {
-            await emailService.sendWaitlistConfirmation(email.trim().toLowerCase(), normalizedType);
+            const cityLeadToken = require('crypto').randomBytes(16).toString('hex');
+            await emailService.sendWaitlistConfirmation(email.trim().toLowerCase(), normalizedType, cityLeadToken);
         } catch (emailErr) {
             console.error('City lead email failed:', emailErr.message);
         }
@@ -5826,9 +5934,11 @@ app.post('/api/listings/:id/documents', auth.requireAuth, uploadLimiter, uploadD
         if (!req.file) return res.status(400).json({ error: 'No file provided' });
         const result = await uploadToCloudinaryDoc(req.file.buffer, req.file.originalname);
         const name = req.body.name || req.file.originalname || 'Document';
+        const allowedTypes = ['Contract', 'Disclosure', 'Inspection', 'Appraisal', 'Other'];
+        const docType = allowedTypes.includes(req.body.doc_type) ? req.body.doc_type : 'Other';
         const { rows } = await pool.query(
-            `INSERT INTO listing_documents (listing_id, uploaded_by, name, url) VALUES ($1,$2,$3,$4) RETURNING *`,
-            [listingId, req.session.userId, name.slice(0, 100), result.secure_url]
+            `INSERT INTO listing_documents (listing_id, uploaded_by, name, url, doc_type) VALUES ($1,$2,$3,$4,$5) RETURNING *`,
+            [listingId, req.session.userId, name.slice(0, 100), result.secure_url, docType]
         );
         res.status(201).json(rows[0]);
     } catch (err) {
@@ -5846,7 +5956,7 @@ app.get('/api/listings/:id/documents', auth.requireAuth, async (req, res) => {
         if (req.user.user_type === 'seller' && l.user_id !== req.session.userId) return res.status(403).json({ error: 'Forbidden' });
         if (!['seller', 'realtor'].includes(req.user.user_type)) return res.status(403).json({ error: 'Access denied' });
         const { rows } = await pool.query(
-            `SELECT id, name, url, created_at FROM listing_documents WHERE listing_id=$1 ORDER BY created_at DESC`,
+            `SELECT id, name, url, doc_type, created_at FROM listing_documents WHERE listing_id=$1 ORDER BY created_at DESC`,
             [listingId]
         );
         res.json(rows);
@@ -5962,7 +6072,7 @@ app.delete('/api/open-houses/:id', auth.requireAuth, async (req, res) => {
     }
 });
 
-app.post('/api/open-houses/:id/rsvp', async (req, res) => {
+app.post('/api/open-houses/:id/rsvp', auth.requireAuth, async (req, res) => {
     try {
         const { name, email } = req.body;
         if (!name || !email) return res.status(400).json({ error: 'name and email required' });
@@ -6118,7 +6228,7 @@ app.post('/api/proposals/:id/followup', auth.requireAuth, async (req, res) => {
 
 // ===== BUYER FORMAL OFFERS =====
 
-app.post('/api/listings/:id/buyer-offers', async (req, res) => {
+app.post('/api/listings/:id/buyer-offers', auth.requireAuth, async (req, res) => {
     try {
         const listingId = parseInt(req.params.id);
         const { buyer_name, buyer_email, offer_price, contingencies, closing_date_target, notes } = req.body;
@@ -6671,7 +6781,12 @@ app.post('/api/messages', auth.requireAuth, async (req, res) => {
             INSERT INTO notifications (user_id, type, title, body, link)
             VALUES ($1, 'message', 'New Message', $2, '/dashboard/' || (SELECT user_type FROM users WHERE id=$1))
             ON CONFLICT DO NOTHING
-        `, [toUserId, `You have a new message`]).then(() => sseNotify(toUserId, { type: 'new_message', fromUserId: uid, listingId: listingId || null, messageId: newMsgId })).catch(() => {});
+        `, [toUserId, `You have a new message`]).then(async () => {
+            sseNotify(toUserId, { type: 'new_message', fromUserId: uid, listingId: listingId || null, messageId: newMsgId });
+            const { rows: [recipient] } = await pool.query('SELECT user_type FROM users WHERE id = $1', [toUserId]);
+            const dashTab = recipient && recipient.user_type === 'seller' ? '/dashboard/seller' : '/dashboard/realtor?tab=messages';
+            pushNotify(toUserId, 'New Message', 'You have a new message', dashTab);
+        }).catch(() => {});
 
         // Fire-and-forget email notification
         (async () => {
@@ -6739,6 +6854,34 @@ app.get('/api/messages/unread-count', auth.requireAuth, async (req, res) => {
 // ===== NOTIFICATIONS =====
 
 // Get notifications for current user
+// ===== PUSH NOTIFICATION ROUTES =====
+
+app.get('/api/push/vapid-public-key', (req, res) => {
+    res.json({ publicKey: process.env.VAPID_PUBLIC_KEY });
+});
+
+app.post('/api/push/subscribe', auth.requireAuth, async (req, res) => {
+    try {
+        const { endpoint, keys } = req.body;
+        if (!endpoint || !keys || !keys.p256dh || !keys.auth) return res.status(400).json({ error: 'Invalid subscription' });
+        await pool.query(`
+            INSERT INTO push_subscriptions (user_id, endpoint, p256dh, auth)
+            VALUES ($1, $2, $3, $4)
+            ON CONFLICT (endpoint) DO UPDATE SET user_id = EXCLUDED.user_id, p256dh = EXCLUDED.p256dh, auth = EXCLUDED.auth
+        `, [req.session.userId, endpoint, keys.p256dh, keys.auth]);
+        res.json({ ok: true });
+    } catch (err) { res.status(500).json({ error: 'Failed to save subscription' }); }
+});
+
+app.delete('/api/push/unsubscribe', auth.requireAuth, async (req, res) => {
+    try {
+        const { endpoint } = req.body;
+        if (!endpoint) return res.status(400).json({ error: 'Missing endpoint' });
+        await pool.query('DELETE FROM push_subscriptions WHERE user_id = $1 AND endpoint = $2', [req.session.userId, endpoint]);
+        res.json({ ok: true });
+    } catch (err) { res.status(500).json({ error: 'Failed to remove subscription' }); }
+});
+
 app.get('/api/notifications', auth.requireAuth, async (req, res) => {
     try {
         const { rows } = await pool.query(`
@@ -7145,6 +7288,83 @@ app.put('/api/realtor-showings/:id/respond', auth.requireAuth, async (req, res) 
     } catch (err) {
         console.error('Respond to showing error:', err);
         res.status(500).json({ error: 'Failed to respond to showing request' });
+    }
+});
+
+// Generate ICS calendar file for a confirmed showing
+app.get('/api/showings/:id/ics', auth.requireAuth, async (req, res) => {
+    try {
+        const showingId = parseInt(req.params.id);
+        const uid = req.session.userId;
+        // Try buyer showings table first, then realtor showing requests
+        let showing = null;
+        let address = '';
+        let startDate = null;
+        let endDate = null;
+        let title = '';
+
+        const { rows: buyerRows } = await pool.query(
+            `SELECT s.*, l.address, l.city, l.state, l.zip FROM showings s
+             JOIN listings l ON s.listing_id = l.id
+             WHERE s.id = $1 AND (s.buyer_id = $2 OR l.user_id = $2)`,
+            [showingId, uid]
+        );
+        if (buyerRows.length) {
+            showing = buyerRows[0];
+            address = [showing.address, showing.city, showing.state, showing.zip].filter(Boolean).join(', ');
+            // Parse date + time
+            const [hour, minute] = (showing.requested_time || '10:00').split(':').map(Number);
+            const d = new Date(showing.requested_date);
+            d.setHours(hour, minute || 0, 0, 0);
+            startDate = d;
+            endDate = new Date(d.getTime() + 60 * 60 * 1000); // 1 hour
+            title = `Property Showing: ${showing.address}`;
+        } else {
+            const { rows: realtorRows } = await pool.query(
+                `SELECT r.*, l.address, l.city, l.state, l.zip FROM realtor_showing_requests r
+                 JOIN listings l ON r.listing_id = l.id
+                 WHERE r.id = $1 AND (r.realtor_id = $2 OR l.user_id = $2)`,
+                [showingId, uid]
+            );
+            if (!realtorRows.length) return res.status(404).json({ error: 'Showing not found' });
+            showing = realtorRows[0];
+            address = [showing.address, showing.city, showing.state, showing.zip].filter(Boolean).join(', ');
+            // confirmed_slot is a JSONB object like { date: 'YYYY-MM-DD', time: 'HH:MM' }
+            const slot = showing.confirmed_slot || (showing.proposed_slots && showing.proposed_slots[0]) || {};
+            const [hour, minute] = (slot.time || '10:00').split(':').map(Number);
+            const d = new Date(slot.date || new Date());
+            d.setHours(hour, minute || 0, 0, 0);
+            startDate = d;
+            endDate = new Date(d.getTime() + 60 * 60 * 1000);
+            title = `Property Showing: ${showing.address}`;
+        }
+
+        const fmt = (d) => d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+        const uid_str = `showing-${showingId}@realtorfinder.net`;
+        const ics = [
+            'BEGIN:VCALENDAR',
+            'VERSION:2.0',
+            'PRODID:-//RealtorFinder//EN',
+            'CALSCALE:GREGORIAN',
+            'METHOD:PUBLISH',
+            'BEGIN:VEVENT',
+            `UID:${uid_str}`,
+            `DTSTAMP:${fmt(new Date())}`,
+            `DTSTART:${fmt(startDate)}`,
+            `DTEND:${fmt(endDate)}`,
+            `SUMMARY:${title}`,
+            `LOCATION:${address}`,
+            `DESCRIPTION:Property showing scheduled via RealtorFinder.`,
+            'END:VEVENT',
+            'END:VCALENDAR'
+        ].join('\r\n');
+
+        res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
+        res.setHeader('Content-Disposition', `attachment; filename="showing-${showingId}.ics"`);
+        res.send(ics);
+    } catch (err) {
+        console.error('ICS generation error:', err);
+        res.status(500).json({ error: 'Failed to generate calendar file' });
     }
 });
 
@@ -9628,6 +9848,46 @@ _schemaMigrations.push(`
     WHERE slug IS NULL
 `);
 
+_schemaMigrations.push(`ALTER TABLE listing_documents ADD COLUMN IF NOT EXISTS doc_type VARCHAR(30) DEFAULT 'Other'`);
+
+_schemaMigrations.push(`
+    CREATE TABLE IF NOT EXISTS push_subscriptions (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        endpoint TEXT NOT NULL UNIQUE,
+        p256dh TEXT NOT NULL,
+        auth TEXT NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+`);
+
+// Remind sellers about proposals they haven't responded to in 5+ days
+async function runProposalExpiryReminder() {
+    try {
+        const { rows } = await pool.query(`
+            SELECT DISTINCT l.user_id, l.address, l.id as listing_id,
+                   COUNT(o.id) as pending_count,
+                   u.email, u.first_name
+            FROM offers o
+            JOIN listings l ON o.listing_id = l.id
+            JOIN users u ON l.user_id = u.id
+            WHERE o.status = 'pending'
+              AND o.created_at < NOW() - INTERVAL '5 days'
+              AND l.deleted_at IS NULL
+              AND u.is_active IS NOT FALSE
+              AND u.email IS NOT NULL
+              AND (u.email_alerts IS NULL OR u.email_alerts = true)
+            GROUP BY l.user_id, l.address, l.id, u.email, u.first_name
+        `);
+        for (const row of rows) {
+            await emailService.sendProposalReminderEmail(row).catch(() => {});
+        }
+        if (rows.length > 0) console.log(`📬 Sent proposal reminders to ${rows.length} sellers`);
+    } catch (err) {
+        console.error('runProposalExpiryReminder error:', err.message);
+    }
+}
+
 // Run all schema migrations then start listening
 async function startServer() {
     for (const sql of _schemaMigrations) {
@@ -9672,6 +9932,8 @@ async function startServer() {
         setInterval(runReEngagementJob, 24 * 60 * 60 * 1000).unref();
         runSellerDigestJob();
         setInterval(runSellerDigestJob, 24 * 60 * 60 * 1000).unref();
+        runProposalExpiryReminder();
+        setInterval(() => runProposalExpiryReminder(), 24 * 60 * 60 * 1000).unref();
     });
 }
 startServer().catch(err => {

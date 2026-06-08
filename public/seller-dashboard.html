@@ -973,6 +973,20 @@
     <meta name="apple-mobile-web-app-title" content="RealtorFinder">
 </head>
 <body>
+    <!-- PWA Install Banner -->
+    <!-- Android/Chrome install banner -->
+    <div id="pwaInstallBanner" style="display:none;align-items:center;justify-content:space-between;gap:1rem;background:#0A2540;color:white;padding:0.75rem 1.25rem;font-size:0.875rem;flex-wrap:wrap;">
+        <span>📱 <strong>Install RealtorFinder</strong> for instant access from your home screen.</span>
+        <div style="display:flex;gap:0.5rem;flex-shrink:0;">
+            <button id="pwaInstallBtn" style="background:#FF6B35;color:white;border:none;padding:0.45rem 1rem;border-radius:6px;font-weight:600;cursor:pointer;font-size:0.875rem;font-family:inherit;">Install</button>
+            <button id="pwaInstallDismiss" style="background:transparent;color:rgba(255,255,255,0.7);border:1px solid rgba(255,255,255,0.3);padding:0.45rem 0.75rem;border-radius:6px;cursor:pointer;font-size:0.875rem;font-family:inherit;">✕</button>
+        </div>
+    </div>
+    <!-- iOS Safari install tip -->
+    <div id="pwaIosBanner" style="display:none;align-items:center;justify-content:space-between;gap:1rem;background:#0A2540;color:white;padding:0.75rem 1.25rem;font-size:0.875rem;flex-wrap:wrap;">
+        <span>📱 <strong>Add to Home Screen:</strong> tap the Share button <span style="font-size:1rem;">⎋</span> then <em>Add to Home Screen</em> for the best experience.</span>
+        <button id="pwaIosDismiss" style="background:transparent;color:rgba(255,255,255,0.7);border:1px solid rgba(255,255,255,0.3);padding:0.45rem 0.75rem;border-radius:6px;cursor:pointer;font-size:0.875rem;font-family:inherit;flex-shrink:0;">✕</button>
+    </div>
     <header>
         <div class="header-container">
             <div class="logo">Realtor<span>Finder</span></div>
@@ -1109,12 +1123,32 @@
                 <div class="hub-subnav">
                     <button class="hub-btn active" onclick="switchRealtorsTab('proposals')">Proposals</button>
                     <button class="hub-btn" onclick="switchRealtorsTab('bids')">Classic Bids</button>
+                    <button class="hub-btn" onclick="switchRealtorsTab('find')">Find Realtors</button>
                 </div>
                 <div id="rt-proposals" class="hub-section active">
                     <div id="proposalsByListing"></div>
                 </div>
                 <div id="rt-bids" class="hub-section">
                     <div id="offersContainer"></div>
+                </div>
+                <div id="rt-find" class="hub-section">
+                    <div style="max-width:680px;">
+                        <h3 style="font-family:'Crimson Pro',serif;font-size:1.4rem;font-weight:700;margin-bottom:0.5rem;color:#0a2540;">Find a Realtor</h3>
+                        <p style="color:#6b7280;font-size:0.875rem;margin-bottom:1.25rem;">Search for realtors in your area and invite them to submit a proposal on your listing.</p>
+
+                        <!-- Search form -->
+                        <div style="display:flex;gap:0.75rem;flex-wrap:wrap;margin-bottom:1.5rem;">
+                            <input id="realtorSearchZip" type="text" placeholder="ZIP code" maxlength="10" style="padding:0.6rem 0.85rem;border:1px solid #e1e8ed;border-radius:8px;font-family:inherit;font-size:0.9rem;outline:none;width:130px;">
+                            <input id="realtorSearchName" type="text" placeholder="Name (optional)" style="padding:0.6rem 0.85rem;border:1px solid #e1e8ed;border-radius:8px;font-family:inherit;font-size:0.9rem;outline:none;flex:1;min-width:160px;">
+                            <button onclick="searchRealtors()" style="background:#FF6B35;color:white;border:none;padding:0.6rem 1.25rem;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.9rem;font-family:inherit;">Search</button>
+                        </div>
+
+                        <!-- Results -->
+                        <div id="realtorSearchResults">
+                            <div style="color:#9ca3af;text-align:center;padding:2rem;">Enter a ZIP code to find realtors in your area.</div>
+                        </div>
+                        <div id="realtorSearchPagination" style="display:flex;gap:0.5rem;justify-content:center;margin-top:1rem;"></div>
+                    </div>
                 </div>
             </section>
 
@@ -1182,6 +1216,12 @@
                             <div id="notifPrefsSaved" style="display:none;color:#059669;font-size:0.85rem;">✓ Preferences saved</div>
                             <button onclick="saveNotifPrefs()" style="background:#ff6b35;color:white;border:none;padding:0.65rem 1.5rem;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.9rem;align-self:flex-start;font-family:inherit;">Save Preferences</button>
                         </div>
+                    </div>
+
+                    <div style="background:white;border-radius:12px;border:1px solid #e5e7eb;padding:1.5rem;margin-bottom:1rem;">
+                        <h3 style="font-family:'Crimson Pro',serif;font-size:1.3rem;font-weight:700;margin-bottom:0.5rem;color:#0a2540;">Push Notifications</h3>
+                        <p style="color:#6b7280;font-size:0.875rem;margin-bottom:1.25rem;">Get real-time alerts for new proposals and messages — even when the tab is closed.</p>
+                        <button id="sellerPushToggleBtn" onclick="sellerRequestPushPermission()" style="background:#FF6B35;color:white;border:none;padding:0.65rem 1.5rem;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.9rem;font-family:inherit;">Enable Push Notifications</button>
                     </div>
 
                     <div style="background:white;border-radius:12px;border:1px solid #e1e8ed;padding:1.75rem;margin-bottom:1.5rem;">
@@ -1533,7 +1573,7 @@
                 if (view === 'buyer-offers') loadBuyerOffers();
                 if (view === 'messages') loadConversations();
                 if (view === 'showings') loadSellerShowings();
-                if (view === 'settings') loadNotifPrefs();
+                if (view === 'settings') { loadNotifPrefs(); sellerInitPushToggle(); }
             });
         });
 
@@ -2380,7 +2420,102 @@
                 };
                 es.onerror = () => { setTimeout(startNotifStream, 5000); es.close(); };
             })();
+
+            // ─── URL param tab routing (PWA shortcuts) ───────────────────────────────
+            (function handleTabParam() {
+                const params = new URLSearchParams(location.search);
+                const tab = params.get('tab');
+                if (!tab) return;
+                const el = document.querySelector(`[data-view="${tab}"]`);
+                if (el) el.click();
+            })();
+
+            // ─── Service Worker registration ─────────────────────────────────────────
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('/sw.js').catch(() => {});
+            }
+
+            // ─── PWA install prompt (Android/Chrome) ──────────────────────────────────
+            let _sellerDeferredInstall = null;
+            window.addEventListener('beforeinstallprompt', e => {
+                e.preventDefault();
+                _sellerDeferredInstall = e;
+                const banner = document.getElementById('pwaInstallBanner');
+                if (banner && !localStorage.getItem('pwaInstallDismissed')) banner.style.display = 'flex';
+            });
+            document.getElementById('pwaInstallBtn') && document.getElementById('pwaInstallBtn').addEventListener('click', () => {
+                if (!_sellerDeferredInstall) return;
+                _sellerDeferredInstall.prompt();
+                _sellerDeferredInstall.userChoice.finally(() => {
+                    _sellerDeferredInstall = null;
+                    const banner = document.getElementById('pwaInstallBanner');
+                    if (banner) banner.style.display = 'none';
+                });
+            });
+            document.getElementById('pwaInstallDismiss') && document.getElementById('pwaInstallDismiss').addEventListener('click', () => {
+                localStorage.setItem('pwaInstallDismissed', '1');
+                const b = document.getElementById('pwaInstallBanner');
+                if (b) b.style.display = 'none';
+            });
+            // iOS Safari tip
+            const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+            const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+            if (isIos && !isStandalone && !localStorage.getItem('pwaInstallDismissed')) {
+                const iosBanner = document.getElementById('pwaIosBanner');
+                if (iosBanner) iosBanner.style.display = 'flex';
+            }
+            document.getElementById('pwaIosDismiss') && document.getElementById('pwaIosDismiss').addEventListener('click', () => {
+                localStorage.setItem('pwaInstallDismissed', '1');
+                const b = document.getElementById('pwaIosBanner');
+                if (b) b.style.display = 'none';
+            });
         });
+
+        // ─── Push notification helpers (seller) ─────────────────────────────────
+        function sellerUrlBase64ToUint8Array(b64) {
+            const pad = '='.repeat((4 - b64.length % 4) % 4);
+            const raw = atob((b64 + pad).replace(/-/g, '+').replace(/_/g, '/'));
+            const arr = new Uint8Array(raw.length);
+            for (let i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i);
+            return arr;
+        }
+        async function sellerGetPushSub() {
+            if (!('serviceWorker' in navigator) || !('PushManager' in window)) return null;
+            const reg = await navigator.serviceWorker.ready;
+            return reg.pushManager.getSubscription();
+        }
+        async function sellerRequestPushPermission() {
+            if (!('Notification' in window)) return alert('Push notifications are not supported on this browser.');
+            const perm = await Notification.requestPermission();
+            if (perm === 'granted') {
+                try {
+                    const reg = await navigator.serviceWorker.ready;
+                    const { publicKey } = await fetch('/api/push/vapid-public-key', { credentials: 'include' }).then(r => r.json());
+                    const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: sellerUrlBase64ToUint8Array(publicKey) });
+                    await fetch('/api/push/subscribe', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(sub.toJSON()) });
+                    const btn = document.getElementById('sellerPushToggleBtn');
+                    if (btn) { btn.textContent = 'Disable Push Notifications'; btn.onclick = sellerDisablePush; }
+                } catch(e) { console.warn('Push subscribe failed:', e); }
+            }
+        }
+        async function sellerDisablePush() {
+            const sub = await sellerGetPushSub();
+            if (sub) {
+                await fetch('/api/push/unsubscribe', { method: 'DELETE', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: sub.endpoint }) });
+                await sub.unsubscribe();
+            }
+            const btn = document.getElementById('sellerPushToggleBtn');
+            if (btn) { btn.textContent = 'Enable Push Notifications'; btn.onclick = sellerRequestPushPermission; }
+        }
+        async function sellerInitPushToggle() {
+            const btn = document.getElementById('sellerPushToggleBtn');
+            if (!btn || !('serviceWorker' in navigator) || !('PushManager' in window)) return;
+            const sub = await sellerGetPushSub();
+            if (Notification.permission === 'granted' && sub) {
+                btn.textContent = 'Disable Push Notifications';
+                btn.onclick = sellerDisablePush;
+            }
+        }
 
         // ─── Notifications ───────────────────────────────────────────────────────
         let notifOpen = false;
@@ -2724,6 +2859,31 @@
             document.getElementById('proposalCompareModal').classList.remove('active');
         }
 
+        function computeMatchScore(p) {
+            let score = 0;
+            // Experience: 3 pts/year, max 30
+            score += Math.min((parseInt(p.years_experience) || 0) * 3, 30);
+            // Commission competitiveness (industry avg ~2.5-3%)
+            const comm = parseFloat(p.commission_pct) || 3;
+            if (comm <= 2)        score += 25;
+            else if (comm <= 2.5) score += 20;
+            else if (comm <= 3)   score += 15;
+            else                  score += 8;
+            // Profile completeness signals
+            if (p.brokerage)                          score += 15;
+            if (p.license_verified)                   score += 15;
+            if ((p.cover_note || '').length >= 100)   score += 15;
+            return Math.min(score, 100);
+        }
+
+        function matchScoreBadge(score) {
+            const [bg, col] = score >= 80 ? ['#ecfdf5','#059669']
+                            : score >= 60 ? ['#eff6ff','#2563eb']
+                            : score >= 40 ? ['#fffbeb','#d97706']
+                            :               ['#f3f4f6','#9ca3af'];
+            return `<span title="Match score (experience, commission, profile completeness)" style="background:${bg};color:${col};border:1px solid ${col}40;font-size:0.72rem;font-weight:700;padding:2px 7px;border-radius:20px;margin-left:4px;">${score}</span>`;
+        }
+
         async function loadProposals() {
             try {
                 const listingsRes = await fetch('/api/listings', { credentials: 'include' });
@@ -2751,6 +2911,8 @@
                             const isLowest = i === 0;
                             const name = esc(`${p.first_name || ''} ${p.last_name || ''}`.trim());
                             const badge = isLowest ? '<span style="background:#d1fae5;color:#065f46;font-size:0.75rem;padding:2px 8px;border-radius:20px;font-weight:600;margin-left:6px;">Lowest ★</span>' : '';
+                            const matchScore = computeMatchScore(p);
+                            const scoreBadge = matchScoreBadge(matchScore);
                             const verifiedBadge = p.license_verified ? '<span style="background:#ecfdf5;color:#059669;font-size:0.72rem;font-weight:700;padding:2px 7px;border-radius:20px;margin-left:4px;">✓ Verified</span>' : '';
                             const status = p.status === 'accepted' ? '<span style="background:#d1fae5;color:#065f46;font-size:0.75rem;padding:2px 8px;border-radius:20px;font-weight:600;">Accepted</span>'
                                          : p.status === 'declined' ? '<span style="background:#fee2e2;color:#991b1b;font-size:0.75rem;padding:2px 8px;border-radius:20px;font-weight:600;">Declined</span>'
@@ -2775,7 +2937,7 @@
                             }));
                             const compareBtn = `<button onclick="addToProposalCompare('${pData}')" style="background:white;border:1px solid #6366f1;color:#6366f1;padding:5px 10px;border-radius:6px;font-weight:600;cursor:pointer;font-size:0.8rem;">⚖️</button>`;
                             return `<tr style="${isLowest ? 'background:#f0fdf4;' : ''}">
-                                <td style="padding:10px 12px;font-weight:600;">${name}${badge}${verifiedBadge}</td>
+                                <td style="padding:10px 12px;font-weight:600;">${name}${badge}${verifiedBadge}${scoreBadge}</td>
                                 <td style="padding:10px 12px;font-weight:700;color:${isLowest ? '#065f46' : 'var(--accent)'};">${p.commission_pct}%</td>
                                 <td style="padding:10px 12px;color:#666;font-size:0.85rem;">${esc(p.timeline || '—')}</td>
                                 <td style="padding:10px 12px;color:#444;font-size:0.85rem;max-width:200px;">${esc(p.cover_note || '—').slice(0, 80)}${(p.cover_note || '').length > 80 ? '…' : ''}
@@ -2861,6 +3023,7 @@
                         </div>
                         <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
                             <span style="font-size:0.85rem;font-weight:700;color:${statusColor};">● ${s.status.charAt(0).toUpperCase() + s.status.slice(1)}</span>
+                            ${s.status === 'confirmed' ? `<a href="/api/showings/${s.id}/ics" style="background:#f3f4f6;color:#374151;border:1px solid #d1d5db;border-radius:8px;padding:6px 12px;font-size:0.82rem;font-weight:600;text-decoration:none;white-space:nowrap;">📅 Add to Calendar</a>` : ''}
                             ${s.status === 'pending' ? `<button onclick="sellerConfirmShowing(${s.id})" style="background:#10b981;color:white;border:none;border-radius:8px;padding:8px 16px;cursor:pointer;font-weight:600;font-size:0.85rem;">Confirm</button>` : ''}
                             ${s.status !== 'cancelled' ? `<button onclick="sellerCancelShowing(${s.id})" style="background:none;border:1px solid #e1e8ed;border-radius:8px;padding:8px 14px;cursor:pointer;font-size:0.85rem;">Cancel</button>` : ''}
                         </div>
@@ -2965,7 +3128,10 @@
                                 ${r.message ? `<div style="color:#555;font-size:0.85rem;margin-top:0.25rem;font-style:italic;">"${esc(r.message)}"</div>` : ''}
                                 ${r.confirmed_slot ? `<div style="color:#059669;font-size:0.85rem;margin-top:0.25rem;">✓ Confirmed: ${esc(r.confirmed_slot)}</div>` : ''}
                             </div>
-                            <span style="font-size:0.85rem;font-weight:700;color:${statusColor};">● ${r.status.charAt(0).toUpperCase() + r.status.slice(1)}</span>
+                            <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
+                                <span style="font-size:0.85rem;font-weight:700;color:${statusColor};">● ${r.status.charAt(0).toUpperCase() + r.status.slice(1)}</span>
+                                ${r.confirmed_slot ? `<a href="/api/realtor-showings/${r.id}/ics" style="background:#f3f4f6;color:#374151;border:1px solid #d1d5db;border-radius:8px;padding:5px 10px;font-size:0.82rem;font-weight:600;text-decoration:none;white-space:nowrap;">📅 Add to Calendar</a>` : ''}
+                            </div>
                         </div>
                         ${r.status === 'pending' && (r.proposed_slots || []).length ? `
                         <div style="margin-top:0.75rem;border-top:1px solid #f3f4f6;padding-top:0.75rem;">
@@ -3163,6 +3329,119 @@
             document.getElementById(`rt-${sub}`).classList.add('active');
         }
 
+        let realtorSearchPage = 1;
+
+        async function searchRealtors(page = 1) {
+            const zip = document.getElementById('realtorSearchZip').value.trim();
+            const name = document.getElementById('realtorSearchName').value.trim();
+            if (!zip && !name) {
+                document.getElementById('realtorSearchResults').innerHTML = '<div style="color:#9ca3af;text-align:center;padding:2rem;">Enter a ZIP code or name to search.</div>';
+                return;
+            }
+            realtorSearchPage = page;
+            const params = new URLSearchParams({ limit: 12, page });
+            if (zip) params.set('zip', zip);
+            if (name) params.set('name', name);
+
+            document.getElementById('realtorSearchResults').innerHTML = '<div style="text-align:center;padding:2rem;color:#9ca3af;">Searching...</div>';
+
+            try {
+                const res = await fetch(`${API_BASE_URL}/realtors/search?${params}`, { credentials: 'include' });
+                const data = await res.json();
+                const realtors = data.realtors || data || [];
+
+                if (!realtors.length) {
+                    document.getElementById('realtorSearchResults').innerHTML = '<div style="color:#9ca3af;text-align:center;padding:2rem;">No realtors found. Try a different ZIP or city.</div>';
+                    document.getElementById('realtorSearchPagination').innerHTML = '';
+                    return;
+                }
+
+                document.getElementById('realtorSearchResults').innerHTML = `
+                    <div style="display:grid;gap:1rem;">
+                        ${realtors.map(r => renderRealtorCard(r)).join('')}
+                    </div>
+                `;
+                // Pagination
+                const total = data.total || realtors.length;
+                const pages = Math.ceil(total / 12);
+                const pag = document.getElementById('realtorSearchPagination');
+                pag.innerHTML = pages > 1 ? Array.from({length: Math.min(pages, 5)}, (_, i) => i + 1).map(p =>
+                    `<button onclick="searchRealtors(${p})" style="background:${p === page ? '#FF6B35' : 'white'};color:${p === page ? 'white' : '#374151'};border:1px solid #e5e7eb;padding:0.4rem 0.75rem;border-radius:6px;cursor:pointer;font-family:inherit;">${p}</button>`
+                ).join('') : '';
+            } catch(e) {
+                document.getElementById('realtorSearchResults').innerHTML = '<div style="color:#dc2626;text-align:center;padding:2rem;">Search failed. Please try again.</div>';
+            }
+        }
+
+        function renderRealtorCard(r) {
+            const name = [r.first_name, r.last_name].filter(Boolean).join(' ') || 'Realtor';
+            const areas = r.service_areas ? r.service_areas.slice(0, 60) + (r.service_areas.length > 60 ? '…' : '') : 'Service areas not listed';
+            const exp = r.years_experience ? `${r.years_experience} yrs exp` : '';
+            const brokerage = r.brokerage || '';
+            const verified = r.license_verified ? '<span style="color:#059669;font-size:0.75rem;font-weight:600;">✓ Verified</span>' : '';
+            const planBadge = r.subscription_plan && r.subscription_plan !== 'free' ? `<span style="background:#eff6ff;color:#2563eb;font-size:0.7rem;font-weight:700;padding:1px 6px;border-radius:10px;text-transform:uppercase;">${r.subscription_plan}</span>` : '';
+            const profileLink = r.profile_slug ? `/agent/${r.profile_slug}` : '#';
+
+            return `
+                <div style="background:white;border:1px solid #e5e7eb;border-radius:12px;padding:1.25rem;display:flex;gap:1rem;align-items:flex-start;">
+                    <div style="width:48px;height:48px;border-radius:50%;background:#f3f4f6;overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1.2rem;font-weight:700;color:#9ca3af;">
+                        ${r.profile_photo ? `<img src="${r.profile_photo}" style="width:100%;height:100%;object-fit:cover;" alt="${name}">` : name.charAt(0)}
+                    </div>
+                    <div style="flex:1;min-width:0;">
+                        <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.25rem;">
+                            <span style="font-weight:700;font-size:0.95rem;">${name}</span>
+                            ${verified} ${planBadge}
+                        </div>
+                        ${brokerage ? `<div style="font-size:0.82rem;color:#6b7280;margin-bottom:0.2rem;">${brokerage}</div>` : ''}
+                        <div style="font-size:0.8rem;color:#9ca3af;">
+                            ${[exp, areas].filter(Boolean).join(' · ')}
+                        </div>
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:0.5rem;flex-shrink:0;">
+                        ${profileLink !== '#' ? `<a href="${profileLink}" target="_blank" style="background:white;color:#374151;border:1px solid #e5e7eb;padding:0.4rem 0.75rem;border-radius:6px;font-size:0.82rem;font-weight:600;text-decoration:none;text-align:center;">View Profile</a>` : ''}
+                        <button onclick="inviteRealtor(${r.id}, '${name.replace(/'/g, "\\'")}')" style="background:#FF6B35;color:white;border:none;padding:0.4rem 0.75rem;border-radius:6px;font-size:0.82rem;font-weight:600;cursor:pointer;font-family:inherit;">Invite</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function inviteRealtor(realtorId, realtorName) {
+            try {
+                const res = await fetch(`${API_BASE_URL}/listings/my`, { credentials: 'include' });
+                const listings = await res.json();
+                const active = (listings.listings || listings || []).filter(l => l.status === 'active' || l.status === 'pending');
+
+                if (!active.length) {
+                    return showToast('You need an active listing to invite a realtor.');
+                }
+
+                let listingId;
+                if (active.length === 1) {
+                    listingId = active[0].id;
+                } else {
+                    const choice = prompt(`Which listing would you like to invite ${realtorName} to?\n\n${active.map((l, i) => `${i + 1}. ${l.address}`).join('\n')}\n\nEnter the number:`);
+                    const idx = parseInt(choice) - 1;
+                    if (isNaN(idx) || idx < 0 || idx >= active.length) return;
+                    listingId = active[idx].id;
+                }
+
+                const invRes = await fetch(`${API_BASE_URL}/listings/${listingId}/invite-realtor`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ realtorId })
+                });
+                if (invRes.ok) {
+                    showToast(`Invitation sent to ${realtorName}!`);
+                } else {
+                    const err = await invRes.json();
+                    showToast(err.error || 'Failed to send invitation');
+                }
+            } catch(e) {
+                showToast('Failed to send invitation');
+            }
+        }
+
         async function loadBuyerOffers() {
             const container = document.getElementById('buyerOffersContainer');
             if (!container) return;
@@ -3257,15 +3536,31 @@
                     <div style="background:#f8f9fa;border:1px solid #e1e8ed;border-radius:10px;padding:1rem;margin-top:0.5rem;">
                         <div style="font-weight:600;font-size:0.85rem;color:#374151;margin-bottom:0.75rem;">📄 Documents & Disclosures</div>
                         <div id="docs-list-${listingId}">
-                            ${docs.length ? docs.map(d => `
-                                <div style="display:flex;align-items:center;justify-content:space-between;padding:0.35rem 0;border-bottom:1px solid #e5e7eb;font-size:0.85rem;">
-                                    <a href="${esc(d.url)}" target="_blank" style="color:#0284c7;text-decoration:none;">📎 ${esc(d.name)}</a>
-                                    <button onclick="deleteDoc(${listingId},${d.id})" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:0.85rem;padding:0 0.25rem;">✕</button>
-                                </div>`).join('') : '<div style="color:#9ca3af;font-size:0.83rem;">No documents yet.</div>'}
+                            ${docs.length ? docs.map(d => {
+                                const typeColors = { Contract: '#dbeafe', Disclosure: '#fef3c7', Inspection: '#d1fae5', Appraisal: '#ede9fe', Other: '#f3f4f6' };
+                                const typeTextColors = { Contract: '#1d4ed8', Disclosure: '#92400e', Inspection: '#065f46', Appraisal: '#5b21b6', Other: '#374151' };
+                                const dt = d.doc_type || 'Other';
+                                const badgeBg = typeColors[dt] || '#f3f4f6';
+                                const badgeText = typeTextColors[dt] || '#374151';
+                                return `<div style="display:flex;align-items:center;justify-content:space-between;padding:0.35rem 0;border-bottom:1px solid #e5e7eb;font-size:0.85rem;">
+                                    <div style="display:flex;align-items:center;gap:0.5rem;min-width:0;">
+                                        <span style="background:${badgeBg};color:${badgeText};border-radius:4px;padding:1px 6px;font-size:0.75rem;font-weight:600;white-space:nowrap;">${esc(dt)}</span>
+                                        <a href="${esc(d.url)}" target="_blank" style="color:#0284c7;text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">📎 ${esc(d.name)}</a>
+                                    </div>
+                                    <button onclick="deleteDoc(${listingId},${d.id})" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:0.85rem;padding:0 0.25rem;flex-shrink:0;">✕</button>
+                                </div>`;
+                            }).join('') : '<div style="color:#9ca3af;font-size:0.83rem;">No documents yet.</div>'}
                         </div>
                         <div style="margin-top:0.75rem;display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
                             <input type="file" id="docFile-${listingId}" accept=".pdf,.doc,.docx,.txt" style="font-size:0.82rem;color:#555;">
-                            <input type="text" id="docName-${listingId}" placeholder="Document name (optional)" style="padding:0.4rem 0.75rem;border:1px solid #d1d5db;border-radius:6px;font-size:0.82rem;font-family:inherit;flex:1;min-width:140px;">
+                            <select id="docType-${listingId}" style="padding:0.4rem 0.6rem;border:1px solid #d1d5db;border-radius:6px;font-size:0.82rem;font-family:inherit;color:#374151;">
+                                <option value="Other">Other</option>
+                                <option value="Contract">Contract</option>
+                                <option value="Disclosure">Disclosure</option>
+                                <option value="Inspection">Inspection</option>
+                                <option value="Appraisal">Appraisal</option>
+                            </select>
+                            <input type="text" id="docName-${listingId}" placeholder="Document name (optional)" style="padding:0.4rem 0.75rem;border:1px solid #d1d5db;border-radius:6px;font-size:0.82rem;font-family:inherit;flex:1;min-width:120px;">
                             <button onclick="uploadDoc(${listingId})" style="background:#0a2540;color:white;border:none;border-radius:6px;padding:0.4rem 0.9rem;font-size:0.82rem;font-weight:600;cursor:pointer;white-space:nowrap;font-family:inherit;">Upload</button>
                         </div>
                         <div id="docUploadMsg-${listingId}" style="font-size:0.8rem;margin-top:0.4rem;"></div>
@@ -3276,12 +3571,14 @@
         async function uploadDoc(listingId) {
             const fileEl = document.getElementById(`docFile-${listingId}`);
             const nameEl = document.getElementById(`docName-${listingId}`);
+            const typeEl = document.getElementById(`docType-${listingId}`);
             const msgEl = document.getElementById(`docUploadMsg-${listingId}`);
             if (!fileEl?.files[0]) { msgEl.textContent = 'Please select a file.'; msgEl.style.color = '#dc2626'; return; }
             msgEl.textContent = 'Uploading…'; msgEl.style.color = '#6b7280';
             const fd = new FormData();
             fd.append('doc', fileEl.files[0]);
             if (nameEl?.value.trim()) fd.append('name', nameEl.value.trim());
+            fd.append('doc_type', typeEl?.value || 'Other');
             try {
                 const res = await fetch(`/api/listings/${listingId}/documents`, { method: 'POST', credentials: 'include', body: fd });
                 if (!res.ok) { const d = await res.json(); msgEl.textContent = d.error || 'Upload failed.'; msgEl.style.color = '#dc2626'; return; }

@@ -269,25 +269,29 @@
         .share-row {
             display: flex;
             align-items: center;
-            gap: 0.75rem;
+            gap: 0.5rem;
             margin-top: 1rem;
             padding-top: 1rem;
             border-top: 1px solid var(--border);
+            flex-wrap: wrap;
         }
         .btn-share {
-            flex: 1;
-            padding: 0.6rem 1rem;
+            padding: 0.5rem 0.875rem;
             background: var(--soft-bg);
             color: var(--primary);
             border: 1.5px solid var(--border);
             border-radius: 8px;
             font-weight: 600;
-            font-size: 0.88rem;
+            font-size: 0.82rem;
             cursor: pointer;
             font-family: inherit;
-            transition: border-color 0.15s;
+            text-decoration: none;
+            transition: border-color 0.15s, background 0.15s;
+            display: inline-flex;
+            align-items: center;
+            white-space: nowrap;
         }
-        .btn-share:hover { border-color: var(--primary); }
+        .btn-share:hover { border-color: var(--primary); background: #f1f5f9; }
 
         .skeleton {
             background: linear-gradient(90deg, #f0ede9 25%, #e8e4df 50%, #f0ede9 75%);
@@ -474,16 +478,21 @@
             <p>Submit a proposal to represent this seller. Show them why you're the right agent for this home.</p>
             <a href="/login?tab=signup&type=realtor" class="btn-cta">Submit a Proposal</a>
             <a href="/realtors" class="btn-cta-outline">Learn More</a>
-            <div class="share-row">
-                <button class="btn-share" onclick="shareListing()">📋 Copy Link</button>
-                ${navigator.share ? `<button class="btn-share" onclick="nativeShare('${esc(l.address || '')}')">↗ Share</button>` : ''}
+            <div class="share-row" id="shareRow">
+                <button class="btn-share" onclick="shareListing()">📋 Copy</button>
+                <a class="btn-share" href="https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}" target="_blank" rel="noopener">Facebook</a>
+                <a class="btn-share" href="https://twitter.com/intent/tweet?url=${encodeURIComponent(window.location.href)}&text=${encodeURIComponent((l.address||'') + ' — RealtorFinder')}" target="_blank" rel="noopener">𝕏</a>
+                <a class="btn-share" href="https://wa.me/?text=${encodeURIComponent((l.address||'') + ' ' + window.location.href)}" target="_blank" rel="noopener">WhatsApp</a>
             </div>
         ` : `
             <h3>This listing is ${l.status === 'sold' ? 'sold' : 'under contract'}.</h3>
             <p>Looking to sell your home? List it on RealtorFinder and start receiving proposals from qualified realtors.</p>
             <a href="/login?tab=signup&type=seller" class="btn-cta">List Your Home</a>
             <div class="share-row">
-                <button class="btn-share" onclick="shareListing()">📋 Copy Link</button>
+                <button class="btn-share" onclick="shareListing()">📋 Copy</button>
+                <a class="btn-share" href="https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}" target="_blank" rel="noopener">Facebook</a>
+                <a class="btn-share" href="https://twitter.com/intent/tweet?url=${encodeURIComponent(window.location.href)}&text=${encodeURIComponent((l.address||'') + ' — RealtorFinder')}" target="_blank" rel="noopener">𝕏</a>
+                <a class="btn-share" href="https://wa.me/?text=${encodeURIComponent((l.address||'') + ' ' + window.location.href)}" target="_blank" rel="noopener">WhatsApp</a>
             </div>
         `;
     }
@@ -530,6 +539,15 @@
         if (navigator.share) {
             navigator.share({ title: address + ' — RealtorFinder', url: window.location.href }).catch(() => {});
         }
+    }
+
+    function buildVideoEmbed(url) {
+        if (!url) return '';
+        const yt = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/);
+        if (yt) return `<iframe src="https://www.youtube.com/embed/${yt[1]}" allowfullscreen></iframe>`;
+        const vm = url.match(/vimeo\.com\/(\d+)/);
+        if (vm) return `<iframe src="https://player.vimeo.com/video/${vm[1]}" allowfullscreen></iframe>`;
+        return '';
     }
 
     loadListing();

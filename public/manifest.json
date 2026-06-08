@@ -1,14 +1,48 @@
 {
   "name": "RealtorFinder",
   "short_name": "RealtorFinder",
-  "description": "Find and connect with licensed realtors nationwide",
+  "description": "Browse listings, submit proposals, and manage your pipeline on the go",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#0A2540",
   "theme_color": "#0A2540",
   "orientation": "portrait-primary",
+  "categories": ["business", "productivity"],
   "icons": [
-    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" }
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "shortcuts": [
+    {
+      "name": "Browse Listings",
+      "short_name": "Browse",
+      "description": "Browse active seller listings",
+      "url": "/dashboard/realtor?tab=browse",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "My Pipeline",
+      "short_name": "Pipeline",
+      "description": "View your proposals and won listings",
+      "url": "/dashboard/realtor?tab=pipeline",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Messages",
+      "short_name": "Messages",
+      "description": "View your conversations",
+      "url": "/dashboard/realtor?tab=messages",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "RealtorFinder Dashboard"
+    }
   ]
 }

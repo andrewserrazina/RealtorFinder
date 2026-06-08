@@ -4,6 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Realtor Dashboard - RealtorFinder</title>
+    <!-- PWA -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#0A2540">
+    <!-- iOS PWA -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="RealtorFinder">
+    <link rel="apple-touch-icon" href="/icon-192.png">
     <!-- Google Analytics 4 -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-BRGVVNKT65"></script>
     <script>
@@ -1041,6 +1049,20 @@
     <meta name="apple-mobile-web-app-title" content="RealtorFinder">
 </head>
 <body>
+    <!-- PWA Install Banner -->
+    <!-- Android/Chrome install banner -->
+    <div id="pwaInstallBanner" style="display:none;align-items:center;justify-content:space-between;gap:1rem;background:#0A2540;color:white;padding:0.75rem 1.25rem;font-size:0.875rem;flex-wrap:wrap;">
+        <span>📱 <strong>Install RealtorFinder</strong> for instant access from your home screen.</span>
+        <div style="display:flex;gap:0.5rem;flex-shrink:0;">
+            <button id="pwaInstallBtn" style="background:#FF6B35;color:white;border:none;padding:0.45rem 1rem;border-radius:6px;font-weight:600;cursor:pointer;font-size:0.875rem;font-family:inherit;">Install</button>
+            <button id="pwaInstallDismiss" style="background:transparent;color:rgba(255,255,255,0.7);border:1px solid rgba(255,255,255,0.3);padding:0.45rem 0.75rem;border-radius:6px;cursor:pointer;font-size:0.875rem;font-family:inherit;">✕</button>
+        </div>
+    </div>
+    <!-- iOS Safari install tip -->
+    <div id="pwaIosBanner" style="display:none;align-items:center;justify-content:space-between;gap:1rem;background:#0A2540;color:white;padding:0.75rem 1.25rem;font-size:0.875rem;flex-wrap:wrap;">
+        <span>📱 <strong>Add to Home Screen:</strong> tap the Share button <span style="font-size:1rem;">⎋</span> then <em>Add to Home Screen</em> for the best experience.</span>
+        <button id="pwaIosDismiss" style="background:transparent;color:rgba(255,255,255,0.7);border:1px solid rgba(255,255,255,0.3);padding:0.45rem 0.75rem;border-radius:6px;cursor:pointer;font-size:0.875rem;font-family:inherit;flex-shrink:0;">✕</button>
+    </div>
     <header>
         <div class="header-container">
             <div class="logo">Realtor<span>Finder</span></div>
@@ -1624,6 +1646,13 @@
                         <div id="rNotifPrefsSaved" style="display:none;color:#059669;font-size:0.85rem;">✓ Preferences saved</div>
                         <button onclick="saveRNotifPrefs()" style="background:var(--accent);color:white;border:none;padding:0.65rem 1.5rem;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.9rem;align-self:flex-start;font-family:inherit;">Save Preferences</button>
                     </div>
+                </div>
+
+                <!-- Push Notifications -->
+                <div style="background:white;border-radius:12px;border:1px solid var(--border);padding:1.5rem;">
+                    <h3 style="font-family:'Crimson Pro',serif;font-size:1.3rem;font-weight:700;margin-bottom:0.5rem;color:var(--ink);">Push Notifications</h3>
+                    <p style="color:#6b7280;font-size:0.875rem;margin-bottom:1.25rem;">Get real-time alerts for new proposals, messages, and accepted listings — even when the tab is closed.</p>
+                    <button id="pushToggleBtn" onclick="requestPushPermission()" style="background:var(--accent);color:white;border:none;padding:0.65rem 1.5rem;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.9rem;font-family:inherit;">Enable Push Notifications</button>
                 </div>
 
                 <!-- Profile Completeness Widget (Settings) -->
@@ -2314,6 +2343,7 @@
                     loadSettingsCompleteness();
                     loadAvailability();
                     loadCompany();
+                    initPushToggle();
                 }
             });
         });
@@ -3901,7 +3931,8 @@
                             </div>
                             ${s.message ? `<div style="margin-top:0.5rem;color:#555;font-size:0.9rem;">"${s.message}"</div>` : ''}
                         </div>
-                        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+                        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
+                            ${s.status === 'confirmed' ? `<a href="/api/showings/${s.id}/ics" class="btn btn-outline" style="font-size:0.82rem;padding:0.45rem 0.9rem;text-decoration:none;">📅 Add to Calendar</a>` : ''}
                             ${s.status === 'pending' ? `<button class="btn btn-primary" onclick="confirmShowing(${s.id})" style="font-size:0.85rem;padding:0.5rem 1rem;">Confirm</button>` : ''}
                             ${s.status !== 'cancelled' ? `<button class="btn btn-outline" onclick="cancelShowing(${s.id})" style="font-size:0.85rem;padding:0.5rem 1rem;">Cancel</button>` : ''}
                         </div>
@@ -4710,6 +4741,64 @@
                 };
                 es.onerror = () => { setTimeout(startNotifStream, 5000); es.close(); };
             })();
+
+            // ─── URL param tab routing (PWA shortcuts: ?tab=browse|pipeline|messages) ───
+            (function handleTabParam() {
+                const params = new URLSearchParams(location.search);
+                const tab = params.get('tab');
+                if (!tab) return;
+                const el = document.querySelector(`[data-view="${tab}"]`);
+                if (el) el.click();
+            })();
+
+            // ─── Service Worker registration ─────────────────────────────────────────
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('/sw.js').then(reg => {
+                    navigator.serviceWorker.addEventListener('message', e => {
+                        if (e.data && e.data.type === 'navigate') {
+                            const params = new URLSearchParams(e.data.url.split('?')[1] || '');
+                            const t = params.get('tab');
+                            if (t) { const el = document.querySelector(`[data-view="${t}"]`); if (el) el.click(); }
+                        }
+                    });
+                }).catch(() => {});
+            }
+
+            // ─── PWA install prompt ───────────────────────────────────────────────────
+            let _deferredInstallPrompt = null;
+            window.addEventListener('beforeinstallprompt', e => {
+                e.preventDefault();
+                _deferredInstallPrompt = e;
+                const banner = document.getElementById('pwaInstallBanner');
+                if (banner && !localStorage.getItem('pwaInstallDismissed')) banner.style.display = 'flex';
+            });
+            document.getElementById('pwaInstallBtn') && document.getElementById('pwaInstallBtn').addEventListener('click', () => {
+                if (!_deferredInstallPrompt) return;
+                _deferredInstallPrompt.prompt();
+                _deferredInstallPrompt.userChoice.finally(() => {
+                    _deferredInstallPrompt = null;
+                    const banner = document.getElementById('pwaInstallBanner');
+                    if (banner) banner.style.display = 'none';
+                });
+            });
+            document.getElementById('pwaInstallDismiss') && document.getElementById('pwaInstallDismiss').addEventListener('click', () => {
+                localStorage.setItem('pwaInstallDismissed', '1');
+                const banner = document.getElementById('pwaInstallBanner');
+                if (banner) banner.style.display = 'none';
+            });
+
+            // iOS Safari: show "Add to Home Screen" tip since beforeinstallprompt never fires there
+            const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+            const isInStandaloneMode = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+            if (isIos && !isInStandaloneMode && !localStorage.getItem('pwaInstallDismissed')) {
+                const iosBanner = document.getElementById('pwaIosBanner');
+                if (iosBanner) iosBanner.style.display = 'flex';
+            }
+            document.getElementById('pwaIosDismiss') && document.getElementById('pwaIosDismiss').addEventListener('click', () => {
+                localStorage.setItem('pwaInstallDismissed', '1');
+                const b = document.getElementById('pwaIosBanner');
+                if (b) b.style.display = 'none';
+            });
         });
 
         // ─── Notifications ───────────────────────────────────────────────────────
@@ -4745,6 +4834,87 @@
                 `).join('');
             } catch(e) {}
         }
+        // ─── Push notification subscribe/unsubscribe ──────────────────────────────
+        async function getPushSubscription() {
+            if (!('serviceWorker' in navigator) || !('PushManager' in window)) return null;
+            const reg = await navigator.serviceWorker.ready;
+            return reg.pushManager.getSubscription();
+        }
+
+        async function subscribePush() {
+            try {
+                const reg = await navigator.serviceWorker.ready;
+                const { publicKey } = await fetch(`${API_BASE_URL}/push/vapid-public-key`, { credentials: 'include' }).then(r => r.json());
+                const sub = await reg.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: urlBase64ToUint8Array(publicKey)
+                });
+                await fetch(`${API_BASE_URL}/push/subscribe`, {
+                    method: 'POST', credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(sub.toJSON())
+                });
+                return sub;
+            } catch (e) { console.warn('Push subscribe failed:', e); return null; }
+        }
+
+        async function unsubscribePush() {
+            const sub = await getPushSubscription();
+            if (!sub) return;
+            await fetch(`${API_BASE_URL}/push/unsubscribe`, {
+                method: 'DELETE', credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ endpoint: sub.endpoint })
+            });
+            await sub.unsubscribe();
+        }
+
+        function urlBase64ToUint8Array(b64) {
+            const pad = '='.repeat((4 - b64.length % 4) % 4);
+            const raw = atob((b64 + pad).replace(/-/g, '+').replace(/_/g, '/'));
+            const arr = new Uint8Array(raw.length);
+            for (let i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i);
+            return arr;
+        }
+
+        async function requestPushPermission() {
+            if (!('Notification' in window)) return alert('Push notifications are not supported on this browser.');
+            const perm = await Notification.requestPermission();
+            if (perm === 'granted') {
+                const sub = await subscribePush();
+                if (sub) {
+                    const btn = document.getElementById('pushToggleBtn');
+                    if (btn) { btn.textContent = 'Disable Push Notifications'; btn.onclick = disablePushNotifications; }
+                    showToast('Push notifications enabled!');
+                }
+            }
+        }
+
+        async function disablePushNotifications() {
+            await unsubscribePush();
+            const btn = document.getElementById('pushToggleBtn');
+            if (btn) { btn.textContent = 'Enable Push Notifications'; btn.onclick = requestPushPermission; }
+            showToast('Push notifications disabled.');
+        }
+
+        // Wire up push toggle in settings when settings tab loads
+        async function initPushToggle() {
+            const btn = document.getElementById('pushToggleBtn');
+            if (!btn) return;
+            if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+                btn.textContent = 'Push not supported'; btn.disabled = true; return;
+            }
+            const perm = Notification.permission;
+            const sub = await getPushSubscription();
+            if (perm === 'granted' && sub) {
+                btn.textContent = 'Disable Push Notifications';
+                btn.onclick = disablePushNotifications;
+            } else {
+                btn.textContent = 'Enable Push Notifications';
+                btn.onclick = requestPushPermission;
+            }
+        }
+
         function toggleNotifDropdown() {
             const dd = document.getElementById('notifDropdown');
             notifOpen = !notifOpen;
