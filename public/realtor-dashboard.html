@@ -2175,6 +2175,11 @@
 
     <script>
         const API_BASE_URL = window.location.origin + '/api';
+        function fmtPrice(val) {
+            const n = Number(val);
+            if (!n && n !== 0) return val;
+            return '$' + n.toLocaleString('en-US', { maximumFractionDigits: 0 });
+        }
         function esc(str) {
             if (str == null) return '';
             return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
@@ -2572,7 +2577,7 @@
                         <button class="bookmark-btn ${isSaved ? 'saved' : ''}" onclick="event.stopPropagation();toggleSave(${listing.id}, this)" title="${isSaved ? 'Unsave' : 'Save listing'}">${isSaved ? '🔖' : '🏷️'}</button>
                     </div>
                     <div class="listing-content">
-                        <div class="listing-price">${listing.price}</div>
+                        <div class="listing-price">${fmtPrice(listing.price)}</div>
                         <div class="listing-address">${listing.address}</div>
                         <div class="listing-specs">
                             <span>🛏️ ${listing.bedrooms} bd</span>
@@ -2616,7 +2621,7 @@
                     <div class="bid-card" style="${status === 'declined' ? 'opacity:0.7;' : ''}">
                         <div class="bid-info">
                             <h3>${fullAddress}</h3>
-                            <div class="bid-price">${bid.price}</div>
+                            <div class="bid-price">${fmtPrice(bid.price)}</div>
                             <div class="bid-details">
                                 <span><strong>${bid.commission}%</strong> commission</span>
                                 <span>${bid.brokerage}</span>
@@ -2651,7 +2656,7 @@
                     <div class="bid-card" id="won-bid-${bid.id}" style="border-color: var(--success); border-width: 2px;">
                         <div class="bid-info">
                             <h3>${fullAddress}</h3>
-                            <div class="bid-price">${bid.price}</div>
+                            <div class="bid-price">${fmtPrice(bid.price)}</div>
                             <div class="bid-details">
                                 <span><strong>${bid.commission}%</strong> commission</span>
                                 <span>${bid.brokerage}</span>
@@ -2706,15 +2711,18 @@
             const escapedAddress = listing.address.replace(/'/g, '&#39;').replace(/"/g, '&quot;');
             const icon = L.divIcon({
                 className: '',
-                html: `<div style="background:var(--accent);color:white;padding:4px 10px;border-radius:8px;font-size:11px;font-weight:700;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,0.25);cursor:pointer;">🏠 ${listing.price}</div>`,
-                iconAnchor: [32, 10]
+                html: `<div style="position:relative;display:inline-block;">
+                    <div style="background:#FF6B35;color:white;padding:5px 11px;border-radius:20px;font-size:12px;font-weight:800;white-space:nowrap;box-shadow:0 3px 10px rgba(0,0,0,0.35);cursor:pointer;letter-spacing:0.01em;border:2px solid rgba(255,255,255,0.5);">${fmtPrice(listing.price)}</div>
+                    <div style="width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-top:7px solid #FF6B35;margin:0 auto;"></div>
+                </div>`,
+                iconAnchor: [40, 28]
             });
 
             const marker = L.marker([listing.lat, listing.lng], { icon })
                 .addTo(map)
                 .bindPopup(
                     `<div style="min-width:220px;font-family:'DM Sans',sans-serif;">
-                        <div style="font-size:1.15rem;font-weight:700;color:var(--accent);margin-bottom:4px;">${listing.price}</div>
+                        <div style="font-size:1.15rem;font-weight:700;color:var(--accent);margin-bottom:4px;">${fmtPrice(listing.price)}</div>
                         <div style="font-weight:600;margin-bottom:6px;font-size:0.9rem;">${listing.address}</div>
                         <div style="color:#666;font-size:0.82rem;margin-bottom:4px;">
                             🛏️ ${listing.bedrooms} bd &nbsp;·&nbsp; 🛁 ${listing.bathrooms} ba &nbsp;·&nbsp; ${Number(listing.sqft).toLocaleString()} sqft
@@ -4540,7 +4548,7 @@
                                 <button class="bookmark-btn saved" onclick="event.stopPropagation();toggleSave(${listing.id}, this);setTimeout(loadSavedListings,300)" title="Unsave">🔖</button>
                             </div>
                             <div class="listing-content">
-                                <div class="listing-price">${listing.price}</div>
+                                <div class="listing-price">${fmtPrice(listing.price)}</div>
                                 <div class="listing-address">${listing.address}</div>
                                 <div class="listing-specs">
                                     <span>🛏️ ${listing.bedrooms} bd</span>
