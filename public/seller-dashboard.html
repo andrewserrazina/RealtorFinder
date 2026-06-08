@@ -2724,6 +2724,31 @@
             document.getElementById('proposalCompareModal').classList.remove('active');
         }
 
+        function computeMatchScore(p) {
+            let score = 0;
+            // Experience: 3 pts/year, max 30
+            score += Math.min((parseInt(p.years_experience) || 0) * 3, 30);
+            // Commission competitiveness (industry avg ~2.5-3%)
+            const comm = parseFloat(p.commission_pct) || 3;
+            if (comm <= 2)        score += 25;
+            else if (comm <= 2.5) score += 20;
+            else if (comm <= 3)   score += 15;
+            else                  score += 8;
+            // Profile completeness signals
+            if (p.brokerage)                          score += 15;
+            if (p.license_verified)                   score += 15;
+            if ((p.cover_note || '').length >= 100)   score += 15;
+            return Math.min(score, 100);
+        }
+
+        function matchScoreBadge(score) {
+            const [bg, col] = score >= 80 ? ['#ecfdf5','#059669']
+                            : score >= 60 ? ['#eff6ff','#2563eb']
+                            : score >= 40 ? ['#fffbeb','#d97706']
+                            :               ['#f3f4f6','#9ca3af'];
+            return `<span title="Match score (experience, commission, profile completeness)" style="background:${bg};color:${col};border:1px solid ${col}40;font-size:0.72rem;font-weight:700;padding:2px 7px;border-radius:20px;margin-left:4px;">${score}</span>`;
+        }
+
         async function loadProposals() {
             try {
                 const listingsRes = await fetch('/api/listings', { credentials: 'include' });
@@ -2751,6 +2776,8 @@
                             const isLowest = i === 0;
                             const name = esc(`${p.first_name || ''} ${p.last_name || ''}`.trim());
                             const badge = isLowest ? '<span style="background:#d1fae5;color:#065f46;font-size:0.75rem;padding:2px 8px;border-radius:20px;font-weight:600;margin-left:6px;">Lowest ★</span>' : '';
+                            const matchScore = computeMatchScore(p);
+                            const scoreBadge = matchScoreBadge(matchScore);
                             const verifiedBadge = p.license_verified ? '<span style="background:#ecfdf5;color:#059669;font-size:0.72rem;font-weight:700;padding:2px 7px;border-radius:20px;margin-left:4px;">✓ Verified</span>' : '';
                             const status = p.status === 'accepted' ? '<span style="background:#d1fae5;color:#065f46;font-size:0.75rem;padding:2px 8px;border-radius:20px;font-weight:600;">Accepted</span>'
                                          : p.status === 'declined' ? '<span style="background:#fee2e2;color:#991b1b;font-size:0.75rem;padding:2px 8px;border-radius:20px;font-weight:600;">Declined</span>'
@@ -2775,7 +2802,7 @@
                             }));
                             const compareBtn = `<button onclick="addToProposalCompare('${pData}')" style="background:white;border:1px solid #6366f1;color:#6366f1;padding:5px 10px;border-radius:6px;font-weight:600;cursor:pointer;font-size:0.8rem;">⚖️</button>`;
                             return `<tr style="${isLowest ? 'background:#f0fdf4;' : ''}">
-                                <td style="padding:10px 12px;font-weight:600;">${name}${badge}${verifiedBadge}</td>
+                                <td style="padding:10px 12px;font-weight:600;">${name}${badge}${verifiedBadge}${scoreBadge}</td>
                                 <td style="padding:10px 12px;font-weight:700;color:${isLowest ? '#065f46' : 'var(--accent)'};">${p.commission_pct}%</td>
                                 <td style="padding:10px 12px;color:#666;font-size:0.85rem;">${esc(p.timeline || '—')}</td>
                                 <td style="padding:10px 12px;color:#444;font-size:0.85rem;max-width:200px;">${esc(p.cover_note || '—').slice(0, 80)}${(p.cover_note || '').length > 80 ? '…' : ''}
