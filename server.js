@@ -9709,6 +9709,10 @@ _schemaMigrations.push(
 );
 
 _schemaMigrations.push(
+    `ALTER TABLE buyer_requests ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ`
+);
+
+_schemaMigrations.push(
     `ALTER TABLE listings ADD COLUMN IF NOT EXISTS proposal_deadline DATE`,
     `ALTER TABLE listings ADD COLUMN IF NOT EXISTS video_url TEXT`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS unavailable_until DATE`,
