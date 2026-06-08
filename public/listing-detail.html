@@ -398,6 +398,26 @@
             if (!res.ok) { showNotFound(); return; }
             const l = await res.json();
             document.title = `${l.address} — RealtorFinder`;
+            // Update OG/Twitter meta tags for social sharing (messaging apps execute JS)
+            const _ogTitle = `${l.address} — RealtorFinder`;
+            const _ogDesc = [
+                l.bedrooms ? `${l.bedrooms} bed` : '',
+                l.bathrooms ? `${l.bathrooms} bath` : '',
+                l.sqft ? `${Number(l.sqft).toLocaleString()} sqft` : '',
+                l.price ? `listed at $${Number(l.price).toLocaleString()}` : ''
+            ].filter(Boolean).join(', ') + '. View agent proposals on RealtorFinder.';
+            const _ogImage = (l.image_urls && l.image_urls.length) ? l.image_urls[0] : 'https://realtorfinder.net/og-default.png';
+            const _setMeta = (prop, val) => {
+                const el = document.querySelector(`meta[property="${prop}"]`) || document.querySelector(`meta[name="${prop}"]`);
+                if (el) el.setAttribute('content', val);
+            };
+            _setMeta('og:title', _ogTitle);
+            _setMeta('og:description', _ogDesc);
+            _setMeta('og:image', _ogImage);
+            _setMeta('og:url', window.location.href);
+            _setMeta('twitter:title', _ogTitle);
+            _setMeta('twitter:description', _ogDesc);
+            _setMeta('twitter:image', _ogImage);
             renderGallery(l);
             renderMain(l);
             renderCta(l);

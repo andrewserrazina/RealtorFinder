@@ -4875,9 +4875,9 @@ app.post('/api/proposals', auth.requireAuth, async (req, res) => {
             }
         }
         const { rows } = await pool.query(
-            `INSERT INTO proposals (listing_id, realtor_id, commission_pct, cover_note, timeline)
-             VALUES ($1, $2, $3, $4, $5)
-             ON CONFLICT (listing_id, realtor_id) DO UPDATE SET commission_pct=$3, cover_note=$4, timeline=$5, status='pending'
+            `INSERT INTO proposals (listing_id, realtor_id, commission_pct, cover_note, timeline, expires_at)
+             VALUES ($1, $2, $3, $4, $5, NOW() + INTERVAL '30 days')
+             ON CONFLICT (listing_id, realtor_id) DO UPDATE SET commission_pct=$3, cover_note=$4, timeline=$5, status='pending', expires_at=NOW() + INTERVAL '30 days'
              RETURNING *`,
             [listing_id, req.session.userId, pct, cover_note || null, timeline || null]
         );
@@ -9872,6 +9872,25 @@ _schemaMigrations.push(`
     )
 `);
 
+_schemaMigrations.push(`ALTER TABLE proposals ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ`);
+_schemaMigrations.push(`UPDATE proposals SET expires_at = created_at + INTERVAL '30 days' WHERE expires_at IS NULL AND status = 'pending'`);
+
+// Auto-expire proposals whose expires_at has passed
+async function runProposalExpiryJob() {
+    try {
+        const { rowCount } = await pool.query(`
+            UPDATE proposals
+               SET status = 'expired', updated_at = NOW()
+             WHERE status = 'pending'
+               AND expires_at IS NOT NULL
+               AND expires_at < NOW()
+        `);
+        if (rowCount > 0) console.log(`⏰ Expired ${rowCount} proposal(s)`);
+    } catch (err) {
+        console.error('runProposalExpiryJob error:', err.message);
+    }
+}
+
 // Remind sellers about proposals they haven't responded to in 5+ days
 async function runProposalExpiryReminder() {
     try {
@@ -9943,6 +9962,8 @@ async function startServer() {
         setInterval(runReEngagementJob, 24 * 60 * 60 * 1000).unref();
         runSellerDigestJob();
         setInterval(runSellerDigestJob, 24 * 60 * 60 * 1000).unref();
+        runProposalExpiryJob();
+        setInterval(runProposalExpiryJob, 24 * 60 * 60 * 1000).unref();
         runProposalExpiryReminder();
         setInterval(() => runProposalExpiryReminder(), 24 * 60 * 60 * 1000).unref();
     });
