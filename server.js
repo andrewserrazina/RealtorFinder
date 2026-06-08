@@ -2563,6 +2563,126 @@ app.post('/api/admin/impersonate/:userId', requireAdmin, impersonateLimiter, asy
     }
 });
 
+// ===== ADMIN CRM USER DETAIL ROUTES =====
+
+app.get('/api/admin/users/:id/detail', requireAdmin, async (req, res) => {
+    try {
+        const userId = parseInt(req.params.id);
+        const { rows: userRows } = await pool.query(
+            `SELECT id, email, user_type, first_name, last_name, zip_code,
+                    email_verified, is_active, is_admin, is_approved, created_at,
+                    crm_stage, crm_flags, subscription_plan, profile_photo_url
+             FROM users WHERE id = $1`,
+            [userId]
+        );
+        if (!userRows.length) return res.status(404).json({ error: 'User not found' });
+
+        const { rows: statsRows } = await pool.query(
+            `SELECT
+                (SELECT COUNT(*) FROM listings WHERE user_id = $1) AS listings_count,
+                (SELECT COUNT(*) FROM offers WHERE user_id = $1) AS proposals_count,
+                GREATEST(
+                    (SELECT MAX(created_at) FROM listings WHERE user_id = $1),
+                    (SELECT MAX(created_at) FROM offers WHERE user_id = $1)
+                ) AS last_active`,
+            [userId]
+        );
+
+        res.json({ user: userRows[0], stats: statsRows[0] || { listings_count: 0, proposals_count: 0, last_active: null } });
+    } catch (err) {
+        console.error('Admin user detail error:', err);
+        res.status(500).json({ error: 'Failed to fetch user detail' });
+    }
+});
+
+app.get('/api/admin/users/:id/notes', requireAdmin, async (req, res) => {
+    try {
+        const userId = parseInt(req.params.id);
+        const { rows } = await pool.query(
+            `SELECT id, user_id, note, author_name, created_at
+             FROM admin_crm_notes WHERE user_id = $1 ORDER BY created_at DESC`,
+            [userId]
+        );
+        res.json(rows);
+    } catch (err) {
+        console.error('Admin user notes GET error:', err);
+        res.status(500).json({ error: 'Failed to fetch notes' });
+    }
+});
+
+app.post('/api/admin/users/:id/notes', requireAdmin, async (req, res) => {
+    try {
+        const userId = parseInt(req.params.id);
+        const { note } = req.body;
+        if (!note || !note.trim()) return res.status(400).json({ error: 'Note text is required' });
+        const { rows } = await pool.query(
+            `INSERT INTO admin_crm_notes (user_id, note, author_name)
+             VALUES ($1, $2, 'Admin') RETURNING *`,
+            [userId, note.trim()]
+        );
+        res.json(rows[0]);
+    } catch (err) {
+        console.error('Admin user notes POST error:', err);
+        res.status(500).json({ error: 'Failed to add note' });
+    }
+});
+
+app.delete('/api/admin/notes/:noteId', requireAdmin, async (req, res) => {
+    try {
+        const noteId = parseInt(req.params.noteId);
+        await pool.query(`DELETE FROM admin_crm_notes WHERE id = $1`, [noteId]);
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Admin note DELETE error:', err);
+        res.status(500).json({ error: 'Failed to delete note' });
+    }
+});
+
+app.put('/api/admin/users/:id/crm', requireAdmin, async (req, res) => {
+    try {
+        const userId = parseInt(req.params.id);
+        const { crm_stage, crm_flags } = req.body;
+        const setClauses = [];
+        const params = [];
+        if (crm_stage !== undefined) {
+            params.push(crm_stage);
+            setClauses.push(`crm_stage = $${params.length}`);
+        }
+        if (crm_flags !== undefined) {
+            params.push(JSON.stringify(crm_flags));
+            setClauses.push(`crm_flags = $${params.length}`);
+        }
+        if (!setClauses.length) return res.status(400).json({ error: 'No fields to update' });
+        params.push(userId);
+        const { rows } = await pool.query(
+            `UPDATE users SET ${setClauses.join(', ')} WHERE id = $${params.length}
+             RETURNING id, crm_stage, crm_flags`,
+            params
+        );
+        if (!rows.length) return res.status(404).json({ error: 'User not found' });
+        res.json({ success: true, user: rows[0] });
+    } catch (err) {
+        console.error('Admin user CRM PUT error:', err);
+        res.status(500).json({ error: 'Failed to update CRM data' });
+    }
+});
+
+app.get('/api/admin/analytics/signups', requireAdmin, async (req, res) => {
+    try {
+        const { rows } = await pool.query(`
+            SELECT DATE_TRUNC('week', created_at) AS week, COUNT(*) AS count
+            FROM users
+            WHERE created_at >= NOW() - INTERVAL '12 weeks'
+            GROUP BY week
+            ORDER BY week
+        `);
+        res.json(rows.map(r => ({ week: r.week, count: parseInt(r.count) })));
+    } catch (err) {
+        console.error('Admin signups analytics error:', err);
+        res.status(500).json({ error: 'Failed to fetch signup analytics' });
+    }
+});
+
 app.get('/api/admin/leads', requireAdmin, async (req, res) => {
     try {
         const { rows } = await pool.query(
@@ -9397,6 +9517,18 @@ _schemaMigrations.push(
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS terms_accepted_at TIMESTAMPTZ`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS marketing_consent_at TIMESTAMPTZ`,
     `ALTER TABLE waitlist ADD COLUMN IF NOT EXISTS unsubscribe_token TEXT UNIQUE`
+);
+
+_schemaMigrations.push(
+    `CREATE TABLE IF NOT EXISTS admin_crm_notes (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        note TEXT NOT NULL,
+        author_name TEXT DEFAULT 'Admin',
+        created_at TIMESTAMPTZ DEFAULT NOW()
+    )`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS crm_stage VARCHAR(20) DEFAULT 'new' CHECK (crm_stage IN ('prospect','new','active','at_risk','churned'))`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS crm_flags JSONB DEFAULT '{}'`
 );
 
 // Backfill profile_slug for any realtors created before the column was added

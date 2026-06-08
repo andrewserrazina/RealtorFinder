@@ -8,7 +8,7 @@
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://realtorfinder.net/features">
     <meta property="og:title" content="Features — RealtorFinder">
-    <meta property="og:description" content="Free listings, competing realtor proposals, map-based search, direct messaging, and a full notification center — all in one platform.">
+    <meta property="og:description" content="Free listings, competing realtor proposals, map-based search, direct messaging, buyer offers, open house RSVP, mortgage estimator, and more.">
     <meta property="og:image" content="https://realtorfinder.net/og-default.png">
     <meta name="twitter:card" content="summary_large_image">
     <!-- Google Analytics 4 -->
@@ -180,10 +180,23 @@
             margin: 0 auto;
         }
 
+        /* ── Section heading inside panel ── */
+        .section-heading {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin: 3rem 0 1.25rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--border);
+        }
+        .section-heading:first-of-type { margin-top: 0; }
+
         .features-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
             gap: 1.5rem;
+            margin-bottom: 1rem;
         }
         .feature-card {
             background: var(--soft-bg);
@@ -221,6 +234,14 @@
             border-radius: 100px;
             margin-bottom: 0.75rem;
         }
+        .feature-tag.new {
+            background: rgba(5,150,105,0.1);
+            color: #059669;
+        }
+        .feature-tag.pro {
+            background: rgba(139,92,246,0.1);
+            color: #7c3aed;
+        }
 
         /* ── Highlight strip ── */
         .highlight-strip {
@@ -232,7 +253,7 @@
             max-width: 1080px;
             margin: 0 auto;
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(4, 1fr);
             gap: 2rem;
             text-align: center;
         }
@@ -341,6 +362,7 @@
             border-radius: 100px;
         }
         .mock-badge.orange { background: rgba(255,107,53,0.1); color: var(--accent); }
+        .mock-badge.blue { background: rgba(59,130,246,0.1); color: #2563eb; }
         .mock-map {
             background: #dde8f0;
             border-radius: 10px;
@@ -373,6 +395,83 @@
         }
         .mock-notif-title { font-size: 0.85rem; font-weight: 600; color: var(--text); }
         .mock-notif-body { font-size: 0.78rem; color: var(--muted); margin-top: 1px; }
+
+        /* ── Pipeline status bar ── */
+        .mock-pipeline {
+            display: flex;
+            align-items: center;
+            gap: 0;
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1rem 1.25rem;
+            overflow-x: auto;
+        }
+        .mock-pipeline-step {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: var(--muted);
+            white-space: nowrap;
+        }
+        .mock-pipeline-step.done { color: #059669; }
+        .mock-pipeline-step.current { color: var(--accent); }
+        .mock-pipeline-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            border: 2px solid currentColor;
+            flex-shrink: 0;
+        }
+        .mock-pipeline-step.done .mock-pipeline-dot { background: #059669; border-color: #059669; }
+        .mock-pipeline-step.current .mock-pipeline-dot { background: var(--accent); border-color: var(--accent); }
+        .mock-pipeline-line {
+            flex: 1;
+            height: 2px;
+            background: var(--border);
+            min-width: 16px;
+        }
+        .mock-pipeline-line.done { background: #059669; }
+
+        /* ── Mortgage mock ── */
+        .mock-mortgage {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1.25rem;
+        }
+        .mock-mortgage-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.82rem;
+            color: var(--muted);
+            margin-bottom: 0.35rem;
+        }
+        .mock-mortgage-total {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-top: 0.5rem;
+        }
+        .mock-mortgage-label { font-size: 0.78rem; color: var(--muted); }
+
+        /* ── Neighborhood mock ── */
+        .mock-neighborhood-row {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 0.82rem;
+        }
+        .mock-neighborhood-icon { font-size: 1.1rem; flex-shrink: 0; }
+        .mock-neighborhood-name { font-weight: 600; color: var(--text); flex: 1; }
+        .mock-neighborhood-dist { color: var(--muted); }
 
         /* ── CTA ── */
         .cta-section {
@@ -438,9 +537,12 @@
             .nav-hamburger { display: flex; }
             .audience-tab { padding: 0.75rem 1.25rem; font-size: 0.875rem; }
             .features-grid { grid-template-columns: 1fr; }
-            .highlight-strip-inner { grid-template-columns: 1fr; gap: 1.5rem; }
+            .highlight-strip-inner { grid-template-columns: repeat(2, 1fr); gap: 1.5rem; }
             .feature-row { grid-template-columns: 1fr; gap: 2rem; }
             .feature-row.flip { direction: ltr; }
+        }
+        @media (max-width: 480px) {
+            .highlight-strip-inner { grid-template-columns: 1fr; }
         }
     </style>
     <link rel="manifest" href="/manifest.json">
@@ -484,6 +586,9 @@
         <div class="hero-pill">Real-time messaging</div>
         <div class="hero-pill">Map-based search</div>
         <div class="hero-pill">Competing proposals</div>
+        <div class="hero-pill">Buyer offers</div>
+        <div class="hero-pill">Open house RSVP</div>
+        <div class="hero-pill">Mortgage estimator</div>
     </div>
 </section>
 
@@ -502,6 +607,8 @@
             <h2 class="panel-title">You post. Realtors compete. You choose.</h2>
             <p class="panel-sub">Stop chasing agents. List your home for free and let qualified realtors bring their best offer directly to you.</p>
         </div>
+
+        <h3 class="section-heading">Listing & Proposals</h3>
         <div class="features-grid">
             <div class="feature-card">
                 <div class="feature-tag">Core</div>
@@ -513,38 +620,85 @@
                 <div class="feature-tag">Core</div>
                 <div class="feature-icon">📬</div>
                 <h3>Inbound realtor proposals</h3>
-                <p>Qualified local realtors review your listing and send personalized proposals that include their commission rate, brokerage, years of experience, and sales strategy.</p>
+                <p>Qualified local realtors review your listing and send personalized proposals with their commission rate, brokerage, years of experience, and sales strategy.</p>
             </div>
             <div class="feature-card">
                 <div class="feature-tag">Core</div>
                 <div class="feature-icon">⚖️</div>
-                <h3>Accept or decline with one click</h3>
-                <p>Review every proposal on your own schedule. Accept the one that fits, or decline the rest — all from your seller dashboard. No awkward phone calls required.</p>
+                <h3>Accept, decline, or counter</h3>
+                <p>Review every proposal on your own schedule. Accept the one that fits, decline the rest, or send a counter-offer — all from your seller dashboard.</p>
             </div>
             <div class="feature-card">
-                <div class="feature-icon">💬</div>
-                <h3>Direct messaging</h3>
-                <p>Have a question about a realtor's proposal? Message them directly inside the platform. Full conversation history, tied to your listing, all in one place.</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">🔔</div>
-                <h3>Notification center</h3>
-                <p>Get instant in-app alerts when a new realtor submits a proposal on your listing. No need to refresh — your notification bell lights up automatically.</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">📸</div>
-                <h3>Photo uploads</h3>
-                <p>Upload up to 10 photos per listing. Images are stored in the cloud and served from a fast CDN, so your listing always looks sharp on any device.</p>
+                <div class="feature-icon">📊</div>
+                <h3>Proposal comparison</h3>
+                <p>See all incoming proposals side by side — commission rate, experience, brokerage, and personal pitch — so you can make an informed decision without hunting through emails.</p>
             </div>
             <div class="feature-card">
                 <div class="feature-icon">✏️</div>
                 <h3>Editable listings</h3>
-                <p>Need to update your price or description? Edit your listing at any time from your dashboard. Changes go live instantly — no waiting on an agent to make updates.</p>
+                <p>Update your price, description, or photos at any time from your dashboard. Changes go live instantly — no waiting on an agent to make updates.</p>
             </div>
             <div class="feature-card">
-                <div class="feature-icon">📊</div>
-                <h3>Proposal tracking</h3>
-                <p>See every realtor who submitted a proposal, when they submitted it, their terms, and the current status — all organized in a clean timeline view.</p>
+                <div class="feature-icon">📸</div>
+                <h3>Photo uploads</h3>
+                <p>Upload up to 10 photos per listing. Images are stored in the cloud and served from a fast CDN so your listing always looks sharp on any device.</p>
+            </div>
+        </div>
+
+        <h3 class="section-heading">Listing Management</h3>
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-tag new">New</div>
+                <div class="feature-icon">🚦</div>
+                <h3>Listing status pipeline</h3>
+                <p>Track your listing through every stage — Active, Under Review, Under Contract, and Sold. Your pipeline is always visible at the top of your dashboard so you know exactly where things stand.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-tag new">New</div>
+                <div class="feature-icon">💰</div>
+                <h3>Direct buyer offers</h3>
+                <p>Receive purchase offers directly from buyers on the platform. Review each offer's price and terms, then accept, decline, or counter — all in one place alongside your realtor proposals.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-tag new">New</div>
+                <div class="feature-icon">🗓️</div>
+                <h3>Showing requests</h3>
+                <p>Manage in-person showing requests from your dashboard. See requested times, confirm or reschedule, and keep a log of all scheduled showings for your property.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-tag new">New</div>
+                <div class="feature-icon">📂</div>
+                <h3>Document vault</h3>
+                <p>Securely upload and store listing-related documents — disclosure forms, inspection reports, and more. Share them selectively with realtors or buyers you're working with.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">📈</div>
+                <h3>Listing analytics</h3>
+                <p>See how your listing is performing — total views, number of proposals received, days on market, and a timeline of activity so you always know what's happening.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🔔</div>
+                <h3>Real-time notifications</h3>
+                <p>Get instant in-app alerts when a new realtor submits a proposal or a buyer places an offer. Your notification bell lights up automatically — no need to refresh.</p>
+            </div>
+        </div>
+
+        <h3 class="section-heading">Communication</h3>
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">💬</div>
+                <h3>Direct messaging</h3>
+                <p>Message any realtor directly inside the platform. Full conversation history, tied to your listing, all in one place — no emails or phone calls required.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">👤</div>
+                <h3>Realtor profile access</h3>
+                <p>Click through to any realtor's public profile to see their full bio, brokerage, license number, specialties, and client reviews before making a decision.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🏡</div>
+                <h3>Open house management</h3>
+                <p>Post open house dates and times directly on your listing. Buyers RSVP through the platform and you see an attendance list before the event.</p>
             </div>
         </div>
     </div>
@@ -556,41 +710,34 @@
         <div class="panel-lead">
             <div class="panel-eyebrow">Real Estate Professionals</div>
             <h2 class="panel-title">Stop cold calling. Start winning listings.</h2>
-            <p class="panel-sub">Browse motivated sellers who are actively looking for an agent. Submit a proposal, make your case, and close the deal.</p>
+            <p class="panel-sub">Browse motivated sellers and buyers who are actively looking for an agent. Submit a proposal, build your pipeline, and close more deals.</p>
         </div>
+
+        <h3 class="section-heading">Prospecting & Pipeline</h3>
         <div class="features-grid">
             <div class="feature-card">
                 <div class="feature-tag">Core</div>
                 <div class="feature-icon">🔍</div>
-                <h3>Browse active listings</h3>
+                <h3>Browse active seller listings</h3>
                 <p>Access a live feed of seller listings filtered by city, state, property type, and price range. Every listing you see is from a seller actively looking for an agent.</p>
             </div>
             <div class="feature-card">
                 <div class="feature-tag">Core</div>
                 <div class="feature-icon">📝</div>
                 <h3>Submit proposals</h3>
-                <p>Send a personalized proposal to any seller listing — include your commission rate, brokerage name, years of experience, and a custom pitch. Stand out from the competition.</p>
+                <p>Send a personalized proposal to any seller listing — include your commission rate, brokerage, years of experience, and a custom pitch. Stand out from the competition.</p>
             </div>
             <div class="feature-card">
-                <div class="feature-tag">Core</div>
-                <div class="feature-icon">👤</div>
-                <h3>Public realtor profile</h3>
-                <p>Your profile page is visible to the public and linked from every proposal you submit. Showcase your bio, brokerage, license number, and track record.</p>
+                <div class="feature-tag new">New</div>
+                <div class="feature-icon">📋</div>
+                <h3>Proposal templates</h3>
+                <p>Save your best proposal language as a reusable template. Load it with one click when submitting to a new listing and customize from there — stop writing from scratch every time.</p>
             </div>
             <div class="feature-card">
-                <div class="feature-icon">💬</div>
-                <h3>Seller messaging</h3>
-                <p>After submitting a proposal, communicate with the seller directly inside the platform. Answer questions, provide more detail, and build trust before the meeting.</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">🔔</div>
-                <h3>Proposal notifications</h3>
-                <p>Get notified when a seller accepts or declines your proposal. Stay on top of your pipeline without logging in constantly to check status.</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">💳</div>
-                <h3>Subscription plans</h3>
-                <p>Start free for 30 days — no credit card required. Choose Basic, Professional, or Firm. Upgrade, downgrade, or cancel anytime.</p>
+                <div class="feature-tag new">New</div>
+                <div class="feature-icon">🏪</div>
+                <h3>Buyer requests marketplace</h3>
+                <p>Browse buyer requests posted by people actively looking for representation. See their target price, area, and criteria — reach out directly to connect with motivated buyers before they find someone else.</p>
             </div>
             <div class="feature-card">
                 <div class="feature-icon">📍</div>
@@ -598,9 +745,92 @@
                 <p>Listings are geocoded automatically from address. Browse by proximity and focus your time on listings in the areas you actually work.</p>
             </div>
             <div class="feature-card">
+                <div class="feature-tag new">New</div>
+                <div class="feature-icon">🔔</div>
+                <h3>Saved searches &amp; alerts</h3>
+                <p>Save your favorite filter combinations as named searches. Get notified the moment a new listing matches your saved criteria — never miss a relevant opportunity.</p>
+            </div>
+        </div>
+
+        <h3 class="section-heading">Analytics & Performance</h3>
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-tag new">New</div>
+                <div class="feature-icon">📊</div>
+                <h3>Win-rate analytics</h3>
+                <p>Track your full pipeline at a glance — proposals submitted, proposals won, win rate percentage, and revenue closed. Understand where you're winning and where to improve.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-tag new">New</div>
+                <div class="feature-icon">🏡</div>
+                <h3>Open house scheduling</h3>
+                <p>Schedule open houses on listings you're representing. Buyers see them on the listing page and RSVP directly. You get an attendee list and can track interest automatically.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-tag new">New</div>
+                <div class="feature-icon">🔑</div>
+                <h3>Showing request management</h3>
+                <p>Receive and manage showing requests from buyers. Confirm or reschedule with one click. All upcoming showings appear in a unified calendar view in your pipeline.</p>
+            </div>
+            <div class="feature-icon"></div>
+        </div>
+
+        <h3 class="section-heading">Profile & Brand</h3>
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-tag">Core</div>
+                <div class="feature-icon">👤</div>
+                <h3>Public realtor profile</h3>
+                <p>Your profile page is visible to the public and linked from every proposal you submit. Showcase your bio, brokerage, license number, and track record.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-tag new">New</div>
+                <div class="feature-icon">⭐</div>
+                <h3>Client reviews</h3>
+                <p>Collect reviews from sellers and buyers you've worked with. Verified reviews appear on your public profile and give new clients the social proof they need to choose you.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-tag new">New</div>
+                <div class="feature-icon">🏢</div>
+                <h3>Company &amp; team management</h3>
+                <p>Create a company profile and associate team members under it. Team members share a branded presence and can be compared by sellers browsing your brokerage.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-tag new">New</div>
+                <div class="feature-icon">🕐</div>
+                <h3>Availability schedule &amp; away status</h3>
+                <p>Set your available hours by day of week so sellers know when to expect a response. Mark yourself as away when you're on vacation — listings still show your profile but set expectations automatically.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-tag new">New</div>
+                <div class="feature-icon">🔗</div>
+                <h3>Referral program</h3>
+                <p>Earn credits for every realtor you refer to the platform. Credits apply to your subscription. Track your referral count and pending credits directly from your profile hub.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-tag pro">Pro</div>
+                <div class="feature-icon">🚀</div>
+                <h3>Premium profile boost</h3>
+                <p>Premium subscribers appear higher in search results and receive a "Featured" badge on their proposals and profile. Stand out in competitive markets without extra effort.</p>
+            </div>
+        </div>
+
+        <h3 class="section-heading">Subscriptions & Communication</h3>
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">💳</div>
+                <h3>Subscription plans</h3>
+                <p>Start free for 30 days — no credit card required. Choose Basic, Professional, or Firm. Upgrade, downgrade, or cancel anytime from your settings dashboard.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">💬</div>
+                <h3>Seller &amp; buyer messaging</h3>
+                <p>After submitting a proposal or connecting with a buyer request, communicate directly inside the platform. Build trust before the meeting with a full conversation history.</p>
+            </div>
+            <div class="feature-card">
                 <div class="feature-icon">📈</div>
                 <h3>Qualified intent</h3>
-                <p>Every seller on RealtorFinder listed their home themselves. They're not tire-kickers — they're actively ready to engage. Your conversion rate will show it.</p>
+                <p>Every seller on RealtorFinder listed their home themselves. Every buyer posted a request. These are not tire-kickers — they're actively ready to engage.</p>
             </div>
         </div>
     </div>
@@ -612,20 +842,22 @@
         <div class="panel-lead">
             <div class="panel-eyebrow">Home Buyers</div>
             <h2 class="panel-title">Find your next home — on a map.</h2>
-            <p class="panel-sub">Browse active listings with powerful filters, explore them visually on an interactive map, and connect with the right realtor for your search.</p>
+            <p class="panel-sub">Browse active listings with powerful filters, explore the neighborhood, estimate your mortgage, and connect with the right realtor for your search.</p>
         </div>
+
+        <h3 class="section-heading">Search & Discovery</h3>
         <div class="features-grid">
             <div class="feature-card">
                 <div class="feature-tag">Core</div>
                 <div class="feature-icon">🗺️</div>
                 <h3>Interactive map search</h3>
-                <p>Switch to map view to see every listing plotted as a pin on an interactive OpenStreetMap map. Click any pin to see the price, photos, and property details instantly.</p>
+                <p>Switch to map view to see every listing as a pin on an interactive OpenStreetMap map. Click any pin to see the price, photos, and property details instantly.</p>
             </div>
             <div class="feature-card">
                 <div class="feature-tag">Core</div>
                 <div class="feature-icon">🔎</div>
                 <h3>Advanced filters</h3>
-                <p>Narrow your search by city, zip code, property type, price range, minimum bedrooms, and minimum bathrooms. All filters run server-side against live data.</p>
+                <p>Narrow your search by city, zip code, property type, price range, minimum bedrooms, and bathrooms. All filters run server-side against live data.</p>
             </div>
             <div class="feature-card">
                 <div class="feature-tag">Core</div>
@@ -634,29 +866,77 @@
                 <p>Bookmark listings you like with one click. Your saved listings sync to your account and are available any time from your Saved tab — even across devices.</p>
             </div>
             <div class="feature-card">
+                <div class="feature-icon">🏘️</div>
+                <h3>Grid &amp; map toggle</h3>
+                <p>Prefer scrolling cards? Stay in grid view. Prefer a geographic overview? Switch to map with one click. Your last view preference is remembered per session.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-tag new">New</div>
+                <div class="feature-icon">🏫</div>
+                <h3>Neighborhood snapshot</h3>
+                <p>Every listing page includes a neighborhood breakdown — nearby schools, restaurants, parks, grocery stores, and pharmacies within walking and driving distance. Know the area before you visit.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-tag new">New</div>
+                <div class="feature-icon">💵</div>
+                <h3>Mortgage payment estimator</h3>
+                <p>See an estimated monthly payment right on the listing page. Adjust down payment, loan term, and interest rate to model your real scenario — no spreadsheet required.</p>
+            </div>
+        </div>
+
+        <h3 class="section-heading">Offers & Showings</h3>
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-tag new">New</div>
+                <div class="feature-icon">🤝</div>
+                <h3>Submit a purchase offer</h3>
+                <p>Ready to make an offer? Submit your purchase price and terms directly through the platform. The seller receives it alongside any realtor proposals and can accept, decline, or counter.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-tag new">New</div>
+                <div class="feature-icon">🏡</div>
+                <h3>Open house RSVP</h3>
+                <p>See upcoming open houses on every listing page. RSVP with one click — the seller and their realtor see your attendance confirmation and you receive a reminder before the event.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-tag new">New</div>
+                <div class="feature-icon">📅</div>
+                <h3>Schedule a showing</h3>
+                <p>Request a private showing directly from any listing page. Pick a preferred time window and the seller or their realtor confirms. Your upcoming showings all appear in one place.</p>
+            </div>
+        </div>
+
+        <h3 class="section-heading">Realtor Discovery</h3>
+        <div class="features-grid">
+            <div class="feature-card">
                 <div class="feature-icon">⚖️</div>
                 <h3>Realtor comparison tool</h3>
-                <p>Select up to 3 realtors and compare them side by side in a single modal — commission rate, brokerage, years of experience, specialties, and more.</p>
+                <p>Select up to 3 realtors and compare them side by side — commission rate, brokerage, years of experience, specialties, and reviews in a single modal.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-tag new">New</div>
+                <div class="feature-icon">📢</div>
+                <h3>Post a buyer request</h3>
+                <p>Tell realtors what you're looking for — target city, price range, property type, and timeline. Realtors in your area can discover your request and reach out to represent you.</p>
             </div>
             <div class="feature-card">
                 <div class="feature-icon">🔔</div>
                 <h3>Notification center</h3>
-                <p>In-app alerts keep you informed when there are updates relevant to your search. A live unread badge on the bell icon means you never miss something important.</p>
+                <p>In-app alerts keep you informed when there are updates on listings you've saved or offers you've submitted. A live unread badge on the bell icon means you never miss anything.</p>
             </div>
+        </div>
+
+        <h3 class="section-heading">Platform</h3>
+        <div class="features-grid">
             <div class="feature-card">
                 <div class="feature-icon">📱</div>
                 <h3>Mobile-first design</h3>
                 <p>Every page is fully responsive. Browse listings, view the map, and manage your saved homes just as easily on your phone as on a desktop.</p>
             </div>
             <div class="feature-card">
-                <div class="feature-icon">🏘️</div>
-                <h3>Grid &amp; map toggle</h3>
-                <p>Prefer scrolling cards? Stay in grid view. Prefer a geographic overview? Switch to map with one click. Your last view preference is remembered per session.</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">🤝</div>
-                <h3>Direct realtor contact</h3>
-                <p>Found an agent you like? Submit a buyer request to connect with realtors in your target area who are actively looking for buyers like you.</p>
+                <div class="feature-icon">💬</div>
+                <h3>Direct messaging</h3>
+                <p>Message a realtor directly once you've connected. Ask questions about a property, discuss your criteria, and build a relationship — all inside the platform.</p>
             </div>
         </div>
     </div>
@@ -675,7 +955,11 @@
         </div>
         <div>
             <div class="highlight-stat">0</div>
-            <div class="highlight-label">Cold calls you'll need to make as a realtor</div>
+            <div class="highlight-label">Cold calls needed as a realtor</div>
+        </div>
+        <div>
+            <div class="highlight-stat">3-way</div>
+            <div class="highlight-label">Platform serving sellers, realtors &amp; buyers</div>
         </div>
     </div>
 </div>
@@ -689,8 +973,8 @@
             <ul class="feature-bullets">
                 <li>Receive multiple proposals from different agents</li>
                 <li>Compare commission rates, experience, and brokerage</li>
-                <li>Accept the one that's right for you — no pressure</li>
-                <li>Decline others with one click, no awkward conversations</li>
+                <li>Accept, decline, or counter — no pressure</li>
+                <li>See every agent's public reviews before deciding</li>
             </ul>
         </div>
         <div class="feature-row-visual">
@@ -725,6 +1009,60 @@
 <div style="background: var(--soft-bg); border-bottom: 1px solid var(--border);">
     <div class="feature-row flip">
         <div class="feature-row-text">
+            <h2>Track your listing from active to sold.</h2>
+            <p>Your seller dashboard shows your listing's current stage at a glance — Active, Under Review, Under Contract, or Sold. No more wondering where things stand.</p>
+            <ul class="feature-bullets">
+                <li>Visual pipeline status at the top of your dashboard</li>
+                <li>Update your stage with one click at any point</li>
+                <li>Receive buyer offers alongside realtor proposals</li>
+                <li>Manage showings and open houses in the same place</li>
+            </ul>
+        </div>
+        <div class="feature-row-visual">
+            <div class="mock-pipeline">
+                <div class="mock-pipeline-step done">
+                    <div class="mock-pipeline-dot"></div>
+                    Active
+                </div>
+                <div class="mock-pipeline-line done"></div>
+                <div class="mock-pipeline-step done">
+                    <div class="mock-pipeline-dot"></div>
+                    Reviewing
+                </div>
+                <div class="mock-pipeline-line done"></div>
+                <div class="mock-pipeline-step current">
+                    <div class="mock-pipeline-dot"></div>
+                    Under Contract
+                </div>
+                <div class="mock-pipeline-line"></div>
+                <div class="mock-pipeline-step">
+                    <div class="mock-pipeline-dot"></div>
+                    Sold
+                </div>
+            </div>
+            <div class="mock-card">
+                <div style="font-size:1.25rem;">💰</div>
+                <div class="mock-info">
+                    <div class="mock-name">Buyer offer received</div>
+                    <div class="mock-detail">$487,000 · 20% down · 30-day close</div>
+                </div>
+                <div class="mock-badge blue">New</div>
+            </div>
+            <div class="mock-card">
+                <div style="font-size:1.25rem;">🗓️</div>
+                <div class="mock-info">
+                    <div class="mock-name">Showing request</div>
+                    <div class="mock-detail">Sat Jun 14, 2:00 PM · 3 confirmed</div>
+                </div>
+                <div class="mock-badge">Scheduled</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div style="background: var(--surface); border-bottom: 1px solid var(--border);">
+    <div class="feature-row">
+        <div class="feature-row-text">
             <h2>Find homes on the map, not just a list.</h2>
             <p>Browsing a grid of cards is fine — until you lose track of where things actually are. RealtorFinder's map view lets you see the full geographic picture at a glance.</p>
             <ul class="feature-bullets">
@@ -752,16 +1090,100 @@
     </div>
 </div>
 
+<div style="background: var(--soft-bg); border-bottom: 1px solid var(--border);">
+    <div class="feature-row flip">
+        <div class="feature-row-text">
+            <h2>Know the neighborhood before you visit.</h2>
+            <p>The mortgage and neighborhood tools on every listing page give buyers the full picture — without leaving the app to open Google Maps or a separate calculator.</p>
+            <ul class="feature-bullets">
+                <li>Nearby schools, parks, restaurants, and groceries within 1 mile</li>
+                <li>Mortgage estimator with adjustable rate, term, and down payment</li>
+                <li>Open house dates and RSVP on every listing page</li>
+                <li>Request a private showing with a preferred time window</li>
+            </ul>
+        </div>
+        <div class="feature-row-visual">
+            <div class="mock-mortgage">
+                <div class="mock-mortgage-row">
+                    <span>Price: $485,000</span>
+                    <span>Down: 20% ($97,000)</span>
+                </div>
+                <div class="mock-mortgage-row">
+                    <span>Rate: 6.8% · 30 yr fixed</span>
+                </div>
+                <div class="mock-mortgage-total">$2,524<span style="font-size:0.9rem;font-weight:400;color:var(--muted);">/mo</span></div>
+                <div class="mock-mortgage-label">Estimated monthly payment</div>
+            </div>
+            <div class="mock-neighborhood-row">
+                <div class="mock-neighborhood-icon">🏫</div>
+                <div class="mock-neighborhood-name">Lincoln Elementary</div>
+                <div class="mock-neighborhood-dist">0.4 mi</div>
+            </div>
+            <div class="mock-neighborhood-row">
+                <div class="mock-neighborhood-icon">🌳</div>
+                <div class="mock-neighborhood-name">Riverside Park</div>
+                <div class="mock-neighborhood-dist">0.6 mi</div>
+            </div>
+            <div class="mock-neighborhood-row">
+                <div class="mock-neighborhood-icon">🛒</div>
+                <div class="mock-neighborhood-name">Whole Foods Market</div>
+                <div class="mock-neighborhood-dist">0.9 mi</div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div style="background: var(--surface); border-bottom: 1px solid var(--border);">
     <div class="feature-row">
         <div class="feature-row-text">
+            <h2>Win more listings with a smarter pipeline.</h2>
+            <p>RealtorFinder gives real estate professionals the tools to manage their pipeline, track their performance, and build a brand — all in one dashboard.</p>
+            <ul class="feature-bullets">
+                <li>Saved searches with instant email and in-app alerts</li>
+                <li>Proposal templates to pitch faster without writing from scratch</li>
+                <li>Win-rate analytics to understand where you're closing</li>
+                <li>Open house scheduling with buyer RSVP and attendance tracking</li>
+            </ul>
+        </div>
+        <div class="feature-row-visual">
+            <div class="mock-card">
+                <div style="font-size:1.25rem;">📊</div>
+                <div class="mock-info">
+                    <div class="mock-name">Win rate this month</div>
+                    <div class="mock-detail">8 proposals · 3 won · 37.5%</div>
+                </div>
+                <div class="mock-badge">↑ +12%</div>
+            </div>
+            <div class="mock-card">
+                <div style="font-size:1.25rem;">🔔</div>
+                <div class="mock-info">
+                    <div class="mock-name">New listing alert</div>
+                    <div class="mock-detail">Matches your saved search: Boston · $400–600K</div>
+                </div>
+                <div class="mock-badge blue">Alert</div>
+            </div>
+            <div class="mock-card">
+                <div style="font-size:1.25rem;">🏡</div>
+                <div class="mock-info">
+                    <div class="mock-name">Open house — 42 Elm St</div>
+                    <div class="mock-detail">Sat Jun 14 · 6 RSVPs confirmed</div>
+                </div>
+                <div class="mock-badge">Upcoming</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div style="background: var(--soft-bg); border-bottom: 1px solid var(--border);">
+    <div class="feature-row flip">
+        <div class="feature-row-text">
             <h2>Stay in the loop with real-time notifications.</h2>
-            <p>Whether you're a seller waiting on proposals or a realtor tracking your pipeline, the notification center keeps you informed without inbox clutter.</p>
+            <p>Whether you're a seller waiting on proposals or a realtor tracking your pipeline, the notification center keeps everyone informed without inbox clutter.</p>
             <ul class="feature-bullets">
                 <li>Bell icon with live unread badge in every dashboard</li>
-                <li>Sellers notified instantly when a new proposal arrives</li>
+                <li>Sellers notified when a proposal or buyer offer arrives</li>
                 <li>Realtors notified when their proposal is accepted or declined</li>
-                <li>Mark individual notifications or all as read in one click</li>
+                <li>Buyers notified of open houses and offer status updates</li>
             </ul>
         </div>
         <div class="feature-row-visual">
@@ -775,8 +1197,8 @@
             <div class="mock-notif">
                 <div class="mock-notif-dot"></div>
                 <div>
-                    <div class="mock-notif-title">New Realtor Proposal</div>
-                    <div class="mock-notif-body">Tom Reynolds from Coldwell Banker submitted a proposal on 42 Elm Street</div>
+                    <div class="mock-notif-title">Buyer Offer Received</div>
+                    <div class="mock-notif-body">A buyer submitted an offer of $487,000 on your listing at 42 Elm Street</div>
                 </div>
             </div>
             <div class="mock-notif" style="opacity: 0.5;">
