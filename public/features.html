@@ -535,13 +535,15 @@
         @media (max-width: 768px) {
             .nav-links { display: none; }
             .nav-hamburger { display: flex; }
-            .audience-tab { padding: 0.75rem 1.25rem; font-size: 0.875rem; }
+            .audience-tab { padding: 0.75rem 1rem; font-size: 0.875rem; white-space: nowrap; flex: 1; text-align: center; }
+            .audience-tabs { padding-top: 1.5rem; }
             .features-grid { grid-template-columns: 1fr; }
             .highlight-strip-inner { grid-template-columns: repeat(2, 1fr); gap: 1.5rem; }
             .feature-row { grid-template-columns: 1fr; gap: 2rem; }
             .feature-row.flip { direction: ltr; }
         }
         @media (max-width: 480px) {
+            .audience-tab { padding: 0.65rem 0.5rem; font-size: 0.8rem; }
             .highlight-strip-inner { grid-template-columns: 1fr; }
         }
     </style>
