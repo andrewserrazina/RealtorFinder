@@ -2671,7 +2671,7 @@ app.get('/api/admin/users/:id/detail', requireAdmin, async (req, res) => {
         const { rows: userRows } = await pool.query(
             `SELECT id, email, user_type, first_name, last_name, zip_code,
                     email_verified, is_active, is_admin, is_approved, created_at,
-                    crm_stage, crm_flags, subscription_plan, profile_photo_url
+                    crm_stage, crm_flags, subscription_plan, profile_photo
              FROM users WHERE id = $1`,
             [userId]
         );
