@@ -666,6 +666,7 @@ ${neContent}
         document.getElementById('modalType').value = type;
         document.getElementById('modal-seller-btn').classList.toggle('active', type === 'seller');
         document.getElementById('modal-realtor-btn').classList.toggle('active', type === 'realtor');
+        document.getElementById('modalAddressGroup').style.display = type === 'seller' ? '' : 'none';
         document.getElementById('modalSubmitBtn').textContent =
             type === 'seller' ? 'Connect Me with Realtors →' : 'Get Listing Access →';
     }
@@ -680,6 +681,7 @@ ${neContent}
             document.getElementById('modalName').value,
             document.getElementById('modalEmail').value,
             document.getElementById('modalPhone').value,
+            document.getElementById('modalAddress').value,
             () => {
                 document.getElementById('modalFormWrap').style.display = 'none';
                 document.getElementById('modalSuccess').style.display = 'block';
@@ -711,6 +713,7 @@ ${neContent}
             document.getElementById('inlineName').value,
             document.getElementById('inlineEmail').value,
             document.getElementById('inlinePhone').value,
+            '',
             () => {
                 document.getElementById('inlineFormWrap').style.display = 'none';
                 document.getElementById('inlineSuccess').style.display = 'block';
@@ -720,12 +723,12 @@ ${neContent}
     }
 
     // ── Shared submit ──────────────────────────────────────
-    async function submitLead(type, name, email, phone, onSuccess, onError) {
+    async function submitLead(type, name, email, phone, address, onSuccess, onError) {
         try {
             const res = await fetch('/api/city-lead', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ type, name, email, phone, city_slug: CITY_SLUG, city_name: CITY_NAME, state_code: STATE_CODE })
+                body: JSON.stringify({ type, name, email, phone, address, city_slug: CITY_SLUG, city_name: CITY_NAME, state_code: STATE_CODE })
             });
             if (res.ok) {
                 gtag('event', 'generate_lead', { lead_type: type, city: CITY_NAME, state: STATE_CODE });
@@ -752,6 +755,10 @@ ${neContent}
                 <div class="form-group">
                     <label for="modalName">Your Name</label>
                     <input type="text" id="modalName" placeholder="Jane Smith" autocomplete="name">
+                </div>
+                <div class="form-group" id="modalAddressGroup">
+                    <label for="modalAddress">Home Address <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
+                    <input type="text" id="modalAddress" placeholder="123 Main St, ${city.name}" autocomplete="street-address">
                 </div>
                 <div class="form-group">
                     <label for="modalEmail">Email Address *</label>

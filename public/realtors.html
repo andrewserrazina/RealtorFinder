@@ -1190,11 +1190,89 @@
             .hero-container { padding: 2rem 1.25rem; }
             .section-header h2 { font-size: 2rem; }
             .benefits { padding: 3.5rem 1.25rem; }
-            .pricing { padding: 3.5rem 1.25rem; }
+            .pricing { padding: 3.5rem 1.25px; }
             .testimonials { padding: 3.5rem 1.25rem; }
             .cta h2 { font-size: 1.9rem; }
             .cta { padding: 3.5rem 1.25rem; }
             .founding { padding: 3.5rem 1.25rem; }
+        }
+
+        /* ── Urgency bar ── */
+        #urgencyBar {
+            position: sticky;
+            top: 0;
+            z-index: 101;
+            background: #0A2540;
+            border-bottom: 2px solid #F59E0B;
+            color: white;
+            padding: 10px 48px 10px 16px;
+            text-align: center;
+            font-size: 0.85rem;
+            font-weight: 500;
+            line-height: 1.4;
+        }
+        #urgencyBar .ub-countdown {
+            display: inline-block;
+            background: #F59E0B;
+            color: #0A2540;
+            font-weight: 800;
+            font-variant-numeric: tabular-nums;
+            padding: 2px 8px;
+            border-radius: 4px;
+            margin: 0 4px;
+            letter-spacing: 0.02em;
+        }
+        #urgencyBar a { color: #F59E0B; font-weight: 700; text-decoration: none; margin-left: 8px; }
+        #urgencyBar a:hover { text-decoration: underline; }
+        #ubDismiss {
+            position: absolute;
+            right: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: rgba(255,255,255,0.45);
+            cursor: pointer;
+            font-size: 1.1rem;
+            line-height: 1;
+            padding: 4px;
+        }
+        #ubDismiss:hover { color: white; }
+        body.bar-visible nav { top: 0; } /* nav stays sticky below bar naturally */
+
+        /* ── Founding countdown ── */
+        .founding-countdown {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin: 1.5rem auto 0;
+        }
+        .cd-unit {
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 10px;
+            padding: 0.75rem 1.25rem;
+            min-width: 72px;
+            text-align: center;
+        }
+        .cd-num {
+            font-size: 2rem;
+            font-weight: 800;
+            font-variant-numeric: tabular-nums;
+            color: #F59E0B;
+            line-height: 1;
+        }
+        .cd-label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: rgba(255,255,255,0.45);
+            margin-top: 4px;
+        }
+        @media (max-width: 480px) {
+            .founding-countdown { gap: 0.5rem; }
+            .cd-unit { padding: 0.6rem 0.75rem; min-width: 58px; }
+            .cd-num { font-size: 1.6rem; }
         }
 
     </style>
@@ -1222,6 +1300,15 @@
     <meta name="apple-mobile-web-app-title" content="RealtorFinder">
 </head>
 <body>
+    <!-- Urgency bar — hidden if dismissed this session -->
+    <div id="urgencyBar">
+        🏅 Founding Realtor Program closes
+        <span class="ub-countdown" id="ubCountdown">—</span>
+        · <span id="ubSpots">100</span> spots remaining
+        <a href="#founding">Claim yours →</a>
+        <button id="ubDismiss" aria-label="Dismiss" onclick="dismissUrgencyBar()">✕</button>
+    </div>
+
     <nav>
         <div class="nav-container">
             <a href="/" class="logo">Realtor<span>Finder</span></a>
@@ -1451,9 +1538,15 @@
         <div class="founding-container">
 
             <div class="founding-header">
-                <div class="founding-tag">🏅 Limited — Closes August 2026</div>
+                <div class="founding-tag">🏅 Limited — Closing <span id="foundingDeadlineLabel">July 31, 2026</span></div>
                 <h2>Become a <span>Founding Realtor</span></h2>
-                <p>The first 100 agents to join RealtorFinder earn permanent Founding Realtor status — a badge, locked-in pricing, 2 free months of Professional at launch, and privileges that never go away. Open through <strong style="color:#F59E0B;">August 2026</strong> or until all 100 spots are filled, whichever comes first.</p>
+                <p>The first 100 agents to join RealtorFinder earn permanent Founding Realtor status — a badge, locked-in pricing, 2 free months of Professional at launch, and privileges that never go away. Open through <strong style="color:#F59E0B;">July 31, 2026</strong> or until all 100 spots are filled, whichever comes first.</p>
+                <div class="founding-countdown">
+                    <div class="cd-unit"><div class="cd-num" id="cdDays">—</div><div class="cd-label">Days</div></div>
+                    <div class="cd-unit"><div class="cd-num" id="cdHours">—</div><div class="cd-label">Hours</div></div>
+                    <div class="cd-unit"><div class="cd-num" id="cdMins">—</div><div class="cd-label">Minutes</div></div>
+                    <div class="cd-unit"><div class="cd-num" id="cdSecs">—</div><div class="cd-label">Seconds</div></div>
+                </div>
             </div>
 
             <div class="founding-counter">
@@ -1644,12 +1737,35 @@
                     <a href="/login?tab=signup&type=realtor" class="plan-button secondary" style="text-align:center;display:block;text-decoration:none;">Get Firm</a>
                 </div>
 
+                <!-- PAY PER LEAD -->
+                <div style="grid-column:1/-1;background:rgba(255,107,53,0.05);border:2px solid rgba(255,107,53,0.2);border-radius:24px;padding:2.25rem 2.5rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:2rem;">
+                    <div style="flex:1;min-width:220px;">
+                        <div style="display:inline-block;background:rgba(255,107,53,0.12);color:var(--accent);font-size:0.72rem;font-weight:700;padding:0.28rem 0.85rem;border-radius:20px;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:0.75rem;">No Subscription Needed</div>
+                        <div style="font-family:'Playfair Display',serif;font-size:1.6rem;font-weight:700;color:var(--primary);margin-bottom:0.4rem;">Pay Per Lead</div>
+                        <div style="font-size:0.92rem;color:var(--muted);line-height:1.6;max-width:420px;">Not ready for a monthly plan? Sign up free, browse every active listing, and unlock only the leads you want — no commitment.</div>
+                    </div>
+                    <div style="display:flex;gap:2.5rem;align-items:center;flex-wrap:wrap;">
+                        <div style="text-align:center;">
+                            <div style="font-family:'Playfair Display',serif;font-size:2.6rem;font-weight:700;color:var(--primary);line-height:1;">$15</div>
+                            <div style="font-size:0.8rem;color:var(--muted);margin-top:0.2rem;">per lead</div>
+                        </div>
+                        <ul style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:0.45rem;">
+                            <li style="font-size:0.875rem;color:#444;display:flex;align-items:center;gap:0.5rem;"><span style="color:#10b981;font-weight:700;">✓</span> Browse all active listings free</li>
+                            <li style="font-size:0.875rem;color:#444;display:flex;align-items:center;gap:0.5rem;"><span style="color:#10b981;font-weight:700;">✓</span> Pay only for leads you choose</li>
+                            <li style="font-size:0.875rem;color:#444;display:flex;align-items:center;gap:0.5rem;"><span style="color:#10b981;font-weight:700;">✓</span> No monthly fee, no commitment</li>
+                            <li style="font-size:0.875rem;color:#444;display:flex;align-items:center;gap:0.5rem;"><span style="color:#10b981;font-weight:700;">✓</span> Upgrade to a plan any time</li>
+                        </ul>
+                    </div>
+                    <a href="/login?tab=signup&type=realtor" style="white-space:nowrap;background:var(--accent);color:white;padding:0.85rem 2rem;border-radius:10px;font-weight:700;font-size:0.95rem;text-decoration:none;transition:background 0.2s;border:none;" onmouseover="this.style.background='#e55a2b'" onmouseout="this.style.background='var(--accent)'">Try Pay Per Lead →</a>
+                </div>
+
             </div>
 
             <div style="text-align:center;margin-top:2.5rem;">
                 <p style="color:var(--muted);font-size:0.95rem;margin-bottom:0.75rem;">Need a full feature breakdown or have questions about which plan is right for you?</p>
                 <a href="/pricing" style="display:inline-flex;align-items:center;gap:0.4rem;color:var(--accent);font-weight:600;font-size:0.95rem;text-decoration:none;border:2px solid var(--accent);padding:0.6rem 1.5rem;border-radius:8px;transition:all 0.2s;" onmouseover="this.style.background='var(--accent)';this.style.color='white';" onmouseout="this.style.background='transparent';this.style.color='var(--accent)';">View Full Pricing Details →</a>
             </div>
+
         </div>
     </section>
 
@@ -1730,34 +1846,95 @@
             e.preventDefault();
             const emailInput = e.target.querySelector('input[type="email"]') || document.getElementById('heroEmail');
             const email = emailInput ? emailInput.value.trim() : '';
-            // Fire Lead pixel before navigating
-            if (typeof fbq !== 'undefined') fbq('track', 'Lead', { content_name: 'realtor_signup', content_category: 'realtor' });
-            if (typeof gtag !== 'undefined') gtag('event', 'generate_lead', { event_category: 'realtor', event_label: 'email_capture' });
             const btn = e.target.querySelector('button[type="submit"]');
-            if (btn) { btn.disabled = true; btn.textContent = 'Taking you there…'; }
+            if (btn) { btn.disabled = true; btn.textContent = 'Saving your spot…'; }
             const successEl = document.getElementById('heroSuccess');
-            if (successEl) { successEl.style.display = 'block'; }
+
+            if (typeof fbq !== 'undefined') fbq('track', 'Lead', { content_name: 'realtor_signup', content_category: 'realtor' });
+            if (typeof gtag !== 'undefined') gtag('event', 'generate_lead', { event_category: 'realtor', event_label: 'founding_hero' });
+
+            // Save lead to DB (non-blocking — redirect regardless)
+            if (email) {
+                fetch('/api/city-lead', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ type: 'realtor', email, source: 'founding_hero' })
+                }).catch(() => {});
+            }
+
+            if (successEl) successEl.style.display = 'block';
             setTimeout(() => {
                 window.location.href = `/login?tab=signup&type=realtor${email ? '&email=' + encodeURIComponent(email) : ''}`;
-            }, 400);
+            }, 500);
         }
     </script>
 
     <script>
+        // ── Founding deadline: July 31 2026 11:59 PM EDT ──────────────────
+        const FOUNDING_DEADLINE = new Date('2026-08-01T03:59:59Z');
+
+        function pad(n) { return String(n).padStart(2, '0'); }
+
+        function updateCountdown() {
+            const now = new Date();
+            const diff = FOUNDING_DEADLINE - now;
+            if (diff <= 0) {
+                ['cdDays','cdHours','cdMins','cdSecs'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = '0'; });
+                const ubEl = document.getElementById('ubCountdown');
+                if (ubEl) ubEl.textContent = 'CLOSED';
+                return;
+            }
+            const days  = Math.floor(diff / 86400000);
+            const hours = Math.floor((diff % 86400000) / 3600000);
+            const mins  = Math.floor((diff % 3600000) / 60000);
+            const secs  = Math.floor((diff % 60000) / 1000);
+
+            const cdDays = document.getElementById('cdDays');   if (cdDays)  cdDays.textContent  = days;
+            const cdHours = document.getElementById('cdHours'); if (cdHours) cdHours.textContent = pad(hours);
+            const cdMins = document.getElementById('cdMins');   if (cdMins)  cdMins.textContent  = pad(mins);
+            const cdSecs = document.getElementById('cdSecs');   if (cdSecs)  cdSecs.textContent  = pad(secs);
+
+            // Urgency bar countdown label
+            const ubEl = document.getElementById('ubCountdown');
+            if (ubEl) {
+                ubEl.textContent = days > 0 ? `${days}d ${pad(hours)}h ${pad(mins)}m` : `${pad(hours)}:${pad(mins)}:${pad(secs)}`;
+            }
+        }
+
+        updateCountdown();
+        setInterval(updateCountdown, 1000);
+
+        // ── Urgency bar dismiss ────────────────────────────────────────────
+        function dismissUrgencyBar() {
+            const bar = document.getElementById('urgencyBar');
+            if (bar) bar.style.display = 'none';
+            sessionStorage.setItem('ub_dismissed', '1');
+        }
+
+        if (sessionStorage.getItem('ub_dismissed')) {
+            const bar = document.getElementById('urgencyBar');
+            if (bar) bar.style.display = 'none';
+        }
+
+        // ── Founding spot counter ──────────────────────────────────────────
         (async function loadFoundingCounter() {
             try {
                 const res = await fetch('/api/realtors/founding-count');
                 const { claimed, remaining } = await res.json();
 
-                // Update progress bar
                 const pct = Math.min((claimed / 100) * 100, 100);
                 document.getElementById('counterClaimed').textContent = claimed;
                 document.getElementById('progressFill').style.width = pct + '%';
 
-                // Urgency message
+                // Sync spots into urgency bar
+                const ubSpots = document.getElementById('ubSpots');
+                if (ubSpots) ubSpots.textContent = remaining;
+
                 const urgency = document.getElementById('counterUrgency');
                 if (remaining <= 0) {
                     urgency.textContent = '🔴 All founding spots have been claimed.';
+                    const bar = document.getElementById('urgencyBar');
+                    if (bar) bar.style.display = 'none';
                 } else if (remaining <= 10) {
                     urgency.textContent = `🔴 Only ${remaining} spot${remaining === 1 ? '' : 's'} remaining — act now`;
                 } else if (remaining <= 25) {
@@ -1766,14 +1943,11 @@
                     urgency.textContent = `${remaining} spots remaining`;
                 }
 
-                // Update hero banner
                 const banner = document.getElementById('heroFoundingBanner');
                 if (banner) {
-                    if (remaining <= 0) {
-                        banner.textContent = 'Founding Realtor Program — All 100 spots claimed';
-                    } else {
-                        banner.textContent = `Founding Realtor Program — ${remaining} of 100 spots left`;
-                    }
+                    banner.textContent = remaining <= 0
+                        ? 'Founding Realtor Program — All 100 spots claimed'
+                        : `Founding Realtor Program — ${remaining} of 100 spots left`;
                 }
             } catch {}
         })();

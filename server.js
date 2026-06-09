@@ -3430,7 +3430,7 @@ app.post('/api/contact', contactLimiter, async (req, res) => {
 // City page lead capture
 app.post('/api/city-lead', waitlistLimiter, async (req, res) => {
     try {
-        const { type, name, email, phone, city_slug, city_name, state_code } = req.body;
+        const { type, name, email, phone, city_slug, city_name, state_code, address } = req.body;
 
         if (!email || !email.includes('@')) {
             return res.status(400).json({ error: 'Valid email required' });
@@ -3438,8 +3438,8 @@ app.post('/api/city-lead', waitlistLimiter, async (req, res) => {
         const normalizedType = ['seller', 'realtor'].includes(type) ? type : 'seller';
 
         await pool.query(
-            `INSERT INTO city_leads (type, name, email, phone, city_slug, city_name, state_code)
-             VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+            `INSERT INTO city_leads (type, name, email, phone, city_slug, city_name, state_code, address)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
             [
                 normalizedType,
                 (name || '').trim().slice(0, 255) || null,
@@ -3448,6 +3448,7 @@ app.post('/api/city-lead', waitlistLimiter, async (req, res) => {
                 (city_slug || '').trim().slice(0, 100) || null,
                 (city_name || '').trim().slice(0, 255) || null,
                 (state_code || '').trim().toUpperCase().slice(0, 2) || null,
+                (address || '').trim().slice(0, 500) || null,
             ]
         );
 
@@ -9880,6 +9881,10 @@ _schemaMigrations.push(
 _schemaMigrations.push(
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id TEXT`,
     `CREATE UNIQUE INDEX IF NOT EXISTS users_google_id_idx ON users (google_id) WHERE google_id IS NOT NULL`
+);
+
+_schemaMigrations.push(
+    `ALTER TABLE city_leads ADD COLUMN IF NOT EXISTS address TEXT`
 );
 
 _schemaMigrations.push(
