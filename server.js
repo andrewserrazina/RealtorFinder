@@ -10011,6 +10011,7 @@ _schemaMigrations.push(`
 
 _schemaMigrations.push(`ALTER TABLE proposals ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ`);
 _schemaMigrations.push(`UPDATE proposals SET expires_at = created_at + INTERVAL '30 days' WHERE expires_at IS NULL AND status = 'pending'`);
+_schemaMigrations.push(`ALTER TABLE users ADD COLUMN IF NOT EXISTS email_alerts BOOLEAN DEFAULT TRUE`);
 
 // Auto-expire proposals whose expires_at has passed
 async function runProposalExpiryJob() {
