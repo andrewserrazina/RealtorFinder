@@ -7,6 +7,9 @@ const session = require('express-session');
 const pgSession = require('connect-pg-simple')(session);
 require('dotenv').config();
 
+const Anthropic = require('@anthropic-ai/sdk');
+const _anthropic = process.env.ANTHROPIC_API_KEY ? new Anthropic() : null;
+
 // ===== STARTUP ENVIRONMENT VALIDATION =====
 const _requiredEnv = ['DATABASE_URL', 'SESSION_SECRET'];
 const _missingEnv = _requiredEnv.filter(k => !process.env[k]);
@@ -1525,7 +1528,7 @@ app.post('/api/listings', auth.requireAuth, async (req, res) => {
     try {
         if (!req.session.emailVerified && !req.user.email_verified) return res.status(403).json({ error: 'Please verify your email address before creating a listing. Check your inbox for a verification link.' });
         if (req.user.user_type !== 'seller') return res.status(403).json({ error: 'Only seller accounts can create listings' });
-        const { address, price, type, bedrooms, bathrooms, sqft, description, ownerName, ownerEmail, ownerPhone, zestimate, owner_attested, proposal_deadline, video_url } = req.body;
+        const { address, price, type, bedrooms, bathrooms, sqft, description, ownerName, ownerEmail, ownerPhone, zestimate, owner_attested, proposal_deadline, video_url, year_built, garage_spaces, hoa_fee, lot_size } = req.body;
         
         // Parse address into components (basic parsing - could be enhanced with address validation API)
         const addressParts = address.split(',').map(s => s.trim());
@@ -1573,7 +1576,11 @@ app.post('/api/listings', auth.requireAuth, async (req, res) => {
             latitude: coords?.latitude || null,
             longitude: coords?.longitude || null,
             proposal_deadline: proposal_deadline || null,
-            video_url: video_url || null
+            video_url: video_url || null,
+            year_built: year_built || null,
+            garage_spaces: garage_spaces != null && garage_spaces !== '' ? garage_spaces : null,
+            hoa_fee: hoa_fee != null && hoa_fee !== '' ? hoa_fee : null,
+            lot_size: lot_size || null
         };
 
         const newListing = await db.createListing(listingData);
@@ -1611,12 +1618,12 @@ app.put('/api/listings/:id', auth.requireAuth, async (req, res) => {
         if (!listing) return res.status(404).json({ error: 'Listing not found' });
         if (listing.user_id !== req.session.userId) return res.status(403).json({ error: 'Forbidden' });
 
-        const { price, type, bedrooms, bathrooms, sqft, description, proposal_deadline, video_url } = req.body;
+        const { price, type, bedrooms, bathrooms, sqft, description, proposal_deadline, video_url, year_built, garage_spaces, hoa_fee, lot_size } = req.body;
         if (!price || !type || !bedrooms || !bathrooms || !sqft || !description) {
             return res.status(400).json({ error: 'All fields are required' });
         }
 
-        const updated = await db.updateListing(req.params.id, { price, type, bedrooms, bathrooms, sqft, description, proposal_deadline, video_url });
+        const updated = await db.updateListing(req.params.id, { price, type, bedrooms, bathrooms, sqft, description, proposal_deadline, video_url, year_built, garage_spaces, hoa_fee, lot_size });
         res.json({ ...updated, date: formatDate(updated.created_at) });
     } catch (error) {
         console.error('Error updating listing:', error);
@@ -2113,6 +2120,46 @@ app.get('/api/analytics/realtor', auth.requireAuth, async (req, res) => {
     } catch (err) {
         console.error('Realtor analytics error:', err);
         res.status(500).json({ error: 'Failed to fetch analytics' });
+    }
+});
+
+// ===== AI LISTING DESCRIPTION =====
+
+app.post('/api/ai/listing-description', auth.requireAuth, async (req, res) => {
+    if (!_anthropic) return res.status(503).json({ error: 'ai_not_configured' });
+    if (req.user.user_type !== 'seller') return res.status(403).json({ error: 'Sellers only' });
+
+    const { address, type, bedrooms, bathrooms, sqft, price, year_built, lot_size, garage_spaces, hoa_fee } = req.body;
+    if (!address || !type || !bedrooms || !sqft) {
+        return res.status(400).json({ error: 'address, type, bedrooms, and sqft are required' });
+    }
+
+    const details = [
+        `Address: ${address}`,
+        `Property type: ${type}`,
+        `Bedrooms: ${bedrooms}, Bathrooms: ${bathrooms || 'not specified'}`,
+        `Square feet: ${Number(sqft).toLocaleString()}`,
+        price ? `Asking price: $${Number(String(price).replace(/[^0-9.]/g, '')).toLocaleString()}` : null,
+        year_built ? `Year built: ${year_built}` : null,
+        lot_size ? `Lot size: ${Number(lot_size).toLocaleString()} sq ft` : null,
+        garage_spaces != null && garage_spaces !== '' ? `Garage: ${garage_spaces == 0 ? 'no garage' : garage_spaces + '-car garage'}` : null,
+        hoa_fee != null && hoa_fee !== '' ? (Number(hoa_fee) === 0 ? 'No HOA' : `HOA: $${Number(hoa_fee).toLocaleString()}/month`) : null,
+    ].filter(Boolean).join('\n');
+
+    try {
+        const message = await _anthropic.messages.create({
+            model: 'claude-sonnet-4-6',
+            max_tokens: 400,
+            messages: [{
+                role: 'user',
+                content: `Write a compelling, professional real estate listing description for this property. Use 3–4 sentences. Be specific, highlight key features, and end with a brief call-to-action for interested buyers. Do not include the price. Do not use bullet points. Output only the description text — no heading, no label.\n\n${details}`
+            }]
+        });
+        const description = message.content[0].text.trim();
+        res.json({ description });
+    } catch (err) {
+        console.error('AI listing description error:', err.message);
+        res.status(500).json({ error: 'Failed to generate description' });
     }
 });
 
@@ -10011,6 +10058,11 @@ _schemaMigrations.push(`
 
 _schemaMigrations.push(`ALTER TABLE proposals ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ`);
 _schemaMigrations.push(`UPDATE proposals SET expires_at = created_at + INTERVAL '30 days' WHERE expires_at IS NULL AND status = 'pending'`);
+_schemaMigrations.push(`ALTER TABLE users ADD COLUMN IF NOT EXISTS email_alerts BOOLEAN DEFAULT TRUE`);
+_schemaMigrations.push(`ALTER TABLE listings ADD COLUMN IF NOT EXISTS year_built INTEGER`);
+_schemaMigrations.push(`ALTER TABLE listings ADD COLUMN IF NOT EXISTS garage_spaces INTEGER`);
+_schemaMigrations.push(`ALTER TABLE listings ADD COLUMN IF NOT EXISTS hoa_fee NUMERIC(8,2)`);
+_schemaMigrations.push(`ALTER TABLE listings ADD COLUMN IF NOT EXISTS lot_size INTEGER`);
 
 // Auto-expire proposals whose expires_at has passed
 async function runProposalExpiryJob() {

@@ -1315,9 +1315,39 @@
                     <label>Square Feet *</label>
                     <input type="number" name="sqft" placeholder="2000" required>
                 </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Year Built <span style="font-weight:400;color:#6b7280;">(optional)</span></label>
+                        <input type="number" name="year_built" placeholder="1998" min="1800" max="2026">
+                    </div>
+                    <div class="form-group">
+                        <label>Lot Size (sq ft) <span style="font-weight:400;color:#6b7280;">(optional)</span></label>
+                        <input type="number" name="lot_size" placeholder="6500">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Garage <span style="font-weight:400;color:#6b7280;">(optional)</span></label>
+                        <select name="garage_spaces">
+                            <option value="">Select</option>
+                            <option value="0">No Garage</option>
+                            <option value="1">1-Car Garage</option>
+                            <option value="2">2-Car Garage</option>
+                            <option value="3">3+ Car Garage</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>HOA Fee/month <span style="font-weight:400;color:#6b7280;">(optional)</span></label>
+                        <input type="number" name="hoa_fee" placeholder="0" min="0" step="1">
+                        <p style="font-size:0.8rem;color:#6b7280;margin-top:4px;">Enter 0 if no HOA.</p>
+                    </div>
+                </div>
                 <div class="form-group">
-                    <label>Description *</label>
-                    <textarea name="description" placeholder="Describe your property..." required></textarea>
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.4rem;">
+                        <label style="margin-bottom:0;">Description *</label>
+                        <button type="button" id="aiDescBtn" onclick="generateAIDescription('new')" style="display:flex;align-items:center;gap:0.35rem;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:white;border:none;border-radius:6px;padding:0.3rem 0.75rem;font-size:0.78rem;font-weight:600;cursor:pointer;font-family:inherit;transition:opacity 0.2s;">✨ Write with AI</button>
+                    </div>
+                    <textarea name="description" id="newListingDescription" placeholder="Describe your property, or click ✨ Write with AI to generate one…" required></textarea>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
@@ -1398,9 +1428,50 @@
                     <label>Square Feet *</label>
                     <input type="number" name="sqft" required>
                 </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Year Built <span style="font-weight:400;color:#6b7280;">(optional)</span></label>
+                        <input type="number" name="year_built" placeholder="1998" min="1800" max="2026">
+                    </div>
+                    <div class="form-group">
+                        <label>Lot Size (sq ft) <span style="font-weight:400;color:#6b7280;">(optional)</span></label>
+                        <input type="number" name="lot_size" placeholder="6500">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Garage <span style="font-weight:400;color:#6b7280;">(optional)</span></label>
+                        <select name="garage_spaces">
+                            <option value="">Select</option>
+                            <option value="0">No Garage</option>
+                            <option value="1">1-Car Garage</option>
+                            <option value="2">2-Car Garage</option>
+                            <option value="3">3+ Car Garage</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>HOA Fee/month <span style="font-weight:400;color:#6b7280;">(optional)</span></label>
+                        <input type="number" name="hoa_fee" placeholder="0" min="0" step="1">
+                    </div>
+                </div>
                 <div class="form-group">
-                    <label>Description *</label>
-                    <textarea name="description" required></textarea>
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.4rem;">
+                        <label style="margin-bottom:0;">Description *</label>
+                        <button type="button" id="aiDescBtnEdit" onclick="generateAIDescription('edit')" style="display:flex;align-items:center;gap:0.35rem;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:white;border:none;border-radius:6px;padding:0.3rem 0.75rem;font-size:0.78rem;font-weight:600;cursor:pointer;font-family:inherit;transition:opacity 0.2s;">✨ Write with AI</button>
+                    </div>
+                    <textarea name="description" id="editListingDescription" required></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Proposal Deadline <span style="font-weight:400;color:#6b7280;">(optional)</span></label>
+                        <input type="date" name="proposal_deadline" id="editListingDeadline" style="padding:0.75rem 1rem;border:1px solid #e1e8ed;border-radius:8px;font-family:inherit;font-size:0.95rem;width:100%;">
+                        <p style="font-size:0.8rem;color:#6b7280;margin-top:4px;">Creates urgency — realtors see a countdown.</p>
+                    </div>
+                    <div class="form-group">
+                        <label>Video Tour URL <span style="font-weight:400;color:#6b7280;">(optional)</span></label>
+                        <input type="url" name="video_url" placeholder="https://youtube.com/watch?v=…" style="padding:0.75rem 1rem;border:1px solid #e1e8ed;border-radius:8px;font-family:inherit;font-size:0.95rem;width:100%;">
+                        <p style="font-size:0.8rem;color:#6b7280;margin-top:4px;">YouTube or Vimeo link.</p>
+                    </div>
                 </div>
                 <button type="submit" class="btn btn-primary" style="width:100%;padding:1rem;margin-top:1rem;">Save Changes</button>
             </form>
@@ -1916,8 +1987,13 @@
                             <span>🛏️ ${listing.bedrooms} bd</span>
                             <span>🛁 ${listing.bathrooms} ba</span>
                             <span>📏 ${listing.sqft.toLocaleString()} sqft</span>
+                            ${listing.year_built ? `<span>🏗️ ${listing.year_built}</span>` : ''}
+                            ${listing.garage_spaces != null ? `<span>🚗 ${listing.garage_spaces === 0 ? 'No garage' : listing.garage_spaces + '-car garage'}</span>` : ''}
+                            ${listing.lot_size ? `<span>🌿 ${listing.lot_size.toLocaleString()} sqft lot</span>` : ''}
+                            ${listing.hoa_fee != null ? `<span>🏘️ HOA $${Number(listing.hoa_fee).toLocaleString()}/mo</span>` : ''}
                         </div>
-                        <p style="margin-top:1rem;color:#666;">${listing.description}</p>
+                        ${listingCompleteness(listing)}
+                        <p style="margin-top:0.75rem;color:#666;">${listing.description}</p>
                         <p style="margin-top:0.5rem;font-size:0.9rem;color:#999;">${listing.date} &nbsp;·&nbsp; 👁 ${listing.view_count || 0} views &nbsp;·&nbsp; 🔗 ${listing.shareViews || 0} share views &nbsp;·&nbsp; 📬 ${listing.offerCount || 0} proposals &nbsp;·&nbsp; 📅 ${Math.floor((Date.now() - new Date(listing.created_at).getTime()) / 86400000)} days on market</p>
                         ${renderStatusPipeline(listing)}
                         ${renderDeadlineBadge(listing)}
@@ -1929,7 +2005,7 @@
                             ? `<button class="btn btn-primary" onclick="renewListing(${listing.id})" style="background:#d97706;">Renew Listing</button>`
                             : `<button class="btn btn-primary" onclick="viewOffers(${listing.id})">${listing.offerCount || 0} Offers</button>`
                         }
-                        <a href="/listing/${listing.id}" target="_blank" class="btn btn-secondary" style="font-size:0.85rem;text-align:center;">View Listing</a>
+                        <a href="/listing/${listing.id}" target="_blank" class="btn btn-secondary" style="font-size:0.85rem;text-align:center;">👁 Preview as Realtor</a>
                         ${listing.shareToken ? `<button class="btn btn-outline" onclick="copyShareLink('${listing.shareToken}')" style="font-size:0.85rem;">🔗 Share</button>` : ''}
                         ${!isExpired ? `<button class="btn btn-outline" onclick="openEditModal(${listing.id})">Edit</button>` : ''}
                         <button class="btn btn-outline" onclick="openListingAnalytics(${listing.id})" style="font-size:0.85rem;">📊 Analytics</button>
@@ -1940,6 +2016,83 @@
                     </div>
                 </div>
             `}).join('');
+        }
+
+        async function generateAIDescription(formType) {
+            const isEdit = formType === 'edit';
+            const form = document.getElementById(isEdit ? 'editListingForm' : 'newListingForm');
+            const btn = document.getElementById(isEdit ? 'aiDescBtnEdit' : 'aiDescBtn');
+            const textarea = document.getElementById(isEdit ? 'editListingDescription' : 'newListingDescription');
+
+            const address = isEdit
+                ? (cachedListings.find(l => l.id === form.id_value)?.address || '')
+                : (document.getElementById('newListingAddress')?.value || '');
+            const type = form.elements.type?.value;
+            const bedrooms = form.elements.bedrooms?.value;
+            const bathrooms = form.elements.bathrooms?.value;
+            const sqft = form.elements.sqft?.value;
+            const price = isEdit ? form.elements.price?.value : document.getElementById('newListingPrice')?.value;
+            const year_built = form.elements.year_built?.value;
+            const lot_size = form.elements.lot_size?.value;
+            const garage_spaces = form.elements.garage_spaces?.value;
+            const hoa_fee = form.elements.hoa_fee?.value;
+
+            if (!address || !type || !bedrooms || !sqft) {
+                showToast('Fill in address, type, bedrooms, and sqft first.');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = '⏳ Writing…';
+            try {
+                const res = await fetch('/api/ai/listing-description', {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ address, type, bedrooms, bathrooms, sqft, price, year_built, lot_size, garage_spaces, hoa_fee })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Failed');
+                textarea.value = data.description;
+                textarea.focus();
+                showToast('✨ Description generated! Feel free to edit it.');
+            } catch (e) {
+                showToast('Could not generate description. Try again.');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '✨ Write with AI';
+            }
+        }
+
+        function listingCompleteness(listing) {
+            let score = 0;
+            const tips = [];
+            if (listing.image_urls && listing.image_urls.length > 0) score += 30;
+            else tips.push('Add photos');
+            if (listing.description && listing.description.length > 80) score += 20;
+            else tips.push('Expand description');
+            if (listing.year_built) score += 15;
+            else tips.push('Add year built');
+            if (listing.proposal_deadline) score += 15;
+            else tips.push('Set a proposal deadline');
+            if (listing.video_url) score += 10;
+            else tips.push('Add a video tour');
+            const hasExtra = listing.lot_size || listing.garage_spaces != null || listing.hoa_fee != null;
+            if (hasExtra) score += 10;
+            else tips.push('Add lot size, garage & HOA');
+            const color = score >= 80 ? '#16a34a' : score >= 50 ? '#d97706' : '#dc2626';
+            const label = score >= 80 ? 'Great' : score >= 50 ? 'Good' : 'Needs info';
+            const tip = tips.length
+                ? `<button onclick="openEditModal(${listing.id})" style="margin-left:0.4rem;font-size:0.78rem;color:var(--accent);background:none;border:none;cursor:pointer;font-family:inherit;padding:0;text-decoration:underline;">+ ${tips[0]} →</button>`
+                : '';
+            return `<div style="margin-top:0.75rem;margin-bottom:0.25rem;">
+                <div style="display:flex;align-items:center;gap:0.25rem;margin-bottom:0.35rem;">
+                    <span style="font-size:0.78rem;font-weight:600;color:${color};">${score}% — ${label}</span>${tip}
+                </div>
+                <div style="background:#e5e7eb;border-radius:99px;height:5px;overflow:hidden;">
+                    <div style="background:${color};width:${score}%;height:100%;border-radius:99px;transition:width 0.4s;"></div>
+                </div>
+            </div>`;
         }
 
         function showToast(message) {
@@ -2233,6 +2386,12 @@
             form.elements.bathrooms.value = listing.bathrooms;
             form.elements.sqft.value = listing.sqft;
             form.elements.description.value = listing.description;
+            form.elements.year_built.value = listing.year_built || '';
+            form.elements.lot_size.value = listing.lot_size || '';
+            form.elements.garage_spaces.value = listing.garage_spaces != null ? String(listing.garage_spaces) : '';
+            form.elements.hoa_fee.value = listing.hoa_fee != null ? listing.hoa_fee : '';
+            document.getElementById('editListingDeadline').value = listing.proposal_deadline ? listing.proposal_deadline.slice(0, 10) : '';
+            form.elements.video_url.value = listing.video_url || '';
             document.getElementById('editListingModal').classList.add('active');
             document.getElementById('editImageStatus').textContent = '';
             document.getElementById('editImageInput').value = '';
@@ -2326,12 +2485,18 @@
             const form = e.target;
             const id = form.id_value;
             const data = {
-                price:       parseInt(stripCurrency(form.elements.price.value), 10),
-                type:        form.elements.type.value,
-                bedrooms:    form.elements.bedrooms.value,
-                bathrooms:   form.elements.bathrooms.value,
-                sqft:        form.elements.sqft.value,
-                description: form.elements.description.value
+                price:             parseInt(stripCurrency(form.elements.price.value), 10),
+                type:              form.elements.type.value,
+                bedrooms:          form.elements.bedrooms.value,
+                bathrooms:         form.elements.bathrooms.value,
+                sqft:              form.elements.sqft.value,
+                description:       form.elements.description.value,
+                year_built:        form.elements.year_built.value || null,
+                lot_size:          form.elements.lot_size.value || null,
+                garage_spaces:     form.elements.garage_spaces.value !== '' ? form.elements.garage_spaces.value : null,
+                hoa_fee:           form.elements.hoa_fee.value !== '' ? form.elements.hoa_fee.value : null,
+                proposal_deadline: document.getElementById('editListingDeadline').value || null,
+                video_url:         form.elements.video_url.value || null,
             };
             try {
                 const res = await fetch(`${API_BASE_URL}/listings/${id}`, {
