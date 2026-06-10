@@ -1343,8 +1343,11 @@
                     </div>
                 </div>
                 <div class="form-group">
-                    <label>Description *</label>
-                    <textarea name="description" placeholder="Describe your property..." required></textarea>
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.4rem;">
+                        <label style="margin-bottom:0;">Description *</label>
+                        <button type="button" id="aiDescBtn" onclick="generateAIDescription('new')" style="display:flex;align-items:center;gap:0.35rem;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:white;border:none;border-radius:6px;padding:0.3rem 0.75rem;font-size:0.78rem;font-weight:600;cursor:pointer;font-family:inherit;transition:opacity 0.2s;">✨ Write with AI</button>
+                    </div>
+                    <textarea name="description" id="newListingDescription" placeholder="Describe your property, or click ✨ Write with AI to generate one…" required></textarea>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
@@ -1452,8 +1455,11 @@
                     </div>
                 </div>
                 <div class="form-group">
-                    <label>Description *</label>
-                    <textarea name="description" required></textarea>
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.4rem;">
+                        <label style="margin-bottom:0;">Description *</label>
+                        <button type="button" id="aiDescBtnEdit" onclick="generateAIDescription('edit')" style="display:flex;align-items:center;gap:0.35rem;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:white;border:none;border-radius:6px;padding:0.3rem 0.75rem;font-size:0.78rem;font-weight:600;cursor:pointer;font-family:inherit;transition:opacity 0.2s;">✨ Write with AI</button>
+                    </div>
+                    <textarea name="description" id="editListingDescription" required></textarea>
                 </div>
                 <button type="submit" class="btn btn-primary" style="width:100%;padding:1rem;margin-top:1rem;">Save Changes</button>
             </form>
@@ -1998,6 +2004,52 @@
                     </div>
                 </div>
             `}).join('');
+        }
+
+        async function generateAIDescription(formType) {
+            const isEdit = formType === 'edit';
+            const form = document.getElementById(isEdit ? 'editListingForm' : 'newListingForm');
+            const btn = document.getElementById(isEdit ? 'aiDescBtnEdit' : 'aiDescBtn');
+            const textarea = document.getElementById(isEdit ? 'editListingDescription' : 'newListingDescription');
+
+            const address = isEdit
+                ? (cachedListings.find(l => l.id === form.id_value)?.address || '')
+                : (document.getElementById('newListingAddress')?.value || '');
+            const type = form.elements.type?.value;
+            const bedrooms = form.elements.bedrooms?.value;
+            const bathrooms = form.elements.bathrooms?.value;
+            const sqft = form.elements.sqft?.value;
+            const price = isEdit ? form.elements.price?.value : document.getElementById('newListingPrice')?.value;
+            const year_built = form.elements.year_built?.value;
+            const lot_size = form.elements.lot_size?.value;
+            const garage_spaces = form.elements.garage_spaces?.value;
+            const hoa_fee = form.elements.hoa_fee?.value;
+
+            if (!address || !type || !bedrooms || !sqft) {
+                showToast('Fill in address, type, bedrooms, and sqft first.');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = '⏳ Writing…';
+            try {
+                const res = await fetch('/api/ai/listing-description', {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ address, type, bedrooms, bathrooms, sqft, price, year_built, lot_size, garage_spaces, hoa_fee })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Failed');
+                textarea.value = data.description;
+                textarea.focus();
+                showToast('✨ Description generated! Feel free to edit it.');
+            } catch (e) {
+                showToast('Could not generate description. Try again.');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '✨ Write with AI';
+            }
         }
 
         function listingCompleteness(listing) {

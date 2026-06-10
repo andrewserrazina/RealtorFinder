@@ -7,6 +7,9 @@ const session = require('express-session');
 const pgSession = require('connect-pg-simple')(session);
 require('dotenv').config();
 
+const Anthropic = require('@anthropic-ai/sdk');
+const _anthropic = process.env.ANTHROPIC_API_KEY ? new Anthropic() : null;
+
 // ===== STARTUP ENVIRONMENT VALIDATION =====
 const _requiredEnv = ['DATABASE_URL', 'SESSION_SECRET'];
 const _missingEnv = _requiredEnv.filter(k => !process.env[k]);
@@ -2117,6 +2120,46 @@ app.get('/api/analytics/realtor', auth.requireAuth, async (req, res) => {
     } catch (err) {
         console.error('Realtor analytics error:', err);
         res.status(500).json({ error: 'Failed to fetch analytics' });
+    }
+});
+
+// ===== AI LISTING DESCRIPTION =====
+
+app.post('/api/ai/listing-description', auth.requireAuth, async (req, res) => {
+    if (!_anthropic) return res.status(503).json({ error: 'ai_not_configured' });
+    if (req.user.user_type !== 'seller') return res.status(403).json({ error: 'Sellers only' });
+
+    const { address, type, bedrooms, bathrooms, sqft, price, year_built, lot_size, garage_spaces, hoa_fee } = req.body;
+    if (!address || !type || !bedrooms || !sqft) {
+        return res.status(400).json({ error: 'address, type, bedrooms, and sqft are required' });
+    }
+
+    const details = [
+        `Address: ${address}`,
+        `Property type: ${type}`,
+        `Bedrooms: ${bedrooms}, Bathrooms: ${bathrooms || 'not specified'}`,
+        `Square feet: ${Number(sqft).toLocaleString()}`,
+        price ? `Asking price: $${Number(String(price).replace(/[^0-9.]/g, '')).toLocaleString()}` : null,
+        year_built ? `Year built: ${year_built}` : null,
+        lot_size ? `Lot size: ${Number(lot_size).toLocaleString()} sq ft` : null,
+        garage_spaces != null && garage_spaces !== '' ? `Garage: ${garage_spaces == 0 ? 'no garage' : garage_spaces + '-car garage'}` : null,
+        hoa_fee != null && hoa_fee !== '' ? (Number(hoa_fee) === 0 ? 'No HOA' : `HOA: $${Number(hoa_fee).toLocaleString()}/month`) : null,
+    ].filter(Boolean).join('\n');
+
+    try {
+        const message = await _anthropic.messages.create({
+            model: 'claude-sonnet-4-6',
+            max_tokens: 400,
+            messages: [{
+                role: 'user',
+                content: `Write a compelling, professional real estate listing description for this property. Use 3–4 sentences. Be specific, highlight key features, and end with a brief call-to-action for interested buyers. Do not include the price. Do not use bullet points. Output only the description text — no heading, no label.\n\n${details}`
+            }]
+        });
+        const description = message.content[0].text.trim();
+        res.json({ description });
+    } catch (err) {
+        console.error('AI listing description error:', err.message);
+        res.status(500).json({ error: 'Failed to generate description' });
     }
 });
 
