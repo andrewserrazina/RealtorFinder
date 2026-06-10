@@ -2141,6 +2141,11 @@
                 <h2>Submit Your Proposal</h2>
                 <p class="modal-subtitle" id="modalPropertyAddress"></p>
             </div>
+            <!-- Profile nudge shown when photo/bio missing -->
+            <div id="bidProfileNudge" style="display:none;background:#fffbeb;border:1px solid #fcd34d;border-radius:10px;padding:0.75rem 1rem;margin-bottom:1rem;font-size:0.85rem;color:#92400e;display:flex;align-items:center;gap:0.6rem;">
+                <span style="font-size:1.1rem;flex-shrink:0;">💡</span>
+                <span>Sellers are 3× more likely to accept proposals from agents with a profile photo. <a href="#" onclick="event.preventDefault();closeBidModal();document.querySelector('[data-tab=settings]')?.click()" style="color:#d97706;font-weight:700;text-decoration:underline;">Add yours →</a></span>
+            </div>
             <form id="bidForm">
                 <div class="form-group">
                     <label>Your Name *</label>
@@ -2206,6 +2211,7 @@
         }
         let currentListingId = null;
         let currentUser = null;
+        let _profileItems = null;
         let allListings = [];   // cached for map access
         let map = null;         // Leaflet map instance
         let mapMarkers = [];    // active markers/layers on the map
@@ -2416,6 +2422,12 @@
         function openBidModal(listingId, address) {
             currentListingId = listingId;
             document.getElementById('modalPropertyAddress').textContent = address;
+            // Show profile nudge if photo is missing
+            const nudge = document.getElementById('bidProfileNudge');
+            if (nudge) {
+                const noPhoto = _profileItems && _profileItems.some(i => i.label === 'has_photo' && !i.done);
+                nudge.style.display = noPhoto ? 'flex' : 'none';
+            }
             document.getElementById('bidModal').classList.add('active');
         }
 
@@ -2535,6 +2547,12 @@
         // Load Dashboard
         async function loadDashboard() {
             try {
+                // Fetch profile completeness in background so bid modal can use it
+                fetch(`${API_BASE_URL}/profile/completeness`, { credentials: 'include' })
+                    .then(r => r.ok ? r.json() : null)
+                    .then(d => { if (d) _profileItems = d.items; })
+                    .catch(() => {});
+
                 const bidsRes = await fetch(`${API_BASE_URL}/my-offers`, { credentials: 'include' });
                 const myBidsData = await bidsRes.json();
 

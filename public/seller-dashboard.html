@@ -1859,7 +1859,27 @@
                     credentials: 'include',
                     body: JSON.stringify(data)
                 });
-                if (!response.ok) throw new Error('Failed to create listing');
+                if (!response.ok) {
+                    const err = await response.json().catch(() => ({}));
+                    const msg = err.error || '';
+                    if (response.status === 403 && msg.toLowerCase().includes('verify')) {
+                        btn.disabled = false;
+                        btn.textContent = 'Next: Add Photos →';
+                        closeNewListingModal();
+                        // Scroll to and highlight the verification banner
+                        const banner = document.querySelector('.verification-banner');
+                        if (banner) {
+                            banner.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            banner.style.outline = '3px solid #f59e0b';
+                            setTimeout(() => banner.style.outline = '', 2500);
+                        } else {
+                            alert('Please verify your email address before creating a listing. Check your inbox for a verification link.');
+                        }
+                    } else {
+                        throw new Error(msg || 'Failed to create listing');
+                    }
+                    return;
+                }
                 const result = await response.json();
                 _newListingId = result.id || result.listing?.id;
                 // Show photo upload step
