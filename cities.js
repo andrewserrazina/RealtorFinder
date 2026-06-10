@@ -20,6 +20,9 @@ module.exports = [
   ...require('./cities/nc'),
   ...require('./cities/sc'),
   ...require('./cities/tn'),
+  ...require('./cities/al'),
+  // Mid-Atlantic (DE)
+  ...require('./cities/de'),
   // Midwest
   ...require('./cities/il'),
   ...require('./cities/oh'),
@@ -28,14 +31,23 @@ module.exports = [
   ...require('./cities/in'),
   ...require('./cities/mn'),
   ...require('./cities/mo'),
+  ...require('./cities/ne'),
+  ...require('./cities/ks'),
   // South Central
   ...require('./cities/tx'),
+  ...require('./cities/la'),
+  ...require('./cities/ok'),
   // Mountain / West
   ...require('./cities/co'),
   ...require('./cities/az'),
   ...require('./cities/nv'),
   ...require('./cities/wa'),
   ...require('./cities/or'),
+  ...require('./cities/id'),
+  ...require('./cities/ut'),
+  ...require('./cities/nm'),
   // Pacific
   ...require('./cities/ca'),
+  // Appalachia / Border South
+  ...require('./cities/ky'),
 ];
