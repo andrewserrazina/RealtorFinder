@@ -9,23 +9,27 @@ module.exports = [
   ...require('./cities/me'),
   // Mid-Atlantic
   ...require('./cities/ny'),
+  ...require('./cities/ny-extra'),
   ...require('./cities/nj'),
   ...require('./cities/pa'),
   ...require('./cities/md'),
   ...require('./cities/va'),
   ...require('./cities/dc'),
+  ...require('./cities/de'),
+  ...require('./cities/wv'),
   // Southeast
   ...require('./cities/fl'),
+  ...require('./cities/fl-extra'),
   ...require('./cities/ga'),
   ...require('./cities/nc'),
   ...require('./cities/sc'),
   ...require('./cities/tn'),
   ...require('./cities/al'),
-  // Mid-Atlantic (DE)
-  ...require('./cities/de'),
+  ...require('./cities/ms'),
   // Midwest
   ...require('./cities/il'),
   ...require('./cities/oh'),
+  ...require('./cities/oh-extra'),
   ...require('./cities/mi'),
   ...require('./cities/wi'),
   ...require('./cities/in'),
@@ -33,10 +37,15 @@ module.exports = [
   ...require('./cities/mo'),
   ...require('./cities/ne'),
   ...require('./cities/ks'),
+  ...require('./cities/ia'),
+  ...require('./cities/nd'),
+  ...require('./cities/sd'),
   // South Central
   ...require('./cities/tx'),
+  ...require('./cities/tx-extra'),
   ...require('./cities/la'),
   ...require('./cities/ok'),
+  ...require('./cities/ar'),
   // Mountain / West
   ...require('./cities/co'),
   ...require('./cities/az'),
@@ -46,8 +55,14 @@ module.exports = [
   ...require('./cities/id'),
   ...require('./cities/ut'),
   ...require('./cities/nm'),
+  ...require('./cities/mt'),
+  ...require('./cities/wy'),
   // Pacific
   ...require('./cities/ca'),
+  ...require('./cities/ca-extra'),
+  ...require('./cities/hi'),
+  // Alaska
+  ...require('./cities/ak'),
   // Appalachia / Border South
   ...require('./cities/ky'),
 ];
