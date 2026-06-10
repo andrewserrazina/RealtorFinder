@@ -1461,6 +1461,18 @@
                     </div>
                     <textarea name="description" id="editListingDescription" required></textarea>
                 </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Proposal Deadline <span style="font-weight:400;color:#6b7280;">(optional)</span></label>
+                        <input type="date" name="proposal_deadline" id="editListingDeadline" style="padding:0.75rem 1rem;border:1px solid #e1e8ed;border-radius:8px;font-family:inherit;font-size:0.95rem;width:100%;">
+                        <p style="font-size:0.8rem;color:#6b7280;margin-top:4px;">Creates urgency — realtors see a countdown.</p>
+                    </div>
+                    <div class="form-group">
+                        <label>Video Tour URL <span style="font-weight:400;color:#6b7280;">(optional)</span></label>
+                        <input type="url" name="video_url" placeholder="https://youtube.com/watch?v=…" style="padding:0.75rem 1rem;border:1px solid #e1e8ed;border-radius:8px;font-family:inherit;font-size:0.95rem;width:100%;">
+                        <p style="font-size:0.8rem;color:#6b7280;margin-top:4px;">YouTube or Vimeo link.</p>
+                    </div>
+                </div>
                 <button type="submit" class="btn btn-primary" style="width:100%;padding:1rem;margin-top:1rem;">Save Changes</button>
             </form>
             <div style="margin-top:1.5rem;border-top:1px solid #e5e1db;padding-top:1.5rem;">
@@ -1993,7 +2005,7 @@
                             ? `<button class="btn btn-primary" onclick="renewListing(${listing.id})" style="background:#d97706;">Renew Listing</button>`
                             : `<button class="btn btn-primary" onclick="viewOffers(${listing.id})">${listing.offerCount || 0} Offers</button>`
                         }
-                        <a href="/listing/${listing.id}" target="_blank" class="btn btn-secondary" style="font-size:0.85rem;text-align:center;">View Listing</a>
+                        <a href="/listing/${listing.id}" target="_blank" class="btn btn-secondary" style="font-size:0.85rem;text-align:center;">👁 Preview as Realtor</a>
                         ${listing.shareToken ? `<button class="btn btn-outline" onclick="copyShareLink('${listing.shareToken}')" style="font-size:0.85rem;">🔗 Share</button>` : ''}
                         ${!isExpired ? `<button class="btn btn-outline" onclick="openEditModal(${listing.id})">Edit</button>` : ''}
                         <button class="btn btn-outline" onclick="openListingAnalytics(${listing.id})" style="font-size:0.85rem;">📊 Analytics</button>
@@ -2070,9 +2082,11 @@
             else tips.push('Add lot size, garage & HOA');
             const color = score >= 80 ? '#16a34a' : score >= 50 ? '#d97706' : '#dc2626';
             const label = score >= 80 ? 'Great' : score >= 50 ? 'Good' : 'Needs info';
-            const tip = tips.length ? `<span style="margin-left:0.5rem;font-size:0.78rem;color:#6b7280;">+ ${tips[0]}</span>` : '';
+            const tip = tips.length
+                ? `<button onclick="openEditModal(${listing.id})" style="margin-left:0.4rem;font-size:0.78rem;color:var(--accent);background:none;border:none;cursor:pointer;font-family:inherit;padding:0;text-decoration:underline;">+ ${tips[0]} →</button>`
+                : '';
             return `<div style="margin-top:0.75rem;margin-bottom:0.25rem;">
-                <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.35rem;">
+                <div style="display:flex;align-items:center;gap:0.25rem;margin-bottom:0.35rem;">
                     <span style="font-size:0.78rem;font-weight:600;color:${color};">${score}% — ${label}</span>${tip}
                 </div>
                 <div style="background:#e5e7eb;border-radius:99px;height:5px;overflow:hidden;">
@@ -2376,6 +2390,8 @@
             form.elements.lot_size.value = listing.lot_size || '';
             form.elements.garage_spaces.value = listing.garage_spaces != null ? String(listing.garage_spaces) : '';
             form.elements.hoa_fee.value = listing.hoa_fee != null ? listing.hoa_fee : '';
+            document.getElementById('editListingDeadline').value = listing.proposal_deadline ? listing.proposal_deadline.slice(0, 10) : '';
+            form.elements.video_url.value = listing.video_url || '';
             document.getElementById('editListingModal').classList.add('active');
             document.getElementById('editImageStatus').textContent = '';
             document.getElementById('editImageInput').value = '';
@@ -2469,12 +2485,18 @@
             const form = e.target;
             const id = form.id_value;
             const data = {
-                price:       parseInt(stripCurrency(form.elements.price.value), 10),
-                type:        form.elements.type.value,
-                bedrooms:    form.elements.bedrooms.value,
-                bathrooms:   form.elements.bathrooms.value,
-                sqft:        form.elements.sqft.value,
-                description: form.elements.description.value
+                price:             parseInt(stripCurrency(form.elements.price.value), 10),
+                type:              form.elements.type.value,
+                bedrooms:          form.elements.bedrooms.value,
+                bathrooms:         form.elements.bathrooms.value,
+                sqft:              form.elements.sqft.value,
+                description:       form.elements.description.value,
+                year_built:        form.elements.year_built.value || null,
+                lot_size:          form.elements.lot_size.value || null,
+                garage_spaces:     form.elements.garage_spaces.value !== '' ? form.elements.garage_spaces.value : null,
+                hoa_fee:           form.elements.hoa_fee.value !== '' ? form.elements.hoa_fee.value : null,
+                proposal_deadline: document.getElementById('editListingDeadline').value || null,
+                video_url:         form.elements.video_url.value || null,
             };
             try {
                 const res = await fetch(`${API_BASE_URL}/listings/${id}`, {

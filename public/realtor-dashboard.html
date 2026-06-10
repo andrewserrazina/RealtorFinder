@@ -2170,6 +2170,16 @@
                 </div>
                 <button type="submit" class="btn btn-primary" style="width: 100%; padding: 1rem; margin-top: 1rem;">Submit Proposal</button>
             </form>
+            <!-- Success state shown after submission -->
+            <div id="bidSuccessState" style="display:none;text-align:center;padding:1.5rem 0;">
+                <div style="font-size:3rem;margin-bottom:0.75rem;">✅</div>
+                <h3 style="font-family:'Crimson Pro',Georgia,serif;font-size:1.5rem;color:var(--primary);margin-bottom:0.5rem;">Proposal Sent!</h3>
+                <p id="bidSuccessAddress" style="color:#6b7280;font-size:0.9rem;margin-bottom:1.25rem;"></p>
+                <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:0.9rem 1rem;font-size:0.875rem;color:#15803d;margin-bottom:1.5rem;">
+                    The seller has been notified and will review your proposal. You'll hear back by email if they're interested.
+                </div>
+                <button onclick="closeBidModal()" class="btn btn-primary" style="width:100%;padding:0.85rem;">Browse More Listings</button>
+            </div>
         </div>
     </div>
 
@@ -2412,6 +2422,8 @@
         function closeBidModal() {
             document.getElementById('bidModal').classList.remove('active');
             document.getElementById('bidForm').reset();
+            document.getElementById('bidForm').style.display = '';
+            document.getElementById('bidSuccessState').style.display = 'none';
         }
 
         // Submit Bid
@@ -2439,9 +2451,11 @@
                     return;
                 }
 
-                closeBidModal();
+                document.getElementById('bidForm').style.display = 'none';
+                const successEl = document.getElementById('bidSuccessState');
+                document.getElementById('bidSuccessAddress').textContent = document.getElementById('modalPropertyAddress').textContent;
+                successEl.style.display = 'block';
                 loadDashboard();
-                alert('✅ Proposal submitted successfully!');
             } catch (error) {
                 console.error('Error:', error);
                 alert('Failed to submit proposal. Please try again.');
@@ -2541,10 +2555,15 @@
             const container = document.getElementById('availableListings');
             if (listings.length === 0) {
                 container.innerHTML = `
-                    <div class="empty-state">
+                    <div class="empty-state" style="max-width:480px;margin:0 auto;text-align:center;padding:3rem 1.5rem;">
                         <div class="empty-state-icon">🏠</div>
-                        <h3>No listings available</h3>
-                        <p>Check back soon for new opportunities</p>
+                        <h3>No listings in your area yet</h3>
+                        <p style="margin-bottom:1.5rem;">We're growing fast — sellers are signing up every day. You'll get an email the moment a listing goes live near you.</p>
+                        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:1rem 1.25rem;font-size:0.875rem;color:#15803d;display:flex;align-items:center;gap:0.6rem;justify-content:center;">
+                            <span style="font-size:1.1rem;">✅</span>
+                            <span>New listing alerts are <strong>on</strong> for your area — we'll email you as soon as one is posted.</span>
+                        </div>
+                        <p style="margin-top:1.25rem;font-size:0.85rem;color:#9ca3af;">In the meantime, <a href="/realtors#referral-program" style="color:var(--accent);font-weight:600;">refer a colleague</a> and earn $25 when they subscribe.</p>
                     </div>
                 `;
                 return;
