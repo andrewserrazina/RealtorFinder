@@ -59,13 +59,13 @@ const db = {
 
     // Create new listing
     async createListing(listingData) {
-        const { address, city, state, zip, price, zestimate, type, bedrooms, bathrooms, sqft, description, ownerName, ownerEmail, ownerPhone, userId, latitude, longitude, proposal_deadline, video_url } = listingData;
+        const { address, city, state, zip, price, zestimate, type, bedrooms, bathrooms, sqft, description, ownerName, ownerEmail, ownerPhone, userId, latitude, longitude, proposal_deadline, video_url, year_built, garage_spaces, hoa_fee, lot_size } = listingData;
 
         const result = await pool.query(
-            `INSERT INTO listings (address, city, state, zip, price, zestimate, property_type, bedrooms, bathrooms, sqft, description, owner_name, owner_email, owner_phone, user_id, latitude, longitude, proposal_deadline, video_url)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+            `INSERT INTO listings (address, city, state, zip, price, zestimate, property_type, bedrooms, bathrooms, sqft, description, owner_name, owner_email, owner_phone, user_id, latitude, longitude, proposal_deadline, video_url, year_built, garage_spaces, hoa_fee, lot_size)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)
              RETURNING *`,
-            [address, city, state, zip, price, zestimate || null, type, bedrooms, bathrooms, sqft, description, ownerName, ownerEmail, ownerPhone, userId, latitude || null, longitude || null, proposal_deadline || null, video_url || null]
+            [address, city, state, zip, price, zestimate || null, type, bedrooms, bathrooms, sqft, description, ownerName, ownerEmail, ownerPhone, userId, latitude || null, longitude || null, proposal_deadline || null, video_url || null, year_built || null, garage_spaces != null ? parseInt(garage_spaces) : null, hoa_fee != null ? parseFloat(hoa_fee) : null, lot_size || null]
         );
         return result.rows[0];
     },
@@ -121,14 +121,15 @@ const db = {
 
     // Update listing fields
     async updateListing(id, data) {
-        const { price, type, bedrooms, bathrooms, sqft, description, proposal_deadline, video_url } = data;
+        const { price, type, bedrooms, bathrooms, sqft, description, proposal_deadline, video_url, year_built, garage_spaces, hoa_fee, lot_size } = data;
         const result = await pool.query(
             `UPDATE listings
              SET price=$1, property_type=$2, bedrooms=$3, bathrooms=$4, sqft=$5, description=$6,
-                 proposal_deadline=$7, video_url=$8, updated_at=NOW()
-             WHERE id=$9
+                 proposal_deadline=$7, video_url=$8, year_built=$9, garage_spaces=$10, hoa_fee=$11, lot_size=$12,
+                 updated_at=NOW()
+             WHERE id=$13
              RETURNING *`,
-            [price, type, parseInt(bedrooms), parseFloat(bathrooms), parseInt(sqft), description, proposal_deadline || null, video_url || null, id]
+            [price, type, parseInt(bedrooms), parseFloat(bathrooms), parseInt(sqft), description, proposal_deadline || null, video_url || null, year_built || null, garage_spaces != null ? parseInt(garage_spaces) : null, hoa_fee != null && hoa_fee !== '' ? parseFloat(hoa_fee) : null, lot_size || null, id]
         );
         return result.rows[0];
     },

@@ -1525,7 +1525,7 @@ app.post('/api/listings', auth.requireAuth, async (req, res) => {
     try {
         if (!req.session.emailVerified && !req.user.email_verified) return res.status(403).json({ error: 'Please verify your email address before creating a listing. Check your inbox for a verification link.' });
         if (req.user.user_type !== 'seller') return res.status(403).json({ error: 'Only seller accounts can create listings' });
-        const { address, price, type, bedrooms, bathrooms, sqft, description, ownerName, ownerEmail, ownerPhone, zestimate, owner_attested, proposal_deadline, video_url } = req.body;
+        const { address, price, type, bedrooms, bathrooms, sqft, description, ownerName, ownerEmail, ownerPhone, zestimate, owner_attested, proposal_deadline, video_url, year_built, garage_spaces, hoa_fee, lot_size } = req.body;
         
         // Parse address into components (basic parsing - could be enhanced with address validation API)
         const addressParts = address.split(',').map(s => s.trim());
@@ -1573,7 +1573,11 @@ app.post('/api/listings', auth.requireAuth, async (req, res) => {
             latitude: coords?.latitude || null,
             longitude: coords?.longitude || null,
             proposal_deadline: proposal_deadline || null,
-            video_url: video_url || null
+            video_url: video_url || null,
+            year_built: year_built || null,
+            garage_spaces: garage_spaces != null && garage_spaces !== '' ? garage_spaces : null,
+            hoa_fee: hoa_fee != null && hoa_fee !== '' ? hoa_fee : null,
+            lot_size: lot_size || null
         };
 
         const newListing = await db.createListing(listingData);
@@ -1611,12 +1615,12 @@ app.put('/api/listings/:id', auth.requireAuth, async (req, res) => {
         if (!listing) return res.status(404).json({ error: 'Listing not found' });
         if (listing.user_id !== req.session.userId) return res.status(403).json({ error: 'Forbidden' });
 
-        const { price, type, bedrooms, bathrooms, sqft, description, proposal_deadline, video_url } = req.body;
+        const { price, type, bedrooms, bathrooms, sqft, description, proposal_deadline, video_url, year_built, garage_spaces, hoa_fee, lot_size } = req.body;
         if (!price || !type || !bedrooms || !bathrooms || !sqft || !description) {
             return res.status(400).json({ error: 'All fields are required' });
         }
 
-        const updated = await db.updateListing(req.params.id, { price, type, bedrooms, bathrooms, sqft, description, proposal_deadline, video_url });
+        const updated = await db.updateListing(req.params.id, { price, type, bedrooms, bathrooms, sqft, description, proposal_deadline, video_url, year_built, garage_spaces, hoa_fee, lot_size });
         res.json({ ...updated, date: formatDate(updated.created_at) });
     } catch (error) {
         console.error('Error updating listing:', error);
@@ -10012,6 +10016,10 @@ _schemaMigrations.push(`
 _schemaMigrations.push(`ALTER TABLE proposals ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ`);
 _schemaMigrations.push(`UPDATE proposals SET expires_at = created_at + INTERVAL '30 days' WHERE expires_at IS NULL AND status = 'pending'`);
 _schemaMigrations.push(`ALTER TABLE users ADD COLUMN IF NOT EXISTS email_alerts BOOLEAN DEFAULT TRUE`);
+_schemaMigrations.push(`ALTER TABLE listings ADD COLUMN IF NOT EXISTS year_built INTEGER`);
+_schemaMigrations.push(`ALTER TABLE listings ADD COLUMN IF NOT EXISTS garage_spaces INTEGER`);
+_schemaMigrations.push(`ALTER TABLE listings ADD COLUMN IF NOT EXISTS hoa_fee NUMERIC(8,2)`);
+_schemaMigrations.push(`ALTER TABLE listings ADD COLUMN IF NOT EXISTS lot_size INTEGER`);
 
 // Auto-expire proposals whose expires_at has passed
 async function runProposalExpiryJob() {

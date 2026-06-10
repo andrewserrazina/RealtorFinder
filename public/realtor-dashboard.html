@@ -2583,6 +2583,11 @@
                             <span>🛏️ ${listing.bedrooms} bd</span>
                             <span>🛁 ${listing.bathrooms} ba</span>
                             <span>📏 ${listing.sqft.toLocaleString()} sqft</span>
+                            ${listing.property_type ? `<span>🏠 ${listing.property_type}</span>` : ''}
+                            ${listing.year_built ? `<span>🏗️ ${listing.year_built}</span>` : ''}
+                            ${listing.garage_spaces != null ? `<span>🚗 ${listing.garage_spaces === 0 ? 'No garage' : listing.garage_spaces + '-car'}</span>` : ''}
+                            ${listing.lot_size ? `<span>🌿 ${listing.lot_size.toLocaleString()} sqft lot</span>` : ''}
+                            ${listing.hoa_fee != null ? `<span>🏘️ HOA $${Number(listing.hoa_fee).toLocaleString()}/mo</span>` : ''}
                         </div>
                         <div class="listing-description">${listing.description}</div>
                         ${renderDeadlineBadgeR(listing)}
