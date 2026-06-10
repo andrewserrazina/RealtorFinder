@@ -2,11 +2,16 @@ module.exports = [
   // New England (dense coverage)
   ...require('./cities/ma-western'),
   ...require('./cities/ma-eastern'),
+  ...require('./cities/ma-southeast'),
+  ...require('./cities/ma-metro'),
   ...require('./cities/ct'),
+  ...require('./cities/ct-extra'),
   ...require('./cities/ri'),
   ...require('./cities/vt'),
   ...require('./cities/nh'),
+  ...require('./cities/nh-extra'),
   ...require('./cities/me'),
+  ...require('./cities/me-extra'),
   // Mid-Atlantic
   ...require('./cities/ny'),
   ...require('./cities/ny-extra'),
