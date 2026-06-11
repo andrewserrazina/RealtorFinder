@@ -966,6 +966,9 @@
             opacity: 0.6;
         }
 
+        /* Referral section */
+        .referral-section { padding: 6rem 3rem; background: #fffbf5; }
+
         /* Prevent hero grid children from forcing container wider than viewport */
         .hero-content, .hero-visual { min-width: 0; }
 
@@ -1125,7 +1128,13 @@
             .how-it-works-grid { grid-template-columns: 1fr 1fr; }
             .how-it-works-grid .connector-line { display: none; }
             .founding-grid { grid-template-columns: 1fr !important; }
+            .founding-header h2 { font-size: 2.2rem; }
+            .founding-btn { display: block; text-align: center; }
             .why-grid { grid-template-columns: 1fr; }
+            .referral-section { padding: 4rem 1.5rem; }
+            .pay-per-lead-row { flex-direction: column; align-items: stretch !important; }
+            .pay-per-lead-row .ppl-right { flex-direction: column; align-items: flex-start; gap: 1.5rem; }
+            .pay-per-lead-row .ppl-cta { width: 100%; text-align: center; }
         }
 
         .cta-inline-form {
@@ -1224,6 +1233,8 @@
             .founding { padding: 3.5rem 1.25rem; }
             .how-it-works-section { padding: 3rem 1.25rem; }
             .how-it-works-grid { grid-template-columns: 1fr; gap: 1.5rem; }
+            .founding-header h2 { font-size: 1.9rem; }
+            .referral-section { padding: 3rem 1.25rem; }
         }
 
         /* ── Urgency bar ── */
@@ -1638,7 +1649,7 @@
     </section>
 
     <!-- Referral Program Section -->
-    <section style="padding:6rem 3rem;background:#fffbf5;" id="referral-program">
+    <section class="referral-section" id="referral-program">
         <div style="max-width:960px;margin:0 auto;">
             <div style="text-align:center;margin-bottom:3.5rem;">
                 <div style="display:inline-block;background:#fff7ed;border:1.5px solid #fed7aa;border-radius:24px;padding:6px 18px;font-size:0.8rem;font-weight:700;color:#c2410c;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:1rem;">💸 Referral Program</div>
@@ -1767,13 +1778,13 @@
                 </div>
 
                 <!-- PAY PER LEAD -->
-                <div style="grid-column:1/-1;background:rgba(255,107,53,0.05);border:2px solid rgba(255,107,53,0.2);border-radius:24px;padding:2.25rem 2.5rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:2rem;">
+                <div class="pay-per-lead-row" style="grid-column:1/-1;background:rgba(255,107,53,0.05);border:2px solid rgba(255,107,53,0.2);border-radius:24px;padding:2.25rem 2.5rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:2rem;">
                     <div style="flex:1;min-width:220px;">
                         <div style="display:inline-block;background:rgba(255,107,53,0.12);color:var(--accent);font-size:0.72rem;font-weight:700;padding:0.28rem 0.85rem;border-radius:20px;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:0.75rem;">No Subscription Needed</div>
                         <div style="font-family:'Playfair Display',serif;font-size:1.6rem;font-weight:700;color:var(--primary);margin-bottom:0.4rem;">Pay Per Lead</div>
                         <div style="font-size:0.92rem;color:var(--muted);line-height:1.6;max-width:420px;">Not ready for a monthly plan? Sign up free, browse every active listing, and unlock only the leads you want — no commitment.</div>
                     </div>
-                    <div style="display:flex;gap:2.5rem;align-items:center;flex-wrap:wrap;">
+                    <div class="ppl-right" style="display:flex;gap:2.5rem;align-items:center;flex-wrap:wrap;">
                         <div style="text-align:center;">
                             <div style="font-family:'Playfair Display',serif;font-size:2.6rem;font-weight:700;color:var(--primary);line-height:1;">$15</div>
                             <div style="font-size:0.8rem;color:var(--muted);margin-top:0.2rem;">per lead</div>
@@ -1785,7 +1796,7 @@
                             <li style="font-size:0.875rem;color:#444;display:flex;align-items:center;gap:0.5rem;"><span style="color:#10b981;font-weight:700;">✓</span> Upgrade to a plan any time</li>
                         </ul>
                     </div>
-                    <a href="/login?tab=signup&type=realtor" style="white-space:nowrap;background:var(--accent);color:white;padding:0.85rem 2rem;border-radius:10px;font-weight:700;font-size:0.95rem;text-decoration:none;transition:background 0.2s;border:none;" onmouseover="this.style.background='#e55a2b'" onmouseout="this.style.background='var(--accent)'">Try Pay Per Lead →</a>
+                    <a href="/login?tab=signup&type=realtor" class="ppl-cta" style="white-space:nowrap;background:var(--accent);color:white;padding:0.85rem 2rem;border-radius:10px;font-weight:700;font-size:0.95rem;text-decoration:none;transition:background 0.2s;border:none;" onmouseover="this.style.background='#e55a2b'" onmouseout="this.style.background='var(--accent)'">Try Pay Per Lead →</a>
                 </div>
 
             </div>
