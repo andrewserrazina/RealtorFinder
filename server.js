@@ -9855,6 +9855,9 @@ app.get('/api/company/leaderboard', auth.requireAuth, async (req, res) => {
 // Serve firms.html for /firms/:slug
 app.get('/firms/:slug', (req, res) => res.sendFile(path.join(__dirname, 'public/firms.html')));
 
+// Founding realtor ad landing page
+app.get('/join', (req, res) => res.sendFile(path.join(__dirname, 'public', 'join.html')));
+
 // GET /api/firms/:slug — public JSON firm profile
 app.get('/api/firms/:slug', async (req, res) => {
     try {
