@@ -689,7 +689,7 @@
             });
         }
 
-        // Pre-fill from URL params: ?tab=signup&type=realtor&email=X
+        // Pre-fill from URL params: ?tab=signup&type=realtor&email=X&first_name=X&last_name=X&ref=founding
         (function() {
             const params = new URLSearchParams(window.location.search);
             const type = params.get('type');
@@ -705,6 +705,26 @@
             if (email) {
                 const emailInput = document.querySelector('#signup-form input[type="email"]');
                 if (emailInput) emailInput.value = decodeURIComponent(email);
+            }
+            const firstName = params.get('first_name');
+            const lastName  = params.get('last_name');
+            if (firstName) {
+                const el = document.querySelector('#signup-form input[name="firstName"]');
+                if (el) el.value = decodeURIComponent(firstName);
+            }
+            if (lastName) {
+                const el = document.querySelector('#signup-form input[name="lastName"]');
+                if (el) el.value = decodeURIComponent(lastName);
+            }
+
+            // Founding cohort banner
+            if (params.get('ref') === 'founding') {
+                const banner = document.getElementById('referralBanner');
+                const bannerText = document.getElementById('referralBannerText');
+                if (banner && bannerText) {
+                    bannerText.textContent = '🏅 You\'re joining as a Founding Realtor — 6 months free, no credit card required.';
+                    banner.style.display = 'block';
+                }
             }
 
             // Referral banner
