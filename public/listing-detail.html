@@ -406,7 +406,7 @@
                 l.sqft ? `${Number(l.sqft).toLocaleString()} sqft` : '',
                 l.price ? `listed at $${Number(l.price).toLocaleString()}` : ''
             ].filter(Boolean).join(', ') + '. View agent proposals on RealtorFinder.';
-            const _ogImage = (l.image_urls && l.image_urls.length) ? l.image_urls[0] : 'https://realtorfinder.net/og-default.png';
+            const _ogImage = (l.image_urls && l.image_urls.length) ? l.image_urls[0] : 'https://www.realtorfinder.net/og-default.png';
             const _setMeta = (prop, val) => {
                 const el = document.querySelector(`meta[property="${prop}"]`) || document.querySelector(`meta[name="${prop}"]`);
                 if (el) el.setAttribute('content', val);
