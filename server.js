@@ -4704,6 +4704,7 @@ app.get('/google:token.html', (req, res) => {
 
 // Robots.txt
 app.get('/robots.txt', (req, res) => {
+    const base = (process.env.FRONTEND_URL || 'https://www.realtorfinder.net').replace(/\/$/, '');
     res.type('text/plain');
     res.send([
         'User-agent: *',
@@ -4719,32 +4720,33 @@ app.get('/robots.txt', (req, res) => {
         'Disallow: /subscription-success',
         'Disallow: /company-dashboard',
         '',
-        'Sitemap: https://www.realtorfinder.net/sitemap-index.xml',
+        `Sitemap: ${base}/sitemap-index.xml`,
     ].join('\n'));
 });
 
 // Sitemap index — points to per-state sitemaps
 app.get('/sitemap-index.xml', async (req, res) => {
-    const base = (process.env.FRONTEND_URL || 'https://realtorfinder.net').replace(/\/$/, '');
+    const base = (process.env.FRONTEND_URL || 'https://www.realtorfinder.net').replace(/\/$/, '');
     const today = new Date().toISOString().split('T')[0];
     let states = [];
     try { states = await db.getPublishedStates(); } catch (e) {}
     const staticEntry   = `  <sitemap><loc>${base}/sitemap-static.xml</loc><lastmod>${today}</lastmod></sitemap>`;
     const blogEntry     = `  <sitemap><loc>${base}/sitemap-blog.xml</loc><lastmod>${today}</lastmod></sitemap>`;
     const agentsEntry   = `  <sitemap><loc>${base}/sitemap-agents.xml</loc><lastmod>${today}</lastmod></sitemap>`;
+    const firmsEntry    = `  <sitemap><loc>${base}/sitemap-firms.xml</loc><lastmod>${today}</lastmod></sitemap>`;
     const listingsEntry = `  <sitemap><loc>${base}/sitemap-listings.xml</loc><lastmod>${today}</lastmod></sitemap>`;
     const stateEntries = states.map(s =>
         `  <sitemap><loc>${base}/sitemap-${s.state_code.toLowerCase()}.xml</loc><lastmod>${today}</lastmod></sitemap>`
     ).join('\n');
     res.type('application/xml');
-    res.send(`<?xml version="1.0" encoding="UTF-8"?>\n<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${staticEntry}\n${blogEntry}\n${agentsEntry}\n${listingsEntry}\n${stateEntries}\n</sitemapindex>`);
+    res.send(`<?xml version="1.0" encoding="UTF-8"?>\n<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${staticEntry}\n${blogEntry}\n${agentsEntry}\n${firmsEntry}\n${listingsEntry}\n${stateEntries}\n</sitemapindex>`);
 });
 
 // Static pages sitemap
 app.get('/sitemap-static.xml', (req, res) => {
-    const base = (process.env.FRONTEND_URL || 'https://realtorfinder.net').replace(/\/$/, '');
+    const base = (process.env.FRONTEND_URL || 'https://www.realtorfinder.net').replace(/\/$/, '');
     const today = new Date().toISOString().split('T')[0];
-    const urls = ['/', '/sellers', '/realtors', '/pricing', '/about', '/about-sellers', '/buyers', '/locations', '/blog', '/login', '/contact', '/faq', '/find-agent'];
+    const urls = ['/', '/sellers', '/realtors', '/pricing', '/about', '/about-sellers', '/buyers', '/locations', '/blog', '/contact', '/faq', '/find-agent'];
     const entries = urls.map(u => `  <url><loc>${base}${u}</loc><lastmod>${today}</lastmod><priority>${u === '/' ? '1.0' : '0.7'}</priority></url>`).join('\n');
     res.type('application/xml');
     res.send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${entries}\n</urlset>`);
@@ -4753,7 +4755,7 @@ app.get('/sitemap-static.xml', (req, res) => {
 // Per-state city sitemap — /sitemap-ma.xml
 app.get('/sitemap-:stateCode\\.xml', async (req, res) => {
     const stateCode = req.params.stateCode.toUpperCase();
-    const base = (process.env.FRONTEND_URL || 'https://realtorfinder.net').replace(/\/$/, '');
+    const base = (process.env.FRONTEND_URL || 'https://www.realtorfinder.net').replace(/\/$/, '');
     const today = new Date().toISOString().split('T')[0];
     let cities = [];
     try { cities = await db.getCitiesByState(stateCode); } catch (e) {}
@@ -4767,7 +4769,7 @@ app.get('/sitemap-:stateCode\\.xml', async (req, res) => {
 
 // Blog sitemap
 app.get('/sitemap-blog.xml', async (req, res) => {
-    const base = (process.env.FRONTEND_URL || 'https://realtorfinder.net').replace(/\/$/, '');
+    const base = (process.env.FRONTEND_URL || 'https://www.realtorfinder.net').replace(/\/$/, '');
     const today = new Date().toISOString().split('T')[0];
     let posts = [];
     try { posts = await db.getAllBlogSlugs(); } catch (e) {}
@@ -4782,7 +4784,7 @@ app.get('/sitemap-blog.xml', async (req, res) => {
 
 // Active listing pages sitemap
 app.get('/sitemap-listings.xml', async (req, res) => {
-    const base = (process.env.FRONTEND_URL || 'https://realtorfinder.net').replace(/\/$/, '');
+    const base = (process.env.FRONTEND_URL || 'https://www.realtorfinder.net').replace(/\/$/, '');
     res.type('application/xml');
     try {
         const { rows } = await pool.query(
@@ -4800,7 +4802,7 @@ app.get('/sitemap-listings.xml', async (req, res) => {
 
 // Agent profile sitemap — /agent/:slug URLs for approved realtors with slugs
 app.get('/sitemap-agents.xml', async (req, res) => {
-    const base = (process.env.FRONTEND_URL || 'https://realtorfinder.net').replace(/\/$/, '');
+    const base = (process.env.FRONTEND_URL || 'https://www.realtorfinder.net').replace(/\/$/, '');
     try {
         const { rows } = await pool.query(
             `SELECT profile_slug, updated_at FROM users
@@ -4810,6 +4812,26 @@ app.get('/sitemap-agents.xml', async (req, res) => {
         );
         const entries = rows.map(r =>
             `  <url><loc>${base}/agent/${r.profile_slug}</loc><lastmod>${new Date(r.updated_at).toISOString().split('T')[0]}</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>`
+        ).join('\n');
+        res.type('application/xml');
+        res.send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${entries}\n</urlset>`);
+    } catch (err) {
+        res.type('application/xml');
+        res.send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>`);
+    }
+});
+
+// Firm profile sitemap — /firms/:slug URLs for active companies
+app.get('/sitemap-firms.xml', async (req, res) => {
+    const base = (process.env.FRONTEND_URL || 'https://www.realtorfinder.net').replace(/\/$/, '');
+    try {
+        const { rows } = await pool.query(
+            `SELECT slug, updated_at FROM companies
+             WHERE is_active = TRUE AND slug IS NOT NULL
+             ORDER BY updated_at DESC LIMIT 5000`
+        );
+        const entries = rows.map(r =>
+            `  <url><loc>${base}/firms/${r.slug}</loc><lastmod>${new Date(r.updated_at).toISOString().split('T')[0]}</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>`
         ).join('\n');
         res.type('application/xml');
         res.send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${entries}\n</urlset>`);

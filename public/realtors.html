@@ -4,17 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>For Realtors — Win More Listings | RealtorFinder</title>
-    <meta name="description" content="Stop cold calling. Home sellers post their listings on RealtorFinder and you submit proposals. Win quality listings by competing on merit across 832 markets.">
-    <link rel="canonical" href="https://realtorfinder.net/realtors">
+    <meta name="description" content="Stop cold calling. Home sellers post their listings on RealtorFinder and you submit proposals. Win quality listings by competing on merit across 1,077 markets.">
+    <link rel="canonical" href="https://www.realtorfinder.net/realtors">
     <meta property="og:type" content="website">
-    <meta property="og:url" content="https://realtorfinder.net/realtors">
+    <meta property="og:url" content="https://www.realtorfinder.net/realtors">
     <meta property="og:title" content="For Realtors — RealtorFinder">
     <meta property="og:description" content="Skip the cold calls. Sellers list their homes on RealtorFinder and you submit proposals. Win more listings by competing on merit.">
-    <meta property="og:image" content="https://realtorfinder.net/og-default.png">
+    <meta property="og:image" content="https://www.realtorfinder.net/og-default.png">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="For Realtors — RealtorFinder">
     <meta name="twitter:description" content="Skip the cold calls. Sellers list their homes on RealtorFinder and you submit proposals. Win more listings by competing on merit.">
-    <meta name="twitter:image" content="https://realtorfinder.net/og-default.png">
+    <meta name="twitter:image" content="https://www.realtorfinder.net/og-default.png">
     <!-- Google Analytics 4 -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-BRGVVNKT65"></script>
     <script>
@@ -966,6 +966,31 @@
             opacity: 0.6;
         }
 
+        /* Referral section */
+        .referral-section { padding: 6rem 3rem; background: #fffbf5; }
+
+        /* Prevent hero grid children from forcing container wider than viewport */
+        .hero-content, .hero-visual { min-width: 0; }
+
+        /* How It Works responsive grid */
+        .how-it-works-section { padding: 6rem 3rem; background: white; }
+        .how-it-works-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 2rem;
+            margin-top: 3rem;
+            position: relative;
+        }
+
+        /* Why We Started responsive grid */
+        .why-grid {
+            max-width: 820px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+
         @media (max-width: 1024px) {
             .hero-container {
                 grid-template-columns: 1fr;
@@ -1099,6 +1124,17 @@
                 flex-direction: column;
                 gap: 1rem;
             }
+            .how-it-works-section { padding: 4rem 1.5rem; }
+            .how-it-works-grid { grid-template-columns: 1fr 1fr; }
+            .how-it-works-grid .connector-line { display: none; }
+            .founding-grid { grid-template-columns: 1fr !important; }
+            .founding-header h2 { font-size: 2.2rem; }
+            .founding-btn { display: block; text-align: center; }
+            .why-grid { grid-template-columns: 1fr; }
+            .referral-section { padding: 4rem 1.5rem; }
+            .pay-per-lead-row { flex-direction: column; align-items: stretch !important; }
+            .pay-per-lead-row .ppl-right { flex-direction: column; align-items: flex-start; gap: 1.5rem; }
+            .pay-per-lead-row .ppl-cta { width: 100%; text-align: center; }
         }
 
         .cta-inline-form {
@@ -1195,6 +1231,10 @@
             .cta h2 { font-size: 1.9rem; }
             .cta { padding: 3.5rem 1.25rem; }
             .founding { padding: 3.5rem 1.25rem; }
+            .how-it-works-section { padding: 3rem 1.25rem; }
+            .how-it-works-grid { grid-template-columns: 1fr; gap: 1.5rem; }
+            .founding-header h2 { font-size: 1.9rem; }
+            .referral-section { padding: 3rem 1.25rem; }
         }
 
         /* ── Urgency bar ── */
@@ -1344,7 +1384,7 @@
                     <span id="heroFoundingBanner">Founding Realtor Program — 100 spots available</span>
                 </div>
                 <h1>Win More Listings by <span class="highlight">Bidding</span> on Them</h1>
-                <p>Stop cold calling sellers. Access listing opportunities from motivated home sellers actively seeking representation — right now, across 832 markets nationwide.</p>
+                <p>Stop cold calling sellers. Access listing opportunities from motivated home sellers actively seeking representation — right now, across 1,077 markets nationwide.</p>
 
                 <form class="email-form" id="heroEmailForm" onsubmit="goToSignup(event)">
                     <input type="email" id="heroEmail" placeholder="Enter your work email" required autocomplete="email">
@@ -1355,7 +1395,7 @@
 
                 <div class="hero-stats">
                     <div class="stat-box">
-                        <div class="stat-number">832</div>
+                        <div class="stat-number">1,077</div>
                         <div class="stat-label">Markets Covered</div>
                     </div>
                     <div class="stat-box">
@@ -1403,15 +1443,15 @@
     </section>
 
     <!-- ===== HOW IT WORKS ===== -->
-    <section style="padding:6rem 3rem;background:white;" id="how-it-works">
+    <section class="how-it-works-section" id="how-it-works">
         <div style="max-width:1100px;margin:0 auto;">
             <div class="section-header">
                 <div class="section-tag">Simple Process</div>
                 <h2>From Signup to Closed Deal</h2>
                 <p>RealtorFinder flips the model. Sellers come to you — you compete on merit, not cold outreach.</p>
             </div>
-            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:2rem;margin-top:3rem;position:relative;">
-                <div style="position:absolute;top:40px;left:12%;right:12%;height:2px;background:linear-gradient(90deg,var(--accent),var(--primary));opacity:0.2;z-index:0;"></div>
+            <div class="how-it-works-grid">
+                <div class="connector-line" style="position:absolute;top:40px;left:12%;right:12%;height:2px;background:linear-gradient(90deg,var(--accent),var(--primary));opacity:0.2;z-index:0;"></div>
                 <div style="text-align:center;position:relative;z-index:1;">
                     <div style="width:80px;height:80px;background:linear-gradient(135deg,var(--accent),#e55a2b);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1.25rem;font-size:1.8rem;box-shadow:0 8px 24px rgba(255,107,53,0.3);">📋</div>
                     <div style="font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:700;color:var(--primary);margin-bottom:0.5rem;">1. Seller Lists</div>
@@ -1507,7 +1547,7 @@
                 <h2>Why We Built RealtorFinder</h2>
                 <p>We saw a broken system — and built a better one.</p>
             </div>
-            <div style="max-width:820px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:2rem;">
+            <div class="why-grid">
                 <div class="testimonial-card" style="grid-column:1/-1;background:linear-gradient(135deg,#0A2540 0%,#1a3a5c 100%);color:#fff;border:none;">
                     <div class="quote-icon" style="color:#FF6B35;">"</div>
                     <p class="testimonial-text" style="color:rgba(255,255,255,0.9);">We started RealtorFinder after watching family members get pressured into signing with the first agent who knocked on their door — without any real way to compare options or understand what they were agreeing to. Sellers deserved a marketplace. Agents deserved a level playing field. So we built one.</p>
@@ -1609,7 +1649,7 @@
     </section>
 
     <!-- Referral Program Section -->
-    <section style="padding:6rem 3rem;background:#fffbf5;" id="referral-program">
+    <section class="referral-section" id="referral-program">
         <div style="max-width:960px;margin:0 auto;">
             <div style="text-align:center;margin-bottom:3.5rem;">
                 <div style="display:inline-block;background:#fff7ed;border:1.5px solid #fed7aa;border-radius:24px;padding:6px 18px;font-size:0.8rem;font-weight:700;color:#c2410c;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:1rem;">💸 Referral Program</div>
@@ -1738,13 +1778,13 @@
                 </div>
 
                 <!-- PAY PER LEAD -->
-                <div style="grid-column:1/-1;background:rgba(255,107,53,0.05);border:2px solid rgba(255,107,53,0.2);border-radius:24px;padding:2.25rem 2.5rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:2rem;">
+                <div class="pay-per-lead-row" style="grid-column:1/-1;background:rgba(255,107,53,0.05);border:2px solid rgba(255,107,53,0.2);border-radius:24px;padding:2.25rem 2.5rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:2rem;">
                     <div style="flex:1;min-width:220px;">
                         <div style="display:inline-block;background:rgba(255,107,53,0.12);color:var(--accent);font-size:0.72rem;font-weight:700;padding:0.28rem 0.85rem;border-radius:20px;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:0.75rem;">No Subscription Needed</div>
                         <div style="font-family:'Playfair Display',serif;font-size:1.6rem;font-weight:700;color:var(--primary);margin-bottom:0.4rem;">Pay Per Lead</div>
                         <div style="font-size:0.92rem;color:var(--muted);line-height:1.6;max-width:420px;">Not ready for a monthly plan? Sign up free, browse every active listing, and unlock only the leads you want — no commitment.</div>
                     </div>
-                    <div style="display:flex;gap:2.5rem;align-items:center;flex-wrap:wrap;">
+                    <div class="ppl-right" style="display:flex;gap:2.5rem;align-items:center;flex-wrap:wrap;">
                         <div style="text-align:center;">
                             <div style="font-family:'Playfair Display',serif;font-size:2.6rem;font-weight:700;color:var(--primary);line-height:1;">$15</div>
                             <div style="font-size:0.8rem;color:var(--muted);margin-top:0.2rem;">per lead</div>
@@ -1756,7 +1796,7 @@
                             <li style="font-size:0.875rem;color:#444;display:flex;align-items:center;gap:0.5rem;"><span style="color:#10b981;font-weight:700;">✓</span> Upgrade to a plan any time</li>
                         </ul>
                     </div>
-                    <a href="/login?tab=signup&type=realtor" style="white-space:nowrap;background:var(--accent);color:white;padding:0.85rem 2rem;border-radius:10px;font-weight:700;font-size:0.95rem;text-decoration:none;transition:background 0.2s;border:none;" onmouseover="this.style.background='#e55a2b'" onmouseout="this.style.background='var(--accent)'">Try Pay Per Lead →</a>
+                    <a href="/login?tab=signup&type=realtor" class="ppl-cta" style="white-space:nowrap;background:var(--accent);color:white;padding:0.85rem 2rem;border-radius:10px;font-weight:700;font-size:0.95rem;text-decoration:none;transition:background 0.2s;border:none;" onmouseover="this.style.background='#e55a2b'" onmouseout="this.style.background='var(--accent)'">Try Pay Per Lead →</a>
                 </div>
 
             </div>
@@ -1772,7 +1812,7 @@
     <section class="cta">
         <div class="cta-container">
             <h2>Start Winning Listings Today</h2>
-            <p>Join agents using RealtorFinder to connect with motivated sellers across 832 markets. Free to join — no credit card required.</p>
+            <p>Join agents using RealtorFinder to connect with motivated sellers across 1,077 markets. Free to join — no credit card required.</p>
             <form class="cta-inline-form" onsubmit="goToSignup(event)">
                 <input type="email" placeholder="Your work email address" required autocomplete="email">
                 <button type="submit">Get Started Free</button>
