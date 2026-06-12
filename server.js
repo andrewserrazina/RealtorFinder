@@ -5474,8 +5474,9 @@ app.get('/api/referrals/my', auth.requireAuth, async (req, res) => {
         const referral_count = parseInt(countRes.rows[0].cnt);
         const tier = referral_count >= 10 ? 'ambassador' : referral_count >= 5 ? 'top-referrer' : referral_count >= 3 ? 'connector' : referral_count >= 1 ? 'rising-star' : null;
         const referral_url = `${req.protocol}://${req.get('host')}/join?ref=${code}`;
+        const seller_referral_url = `${req.protocol}://${req.get('host')}/sell?ref=${code}`;
         const credits_cents = parseInt(creditsRes.rows[0]?.referral_credits_cents) || 0;
-        res.json({ referral_code: code, referral_url, referral_count, tier, referred_users: referredRes.rows, credits_cents });
+        res.json({ referral_code: code, referral_url, seller_referral_url, referral_count, tier, referred_users: referredRes.rows, credits_cents });
     } catch (error) {
         console.error('GET /api/referrals/my error:', error);
         res.status(500).json({ error: 'Failed to fetch referral info' });
@@ -5500,6 +5501,24 @@ app.get('/api/referrals/leaderboard', async (req, res) => {
         console.error('Leaderboard error:', err);
         res.status(500).json({ error: 'Failed to load leaderboard' });
     }
+});
+
+// Sell page — stores realtor's ref code in cookie, redirects to sell.html with referrer name
+app.get('/sell', async (req, res) => {
+    const ref = req.query.ref;
+    if (ref && !req.query.referrer) {
+        res.cookie('ref_code', ref, { path: '/', maxAge: 7 * 24 * 3600 * 1000, sameSite: 'lax', httpOnly: false });
+        try {
+            const { rows } = await pool.query(
+                `SELECT first_name FROM users WHERE referral_code = $1 AND user_type = 'realtor'`, [ref]
+            );
+            if (rows.length) {
+                const name = encodeURIComponent(rows[0].first_name);
+                return res.redirect(`/sell?referrer=${name}`);
+            }
+        } catch (e) { /* non-fatal */ }
+    }
+    res.sendFile(path.join(__dirname, 'public', 'sell.html'));
 });
 
 // Join page — stores ref code in cookie then redirects to signup
