@@ -1019,7 +1019,7 @@
         });
 
     // Form submit
-    document.getElementById('join-form').addEventListener('submit', function (e) {
+    document.getElementById('join-form').addEventListener('submit', async function (e) {
         e.preventDefault();
         const firstName = document.getElementById('first-name').value.trim();
         const lastName  = document.getElementById('last-name').value.trim();
@@ -1045,6 +1045,15 @@
         if (typeof fbq !== 'undefined') {
             fbq('track', 'Lead', { content_name: 'founding_realtor', city: citySlug || 'generic' });
         }
+
+        // Save lead before redirect so abandons aren't lost
+        try {
+            await fetch('/api/founding-lead', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ first_name: firstName, last_name: lastName, email, phone, city })
+            });
+        } catch {}
 
         const dest = new URL('/login', window.location.origin);
         dest.searchParams.set('tab', 'signup');

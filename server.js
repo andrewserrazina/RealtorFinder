@@ -4879,6 +4879,31 @@ app.get('/api/realtors/founding-count', async (req, res) => {
     }
 });
 
+// Save founding form lead before signup redirect (public)
+app.post('/api/founding-lead', async (req, res) => {
+    try {
+        const { first_name, last_name, email, phone, city } = req.body;
+        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            return res.status(400).json({ error: 'Valid email required' });
+        }
+        const normalizedEmail = email.toLowerCase().trim();
+        // Skip if this email is already a prospect or a registered user
+        const { rows: existing } = await pool.query(
+            `SELECT id FROM realtor_prospects WHERE email = $1 LIMIT 1`, [normalizedEmail]
+        );
+        if (!existing.length) {
+            await pool.query(
+                `INSERT INTO realtor_prospects (first_name, last_name, email, phone, city, source, outreach_status)
+                 VALUES ($1, $2, $3, $4, $5, 'founding', 'not_contacted')`,
+                [first_name || null, last_name || null, normalizedEmail, phone || null, city || null]
+            );
+        }
+        res.json({ ok: true });
+    } catch {
+        res.json({ ok: true }); // never block the redirect
+    }
+});
+
 // ===== PUBLIC REALTOR SEARCH API =====
 
 app.get('/api/realtors/search', async (req, res) => {
