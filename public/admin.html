@@ -958,11 +958,12 @@
                             <th>Phone</th>
                             <th>City</th>
                             <th>State</th>
+                            <th>Converted</th>
                             <th>Date</th>
                         </tr>
                     </thead>
                     <tbody id="leads-tbody">
-                        <tr><td colspan="8" class="empty-state">Loading leads…</td></tr>
+                        <tr><td colspan="9" class="empty-state">Loading leads…</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -2472,7 +2473,7 @@
             renderLeads();
         } catch (err) {
             document.getElementById('leads-tbody').innerHTML =
-                '<tr><td colspan="8" class="empty-state">Failed to load leads.</td></tr>';
+                '<tr><td colspan="9" class="empty-state">Failed to load leads.</td></tr>';
         }
     }
 
@@ -2481,12 +2482,15 @@
         document.getElementById('leads-count').textContent = leadsData.length + ' leads';
 
         if (!leadsData.length) {
-            tbody.innerHTML = '<tr><td colspan="8" class="empty-state">No leads yet. They\'ll appear here once someone submits the city page form.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="9" class="empty-state">No leads yet. They\'ll appear here once someone submits the city page form.</td></tr>';
             return;
         }
 
         tbody.innerHTML = leadsData.map(l => {
             const typeCls = l.type === 'seller' ? 'badge-seller' : 'badge-realtor';
+            const converted = l.converted_user_id
+                ? `<span style="color:#059669;font-weight:600;font-size:0.82rem;">✓ ${escHtml(l.converted_first || '')} ${escHtml(l.converted_last || '')}</span>`
+                : `<span style="color:#9ca3af;font-size:0.82rem;">—</span>`;
             return `<tr>
                 <td class="id-cell">#${l.id}</td>
                 <td><span class="badge ${typeCls}">${escHtml(l.type)}</span></td>
@@ -2495,6 +2499,7 @@
                 <td class="td-muted">${escHtml(l.phone || '—')}</td>
                 <td>${escHtml(l.city_name || '—')}</td>
                 <td class="td-muted">${escHtml(l.state_code || '—')}</td>
+                <td>${converted}</td>
                 <td class="td-muted">${fmtDate(l.created_at)}</td>
             </tr>`;
         }).join('');

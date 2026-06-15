@@ -504,6 +504,12 @@ app.post('/api/auth/signup', async (req, res) => {
             } catch(e) { console.error('Referral attribution error:', e.message); }
         }
 
+        // Mark any city_leads with this email as converted (non-blocking)
+        pool.query(
+            `UPDATE city_leads SET converted_user_id = $1 WHERE LOWER(email) = LOWER($2) AND converted_user_id IS NULL`,
+            [user.id, email]
+        ).catch(e => console.error('City lead conversion mark error:', e.message));
+
         // Handle company invite token (non-blocking — bad token must not break signup)
         if (req.body.inviteToken && userType === 'realtor') {
             try {
@@ -2974,9 +2980,12 @@ app.get('/api/admin/analytics/signups', requireAdmin, async (req, res) => {
 app.get('/api/admin/leads', requireAdmin, async (req, res) => {
     try {
         const { rows } = await pool.query(
-            `SELECT id, type, name, email, phone, city_name, state_code, created_at
-             FROM city_leads
-             ORDER BY created_at DESC
+            `SELECT cl.id, cl.type, cl.name, cl.email, cl.phone, cl.city_name, cl.state_code, cl.created_at,
+                    cl.converted_user_id,
+                    u.first_name AS converted_first, u.last_name AS converted_last, u.user_type AS converted_user_type
+             FROM city_leads cl
+             LEFT JOIN users u ON u.id = cl.converted_user_id
+             ORDER BY cl.created_at DESC
              LIMIT 1000`
         );
         res.json(rows);
@@ -9445,7 +9454,11 @@ _schemaMigrations.push(
     )`
 );
 
-// Review request job — emails sellers to review their accepted realtor 3 days after acceptance
+_schemaMigrations.push(
+    `ALTER TABLE city_leads ADD COLUMN IF NOT EXISTS converted_user_id INTEGER REFERENCES users(id)`
+);
+
+ — emails sellers to review their accepted realtor 3 days after acceptance
 async function runReviewRequestJob() {
     try {
         const { rows } = await pool.query(
