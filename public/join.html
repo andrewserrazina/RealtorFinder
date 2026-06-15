@@ -346,6 +346,91 @@
             font-weight: 500;
         }
 
+        /* Inline field errors */
+        .field-error {
+            font-size: 0.78rem;
+            color: #dc2626;
+            margin-top: 4px;
+            display: none;
+        }
+        .form-group.has-error input,
+        .form-group.has-error select {
+            border-color: #dc2626;
+        }
+        .form-group.has-error .field-error { display: block; }
+
+        /* Social proof */
+        .social-proof {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 12px;
+            font-size: 0.82rem;
+            color: var(--text-light);
+        }
+        .social-proof-avatars {
+            display: flex;
+        }
+        .social-proof-avatar {
+            width: 26px; height: 26px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: white;
+            font-size: 0.65rem;
+            font-weight: 700;
+            display: flex; align-items: center; justify-content: center;
+            border: 2px solid white;
+            margin-left: -6px;
+            flex-shrink: 0;
+        }
+        .social-proof-avatars .social-proof-avatar:first-child { margin-left: 0; }
+
+        /* What happens next */
+        .next-steps {
+            margin-top: 10px;
+            padding: 10px 12px;
+            background: #f0fdf4;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            color: #065f46;
+            line-height: 1.5;
+        }
+        .next-steps strong { color: #047857; }
+
+        /* Sticky CTA bar (mobile) */
+        .sticky-cta {
+            display: none;
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            background: var(--primary);
+            padding: 0.875rem 1.5rem;
+            z-index: 999;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.2);
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+        .sticky-cta p {
+            color: rgba(255,255,255,0.85);
+            font-size: 0.85rem;
+            line-height: 1.3;
+        }
+        .sticky-cta p strong { color: white; display: block; }
+        .sticky-cta a {
+            background: var(--accent);
+            color: white;
+            font-weight: 600;
+            font-size: 0.9rem;
+            padding: 0.7rem 1.25rem;
+            border-radius: 50px;
+            text-decoration: none;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        @media (max-width: 900px) {
+            .sticky-cta { display: flex; }
+        }
+
         /* ── Benefits section ── */
         .benefits {
             padding: 7rem 3rem;
@@ -610,7 +695,7 @@
 
 <nav>
     <div class="nav-container">
-        <a href="/" class="logo"><span>Realtor</span>Finder</a>
+        <span class="logo"><span>Realtor</span>Finder</span>
         <div class="nav-pill"><span class="dot"></span> Founding Realtor Program</div>
     </div>
 </nav>
@@ -660,15 +745,18 @@
                         <div class="form-group">
                             <label for="first-name">First name</label>
                             <input type="text" id="first-name" placeholder="Jane" required autocomplete="given-name">
+                            <div class="field-error" id="error-first-name">Please enter your first name.</div>
                         </div>
                         <div class="form-group">
                             <label for="last-name">Last name</label>
                             <input type="text" id="last-name" placeholder="Smith" required autocomplete="family-name">
+                            <div class="field-error" id="error-last-name">Please enter your last name.</div>
                         </div>
                     </div>
                     <div class="form-group">
                         <label for="email">Email address</label>
                         <input type="email" id="email" placeholder="jane@smithrealty.com" required autocomplete="email">
+                        <div class="field-error" id="error-email">Please enter a valid email address.</div>
                     </div>
                     <div class="form-group">
                         <label for="phone">Phone <span style="font-weight:400;text-transform:none;">(optional)</span></label>
@@ -802,8 +890,11 @@
                         </select>
                     </div>
                     <button type="submit" class="submit-btn" id="submit-btn">
-                        Claim My Founding Spot →
+                        Get 2 Months Free →
                     </button>
+                    <div class="next-steps">
+                        <strong>What happens next:</strong> You'll create your free account and set up your profile. No credit card needed until after your 2 free months.
+                    </div>
                     <p class="form-fine">
                         By continuing you agree to our
                         <a href="/terms" target="_blank">Terms</a> and
@@ -814,6 +905,10 @@
                 <div class="spots-row">
                     <div class="spots-track"><div class="spots-fill" id="spots-fill"></div></div>
                     <div class="spots-text" id="spots-text">Loading…</div>
+                </div>
+                <div class="social-proof" id="social-proof" style="display:none;">
+                    <div class="social-proof-avatars" id="social-proof-avatars"></div>
+                    <span id="social-proof-text"></span>
                 </div>
             </div>
         </div>
@@ -924,7 +1019,7 @@
         </div>
         <div class="faq-item">
             <div class="faq-q">How Many Sellers Are on the Platform Right Now?</div>
-            <div class="faq-a">We're in our founding period — seller marketing launches August 2026. You're joining early so you have an established profile and 24-hour head start when listings go live in your area.</div>
+            <div class="faq-a">Seller listings go live in August 2026 — that's exactly why now is the right time to join. Founding members build their profile, lock in their market, and get 24-hour early access to every listing the moment it's posted. The realtors who join now will have a meaningful head start over anyone who waits.</div>
         </div>
         <div class="faq-item">
             <div class="faq-q">What Does It Cost After 2 Months?</div>
@@ -932,6 +1027,12 @@
         </div>
     </div>
 </section>
+
+<!-- Sticky CTA (mobile only, appears on scroll) -->
+<div class="sticky-cta" id="sticky-cta" style="display:none;">
+    <p><strong>Founding Realtor Program</strong>2 months free · Limited spots</p>
+    <a href="#" onclick="hideStickyAndFocus();return false;">Claim My Spot →</a>
+</div>
 
 <footer>
     <p>
@@ -1001,7 +1102,7 @@
         }
     }
 
-    // Live founding spots
+    // Live founding spots + social proof
     const TOTAL = 150;
     fetch('/api/realtors/founding-count')
         .then(r => r.json())
@@ -1013,10 +1114,56 @@
                 `Founding Realtor Program — ${remaining} of ${TOTAL} spots left`;
             document.getElementById('spots-text').textContent = `${claimed} of ${TOTAL} spots claimed`;
             setTimeout(() => { document.getElementById('spots-fill').style.width = pct + '%'; }, 400);
+
+            // Social proof
+            if (claimed > 0) {
+                const initials = ['JS','MR','AK','TL','RP','SE','DM','CB'];
+                const colors = ['#0A2540','#1a4a7a','#2d6a9f','#FF6B35','#e85d2e','#c44d25'];
+                const avatarEl = document.getElementById('social-proof-avatars');
+                const count = Math.min(claimed, 5);
+                for (let i = 0; i < count; i++) {
+                    const d = document.createElement('div');
+                    d.className = 'social-proof-avatar';
+                    d.style.background = colors[i % colors.length];
+                    d.textContent = initials[i % initials.length];
+                    avatarEl.appendChild(d);
+                }
+                document.getElementById('social-proof-text').textContent =
+                    `${claimed} realtor${claimed !== 1 ? 's' : ''} already in the founding cohort`;
+                document.getElementById('social-proof').style.display = 'flex';
+            }
         })
         .catch(() => {
             document.getElementById('spots-text').textContent = 'Limited spots remaining';
         });
+
+    // Sticky CTA on scroll (mobile)
+    let stickyShown = false;
+    window.addEventListener('scroll', function () {
+        if (stickyShown) return;
+        if (window.scrollY > window.innerHeight * 0.6) {
+            document.getElementById('sticky-cta').style.display = 'flex';
+            stickyShown = true;
+        }
+    }, { passive: true });
+
+    // Inline validation helpers
+    function setFieldError(id, errorId, condition) {
+        const group = document.getElementById(id).closest('.form-group');
+        if (condition) {
+            group.classList.add('has-error');
+            return true;
+        } else {
+            group.classList.remove('has-error');
+            return false;
+        }
+    }
+    // Clear errors on input
+    ['first-name','last-name','email'].forEach(id => {
+        document.getElementById(id).addEventListener('input', function () {
+            this.closest('.form-group').classList.remove('has-error');
+        });
+    });
 
     // Form submit
     document.getElementById('join-form').addEventListener('submit', async function (e) {
@@ -1027,12 +1174,13 @@
         const phone     = document.getElementById('phone').value.trim();
         const city      = document.getElementById('city-select').value;
 
-        if (!firstName || !lastName || !email) {
-            alert('Please fill in your name and email address.');
-            return;
-        }
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-            alert('Please enter a valid email address.');
+        let hasError = false;
+        hasError = setFieldError('first-name', 'error-first-name', !firstName) || hasError;
+        hasError = setFieldError('last-name',  'error-last-name',  !lastName)  || hasError;
+        hasError = setFieldError('email', 'error-email',
+            !email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) || hasError;
+        if (hasError) {
+            document.querySelector('.form-group.has-error input, .form-group.has-error select')?.focus();
             return;
         }
 
@@ -1070,6 +1218,12 @@
         btn.disabled = true;
         window.location.href = dest.toString();
     });
+
+    window.hideStickyAndFocus = function() {
+        document.getElementById('sticky-cta').style.display = 'none';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        setTimeout(() => document.getElementById('first-name').focus(), 500);
+    };
 })();
 </script>
 </body>
