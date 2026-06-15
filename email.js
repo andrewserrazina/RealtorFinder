@@ -1444,6 +1444,49 @@ const emailService = {
             await send({ to: realtorEmail, subject: `Listing Status Update: ${label} — ${listingAddress}`, html: emailWrap('For Realtors', body) });
         } catch (error) { logSendgridError('Listing status email', error); }
     },
+
+    async sendFoundingWelcome(toEmail, firstName) {
+        const body = `
+            <div style="text-align:center;margin-bottom:32px;">
+                <div style="display:inline-block;background:linear-gradient(135deg,#FF6B35,#e85a25);border-radius:50px;padding:8px 24px;color:white;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;">🏅 Founding Realtor</div>
+            </div>
+            ${h1(`Welcome to the founding cohort, ${firstName}!`)}
+            ${p(`You're officially in. You've claimed one of the 150 founding spots on RealtorFinder — here's exactly what that means for you.`)}
+            <table style="width:100%;border-radius:12px;overflow:hidden;margin:24px 0;border:1.5px solid #FF6B35;">
+                <tr style="background:#FF6B35;">
+                    <td colspan="2" style="padding:14px 20px;color:white;font-weight:700;font-size:14px;letter-spacing:0.5px;text-transform:uppercase;">Your Founding Realtor Benefits</td>
+                </tr>
+                <tr style="background:#fff8f5;">
+                    <td style="padding:14px 20px;font-size:22px;width:40px;">🎁</td>
+                    <td style="padding:14px 20px;font-size:14px;color:#0A2540;"><strong>2 months free</strong> on any paid plan — no credit card needed until after your trial</td>
+                </tr>
+                <tr style="background:#ffffff;border-top:1px solid #fde8d8;">
+                    <td style="padding:14px 20px;font-size:22px;">⚡</td>
+                    <td style="padding:14px 20px;font-size:14px;color:#0A2540;"><strong>24-hour head start</strong> on every new seller listing before it opens to all agents</td>
+                </tr>
+                <tr style="background:#fff8f5;border-top:1px solid #fde8d8;">
+                    <td style="padding:14px 20px;font-size:22px;">🏅</td>
+                    <td style="padding:14px 20px;font-size:14px;color:#0A2540;"><strong>Permanent founding badge</strong> on your profile — a lasting signal of early credibility</td>
+                </tr>
+                <tr style="background:#ffffff;border-top:1px solid #fde8d8;">
+                    <td style="padding:14px 20px;font-size:22px;">📞</td>
+                    <td style="padding:14px 20px;font-size:14px;color:#0A2540;"><strong>Direct line to the founders</strong> — reply to this email any time with questions or feedback</td>
+                </tr>
+                <tr style="background:#fff8f5;border-top:1px solid #fde8d8;">
+                    <td style="padding:14px 20px;font-size:22px;">0%</td>
+                    <td style="padding:14px 20px;font-size:14px;color:#0A2540;"><strong>No commission splits or referral fees</strong> — ever. You keep 100% of every deal</td>
+                </tr>
+            </table>
+            ${p(`<strong>What happens next:</strong> Seller listings go live in August 2026. Between now and then, complete your profile so you're the first agent sellers see when they post in your market.`)}
+            ${btn(`${BASE_URL}/dashboard/realtor`, 'Complete My Profile →')}
+            ${divider()}
+            ${p(`Have a question or want to share feedback? Just reply to this email — you have a direct line to us.`)}
+            <p style="color:#999;font-size:13px;margin:0;">Andrew &amp; the RealtorFinder Team<br><a href="${BASE_URL}" style="color:#FF6B35;text-decoration:none;">realtorfinder.net</a></p>
+        `;
+        try {
+            await send({ to: toEmail, subject: `You're in, ${firstName} — your Founding Realtor spot is confirmed 🏅`, html: emailWrap('Founding Realtor', body) });
+        } catch (error) { logSendgridError('Founding welcome email', error); }
+    },
 };
 
 module.exports = emailService;

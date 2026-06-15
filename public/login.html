@@ -637,11 +637,12 @@
             try {
                 console.log('Attempting signup...');
                 const recaptchaToken = await grecaptcha.execute('6LdopQ4tAAAAAEvpFE_a4g-B6t17I1Kc06q0IRjx', { action: 'signup' });
+                const isFoundingSignup = new URLSearchParams(window.location.search).get('ref') === 'founding';
                 const response = await fetch(`${API_BASE_URL}/auth/signup`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     credentials: 'include', // Important for cookies!
-                    body: JSON.stringify({ ...data, recaptchaToken })
+                    body: JSON.stringify({ ...data, recaptchaToken, isFoundingSignup })
                 });
                 
                 console.log('Response status:', response.status);

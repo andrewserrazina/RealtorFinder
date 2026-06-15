@@ -403,7 +403,7 @@ app.use('/api', apiLimiter);
 // Signup
 app.post('/api/auth/signup', async (req, res) => {
     try {
-        const { email, password, userType, firstName, lastName, zipCode, companyName, licenseNumber, recaptchaToken, termsAccepted, marketingConsent } = req.body;
+        const { email, password, userType, firstName, lastName, zipCode, companyName, licenseNumber, recaptchaToken, termsAccepted, marketingConsent, isFoundingSignup } = req.body;
 
         if (!email || !password || !userType || !firstName || !lastName || !zipCode) {
             return res.status(400).json({ error: 'All fields required' });
@@ -509,6 +509,12 @@ app.post('/api/auth/signup', async (req, res) => {
             `UPDATE city_leads SET converted_user_id = $1 WHERE LOWER(email) = LOWER($2) AND converted_user_id IS NULL`,
             [user.id, email]
         ).catch(e => console.error('City lead conversion mark error:', e.message));
+
+        // Send founding welcome email for founding member signups (non-blocking)
+        if (isFoundingSignup && userType === 'realtor') {
+            emailService.sendFoundingWelcome(email, firstName)
+                .catch(e => console.error('Founding welcome email failed:', e.message));
+        }
 
         // Handle company invite token (non-blocking — bad token must not break signup)
         if (req.body.inviteToken && userType === 'realtor') {
