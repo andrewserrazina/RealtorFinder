@@ -1593,6 +1593,74 @@
                     </div>
                 </div>
                 <div id="referralsWidget" style="margin-top:1.5rem;"></div>
+
+                <!-- Invite a Colleague -->
+                <div style="margin-top:2rem;background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:16px;padding:1.5rem 2rem;">
+                    <div style="font-weight:700;font-size:1rem;color:#15803d;margin-bottom:0.5rem;">✉️ Invite a Colleague</div>
+                    <p style="color:#166534;font-size:0.875rem;margin:0 0 1rem;">Know a great agent? Send them your referral link with a personal note — agents who hear from a peer convert far better than cold ads.</p>
+                    <div style="background:white;border:1px solid #bbf7d0;border-radius:10px;padding:1rem 1.25rem;font-size:0.85rem;color:#374151;line-height:1.6;white-space:pre-wrap;font-family:inherit;" id="inviteTemplate">Hey [name],
+
+I just joined RealtorFinder as a Founding Member and thought of you. It's a platform where sellers post their listings and agents submit proposals — kind of like a marketplace, but for listings instead of buyers.
+
+They're only taking 150 founding agents total and spots are filling up. You get 2 months free and a founding badge on your profile.
+
+Here's my link: [YOUR_LINK]
+
+Worth checking out.</div>
+                    <div style="display:flex;gap:0.75rem;margin-top:1rem;flex-wrap:wrap;">
+                        <button onclick="copyInviteTemplate()" style="background:#15803d;color:white;border:none;border-radius:8px;padding:10px 20px;cursor:pointer;font-weight:600;font-size:0.875rem;">Copy Message</button>
+                        <button onclick="copyReferralLink()" style="background:white;color:#15803d;border:1.5px solid #15803d;border-radius:8px;padding:10px 20px;cursor:pointer;font-weight:600;font-size:0.875rem;">Copy Link Only</button>
+                    </div>
+                </div>
+
+                <!-- Ambassador Program -->
+                <div style="margin-top:1.5rem;background:linear-gradient(135deg,#0A2540 0%,#0d3a5c 100%);border-radius:16px;padding:1.5rem 2rem;color:white;">
+                    <div style="display:flex;align-items:flex-start;gap:1rem;flex-wrap:wrap;">
+                        <div style="flex:1;min-width:220px;">
+                            <div style="font-size:1.25rem;font-weight:800;margin-bottom:0.4rem;">🌟 Ambassador Program</div>
+                            <p style="font-size:0.875rem;opacity:0.85;line-height:1.6;margin:0 0 1rem;">Have a social following? Post about RealtorFinder 2–3× a month and we'll give you <strong>1 full year of Professional free</strong> — a $249 value.</p>
+                            <div style="display:flex;flex-direction:column;gap:0.4rem;font-size:0.82rem;opacity:0.9;">
+                                <div>✅ 1 year Professional plan free ($249)</div>
+                                <div>✅ Founding Ambassador badge on your profile</div>
+                                <div>✅ Direct line to the founding team</div>
+                            </div>
+                        </div>
+                        <div id="ambassadorStatusBlock" style="flex-shrink:0;display:flex;align-items:center;justify-content:center;min-width:160px;">
+                            <div style="text-align:center;opacity:0.6;font-size:0.85rem;">Loading…</div>
+                        </div>
+                    </div>
+                    <!-- Application form (shown when status is null) -->
+                    <div id="ambassadorApplyForm" style="display:none;margin-top:1.5rem;border-top:1px solid rgba(255,255,255,0.15);padding-top:1.5rem;">
+                        <div style="font-weight:700;margin-bottom:1rem;">Apply in 60 seconds</div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+                            <div>
+                                <label style="font-size:0.8rem;opacity:0.75;display:block;margin-bottom:4px;">Instagram handle</label>
+                                <input id="amb-instagram" type="text" placeholder="@yourhandle" style="width:100%;box-sizing:border-box;padding:8px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.1);color:white;font-size:0.875rem;" />
+                            </div>
+                            <div>
+                                <label style="font-size:0.8rem;opacity:0.75;display:block;margin-bottom:4px;">LinkedIn URL</label>
+                                <input id="amb-linkedin" type="text" placeholder="linkedin.com/in/..." style="width:100%;box-sizing:border-box;padding:8px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.1);color:white;font-size:0.875rem;" />
+                            </div>
+                            <div>
+                                <label style="font-size:0.8rem;opacity:0.75;display:block;margin-bottom:4px;">Facebook page URL</label>
+                                <input id="amb-facebook" type="text" placeholder="facebook.com/..." style="width:100%;box-sizing:border-box;padding:8px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.1);color:white;font-size:0.875rem;" />
+                            </div>
+                            <div>
+                                <label style="font-size:0.8rem;opacity:0.75;display:block;margin-bottom:4px;">Total followers (across all platforms) *</label>
+                                <input id="amb-followers" type="number" placeholder="e.g. 2500" min="500" style="width:100%;box-sizing:border-box;padding:8px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.1);color:white;font-size:0.875rem;" />
+                            </div>
+                        </div>
+                        <div style="margin-top:0.75rem;">
+                            <label style="font-size:0.8rem;opacity:0.75;display:block;margin-bottom:4px;">Link to a recent post (optional)</label>
+                            <input id="amb-sample" type="text" placeholder="https://instagram.com/p/..." style="width:100%;box-sizing:border-box;padding:8px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.1);color:white;font-size:0.875rem;" />
+                        </div>
+                        <div style="margin-top:0.75rem;">
+                            <label style="font-size:0.8rem;opacity:0.75;display:block;margin-bottom:4px;">Anything else we should know?</label>
+                            <textarea id="amb-notes" rows="2" placeholder="Your market, content style, etc." style="width:100%;box-sizing:border-box;padding:8px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.1);color:white;font-size:0.875rem;resize:vertical;"></textarea>
+                        </div>
+                        <button onclick="submitAmbassadorApp()" style="margin-top:1rem;background:#FF6B35;color:white;border:none;border-radius:8px;padding:12px 28px;cursor:pointer;font-weight:700;font-size:0.9rem;">Submit Application →</button>
+                    </div>
+                </div>
             </div>
 
             <!-- Saved sub-section -->
@@ -2388,7 +2456,7 @@
             document.querySelector(`#profile-hub-view .hub-btn[onclick*="${sub}"]`).classList.add('active');
             document.getElementById(`phub-${sub}`).classList.add('active');
             if (sub === 'reviews') loadReviews();
-            if (sub === 'referrals') loadReferrals();
+            if (sub === 'referrals') { loadReferrals(); loadAmbassadorStatus(); }
             if (sub === 'saved') loadSavedListings();
         }
 
@@ -5702,6 +5770,65 @@
         function copySellerReferralLink() {
             const input = document.getElementById('sellerReferralLinkInput');
             if (input) { input.select(); document.execCommand('copy'); showToast('Seller link copied — share with anyone thinking of selling!'); }
+        }
+
+        function copyInviteTemplate() {
+            const el = document.getElementById('inviteTemplate');
+            if (!el) return;
+            // Swap in the actual referral link if available
+            const linkInput = document.getElementById('referralLinkInput');
+            let text = el.innerText;
+            if (linkInput && linkInput.value) text = text.replace('[YOUR_LINK]', linkInput.value);
+            navigator.clipboard.writeText(text).then(() => showToast('Message copied — paste it anywhere!')).catch(() => {
+                const ta = document.createElement('textarea');
+                ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove();
+                showToast('Message copied — paste it anywhere!');
+            });
+        }
+
+        // ===== AMBASSADOR PROGRAM =====
+
+        async function loadAmbassadorStatus() {
+            try {
+                const res = await fetch('/api/ambassador/my-status', { credentials: 'include' });
+                if (!res.ok) return;
+                const data = await res.json();
+                const block = document.getElementById('ambassadorStatusBlock');
+                const form = document.getElementById('ambassadorApplyForm');
+                if (!block) return;
+                if (data.status === null) {
+                    block.innerHTML = `<button onclick="document.getElementById('ambassadorApplyForm').style.display='block';this.style.display='none';" style="background:#FF6B35;color:white;border:none;border-radius:8px;padding:12px 24px;cursor:pointer;font-weight:700;font-size:0.9rem;">Apply Now →</button>`;
+                } else if (data.status === 'pending') {
+                    block.innerHTML = `<div style="background:rgba(255,255,255,0.1);border-radius:10px;padding:14px 20px;text-align:center;"><div style="font-size:1.25rem;">⏳</div><div style="font-weight:700;font-size:0.9rem;margin-top:4px;">Under Review</div><div style="font-size:0.78rem;opacity:0.7;margin-top:2px;">2–3 business days</div></div>`;
+                } else if (data.status === 'approved') {
+                    block.innerHTML = `<div style="background:rgba(255,107,53,0.2);border:1px solid rgba(255,107,53,0.4);border-radius:10px;padding:14px 20px;text-align:center;"><div style="font-size:1.25rem;">🌟</div><div style="font-weight:700;font-size:0.9rem;margin-top:4px;color:#FF6B35;">Active Ambassador</div><div style="font-size:0.78rem;opacity:0.7;margin-top:2px;">Professional plan active</div></div>`;
+                } else if (data.status === 'rejected') {
+                    block.innerHTML = `<div style="text-align:center;font-size:0.85rem;opacity:0.7;"><div>Application not approved</div><button onclick="document.getElementById('ambassadorApplyForm').style.display='block';this.closest('div').style.display='none';" style="margin-top:8px;background:rgba(255,255,255,0.15);color:white;border:none;border-radius:6px;padding:6px 14px;cursor:pointer;font-size:0.8rem;">Reapply</button></div>`;
+                }
+            } catch(e) { console.error('loadAmbassadorStatus error:', e); }
+        }
+
+        async function submitAmbassadorApp() {
+            const instagram_handle = document.getElementById('amb-instagram').value.trim();
+            const linkedin_url = document.getElementById('amb-linkedin').value.trim();
+            const facebook_url = document.getElementById('amb-facebook').value.trim();
+            const follower_count = parseInt(document.getElementById('amb-followers').value) || 0;
+            const sample_post_url = document.getElementById('amb-sample').value.trim();
+            const notes = document.getElementById('amb-notes').value.trim();
+            if (!instagram_handle && !linkedin_url && !facebook_url) { showToast('Please enter at least one social handle or URL', 'error'); return; }
+            if (follower_count < 500) { showToast('Minimum 500 followers required', 'error'); return; }
+            try {
+                const res = await fetch('/api/ambassador/apply', {
+                    method: 'POST', credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ instagram_handle, linkedin_url, facebook_url, follower_count, sample_post_url, notes })
+                });
+                const data = await res.json();
+                if (!res.ok) { showToast(data.error || 'Failed to submit', 'error'); return; }
+                showToast('Application submitted! We\'ll be in touch within 2–3 business days 🌟');
+                document.getElementById('ambassadorApplyForm').style.display = 'none';
+                await loadAmbassadorStatus();
+            } catch(e) { showToast('Something went wrong. Please try again.', 'error'); }
         }
 
         // ===== SAVED SEARCHES (Feature 5) =====

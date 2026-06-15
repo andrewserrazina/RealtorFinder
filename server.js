@@ -5518,6 +5518,125 @@ app.get('/api/referrals/leaderboard', async (req, res) => {
     }
 });
 
+// ===== AMBASSADOR PROGRAM =====
+
+// GET /api/ambassador/my-status
+app.get('/api/ambassador/my-status', auth.requireAuth, async (req, res) => {
+    try {
+        const { rows } = await pool.query(
+            `SELECT status, applied_at, reviewed_at FROM ambassadors WHERE user_id = $1`,
+            [req.session.userId]
+        );
+        if (!rows.length) return res.json({ status: null });
+        const row = rows[0];
+        res.json({ status: row.status, applied_at: row.applied_at, reviewed_at: row.reviewed_at });
+    } catch (err) {
+        console.error('GET /api/ambassador/my-status error:', err);
+        res.status(500).json({ error: 'Failed to fetch ambassador status' });
+    }
+});
+
+// POST /api/ambassador/apply
+app.post('/api/ambassador/apply', auth.requireAuth, async (req, res) => {
+    try {
+        if (req.user.user_type !== 'realtor') {
+            return res.status(403).json({ error: 'Only realtors can apply to the ambassador program' });
+        }
+        const { instagram_handle, linkedin_url, facebook_url, follower_count, sample_post_url, notes } = req.body;
+        if (!instagram_handle && !linkedin_url && !facebook_url) {
+            return res.status(400).json({ error: 'At least one social handle or URL is required' });
+        }
+        if (!follower_count || parseInt(follower_count) < 500) {
+            return res.status(400).json({ error: 'Minimum 500 followers required' });
+        }
+        await pool.query(
+            `INSERT INTO ambassadors (user_id, instagram_handle, linkedin_url, facebook_url, follower_count, sample_post_url, notes, status, applied_at, reviewed_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending', NOW(), NULL)
+             ON CONFLICT (user_id) DO UPDATE SET
+               status = 'pending',
+               instagram_handle = EXCLUDED.instagram_handle,
+               linkedin_url = EXCLUDED.linkedin_url,
+               facebook_url = EXCLUDED.facebook_url,
+               follower_count = EXCLUDED.follower_count,
+               sample_post_url = EXCLUDED.sample_post_url,
+               notes = EXCLUDED.notes,
+               applied_at = NOW(),
+               reviewed_at = NULL`,
+            [req.session.userId, instagram_handle || null, linkedin_url || null, facebook_url || null,
+             parseInt(follower_count), sample_post_url || null, notes || null]
+        );
+        emailService.sendAmbassadorApplicationReceived(req.user.email, req.user.first_name)
+            .catch(e => console.error('Ambassador application email failed:', e.message));
+        res.json({ ok: true });
+    } catch (err) {
+        console.error('POST /api/ambassador/apply error:', err);
+        res.status(500).json({ error: 'Failed to submit ambassador application' });
+    }
+});
+
+// GET /api/admin/ambassadors
+app.get('/api/admin/ambassadors', requireAdmin, async (req, res) => {
+    try {
+        const { rows } = await pool.query(`
+            SELECT a.*, u.first_name, u.last_name, u.email, u.profile_photo, u.service_areas
+            FROM ambassadors a
+            JOIN users u ON u.id = a.user_id
+            ORDER BY a.applied_at DESC
+        `);
+        res.json(rows);
+    } catch (err) {
+        console.error('GET /api/admin/ambassadors error:', err);
+        res.status(500).json({ error: 'Failed to fetch ambassador applications' });
+    }
+});
+
+// PUT /api/admin/ambassadors/:id/status
+app.put('/api/admin/ambassadors/:id/status', requireAdmin, async (req, res) => {
+    try {
+        const { action, admin_note } = req.body;
+        if (action !== 'approve' && action !== 'reject') {
+            return res.status(400).json({ error: 'Invalid action — must be approve or reject' });
+        }
+        const ambassadorId = parseInt(req.params.id);
+        const { rows } = await pool.query(
+            `SELECT a.*, u.email, u.first_name, u.id as user_id
+             FROM ambassadors a
+             JOIN users u ON u.id = a.user_id
+             WHERE a.id = $1`,
+            [ambassadorId]
+        );
+        if (!rows.length) return res.status(404).json({ error: 'Ambassador application not found' });
+        const row = rows[0];
+        const userId = row.user_id;
+        const user = { email: row.email, first_name: row.first_name };
+
+        if (action === 'approve') {
+            await pool.query(
+                `UPDATE ambassadors SET status = 'approved', reviewed_at = NOW(), notes = $1 WHERE id = $2`,
+                [admin_note || null, ambassadorId]
+            );
+            await pool.query(
+                `UPDATE users SET subscription_plan = 'professional', ambassador_expires_at = NOW() + INTERVAL '1 year' WHERE id = $1`,
+                [userId]
+            );
+            emailService.sendAmbassadorWelcome(user.email, user.first_name)
+                .catch(e => console.error('Ambassador welcome email failed:', e.message));
+            return res.json({ ok: true, status: 'approved' });
+        }
+
+        if (action === 'reject') {
+            await pool.query(
+                `UPDATE ambassadors SET status = 'rejected', reviewed_at = NOW(), notes = $1 WHERE id = $2`,
+                [admin_note || null, ambassadorId]
+            );
+            return res.json({ ok: true, status: 'rejected' });
+        }
+    } catch (err) {
+        console.error('PUT /api/admin/ambassadors/:id/status error:', err);
+        res.status(500).json({ error: 'Failed to update ambassador status' });
+    }
+});
+
 // Sell page — stores realtor's ref code in cookie, redirects to sell.html with referrer name
 app.get('/sell', async (req, res) => {
     const ref = req.query.ref;
@@ -10151,6 +10270,25 @@ _schemaMigrations.push(`ALTER TABLE listings ADD COLUMN IF NOT EXISTS year_built
 _schemaMigrations.push(`ALTER TABLE listings ADD COLUMN IF NOT EXISTS garage_spaces INTEGER`);
 _schemaMigrations.push(`ALTER TABLE listings ADD COLUMN IF NOT EXISTS hoa_fee NUMERIC(8,2)`);
 _schemaMigrations.push(`ALTER TABLE listings ADD COLUMN IF NOT EXISTS lot_size INTEGER`);
+_schemaMigrations.push(`
+    CREATE TABLE IF NOT EXISTS ambassadors (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        instagram_handle TEXT,
+        linkedin_url TEXT,
+        facebook_url TEXT,
+        follower_count INTEGER,
+        sample_post_url TEXT,
+        notes TEXT,
+        status TEXT NOT NULL DEFAULT 'pending',
+        applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        reviewed_at TIMESTAMPTZ,
+        UNIQUE(user_id)
+    )
+`);
+_schemaMigrations.push(
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS ambassador_expires_at TIMESTAMPTZ`
+);
 
 // Auto-expire proposals whose expires_at has passed
 async function runProposalExpiryJob() {

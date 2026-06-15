@@ -1487,6 +1487,51 @@ const emailService = {
             await send({ to: toEmail, subject: `You're in, ${firstName} — your Founding Realtor spot is confirmed 🏅`, html: emailWrap('Founding Realtor', body) });
         } catch (error) { logSendgridError('Founding welcome email', error); }
     },
+
+    async sendAmbassadorWelcome(toEmail, firstName) {
+        const body = `
+            ${h1("You're a RealtorFinder Ambassador 🌟")}
+            ${p(`Hi ${firstName}, we're thrilled to welcome you to the RealtorFinder Ambassador Program. Your Professional plan is now active for the next 12 months — on us.`)}
+            ${infoBox([
+                ['Plan', 'Professional (12 months free)'],
+                ['Value', '$249'],
+                ['Start Date', new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })]
+            ])}
+            <div style="background:#0A2540;border-radius:12px;padding:28px;color:white;">
+                <div style="font-size:16px;font-weight:700;margin-bottom:12px;">Your posting commitment</div>
+                <ul style="margin:0;padding-left:0;list-style:none;">
+                    <li style="margin-bottom:10px;padding-left:20px;position:relative;font-size:14px;line-height:1.7;opacity:0.9;"><span style="position:absolute;left:0;color:#FF6B35;font-weight:700;">•</span>2–3 posts per month on your social channels tagging @RealtorFinder</li>
+                    <li style="margin-bottom:10px;padding-left:20px;position:relative;font-size:14px;line-height:1.7;opacity:0.9;"><span style="position:absolute;left:0;color:#FF6B35;font-weight:700;">•</span>Target homeowners in your market — listings tips, market updates, why to use a great agent</li>
+                    <li style="padding-left:20px;position:relative;font-size:14px;line-height:1.7;opacity:0.9;"><span style="position:absolute;left:0;color:#FF6B35;font-weight:700;">•</span>Use #RealtorFinder and #FindYourAgent hashtags</li>
+                </ul>
+            </div>
+            ${p("We'll send you brand assets and post ideas within 24 hours. Have questions? Just reply to this email — you have a direct line to us.")}
+            ${btn(`${BASE_URL}/dashboard/realtor`, 'Go to My Dashboard →')}
+            ${divider()}
+            ${p("The RealtorFinder Team")}
+        `;
+        try {
+            await send({ to: toEmail, subject: 'Welcome to the RealtorFinder Ambassador Program 🌟', html: emailWrap('Ambassador Program', body) });
+        } catch (error) { logSendgridError('Ambassador welcome email', error); }
+    },
+
+    async sendAmbassadorApplicationReceived(toEmail, firstName) {
+        const body = `
+            ${h1("Application Received ✅")}
+            ${p(`Hi ${firstName}, thanks for applying to the RealtorFinder Ambassador Program! We'll review your application within 2–3 business days and reach out with a decision.`)}
+            ${infoBox([
+                ['Status', 'Under Review'],
+                ['Response time', '2–3 business days']
+            ])}
+            ${p("In the meantime, keep building your presence — the stronger your engagement, the better. If you have any questions, just reply to this email.")}
+            ${btn(`${BASE_URL}/dashboard/realtor`, 'Back to Dashboard →')}
+            ${divider()}
+            ${p("The RealtorFinder Team")}
+        `;
+        try {
+            await send({ to: toEmail, subject: "Ambassador application received — we'll review it shortly", html: emailWrap('Ambassador Program', body) });
+        } catch (error) { logSendgridError('Ambassador application received email', error); }
+    },
 };
 
 module.exports = emailService;
