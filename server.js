@@ -9583,7 +9583,7 @@ _schemaMigrations.push(
     `ALTER TABLE city_leads ADD COLUMN IF NOT EXISTS converted_user_id INTEGER REFERENCES users(id)`
 );
 
- — emails sellers to review their accepted realtor 3 days after acceptance
+// emails sellers to review their accepted realtor 3 days after acceptance
 async function runReviewRequestJob() {
     try {
         const { rows } = await pool.query(
