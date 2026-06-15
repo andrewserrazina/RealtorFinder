@@ -5003,7 +5003,7 @@ app.get('/api/realtors/:id/public', async (req, res) => {
             pool.query(
                 `SELECT u.id, u.first_name, u.last_name, u.bio, u.years_experience,
                         u.license_number, u.service_areas, u.subscription_plan, u.zip_code,
-                        u.profile_photo, u.license_verified, u.brokerage,
+                        u.profile_photo, u.license_verified, u.brokerage, u.is_founding_member,
                         c.name AS company_name, c.plan AS company_plan
                  FROM users u
                  LEFT JOIN companies c ON u.company_id = c.id
