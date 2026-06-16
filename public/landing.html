@@ -1348,20 +1348,7 @@
     </section>
 
     <script>
-    (function() {
-        var variant = document.cookie.split(';').map(function(c){return c.trim();}).find(function(c){return c.startsWith('ab_variant=');});
-        if (variant && variant.split('=')[1] === 'b') {
-            var h = document.getElementById('hero-headline');
-            var s = document.getElementById('hero-subhead');
-            var c = document.getElementById('hero-cta');
-            if (h) h.textContent = 'Find Your Dream Home Anywhere in the US';
-            if (s) s.textContent = 'Browse listings, compare realtors, and connect directly — all in one place.';
-            if (c) c.innerHTML = '<a href="/dashboard/buyer" class="btn btn-primary" style="display:inline-block;background:#FF6B35;color:#fff;padding:1rem 2.5rem;border-radius:50px;font-size:1.1rem;font-weight:600;text-decoration:none;cursor:pointer;" onclick="if(typeof gtag!==\'undefined\')gtag(\'event\',\'cta_click\',{variant:\'b\'})">Browse Listings</a><a href="/realtors/directory" style="display:inline-block;margin-left:1rem;background:transparent;color:#0A2540;border:2px solid #0A2540;padding:1rem 2.5rem;border-radius:50px;font-size:1.1rem;font-weight:600;text-decoration:none;">Find a Realtor</a>';
-            if (typeof gtag !== 'undefined') gtag('event', 'ab_variant_view', { variant: 'b' });
-        } else {
-            if (typeof gtag !== 'undefined') gtag('event', 'ab_variant_view', { variant: 'a' });
-        }
-    })();
+    if (typeof gtag !== 'undefined') gtag('event', 'page_view', { page_type: 'seller_landing' });
     </script>
 
     <section class="features" id="features">

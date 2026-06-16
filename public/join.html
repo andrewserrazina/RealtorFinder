@@ -709,7 +709,7 @@
                 <span id="founding-tag-text">Founding Cohort — Limited Spots</span>
             </div>
             <h1>
-                <span id="city-display">New England</span> Realtors:<br>
+                <span id="city-display">Local</span> Realtors:<br>
                 <span class="highlight">Sellers Are Waiting</span><br>
                 For You
             </h1>
@@ -989,7 +989,7 @@
     <div class="offer-inner">
         <div class="section-tag" style="background:rgba(255,107,53,0.2);color:#ffb89a;">Founding Realtor Program</div>
         <h2>Claim Your Spot Before<br>the Cohort Closes</h2>
-        <p>150 founding spots. Free for 2 months. Launching August 2026.</p>
+        <p>100 founding spots. Free for 2 months. Launching August 2026.</p>
         <div class="offer-perks">
             <div class="offer-perk">🎁 2 months free</div>
             <div class="offer-perk">🏅 Founding badge</div>
@@ -1103,7 +1103,7 @@
     }
 
     // Live founding spots + social proof
-    const TOTAL = 150;
+    const TOTAL = 100;
     fetch('/api/realtors/founding-count')
         .then(r => r.json())
         .then(data => {
@@ -1187,7 +1187,7 @@
         if (typeof gtag !== 'undefined') {
             gtag('event', 'founding_signup_click', {
                 city: citySlug || 'generic',
-                city_name: cityName || 'New England'
+                city_name: cityName || 'Your Area'
             });
         }
         if (typeof fbq !== 'undefined') {
