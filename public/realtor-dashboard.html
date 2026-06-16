@@ -2501,14 +2501,43 @@ Worth checking out.</div>
                 const noPhoto = _profileItems && _profileItems.some(i => i.label === 'has_photo' && !i.done);
                 nudge.style.display = noPhoto ? 'flex' : 'none';
             }
+            // Restore draft if one exists for this listing
+            try {
+                const draft = JSON.parse(localStorage.getItem(`proposal_draft_${listingId}`) || 'null');
+                if (draft) {
+                    const form = document.getElementById('bidForm');
+                    ['realtorName','brokerage','realtorEmail','realtorPhone','commission','offerDetails'].forEach(n => {
+                        if (draft[n] !== undefined && form.elements[n]) form.elements[n].value = draft[n];
+                    });
+                }
+            } catch(e) {}
             document.getElementById('bidModal').classList.add('active');
         }
+
+        function saveBidDraft() {
+            if (!currentListingId) return;
+            const form = document.getElementById('bidForm');
+            if (!form) return;
+            const draft = {};
+            ['realtorName','brokerage','realtorEmail','realtorPhone','commission','offerDetails'].forEach(n => {
+                if (form.elements[n]) draft[n] = form.elements[n].value;
+            });
+            try { localStorage.setItem(`proposal_draft_${currentListingId}`, JSON.stringify(draft)); } catch(e) {}
+        }
+
+        function clearBidDraft(listingId) {
+            try { localStorage.removeItem(`proposal_draft_${listingId || currentListingId}`); } catch(e) {}
+        }
+
+        // Auto-save draft on input
+        document.getElementById('bidForm').addEventListener('input', saveBidDraft);
 
         function closeBidModal() {
             document.getElementById('bidModal').classList.remove('active');
             document.getElementById('bidForm').reset();
             document.getElementById('bidForm').style.display = '';
             document.getElementById('bidSuccessState').style.display = 'none';
+            // Don't clear draft on close — let them resume if they re-open
         }
 
         // Submit Bid
@@ -2536,6 +2565,7 @@ Worth checking out.</div>
                     return;
                 }
 
+                clearBidDraft(currentListingId);
                 document.getElementById('bidForm').style.display = 'none';
                 const successEl = document.getElementById('bidSuccessState');
                 document.getElementById('bidSuccessAddress').textContent = document.getElementById('modalPropertyAddress').textContent;

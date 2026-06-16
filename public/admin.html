@@ -761,7 +761,7 @@
 
     <div class="tabs" style="flex-wrap:wrap;">
         <button class="tab-btn" onclick="switchTab('stats', this)">Stats</button>
-        <button class="tab-btn active" onclick="switchTab('users', this)">Users</button>
+        <button class="tab-btn active" onclick="switchTab('users', this)">Users <span id="pending-approval-badge" style="display:none;background:#ef4444;color:white;border-radius:10px;padding:1px 7px;font-size:0.72rem;font-weight:700;margin-left:4px;vertical-align:middle;"></span></button>
         <button class="tab-btn" onclick="switchTab('listings', this)">Listings</button>
         <button class="tab-btn" onclick="switchTab('leads', this)">City Leads</button>
         <button class="tab-btn" onclick="switchTab('reviews', this)">Reviews</button>
@@ -1857,6 +1857,7 @@
             loadUsers();
             loadListings();
             loadLeads();
+            loadPendingApprovalCount();
         } catch (err) {
             window.location.href = '/login.html';
         }
@@ -2132,6 +2133,21 @@
 
     let usersData = [];
 
+    async function loadPendingApprovalCount() {
+        try {
+            const res = await fetch('/api/admin/users?status=pending', { credentials: 'include' });
+            if (!res.ok) return;
+            const data = await res.json();
+            const raw = Array.isArray(data) ? data : (Array.isArray(data.users) ? data.users : []);
+            const count = raw.filter(u => !u.is_approved && u.user_type === 'realtor').length;
+            const badge = document.getElementById('pending-approval-badge');
+            if (badge) {
+                if (count > 0) { badge.textContent = count; badge.style.display = 'inline'; }
+                else { badge.style.display = 'none'; }
+            }
+        } catch(e) {}
+    }
+
     async function loadUsers() {
         try {
             const res = await fetch('/api/admin/users', { credentials: 'include' });
@@ -2313,6 +2329,7 @@
             const idx = usersData.findIndex(u => u.id === id);
             if (idx !== -1) usersData[idx].is_approved = true;
             renderUsers();
+            loadPendingApprovalCount();
             showToast('User approved — they can now access the dashboard.', 'success');
         } catch {
             showToast('Failed to approve user.', 'error');
