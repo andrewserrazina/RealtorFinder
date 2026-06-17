@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Founding Realtor Program — RealtorFinder</title>
+    <meta name="description" content="You got the message. Here's the full picture on RealtorFinder's Founding Realtor Program — 100 spots, 2 months free, launching August 2026.">
+    <meta name="robots" content="noindex">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
+    <link rel="apple-touch-icon" href="/icon-192.png">
+
+    <!-- GA4 -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-BRGVVNKT65"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-BRGVVNKT65');
+      gtag('event', 'page_view', { source: 'linkedin', page_type: 'founding_linkedin' });
+    </script>
+
+    <!-- Facebook Pixel -->
+    <script>
+      !function(f,b,e,v,n,t,s)
+      {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+      n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+      if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+      n.queue=[];t=b.createElement(e);t.async=!0;
+      t.src=v;s=b.getElementsByTagName(e)[0];
+      s.parentNode.insertBefore(t,s)}(window, document,'script',
+      'https://connect.facebook.net/en_US/fbevents.js');
+      fbq('init', '1189752893170212');
+      fbq('track', 'PageView');
+    </script>
+    <noscript><img height="1" width="1" style="display:none"
+      src="https://www.facebook.com/tr?id=1189752893170212&ev=PageView&noscript=1"/></noscript>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Work+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --primary:  #0A2540;
+            --accent:   #FF6B35;
+            --light-bg: #f8f9fa;
+            --text:     #1A1A1A;
+            --muted:    #5A5A5A;
+            --border:   #e5e7eb;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Work Sans', sans-serif;
+            color: var(--text);
+            line-height: 1.6;
+            overflow-x: hidden;
+            background: white;
+        }
+
+        /* ── Nav ── */
+        nav {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(255,255,255,0.97);
+            backdrop-filter: blur(8px);
+            border-bottom: 1px solid var(--border);
+        }
+        .nav-inner {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 1.1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .logo {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.6rem;
+            font-weight: 900;
+            color: var(--primary);
+            text-decoration: none;
+            letter-spacing: -0.4px;
+        }
+        .logo span { color: var(--accent); }
+        .nav-login {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--muted);
+            text-decoration: none;
+        }
+        .nav-login:hover { color: var(--primary); }
+
+        /* ── Hero ── */
+        .hero {
+            background: var(--primary);
+            color: white;
+            padding: 5rem 2rem 4.5rem;
+        }
+        .hero-inner {
+            max-width: 760px;
+            margin: 0 auto;
+        }
+        .pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255,107,53,0.18);
+            color: #ffb89a;
+            border: 1px solid rgba(255,107,53,0.3);
+            padding: 0.45rem 1.1rem;
+            border-radius: 50px;
+            font-size: 0.83rem;
+            font-weight: 600;
+            margin-bottom: 1.75rem;
+        }
+        .hero h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(2.2rem, 5vw, 3.2rem);
+            font-weight: 700;
+            line-height: 1.12;
+            letter-spacing: -1px;
+            margin-bottom: 1.25rem;
+        }
+        .hero-sub {
+            font-size: 1.1rem;
+            font-weight: 300;
+            line-height: 1.75;
+            color: rgba(255,255,255,0.82);
+            margin-bottom: 2.25rem;
+            max-width: 680px;
+        }
+        .stat-chips {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            margin-bottom: 2.5rem;
+        }
+        .stat-chip {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.18);
+            color: rgba(255,255,255,0.92);
+            padding: 0.6rem 1.2rem;
+            border-radius: 50px;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        .hero-cta {
+            display: inline-block;
+            background: var(--accent);
+            color: white;
+            font-family: 'Work Sans', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            padding: 0.9rem 2.25rem;
+            border-radius: 50px;
+            text-decoration: none;
+            box-shadow: 0 12px 30px rgba(255,107,53,0.35);
+            transition: all 0.25s;
+        }
+        .hero-cta:hover {
+            background: white;
+            color: var(--primary);
+            transform: translateY(-2px);
+            box-shadow: 0 16px 40px rgba(255,255,255,0.2);
+        }
+
+        /* ── Prose section ── */
+        .prose-section {
+            background: white;
+            padding: 5rem 2rem;
+        }
+        .prose-inner {
+            max-width: 760px;
+            margin: 0 auto;
+        }
+        .prose-inner h2 {
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(1.6rem, 3vw, 2.1rem);
+            font-weight: 700;
+            color: var(--primary);
+            letter-spacing: -0.5px;
+            margin-bottom: 1.75rem;
+        }
+        .prose-inner p {
+            font-size: 1.05rem;
+            font-weight: 400;
+            color: #2e2e2e;
+            line-height: 1.85;
+            margin-bottom: 1.4rem;
+        }
+        .prose-inner p:last-child { margin-bottom: 0; }
+
+        /* ── Why founding section ── */
+        .why-section {
+            background: var(--light-bg);
+            padding: 5rem 2rem;
+        }
+        .why-inner {
+            max-width: 1060px;
+            margin: 0 auto;
+        }
+        .why-inner h2 {
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(1.6rem, 3vw, 2.1rem);
+            font-weight: 700;
+            color: var(--primary);
+            letter-spacing: -0.5px;
+            margin-bottom: 2.5rem;
+        }
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.25rem;
+        }
+        .card {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.75rem 1.5rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+            transition: box-shadow 0.2s, transform 0.2s;
+        }
+        .card:hover {
+            box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+            transform: translateY(-2px);
+        }
+        .card-icon {
+            font-size: 1.6rem;
+            margin-bottom: 0.85rem;
+            display: block;
+        }
+        .card h3 {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+        .card p {
+            font-size: 0.9rem;
+            color: var(--muted);
+            line-height: 1.65;
+        }
+
+        /* ── Signup form section ── */
+        .signup-section {
+            background: white;
+            padding: 5rem 2rem;
+        }
+        .signup-inner {
+            max-width: 560px;
+            margin: 0 auto;
+        }
+        .signup-inner h2 {
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(1.6rem, 3vw, 2.1rem);
+            font-weight: 700;
+            color: var(--primary);
+            letter-spacing: -0.5px;
+            margin-bottom: 0.6rem;
+        }
+        .signup-subtext {
+            font-size: 0.97rem;
+            color: var(--muted);
+            margin-bottom: 2.25rem;
+            font-weight: 400;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+        .form-group {
+            margin-bottom: 14px;
+        }
+        .form-group label {
+            display: block;
+            font-size: 0.73rem;
+            font-weight: 600;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-bottom: 5px;
+        }
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 0.78rem 1rem;
+            border: 1.5px solid var(--border);
+            border-radius: 10px;
+            font-family: 'Work Sans', sans-serif;
+            font-size: 0.95rem;
+            color: var(--text);
+            background: white;
+            transition: border-color 0.15s;
+            -webkit-appearance: none;
+        }
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+        .form-group input::placeholder { color: #c0bab4; }
+
+        .field-error {
+            font-size: 0.78rem;
+            color: #dc2626;
+            margin-top: 4px;
+            display: none;
+        }
+        .form-group.has-error input,
+        .form-group.has-error select { border-color: #dc2626; }
+        .form-group.has-error .field-error { display: block; }
+
+        .submit-btn {
+            width: 100%;
+            padding: 1rem;
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            font-family: 'Work Sans', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.25s;
+            margin-top: 6px;
+            box-shadow: 0 8px 24px rgba(255,107,53,0.3);
+        }
+        .submit-btn:hover {
+            background: var(--primary);
+            box-shadow: 0 12px 32px rgba(10,37,64,0.28);
+            transform: translateY(-2px);
+        }
+        .submit-btn:active { transform: scale(0.98); }
+        .submit-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+        .form-fine {
+            font-size: 0.76rem;
+            color: var(--muted);
+            text-align: center;
+            margin-top: 10px;
+            line-height: 1.5;
+        }
+        .form-fine a { color: var(--muted); text-decoration: underline; }
+
+        /* ── Footer ── */
+        footer {
+            background: var(--primary);
+            padding: 1.75rem 2rem;
+            text-align: center;
+        }
+        footer p {
+            font-size: 0.82rem;
+            color: rgba(255,255,255,0.45);
+        }
+        footer a {
+            color: rgba(255,255,255,0.45);
+            text-decoration: none;
+        }
+        footer a:hover { color: rgba(255,255,255,0.75); }
+
+        /* ── Responsive ── */
+        @media (max-width: 900px) {
+            .cards-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        @media (max-width: 600px) {
+            .hero { padding: 3.5rem 1.5rem 3rem; }
+            .prose-section,
+            .why-section,
+            .signup-section { padding: 3.5rem 1.5rem; }
+            .form-row { grid-template-columns: 1fr; gap: 0; }
+            .cards-grid { grid-template-columns: 1fr 1fr; }
+            .stat-chips { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
+        }
+        @media (max-width: 400px) {
+            .cards-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav>
+    <div class="nav-inner">
+        <a href="/" class="logo"><span>Realtor</span>Finder</a>
+        <a href="/login" class="nav-login">Already a member? Log in</a>
+    </div>
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+    <div class="hero-inner">
+        <div class="pill">
+            🏅 Founding Realtor Program &nbsp;·&nbsp; <span id="spots-remaining">100</span> spots
+        </div>
+        <h1>You got the message.<br>Here's the full picture.</h1>
+        <p class="hero-sub">
+            We're building the platform where motivated sellers post their home and realtors compete for the listing.
+            You submit a proposal — commission rate, marketing plan, track record. They pick you on merit, not who called first.
+            We're inviting 100 founding agents before we go public.
+        </p>
+        <div class="stat-chips">
+            <div class="stat-chip">🏅 2 months free at launch</div>
+            <div class="stat-chip">⏱ 24hr head start on listings</div>
+        </div>
+        <a href="#signup-form" class="hero-cta">See if I qualify →</a>
+    </div>
+</section>
+
+<!-- The problem we're solving -->
+<section class="prose-section">
+    <div class="prose-inner">
+        <h2>The problem we're solving</h2>
+        <p>
+            Right now, sellers list with whoever called them first or whoever their neighbor used.
+            There's no transparent way to compare agents. Most homeowners interview one agent, maybe two.
+        </p>
+        <p>
+            We're flipping that. Sellers post on RealtorFinder and receive proposals from licensed agents in their area.
+            Commission rate, marketing strategy, experience, reviews — all visible side by side. They choose on the full picture.
+        </p>
+        <p>
+            For realtors, that means competing on the things you're actually good at.
+            No more cold calling expired listings. No more fighting Zillow for leads.
+            You pitch motivated sellers directly, on your terms.
+        </p>
+    </div>
+</section>
+
+<!-- Why founding members -->
+<section class="why-section">
+    <div class="why-inner">
+        <h2>Why join before launch?</h2>
+        <div class="cards-grid">
+            <div class="card">
+                <span class="card-icon">🏅</span>
+                <h3>2 months free</h3>
+                <p>Professional plan free when we launch in August. $249 value, no strings.</p>
+            </div>
+            <div class="card">
+                <span class="card-icon">⚡</span>
+                <h3>24-hour head start</h3>
+                <p>New listings open to founding members a full day before anyone else sees them.</p>
+            </div>
+            <div class="card">
+                <span class="card-icon">🔒</span>
+                <h3>Rate lock</h3>
+                <p>Your plan price is locked forever, even as we raise rates for new members.</p>
+            </div>
+            <div class="card">
+                <span class="card-icon">🎯</span>
+                <h3>Founding badge</h3>
+                <p>Permanent badge on your public profile. Signals early adopter credibility to every seller who views you.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Signup form -->
+<section class="signup-section" id="signup-form">
+    <div class="signup-inner">
+        <h2>Claim your founding spot</h2>
+        <p class="signup-subtext">Takes 2 minutes. No credit card. We'll email you when listings go live in your market.</p>
+
+        <form id="founding-form" novalidate>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="first-name">First name</label>
+                    <input type="text" id="first-name" placeholder="Jane" required autocomplete="given-name">
+                    <div class="field-error" id="error-first-name">Please enter your first name.</div>
+                </div>
+                <div class="form-group">
+                    <label for="last-name">Last name</label>
+                    <input type="text" id="last-name" placeholder="Smith" required autocomplete="family-name">
+                    <div class="field-error" id="error-last-name">Please enter your last name.</div>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="email">Email address</label>
+                <input type="email" id="email" placeholder="jane@smithrealty.com" required autocomplete="email">
+                <div class="field-error" id="error-email">Please enter a valid email address.</div>
+            </div>
+            <div class="form-group">
+                <label for="phone">Phone <span style="font-weight:400;text-transform:none;font-size:0.85em;">(optional)</span></label>
+                <input type="tel" id="phone" placeholder="(617) 555-0100" autocomplete="tel">
+            </div>
+            <div class="form-group">
+                <label for="city-select">Your market</label>
+                <select id="city-select" required>
+                    <option value="">Select your city / area…</option>
+                    <optgroup label="Massachusetts">
+                        <option value="springfield">Springfield</option>
+                        <option value="worcester">Worcester</option>
+                        <option value="boston">Boston</option>
+                        <option value="new-bedford">New Bedford</option>
+                        <option value="cape-cod">Cape Cod</option>
+                    </optgroup>
+                    <optgroup label="Connecticut">
+                        <option value="hartford">Hartford</option>
+                        <option value="new-haven">New Haven</option>
+                        <option value="stamford">Stamford / Greenwich</option>
+                    </optgroup>
+                    <optgroup label="Rhode Island">
+                        <option value="providence">Providence</option>
+                    </optgroup>
+                </select>
+                <div class="field-error" id="error-city">Please select your market.</div>
+            </div>
+            <button type="submit" class="submit-btn" id="submit-btn">Claim My Spot →</button>
+            <p class="form-fine">
+                By signing up you agree to our <a href="/terms" target="_blank">Terms of Service</a>.
+                We won't spam you.
+            </p>
+        </form>
+    </div>
+</section>
+
+<!-- Footer -->
+<footer>
+    <p>© 2026 RealtorFinder &nbsp;·&nbsp; <a href="/privacy">Privacy</a> &nbsp;·&nbsp; <a href="/terms">Terms</a></p>
+</footer>
+
+<script>
+(function () {
+    // Smooth scroll for hero CTA
+    document.querySelector('a[href="#signup-form"]').addEventListener('click', function (e) {
+        e.preventDefault();
+        document.getElementById('signup-form').scrollIntoView({ behavior: 'smooth' });
+        setTimeout(function () { document.getElementById('first-name').focus(); }, 500);
+    });
+
+    // Load live spots counter
+    fetch('/api/realtors/founding-count')
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            var claimed   = Math.min(data.claimed || 0, 100);
+            var remaining = Math.max(100 - claimed, 0);
+            document.getElementById('spots-remaining').textContent = remaining;
+        })
+        .catch(function () {
+            // leave default "100" in place on failure
+        });
+
+    // Inline validation helpers
+    function setError(inputId, condition) {
+        var group = document.getElementById(inputId).closest('.form-group');
+        if (condition) { group.classList.add('has-error'); return true; }
+        group.classList.remove('has-error');
+        return false;
+    }
+
+    ['first-name', 'last-name', 'email'].forEach(function (id) {
+        document.getElementById(id).addEventListener('input', function () {
+            this.closest('.form-group').classList.remove('has-error');
+        });
+    });
+    document.getElementById('city-select').addEventListener('change', function () {
+        this.closest('.form-group').classList.remove('has-error');
+    });
+
+    // Form submit
+    document.getElementById('founding-form').addEventListener('submit', async function (e) {
+        e.preventDefault();
+
+        var firstName = document.getElementById('first-name').value.trim();
+        var lastName  = document.getElementById('last-name').value.trim();
+        var email     = document.getElementById('email').value.trim();
+        var phone     = document.getElementById('phone').value.trim();
+        var city      = document.getElementById('city-select').value;
+
+        var hasError = false;
+        hasError = setError('first-name', !firstName)                                            || hasError;
+        hasError = setError('last-name',  !lastName)                                             || hasError;
+        hasError = setError('email', !email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))       || hasError;
+        hasError = setError('city-select', !city)                                                || hasError;
+
+        if (hasError) {
+            var firstBad = document.querySelector('.form-group.has-error input, .form-group.has-error select');
+            if (firstBad) firstBad.focus();
+            return;
+        }
+
+        // Analytics
+        if (typeof gtag !== 'undefined') {
+            gtag('event', 'founding_form_submit', { source: 'linkedin' });
+        }
+        if (typeof fbq !== 'undefined') {
+            fbq('track', 'Lead', { content_name: 'founding_realtor_linkedin' });
+        }
+
+        // Disable button while submitting
+        var btn = document.getElementById('submit-btn');
+        btn.textContent = 'One moment…';
+        btn.disabled = true;
+
+        // POST lead
+        try {
+            await fetch('/api/founding-lead', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    first_name: firstName,
+                    last_name:  lastName,
+                    email:      email,
+                    phone:      phone,
+                    city:       city
+                })
+            });
+        } catch (_) {
+            // proceed to redirect even on network error
+        }
+
+        window.location.href = '/login?tab=signup&type=realtor&ref=founding';
+    });
+})();
+</script>
+</body>
+</html>

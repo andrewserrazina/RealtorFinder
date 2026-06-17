@@ -8662,6 +8662,7 @@ app.get('/realtors', (req, res) => {
 
 // Founding realtor ad landing page
 app.get('/founding', (req, res) => res.sendFile(path.join(__dirname, 'public', 'join.html')));
+app.get('/founding/linkedin', (req, res) => res.sendFile(path.join(__dirname, 'public', 'founding-linkedin.html')));
 
 // Seller Dashboard (PROTECTED)
 app.get('/dashboard/seller', (req, res) => {
