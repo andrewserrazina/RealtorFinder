@@ -10333,6 +10333,32 @@ async function runProposalExpiryReminder() {
     }
 }
 
+// Founding prospect follow-up — runs every hour, emails prospects 20-28h after form submit
+async function runFoundingProspectFollowUpJob() {
+    try {
+        const { rows } = await pool.query(
+            `SELECT id, first_name, last_name, email, city
+             FROM realtor_prospects
+             WHERE source = 'founding'
+               AND outreach_status = 'not_contacted'
+               AND converted_user_id IS NULL
+               AND email IS NOT NULL
+               AND created_at BETWEEN NOW() - INTERVAL '28 hours' AND NOW() - INTERVAL '20 hours'`
+        );
+        for (const p of rows) {
+            await emailService.sendFoundingProspectFollowUp(p.email, p.first_name, p.city)
+                .catch(e => console.error(`Founding follow-up failed for ${p.email}:`, e.message));
+            await pool.query(
+                `UPDATE realtor_prospects SET outreach_status = 'followed_up', last_contact_date = NOW() WHERE id = $1`,
+                [p.id]
+            );
+        }
+        if (rows.length > 0) console.log(`📬 Founding follow-up sent to ${rows.length} prospects`);
+    } catch (err) {
+        console.error('runFoundingProspectFollowUpJob error:', err.message);
+    }
+}
+
 // Run all schema migrations then start listening
 async function startServer() {
     for (const sql of _schemaMigrations) {
@@ -10381,6 +10407,8 @@ async function startServer() {
         setInterval(runProposalExpiryJob, 24 * 60 * 60 * 1000).unref();
         runProposalExpiryReminder();
         setInterval(() => runProposalExpiryReminder(), 24 * 60 * 60 * 1000).unref();
+        runFoundingProspectFollowUpJob();
+        setInterval(runFoundingProspectFollowUpJob, 60 * 60 * 1000).unref();
     });
 }
 startServer().catch(err => {

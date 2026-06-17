@@ -1532,6 +1532,33 @@ const emailService = {
             await send({ to: toEmail, subject: "Ambassador application received — we'll review it shortly", html: emailWrap('Ambassador Program', body) });
         } catch (error) { logSendgridError('Ambassador application received email', error); }
     },
+
+    async sendFoundingProspectFollowUp(toEmail, firstName, cityName) {
+        const name = firstName ? ` ${firstName}` : '';
+        const cityLine = cityName && cityName !== 'Your Area' ? ` in ${cityName}` : '';
+        const body = `
+            ${h1(`Your founding spot${cityLine} is still available`)}
+            ${p(`Hi${name}, you started signing up for RealtorFinder's Founding Realtor Program but didn't quite finish — your spot is still reserved for now.`)}
+            <div style="background:linear-gradient(135deg,#0A2540 0%,#0d3a5c 100%);border-radius:14px;padding:28px 32px;margin:24px 0;color:white;text-align:center;">
+                <div style="font-size:2rem;margin-bottom:8px;">🏅</div>
+                <div style="font-family:Georgia,serif;font-size:1.3rem;font-weight:900;margin-bottom:6px;">Founding Realtor — 2 months free</div>
+                <div style="font-size:0.9rem;opacity:0.8;">Lock in your rate before spots fill up</div>
+            </div>
+            ${infoBox([
+                ['Plan', 'Professional — free for your first 2 months'],
+                ['Commitment', 'None — cancel any time'],
+                ['Spots remaining', 'Limited — closing at 100 founding members'],
+                ['Launch', 'August 2026 — be first in your market'],
+            ])}
+            ${p("When sellers go live in August, founding realtors get a 24-hour head start before listings open to everyone else. That early access is only for founding members.")}
+            ${btn(`${BASE_URL}/founding`, 'Claim My Founding Spot →')}
+            ${divider()}
+            <p style="color:#999;font-size:13px;margin:0;">Questions? Just reply to this email.<br>Andrew &amp; the RealtorFinder Team</p>
+        `;
+        try {
+            await send({ to: toEmail, subject: `Your RealtorFinder founding spot${cityLine} is still open`, html: emailWrap('Founding Realtor', body) });
+        } catch (error) { logSendgridError('Founding prospect follow-up', error); }
+    },
 };
 
 module.exports = emailService;
