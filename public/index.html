@@ -769,5 +769,36 @@
         window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
     }
 </script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "name": "RealtorFinder",
+  "url": "https://www.realtorfinder.net",
+  "logo": "https://www.realtorfinder.net/icon-192.png",
+  "description": "RealtorFinder lets home sellers post their listing for free and receive competing proposals from licensed real estate agents. Compare commissions and credentials, then choose the best fit.",
+  "sameAs": [
+    "https://www.facebook.com/realtorfinder",
+    "https://www.instagram.com/realtorfinder",
+    "https://www.linkedin.com/company/realtorfinder"
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "name": "RealtorFinder",
+  "url": "https://www.realtorfinder.net",
+  "potentialAction": {
+    "@type": "SearchAction",
+    "target": {
+      "@type": "EntryPoint",
+      "urlTemplate": "https://www.realtorfinder.net/search?q={search_term_string}"
+    },
+    "query-input": "required name=search_term_string"
+  }
+}
+</script>
 </body>
 </html>
