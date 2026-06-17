@@ -1104,7 +1104,8 @@
 
     // Live founding spots + social proof
     const TOTAL = 100;
-    fetch('/api/realtors/founding-count')
+    const countUrl = '/api/realtors/founding-count' + (cityName ? '?city=' + encodeURIComponent(cityName) : '');
+    fetch(countUrl)
         .then(r => r.json())
         .then(data => {
             const claimed = Math.min(data.claimed || 0, TOTAL);
@@ -1115,12 +1116,18 @@
             document.getElementById('spots-text').textContent = `${claimed} of ${TOTAL} spots claimed`;
             setTimeout(() => { document.getElementById('spots-fill').style.width = pct + '%'; }, 400);
 
-            // Social proof
-            if (claimed > 0) {
+            // City-specific social proof takes priority
+            const cityClaimed = data.city_claimed || 0;
+            const socialCount = (cityName && cityClaimed > 0) ? cityClaimed : claimed;
+            const socialLabel = (cityName && cityClaimed > 0)
+                ? `${cityClaimed} realtor${cityClaimed !== 1 ? 's' : ''} from ${cityName} already in the founding cohort`
+                : `${claimed} realtor${claimed !== 1 ? 's' : ''} already in the founding cohort`;
+
+            if (socialCount > 0) {
                 const initials = ['JS','MR','AK','TL','RP','SE','DM','CB'];
                 const colors = ['#0A2540','#1a4a7a','#2d6a9f','#FF6B35','#e85d2e','#c44d25'];
                 const avatarEl = document.getElementById('social-proof-avatars');
-                const count = Math.min(claimed, 5);
+                const count = Math.min(socialCount, 5);
                 for (let i = 0; i < count; i++) {
                     const d = document.createElement('div');
                     d.className = 'social-proof-avatar';
@@ -1128,14 +1135,46 @@
                     d.textContent = initials[i % initials.length];
                     avatarEl.appendChild(d);
                 }
-                document.getElementById('social-proof-text').textContent =
-                    `${claimed} realtor${claimed !== 1 ? 's' : ''} already in the founding cohort`;
+                document.getElementById('social-proof-text').textContent = socialLabel;
                 document.getElementById('social-proof').style.display = 'flex';
             }
         })
         .catch(() => {
             document.getElementById('spots-text').textContent = 'Limited spots remaining';
         });
+
+    // ── Funnel tracking ──────────────────────────────────────────────────────
+    // Track first form interaction
+    let formStarted = false;
+    document.getElementById('join-form').addEventListener('focusin', function () {
+        if (formStarted) return;
+        formStarted = true;
+        if (typeof gtag !== 'undefined') gtag('event', 'founding_form_start', { city: citySlug || 'generic', source: 'founding_page' });
+    }, { once: true });
+
+    // Track scroll depth milestones
+    const scrollMilestones = { 25: false, 50: false, 75: false, 90: false };
+    window.addEventListener('scroll', function () {
+        const pctScrolled = Math.round((window.scrollY / (document.body.scrollHeight - window.innerHeight)) * 100);
+        [25, 50, 75, 90].forEach(m => {
+            if (!scrollMilestones[m] && pctScrolled >= m) {
+                scrollMilestones[m] = true;
+                if (typeof gtag !== 'undefined') gtag('event', 'scroll_depth', { depth: m, city: citySlug || 'generic' });
+            }
+        });
+    }, { passive: true });
+
+    // Track CTA visibility (did they see the form?)
+    if ('IntersectionObserver' in window) {
+        const formEl = document.getElementById('join-form');
+        if (formEl) {
+            new IntersectionObserver((entries) => {
+                if (entries[0].isIntersecting) {
+                    if (typeof gtag !== 'undefined') gtag('event', 'founding_form_seen', { city: citySlug || 'generic' });
+                }
+            }, { threshold: 0.5 }).observe(formEl);
+        }
+    }
 
     // Sticky CTA on scroll (mobile)
     let stickyShown = false;
