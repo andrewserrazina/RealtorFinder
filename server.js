@@ -10303,6 +10303,128 @@ _schemaMigrations.push(
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS ambassador_expires_at TIMESTAMPTZ`
 );
 
+_schemaMigrations.push(`
+INSERT INTO blog_posts (slug, title, excerpt, author, category, read_time_minutes, content, is_published, published_at)
+VALUES (
+    'why-new-england-realtors-are-joining-realtorfinder-before-launch',
+    'Why New England Realtors Are Joining RealtorFinder Before the Public Launch',
+    'The first 100 agents to join get founding benefits that never go away. Here''s what''s driving early adoption — and why the timing matters.',
+    'RealtorFinder Editorial Team',
+    'Realtor Resources',
+    6,
+    $blog1$<p>When a new real estate platform opens its doors, most agents take a wait-and-see approach. Reasonable — there have been enough overpromised proptech plays to justify skepticism. So why are experienced New England realtors signing up for RealtorFinder months before sellers even go live?</p>
+
+<p>We asked a few of our founding members. The answers were more practical than we expected.</p>
+
+<h2>The Model Makes Sense</h2>
+
+<p>RealtorFinder flips the traditional listing acquisition process. Instead of agents cold-calling homeowners or farming neighborhoods hoping someone is thinking of selling, sellers post their home on the platform and agents submit proposals to represent them. Commission rate, marketing strategy, experience, reviews — all presented side by side so the seller can make a real comparison.</p>
+
+<p>For agents, that means pitching motivated sellers who have already decided to list. No more chasing people who aren't ready. No more competing with whoever called first. You compete on the quality of your proposal — and the best agents win more consistently.</p>
+
+<p>"I spend a huge amount of time prospecting for listings that may or may not materialize," one Boston-based agent told us. "The idea of submitting proposals to sellers who are already committed to listing — that's a much better use of my time."</p>
+
+<h2>First-Mover Advantage Is Real in Local Markets</h2>
+
+<p>New England real estate markets are dense and relationship-driven. In Boston, Worcester, Hartford, or Providence, being known as the agent who was first on a new platform — and who helped shape how it works in your market — carries weight. Sellers trust agents who are ahead of the curve.</p>
+
+<p>Founding members get a 24-hour head start on every new listing before it opens to the broader agent pool. In a competitive market, that window matters. By the time most agents see a listing, founding members have already submitted their proposal.</p>
+
+<h2>The Founding Benefits Are Locked In Permanently</h2>
+
+<p>The founding program runs through July 31, 2026 or until all 100 spots are filled. What founding members get:</p>
+
+<ul>
+<li><strong>Two months free</strong> on the Professional plan when listings launch in August 2026</li>
+<li><strong>Permanent rate lock</strong> — your subscription price never increases, even as rates rise for new members</li>
+<li><strong>Founding Realtor badge</strong> on your public profile — visible to every seller who views you</li>
+<li><strong>24-hour listing head start</strong> — new listings open to founding members a full day before everyone else</li>
+<li><strong>Direct line to the founding team</strong> — product decisions made with your input during the early period</li>
+</ul>
+
+<p>These aren't introductory offers that expire. They're permanent benefits tied to founding member status.</p>
+
+<h2>Why August 2026?</h2>
+
+<p>RealtorFinder is launching seller listings in August 2026. Between now and then, founding agents complete their profiles, set their service areas, and position themselves to be first in front of motivated sellers the moment they go live.</p>
+
+<p>The agents joining now aren't betting on hype. They're buying time — time to build their profile, establish their presence on the platform, and be ready to move the moment listings open.</p>
+
+<h2>Is It Worth Signing Up Now?</h2>
+
+<p>That depends on your market and your appetite for early adoption. If you work the Greater Boston area, the Hartford metro, Providence, the Cape, or any of the other New England markets we're launching in, and you consistently compete for listings — the founding math is straightforward. Two months free on Professional is worth $249. A permanent rate lock is worth considerably more over the life of your subscription. And a 24-hour head start on every listing in your market is the kind of structural advantage that compounds.</p>
+
+<p>If you're skeptical of new platforms generally, that's fair. Take a look at how the platform works, talk to agents who've joined, and decide for yourself.</p>
+
+<p>Founding spots are capped at 100. Once they're gone, they're gone — new members join at standard pricing with no head start and no founding badge.</p>
+
+<p><a href="/founding" style="color:#FF6B35;font-weight:700;">See if your market has spots available →</a></p>$blog1$,
+    TRUE,
+    NOW()
+)
+ON CONFLICT (slug) DO NOTHING
+`);
+
+_schemaMigrations.push(`
+INSERT INTO blog_posts (slug, title, excerpt, author, category, read_time_minutes, content, is_published, published_at)
+VALUES (
+    'end-of-cold-calling-motivated-sellers-new-england-realtors',
+    'The End of Cold Calling: How Motivated Sellers Are Changing Real Estate in New England',
+    'Cold calling is dying. Zillow leads are expensive and non-exclusive. A new model is emerging — and the agents adapting early are winning more listings on merit.',
+    'RealtorFinder Editorial Team',
+    'Realtor Resources',
+    7,
+    $blog2$<p>Ask any experienced New England realtor what the hardest part of their business is and most won't say negotiation, or contracts, or even difficult clients. They'll say finding listings.</p>
+
+<p>The listing side of the business has always been the hard side. You can be an extraordinary agent — skilled negotiator, deep market knowledge, real track record — and still spend a disproportionate amount of time on prospecting activities that have nothing to do with those skills. Cold calls. Door knocking. Farming mailers. Expired listings. The grind of trying to find sellers before your competition does.</p>
+
+<p>That model is under pressure. Here's why — and what's replacing it.</p>
+
+<h2>Cold Calling Is Losing Its Effectiveness</h2>
+
+<p>It was never pleasant. Now it's increasingly ineffective. Voicemail screens unknown numbers. Spam filters catch most ringless voicemail drops. The TCPA has tightened restrictions on automated dialing. And homeowners who are genuinely thinking about selling have Google, Zillow, and dozens of other resources to research the process before they talk to anyone.</p>
+
+<p>The cold call worked when it created information asymmetry — when homeowners needed agents to understand market value, process, and pricing. That asymmetry is largely gone. Homeowners come to the conversation informed. The cold call now interrupts their process rather than starting it.</p>
+
+<h2>Paid Lead Platforms Have a Structural Problem</h2>
+
+<p>Zillow Premier Agent, Realtor.com, and similar platforms sell leads — but they sell the same lead to multiple agents. You pay for a contact who is simultaneously being called by three of your competitors. The conversion rates are low, the cost per acquisition is high, and there's no relationship foundation to build on.</p>
+
+<p>For the buyer side, this model is awkward but functional. For listings, it's worse — sellers don't want to be contacted by four agents at once. The experience is off-putting and it doesn't help the agent who actually deserves the listing.</p>
+
+<h2>The Seller Behavior Shift</h2>
+
+<p>Here's what's actually happening: motivated sellers are increasingly self-directing their search for a listing agent. They research agents online before reaching out. They read reviews. They compare commission rates. They look at recent sales. By the time they contact an agent, they've often made a shortlist.</p>
+
+<p>That behavior shift creates an opportunity. If sellers are going to research and compare agents anyway, a platform that formalizes that process — where sellers post their home and agents submit structured proposals — aligns with how sellers already want to operate. It puts the comparison in one place and lets the best proposal win.</p>
+
+<h2>Proposal-Based Listing Acquisition</h2>
+
+<p>RealtorFinder is built on this model. Sellers post their listing — address, price range, timeline — and licensed agents in their area submit proposals. Each proposal includes the agent's commission rate, marketing plan, relevant experience, and a personal note. Sellers compare them side by side and choose.</p>
+
+<p>For agents, this is a fundamentally different kind of competition. You're not racing to be first to call. You're not paying per contact regardless of outcome. You're competing on the substance of your pitch — which is exactly the kind of competition that rewards agents who are genuinely good at what they do.</p>
+
+<p>"I've been in this business for eleven years," one Worcester-based agent told us. "I know how to win a listing when I'm in the room. The problem has always been getting in the room. This changes that equation."</p>
+
+<h2>What This Means for New England Agents</h2>
+
+<p>New England markets — Boston, Worcester, Hartford, Providence, the Cape — are mature, competitive markets where relationships and reputation matter. They're also markets where sellers have real choices and do real research. The proposal model fits these markets well.</p>
+
+<p>The agents who will do best on a platform like this are the ones with strong track records, clear marketing strategies, and the ability to articulate what makes them different. That's not every agent — but for agents who have those things, it's a significant advantage over a cold-calling model that treats every agent as interchangeable.</p>
+
+<h2>The Transition</h2>
+
+<p>Cold calling won't disappear overnight. Neither will paid lead platforms. But the direction of travel is clear: sellers have more information, more leverage, and more options than they did ten years ago. The acquisition model that serves agents best in that environment is one that leads with quality rather than speed.</p>
+
+<p>If you're a New England realtor evaluating how you generate listings over the next three to five years, proposal-based platforms are worth understanding now — before they're crowded.</p>
+
+<p><a href="/founding" style="color:#FF6B35;font-weight:700;">See how RealtorFinder''s founding program works →</a></p>$blog2$,
+    TRUE,
+    NOW()
+)
+ON CONFLICT (slug) DO NOTHING
+`);
+
 // Auto-expire proposals whose expires_at has passed
 async function runProposalExpiryJob() {
     try {
