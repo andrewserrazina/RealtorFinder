@@ -467,9 +467,9 @@
                         <input type="text" name="companyName" placeholder="e.g. Sunrise Realty Group" maxlength="255">
                     </div>
                     <div class="form-group" id="licenseGroup" style="display:none;">
-                        <label>Real Estate License Number</label>
+                        <label>Real Estate License Number <span style="font-weight:400;color:#6b7280;">(optional)</span></label>
                         <input type="text" name="licenseNumber" placeholder="e.g. 9012345" maxlength="50">
-                        <small style="color:#6b7280;font-size:0.8rem;">Used to verify your license before activation. Your account will be reviewed within 1 business day.</small>
+                        <small style="color:#6b7280;font-size:0.8rem;">Adding your license number speeds up profile verification and unlocks a verified badge.</small>
                     </div>
                     <div class="form-group">
                         <label>First Name</label>
@@ -489,11 +489,10 @@
                     </div>
                     <div class="form-group">
                         <label>Password</label>
-                        <input type="password" name="password" placeholder="At least 8 characters" required minlength="8">
-                    </div>
-                    <div class="form-group">
-                        <label>Confirm Password</label>
-                        <input type="password" name="confirmPassword" placeholder="Re-enter password" required minlength="8">
+                        <div style="position:relative;">
+                            <input type="password" name="password" id="signupPassword" placeholder="At least 8 characters" required minlength="8" style="width:100%;padding-right:3rem;">
+                            <button type="button" onclick="togglePassword('signupPassword','pwToggle')" id="pwToggle" style="position:absolute;right:0.75rem;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#6b7280;font-size:0.85rem;padding:0;">Show</button>
+                        </div>
                     </div>
                     <div class="form-group" style="margin-bottom:0.75rem;">
                         <label style="display:flex;align-items:flex-start;gap:10px;font-weight:400;cursor:pointer;">
@@ -508,6 +507,7 @@
                         </label>
                     </div>
                     <button type="submit" class="btn btn-primary">Create Account</button>
+                    <p style="text-align:center;font-size:0.8rem;color:#9ca3af;margin-top:0.75rem;">Free to start · No credit card required · Cancel any time</p>
                 </form>
                 <div class="social-divider"><span>or</span></div>
                 <button type="button" class="btn-google" id="googleBtnSignup" onclick="triggerGoogleSignIn('signup')">
@@ -523,6 +523,18 @@
 
     <script>
         const API_BASE_URL = window.location.origin + '/api';
+
+        function togglePassword(inputId, btnId) {
+            const input = document.getElementById(inputId);
+            const btn = document.getElementById(btnId);
+            if (input.type === 'password') {
+                input.type = 'text';
+                btn.textContent = 'Hide';
+            } else {
+                input.type = 'password';
+                btn.textContent = 'Show';
+            }
+        }
 
         // Tab switching
         document.querySelectorAll('.tab').forEach(tab => {
@@ -622,13 +634,6 @@
             data.termsAccepted = data.termsAccepted === 'on';
             data.marketingConsent = data.marketingConsent === 'on';
 
-            // Validate passwords match
-            if (data.password !== data.confirmPassword) {
-                showError('Passwords do not match');
-                return;
-            }
-
-            delete data.confirmPassword;
             
             const submitBtn = e.target.querySelector('button[type="submit"]');
             submitBtn.disabled = true;

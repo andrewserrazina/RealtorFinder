@@ -8604,7 +8604,7 @@ nav{background:var(--primary);padding:0 2rem;display:flex;align-items:center;jus
 footer{background:var(--primary);color:rgba(255,255,255,0.5);text-align:center;padding:2rem;font-size:0.875rem;}
 footer a{color:rgba(255,255,255,0.6);text-decoration:none;margin:0 0.75rem;}
 footer a:hover{color:white;}
-@media(max-width:640px){.agent-card{grid-template-columns:48px 1fr;}.agent-cta{display:none;}.nav-links{display:none;}}
+@media(max-width:640px){.agent-card{grid-template-columns:48px 1fr;row-gap:0.25rem;}.agent-cta{font-size:0.8rem;padding-left:0;grid-column:2;}.nav-links{display:none;}}
 </style>
 </head>
 <body>
@@ -8618,10 +8618,11 @@ footer a:hover{color:white;}
   </div>
 </nav>
 <div class="hero">
-  <div class="breadcrumb"><a href="/">Home</a> › <a href="/locations">Markets</a> › ${cityName}, ${stateCode}</div>
+  <div class="breadcrumb"><a href="/">Home</a> › <a href="/realtors">All Markets</a> › ${cityName}, ${stateCode}</div>
   <div class="hero-label">Local Agents</div>
   <h1>Top Realtors in ${cityName}, ${stateCode}</h1>
   <p>Verified agents serving ${cityName} and surrounding areas. List your home free and let them compete for your listing.</p>
+  <a href="/login?tab=signup" style="display:inline-block;background:var(--accent);color:white;padding:12px 28px;border-radius:8px;font-weight:700;text-decoration:none;font-size:0.95rem;margin-bottom:1.5rem;">List My Home Free →</a>
   ${realtors.length > 0 || activeListings > 0 ? `
   <div class="hero-stats">
     ${realtors.length > 0 ? `<div class="hero-stat"><div class="hero-stat-val">${realtors.length}</div><div class="hero-stat-label">Active agents</div></div>` : ''}
