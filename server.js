@@ -1007,6 +1007,38 @@ app.post('/api/buyer-requests/:id/select-realtor', auth.requireAuth, async (req,
     }
 });
 
+// Buyer quick-register (used by find-agent flow — no ZIP or reCAPTCHA required)
+app.post('/api/auth/register', async (req, res) => {
+    try {
+        const { email, password, firstName, lastName } = req.body;
+        if (!email || !password || !firstName || !lastName) {
+            return res.status(400).json({ error: 'All fields required' });
+        }
+        if (password.length < 8) {
+            return res.status(400).json({ error: 'Password must be at least 8 characters' });
+        }
+        const existing = await pool.query(`SELECT id FROM users WHERE email = $1`, [email.toLowerCase().trim()]);
+        if (existing.rows.length > 0) {
+            return res.status(409).json({ error: 'An account with this email already exists' });
+        }
+        const bcrypt = require('bcrypt');
+        const passwordHash = await bcrypt.hash(password, 12);
+        const { rows: [user] } = await pool.query(
+            `INSERT INTO users (email, password_hash, user_type, first_name, last_name, is_approved, is_active, created_at)
+             VALUES ($1, $2, 'buyer', $3, $4, TRUE, TRUE, NOW())
+             RETURNING id, email, first_name, user_type`,
+            [email.toLowerCase().trim(), passwordHash, firstName.trim(), lastName.trim()]
+        );
+        req.session.userId = user.id;
+        req.session.userType = 'buyer';
+        req.session.isApproved = true;
+        res.json({ ok: true, userId: user.id, userType: 'buyer' });
+    } catch (err) {
+        console.error('Register error:', err.message);
+        res.status(500).json({ error: 'Registration failed. Please try again.' });
+    }
+});
+
 // Login
 app.post('/api/auth/login', async (req, res) => {
     try {
