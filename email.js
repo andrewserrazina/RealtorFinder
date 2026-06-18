@@ -827,7 +827,7 @@ const emailService = {
                     <p style="color:#444;font-size:14px;line-height:1.7;margin:0;">Sellers read every proposal. They compare commission rates, cover notes, and agent profiles. The best agents — not the highest spenders — win listings on RealtorFinder. That's the whole point.</p>
                 </div>
             </div>
-            ${p("We're launching in August 2026. As a waitlist member, you'll get early access and founding member benefits. More on that in the next few days.")}
+            ${p("We're launching in August 2026. As a RealtorFinder member, you'll get early access to every seller listing the moment it goes live — 24 hours before anyone else. More on what to expect in the next few days.")}
             ${btn(`${BASE_URL}/realtors`, 'See Everything RealtorFinder Offers Realtors')}
             ${divider()}
             <p style="color:#999;font-size:13px;margin:0;">The RealtorFinder Team</p>
