@@ -1791,6 +1791,14 @@
                     <div id="winRateBars" style="display:flex;align-items:flex-end;gap:12px;height:80px;"></div>
                     <div id="winRateLabels" style="display:flex;gap:12px;margin-top:6px;font-size:0.72rem;color:#999;"></div>
                 </div>
+
+                <!-- Commission Intelligence -->
+                <div id="commissionIntel" style="display:none;background:#fff;border:1px solid var(--border);border-radius:12px;padding:1.25rem;margin-top:1.5rem;">
+                    <h3 style="font-size:1rem;font-weight:700;color:var(--ink);margin:0 0 0.25rem;">💡 Commission Intelligence</h3>
+                    <p style="font-size:0.82rem;color:#666;margin-bottom:1rem;">How your commission rates compare to accepted proposals on this platform.</p>
+                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.75rem;" id="commissionIntelGrid"></div>
+                    <div id="commissionIntelTip" style="margin-top:1rem;padding:0.75rem 1rem;border-radius:8px;font-size:0.875rem;font-weight:600;"></div>
+                </div>
             </div>
         </section>
 
@@ -2846,6 +2854,20 @@ Worth checking out.</div>
             }
         }
 
+        // Live polling: refresh messages/pipeline every 30s when that tab is active
+        let _pollTimer = null;
+        function startPoll(view) {
+            stopPoll();
+            _pollTimer = setInterval(() => {
+                if (view === 'messages') {
+                    loadUnreadMsgCount();
+                    if (activeConvUserId) loadThread();
+                }
+                if (view === 'pipeline') loadMyProposals();
+            }, 30000);
+        }
+        function stopPoll() { if (_pollTimer) { clearInterval(_pollTimer); _pollTimer = null; } }
+
         // Tab Navigation
         document.querySelectorAll('.tab').forEach(tab => {
             tab.addEventListener('click', () => {
@@ -2863,6 +2885,8 @@ Worth checking out.</div>
                     loadMyProposals();
                     loadShowings();
                 }
+                if (view === 'messages' || view === 'pipeline') startPoll(view);
+                else stopPoll();
                 if (view === 'profile-hub') {
                     loadEmailAlerts();
                     loadProfileCompleteness();
@@ -3521,10 +3545,10 @@ Worth checking out.</div>
                             <span class="status-badge status-accepted" style="margin-top:0.75rem;display:inline-block;">🏆 You're the agent!</span>
                             ${bid.owner_name ? `<div style="margin-top:0.75rem;font-size:0.9rem;color:#444;"><strong>Seller:</strong> ${bid.owner_name} · <a href="mailto:${bid.owner_email}">${bid.owner_email}</a> · <a href="tel:${bid.owner_phone}">${bid.owner_phone}</a></div>` : ''}
                         </div>
-                        ${bid.owner_email ? `
-                        <div>
-                            <a href="mailto:${bid.owner_email}" class="btn btn-primary" style="text-align:center;">Contact Seller</a>
-                        </div>` : ''}
+                        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.75rem;">
+                            ${bid.owner_email ? `<a href="mailto:${bid.owner_email}" class="btn btn-primary" style="text-align:center;">Contact Seller</a>` : ''}
+                            <button onclick='showWonNextSteps(${JSON.stringify({address:(bid.address||"")+(bid.city?", "+bid.city:"")})})' style="background:var(--success);color:white;border:none;border-radius:6px;padding:0.4rem 0.875rem;font-size:0.82rem;font-weight:600;cursor:pointer;font-family:inherit;">🎯 Next Steps</button>
+                        </div>
                     </div>
                 `;
             }).join('');
@@ -3534,6 +3558,40 @@ Worth checking out.</div>
                 const el = document.getElementById(`won-bid-${bid.id}`);
                 if (el) loadDealForWonListing(bid.id, el.querySelector('.bid-info'));
             });
+        }
+
+        function showWonNextSteps(listing) {
+            const existing = document.getElementById('wonNextStepsModal');
+            if (existing) existing.remove();
+            const overlay = document.createElement('div');
+            overlay.id = 'wonNextStepsModal';
+            overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1050;display:flex;align-items:center;justify-content:center;padding:1rem;';
+            overlay.innerHTML = `
+                <div style="background:white;border-radius:16px;padding:2rem;max-width:480px;width:100%;position:relative;max-height:90vh;overflow-y:auto;">
+                    <button onclick="document.getElementById('wonNextStepsModal').remove()" style="position:absolute;top:1rem;right:1rem;background:none;border:none;font-size:1.4rem;cursor:pointer;color:#9ca3af;">&times;</button>
+                    <div style="text-align:center;margin-bottom:1.5rem;">
+                        <div style="font-size:3rem;margin-bottom:0.5rem;">🎉</div>
+                        <h2 style="font-family:'Crimson Pro',serif;font-size:1.6rem;font-weight:700;color:var(--ink);margin-bottom:0.25rem;">You Won This Listing!</h2>
+                        <p style="color:#666;font-size:0.875rem;">${esc(listing.address || 'Property')}</p>
+                    </div>
+                    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:1.25rem;margin-bottom:1.5rem;">
+                        <div style="font-weight:700;color:#15803d;font-size:0.875rem;margin-bottom:0.75rem;">NEXT STEPS</div>
+                        <div style="display:flex;flex-direction:column;gap:0.75rem;">
+                            <div style="display:flex;align-items:flex-start;gap:0.75rem;"><span style="font-size:1.1rem;margin-top:1px;">✅</span><div><div style="font-weight:600;font-size:0.875rem;">Proposal accepted</div><div style="font-size:0.8rem;color:#6b7280;">The seller has chosen you to represent their property.</div></div></div>
+                            <div style="display:flex;align-items:flex-start;gap:0.75rem;"><span style="font-size:1.1rem;margin-top:1px;">📞</span><div><div style="font-weight:600;font-size:0.875rem;">Schedule intro call</div><div style="font-size:0.8rem;color:#6b7280;">Message the seller to introduce yourself and discuss their timeline.</div></div></div>
+                            <div style="display:flex;align-items:flex-start;gap:0.75rem;"><span style="font-size:1.1rem;margin-top:1px;">📝</span><div><div style="font-weight:600;font-size:0.875rem;">Sign listing agreement</div><div style="font-size:0.8rem;color:#6b7280;">Finalize terms and get the agreement signed before listing.</div></div></div>
+                            <div style="display:flex;align-items:flex-start;gap:0.75rem;"><span style="font-size:1.1rem;margin-top:1px;">🏷️</span><div><div style="font-weight:600;font-size:0.875rem;">List the property</div><div style="font-size:0.8rem;color:#6b7280;">Prepare the listing and launch on MLS and your channels.</div></div></div>
+                            <div style="display:flex;align-items:flex-start;gap:0.75rem;"><span style="font-size:1.1rem;margin-top:1px;">🤝</span><div><div style="font-weight:600;font-size:0.875rem;">Close the deal</div><div style="font-size:0.8rem;color:#6b7280;">Work with buyers' agents and guide the seller through closing.</div></div></div>
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:0.75rem;">
+                        <button onclick="document.querySelector('[data-view=messages]').click();document.getElementById('wonNextStepsModal').remove()" style="flex:1;background:var(--accent);color:white;border:none;border-radius:8px;padding:0.75rem;font-weight:700;cursor:pointer;font-family:inherit;">Message Seller →</button>
+                        <button onclick="document.getElementById('wonNextStepsModal').remove()" style="background:#f3f4f6;color:#374151;border:none;border-radius:8px;padding:0.75rem 1.25rem;font-weight:600;cursor:pointer;font-family:inherit;">Close</button>
+                    </div>
+                </div>
+            `;
+            overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+            document.body.appendChild(overlay);
         }
 
         // ===== MAP FUNCTIONS =====
@@ -5510,6 +5568,44 @@ Worth checking out.</div>
                         }).join('');
                     }
                 }
+                // Commission intelligence
+                try {
+                    const ciRes = await fetch(`${API_BASE_URL}/analytics/realtor/commission-intel`, { credentials: 'include' });
+                    if (ciRes.ok) {
+                        const ci = await ciRes.json();
+                        if (ci && ci.myAvg !== null) {
+                            document.getElementById('commissionIntel').style.display = 'block';
+                            const diff = ci.myAvg !== null && ci.acceptedAvg !== null ? (ci.myAvg - ci.acceptedAvg).toFixed(2) : null;
+                            document.getElementById('commissionIntelGrid').innerHTML = `
+                                <div style="background:#f9fafb;border-radius:10px;padding:0.875rem;text-align:center;">
+                                    <div style="font-size:0.7rem;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:0.3rem;">Your Avg Commission</div>
+                                    <div style="font-size:1.6rem;font-weight:700;color:var(--ink);">${ci.myAvg !== null ? ci.myAvg + '%' : '—'}</div>
+                                </div>
+                                <div style="background:#f9fafb;border-radius:10px;padding:0.875rem;text-align:center;">
+                                    <div style="font-size:0.7rem;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:0.3rem;">Platform Accepted Avg</div>
+                                    <div style="font-size:1.6rem;font-weight:700;color:#059669;">${ci.acceptedAvg !== null ? ci.acceptedAvg + '%' : '—'}</div>
+                                </div>
+                                <div style="background:#f9fafb;border-radius:10px;padding:0.875rem;text-align:center;">
+                                    <div style="font-size:0.7rem;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:0.3rem;">vs. Market</div>
+                                    <div style="font-size:1.6rem;font-weight:700;color:${diff === null ? '#374151' : parseFloat(diff) > 0.1 ? '#dc2626' : parseFloat(diff) < -0.1 ? '#059669' : '#d97706'};">${diff !== null ? (parseFloat(diff) > 0 ? '+' : '') + diff + '%' : '—'}</div>
+                                </div>
+                            `;
+                            const tipEl = document.getElementById('commissionIntelTip');
+                            if (diff !== null) {
+                                if (parseFloat(diff) > 0.5) {
+                                    tipEl.style.background = '#fef2f2'; tipEl.style.color = '#991b1b';
+                                    tipEl.textContent = `⚠️ Your commissions average ${diff}% above accepted proposals. Lowering by just 0.25% could meaningfully improve your win rate.`;
+                                } else if (parseFloat(diff) < -0.1) {
+                                    tipEl.style.background = '#f0fdf4'; tipEl.style.color = '#15803d';
+                                    tipEl.textContent = `✅ Your commissions are below the accepted average — great for standing out to sellers.`;
+                                } else {
+                                    tipEl.style.background = '#fefce8'; tipEl.style.color = '#854d0e';
+                                    tipEl.textContent = `💡 Your commissions are right at the market average. A slight reduction could give you an edge on competitive listings.`;
+                                }
+                            }
+                        }
+                    }
+                } catch(e) {}
             } catch (err) { console.error('Analytics error:', err); }
         }
 
@@ -6273,7 +6369,43 @@ Worth checking out.</div>
             modal.style.display = 'flex';
             if (!_templates.length) loadTemplates();
             loadListingDocs(listingId);
+            // Load proposal stats for quality signal
+            const sigEl = document.getElementById('commissionSignal');
+            if (sigEl) { sigEl.style.display = 'none'; }
+            document.getElementById('proposalCommission').value = '';
+            fetch(`/api/listings/${listingId}/proposal-stats`, { credentials: 'include' })
+                .then(r => r.ok ? r.json() : null)
+                .then(stats => {
+                    if (!stats || stats.count === 0) return;
+                    window._proposalStats = stats;
+                    if (sigEl && stats.avgCommission) {
+                        sigEl.style.display = 'block';
+                        sigEl.style.background = '#f0f9ff';
+                        sigEl.style.color = '#0369a1';
+                        sigEl.textContent = `${stats.count} proposal${stats.count===1?'':'s'} submitted · avg commission: ${stats.avgCommission}%${stats.minCommission ? ' · lowest: ' + stats.minCommission + '%' : ''}`;
+                    }
+                }).catch(() => {});
         }
+
+        function updateCommissionSignal(val) {
+            const sigEl = document.getElementById('commissionSignal');
+            if (!sigEl || !window._proposalStats || !window._proposalStats.avgCommission) return;
+            const v = parseFloat(val);
+            if (isNaN(v)) { sigEl.style.display = 'none'; return; }
+            const avg = window._proposalStats.avgCommission;
+            sigEl.style.display = 'block';
+            if (v < avg - 0.25) {
+                sigEl.style.background = '#f0fdf4'; sigEl.style.color = '#15803d';
+                sigEl.textContent = `✅ Competitive! Your ${v}% is below the avg (${avg}%) — sellers prefer lower commissions.`;
+            } else if (v <= avg + 0.25) {
+                sigEl.style.background = '#fefce8'; sigEl.style.color = '#854d0e';
+                sigEl.textContent = `⚡ On par with the avg commission of ${avg}%. Consider going slightly lower to stand out.`;
+            } else {
+                sigEl.style.background = '#fef2f2'; sigEl.style.color = '#991b1b';
+                sigEl.textContent = `⚠️ Your ${v}% is above the avg (${avg}%). Sellers may prefer lower commissions.`;
+            }
+        }
+        window._proposalStats = null;
 
         function showSubmittedProposalModal(p, listingAddress) {
             const statusColors = { pending: '#d97706', accepted: '#059669', declined: '#dc2626', withdrawn: '#6b7280' };
@@ -7241,8 +7373,9 @@ Worth checking out.</div>
                 <input type="hidden" id="proposalListingId">
                 <div style="margin-bottom:1rem;">
                     <label style="display:block;font-weight:600;margin-bottom:0.4rem;font-size:0.9rem;">Commission % <span style="color:#ef4444;">*</span></label>
-                    <input type="number" id="proposalCommission" step="0.1" min="0.1" max="10" placeholder="e.g. 2.5" required style="width:100%;padding:10px 14px;border:1px solid #e5e7eb;border-radius:8px;font-size:0.95rem;">
+                    <input type="number" id="proposalCommission" step="0.1" min="0.1" max="10" placeholder="e.g. 2.5" required style="width:100%;padding:10px 14px;border:1px solid #e5e7eb;border-radius:8px;font-size:0.95rem;" oninput="updateCommissionSignal(this.value)">
                     <p style="font-size:0.78rem;color:#666;margin-top:4px;">Between 0.1% and 10%. Lower commission = better for seller = highlighted in green.</p>
+                    <div id="commissionSignal" style="display:none;margin-top:6px;padding:6px 10px;border-radius:6px;font-size:0.8rem;font-weight:600;"></div>
                 </div>
                 <div style="margin-bottom:1rem;">
                     <label style="display:block;font-weight:600;margin-bottom:0.4rem;font-size:0.9rem;">Timeline</label>
@@ -7613,6 +7746,7 @@ Worth checking out.</div>
       });
 
       window.addEventListener('load', syncMobBadges);
+      window.addEventListener('beforeunload', () => stopPoll());
 
       // Keyboard-aware bottom nav: shrink out of the way when soft keyboard opens
       if (window.visualViewport) {

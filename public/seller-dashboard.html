@@ -965,6 +965,100 @@
             opacity: 0.6;
             cursor: not-allowed;
         }
+
+        /* ── Mobile bottom navigation ── */
+        #sellerMobileNav { display: none; }
+
+        @media (max-width: 640px) {
+            /* Hide sidebar on mobile */
+            .sidebar { display: none !important; }
+            .main-content { margin-left: 0 !important; padding: 1rem 0.9rem !important; padding-bottom: calc(70px + env(safe-area-inset-bottom, 12px)) !important; }
+            header { padding: 0.75rem 0 !important; }
+            .header-container { padding: 0 1rem !important; }
+            .user-name { display: none !important; }
+
+            #sellerMobileNav {
+                display: flex;
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                background: white;
+                border-top: 1px solid #e1ddd7;
+                z-index: 200;
+                padding-bottom: env(safe-area-inset-bottom, 0px);
+                box-shadow: 0 -4px 20px rgba(0,0,0,0.08);
+            }
+            .smob-item {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                padding: 0.55rem 0.25rem 0.5rem;
+                cursor: pointer;
+                color: #888;
+                font-size: 0.62rem;
+                font-weight: 600;
+                border: none;
+                background: none;
+                font-family: 'DM Sans', sans-serif;
+                position: relative;
+                transition: color 0.15s;
+                -webkit-tap-highlight-color: transparent;
+            }
+            .smob-item.active { color: var(--accent); }
+            .smob-icon { font-size: 1.3rem; line-height: 1; margin-bottom: 0.2rem; }
+            .smob-badge {
+                position: absolute;
+                top: 0.3rem;
+                right: calc(50% - 0.9rem);
+                background: var(--accent);
+                color: white;
+                border-radius: 50%;
+                width: 15px;
+                height: 15px;
+                font-size: 0.58rem;
+                font-weight: 700;
+                display: none;
+                align-items: center;
+                justify-content: center;
+            }
+            .smob-badge.visible { display: flex; }
+
+            /* More sheet */
+            #sellerMoreSheet {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                background: white;
+                border-radius: 20px 20px 0 0;
+                box-shadow: 0 -8px 40px rgba(0,0,0,0.18);
+                z-index: 300;
+                padding: 0 0 env(safe-area-inset-bottom, 16px);
+                transform: translateY(100%);
+                transition: transform 0.28s cubic-bezier(0.32,0.72,0,1);
+            }
+            #sellerMoreSheet.open { transform: translateY(0); }
+            #sellerMoreOverlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 299; }
+            #sellerMoreOverlay.open { display: block; }
+            .smore-handle { width: 36px; height: 4px; background: #d1d5db; border-radius: 2px; margin: 12px auto 0; }
+            .smore-title { font-weight: 700; font-size: 1rem; color: #1a1a1a; padding: 1rem 1.5rem 0.75rem; border-bottom: 1px solid #e1ddd7; }
+            .smore-item {
+                display: flex; align-items: center; gap: 1rem;
+                padding: 1rem 1.5rem; cursor: pointer;
+                border-bottom: 1px solid #f3f4f6;
+                font-weight: 600; font-size: 0.95rem; color: #1a1a1a;
+                -webkit-tap-highlight-color: transparent;
+            }
+            .smore-item:last-child { border-bottom: none; }
+            .smore-icon { font-size: 1.4rem; width: 28px; text-align: center; }
+            .smore-logout { display: flex; align-items: center; gap: 1rem; padding: 1rem 1.5rem; cursor: pointer; color: #dc2626; font-weight: 600; font-size: 0.95rem; }
+
+            /* Modals: bottom-sheet on mobile */
+            form input, form select, form textarea { font-size: max(16px, 0.95rem) !important; }
+        }
     </style>
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#0A2540">
@@ -1038,7 +1132,7 @@
                         <span class="nav-icon">🏠</span>
                         <span>Showings</span>
                     </div>
-                    <div class="nav-item" onclick="window.location.href='/inbox'">
+                    <div class="nav-item" data-view="messages">
                         <span class="nav-icon">💬</span>
                         <span>Messages</span>
                         <span class="badge" id="msgBadge" style="display:none;">0</span>
@@ -1632,6 +1726,17 @@
         }
 
         // Navigation
+        let _sellerPollTimer = null;
+        function startSellerPoll(view) {
+            if (_sellerPollTimer) { clearInterval(_sellerPollTimer); _sellerPollTimer = null; }
+            if (view === 'messages') {
+                _sellerPollTimer = setInterval(() => {
+                    loadUnreadMsgCount && loadUnreadMsgCount();
+                    if (typeof activeConvUserId !== 'undefined' && activeConvUserId) loadThread && loadThread();
+                }, 30000);
+            }
+        }
+
         document.querySelectorAll('.nav-item[data-view]').forEach(item => {
             item.addEventListener('click', () => {
                 const view = item.dataset.view;
@@ -1639,12 +1744,13 @@
                 item.classList.add('active');
                 document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
                 document.getElementById(`${view}-view`).classList.add('active');
-                
+
                 if (view === 'realtors') { loadProposals(); loadOffers(); }
                 if (view === 'buyer-offers') loadBuyerOffers();
                 if (view === 'messages') loadConversations();
                 if (view === 'showings') loadSellerShowings();
                 if (view === 'settings') { loadNotifPrefs(); sellerInitPushToggle(); }
+                startSellerPoll(view);
             });
         });
 
@@ -3153,8 +3259,63 @@
             } catch(e) { console.error('loadProposals error:', e); }
         }
 
+        function showSellerNextSteps(realtorName) {
+            const overlay = document.createElement('div');
+            overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1050;display:flex;align-items:center;justify-content:center;padding:1rem;';
+            overlay.innerHTML = `
+                <div style="background:white;border-radius:16px;padding:2rem;max-width:480px;width:100%;max-height:90vh;overflow-y:auto;">
+                    <div style="text-align:center;margin-bottom:1.5rem;">
+                        <div style="font-size:3rem;margin-bottom:0.5rem;">🎉</div>
+                        <h2 style="font-family:'Crimson Pro',serif;font-size:1.6rem;font-weight:700;color:#1a1a1a;margin-bottom:0.4rem;">You're all set!</h2>
+                        <p style="color:#6b7280;font-size:0.9rem;"><strong>${esc(realtorName)}</strong> has been notified and will reach out shortly.</p>
+                    </div>
+                    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:1.25rem;margin-bottom:1.5rem;">
+                        <div style="font-weight:700;color:#15803d;font-size:0.82rem;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.75rem;">WHAT HAPPENS NEXT</div>
+                        <div style="display:flex;flex-direction:column;gap:0.75rem;">
+                            <div style="display:flex;gap:0.75rem;align-items:flex-start;"><span style="font-size:1.1rem;">✅</span><div><strong style="font-size:0.875rem;">Proposal accepted</strong><div style="font-size:0.8rem;color:#6b7280;">All other proposals have been declined automatically.</div></div></div>
+                            <div style="display:flex;gap:0.75rem;align-items:flex-start;"><span style="font-size:1.1rem;">📞</span><div><strong style="font-size:0.875rem;">Expect a call or message</strong><div style="font-size:0.8rem;color:#6b7280;">Your realtor will introduce themselves and discuss your goals.</div></div></div>
+                            <div style="display:flex;gap:0.75rem;align-items:flex-start;"><span style="font-size:1.1rem;">📝</span><div><strong style="font-size:0.875rem;">Sign the listing agreement</strong><div style="font-size:0.8rem;color:#6b7280;">Formalize the relationship and commission terms.</div></div></div>
+                            <div style="display:flex;gap:0.75rem;align-items:flex-start;"><span style="font-size:1.1rem;">🏷️</span><div><strong style="font-size:0.875rem;">Get listed on the MLS</strong><div style="font-size:0.8rem;color:#6b7280;">Your realtor will prepare and launch your property listing.</div></div></div>
+                            <div style="display:flex;gap:0.75rem;align-items:flex-start;"><span style="font-size:1.1rem;">🤝</span><div><strong style="font-size:0.875rem;">Close the deal</strong><div style="font-size:0.8rem;color:#6b7280;">Work with your realtor to review offers and close at the best price.</div></div></div>
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:0.75rem;">
+                        <button onclick="document.querySelector('[data-view=messages]').click();this.closest('[style]').parentElement && this.closest('[style]').parentElement.remove ? this.closest('[style]').remove() : null" style="flex:1;background:var(--accent);color:white;border:none;border-radius:8px;padding:0.75rem;font-weight:700;cursor:pointer;font-family:inherit;">Message Realtor →</button>
+                        <button onclick="this.closest('[style*=fixed]').remove()" style="background:#f3f4f6;color:#374151;border:none;border-radius:8px;padding:0.75rem 1.25rem;font-weight:600;cursor:pointer;font-family:inherit;">Done</button>
+                    </div>
+                </div>
+            `;
+            overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+            document.body.appendChild(overlay);
+        }
+
+        function showAcceptConfirmModal(realtorName) {
+            return new Promise(resolve => {
+                const overlay = document.createElement('div');
+                overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1050;display:flex;align-items:center;justify-content:center;padding:1rem;';
+                overlay.innerHTML = `
+                    <div style="background:white;border-radius:16px;padding:2rem;max-width:420px;width:100%;">
+                        <div style="text-align:center;margin-bottom:1.5rem;">
+                            <div style="font-size:2.5rem;margin-bottom:0.75rem;">🤝</div>
+                            <h2 style="font-family:'Crimson Pro',serif;font-size:1.6rem;font-weight:700;color:#1a1a1a;margin-bottom:0.5rem;">Accept Proposal?</h2>
+                            <p style="color:#6b7280;font-size:0.9rem;">You're about to accept <strong>${esc(realtorName || 'this realtor')}</strong>'s proposal.<br>All other proposals will be automatically declined.</p>
+                        </div>
+                        <div style="display:flex;gap:0.75rem;">
+                            <button id="acceptConfirmYes" style="flex:1;background:var(--accent);color:white;border:none;border-radius:8px;padding:0.875rem;font-weight:700;cursor:pointer;font-size:1rem;font-family:inherit;">Yes, Accept</button>
+                            <button id="acceptConfirmNo" style="background:#f3f4f6;color:#374151;border:none;border-radius:8px;padding:0.875rem 1.25rem;font-weight:600;cursor:pointer;font-family:inherit;">Cancel</button>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(overlay);
+                overlay.querySelector('#acceptConfirmYes').onclick = () => { overlay.remove(); resolve(true); };
+                overlay.querySelector('#acceptConfirmNo').onclick = () => { overlay.remove(); resolve(false); };
+                overlay.addEventListener('click', e => { if (e.target === overlay) { overlay.remove(); resolve(false); } });
+            });
+        }
+
         async function acceptProposal(proposalId, listingId, realtorId, realtorName) {
-            if (!confirm('Accept this proposal? All other proposals for this listing will be declined.')) return;
+            const confirmed = await showAcceptConfirmModal(realtorName);
+            if (!confirmed) return;
             try {
                 const res = await fetch(`/api/proposals/${proposalId}/accept`, {
                     method: 'PUT', credentials: 'include',
@@ -3166,8 +3327,8 @@
                     loadDashboard();
                     const rid = data.realtor_id || realtorId;
                     const rname = data.realtor_name || realtorName || 'this realtor';
-                    if (rid) showReviewPrompt(rid, rname, listingId);
-                    else showToast('Proposal accepted! The realtor has been notified.');
+                    showSellerNextSteps(rname);
+                    if (rid) setTimeout(() => showReviewPrompt(rid, rname, listingId), 6000);
                 } else {
                     const d = await res.json();
                     alert(d.error || 'Failed to accept proposal');
@@ -3968,6 +4129,72 @@
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
       }
+    </script>
+
+    <!-- Seller Mobile Bottom Nav -->
+    <nav id="sellerMobileNav">
+        <button class="smob-item active" data-smob="overview" onclick="sellerMobNav('overview',this)">
+            <span class="smob-icon">🏠</span><span>Overview</span>
+        </button>
+        <button class="smob-item" data-smob="listings" onclick="sellerMobNav('listings',this)">
+            <span class="smob-icon">📋</span><span>Listings</span>
+        </button>
+        <button class="smob-item" data-smob="realtors" onclick="sellerMobNav('realtors',this)">
+            <span class="smob-icon">👔</span><span>Realtors</span>
+            <span class="smob-badge" id="smobProposalBadge"></span>
+        </button>
+        <button class="smob-item" data-smob="messages" onclick="sellerMobNav('messages',this)">
+            <span class="smob-icon">💬</span><span>Messages</span>
+            <span class="smob-badge" id="smobMsgBadge"></span>
+        </button>
+        <button class="smob-item" id="sellerMoreBtn" onclick="openSellerMoreSheet()">
+            <span class="smob-icon">⋯</span><span>More</span>
+        </button>
+    </nav>
+
+    <div id="sellerMoreOverlay" onclick="closeSellerMoreSheet()"></div>
+    <div id="sellerMoreSheet">
+        <div class="smore-handle"></div>
+        <div class="smore-title">More</div>
+        <div class="smore-item" onclick="sellerMobNav('buyer-offers',null);closeSellerMoreSheet()"><span class="smore-icon">💰</span>Buyer Offers</div>
+        <div class="smore-item" onclick="sellerMobNav('showings',null);closeSellerMoreSheet()"><span class="smore-icon">📅</span>Showings</div>
+        <div class="smore-item" onclick="sellerMobNav('settings',null);closeSellerMoreSheet()"><span class="smore-icon">⚙️</span>Settings</div>
+        <div class="smore-logout" onclick="logout()"><span class="smore-icon">🚪</span>Log Out</div>
+    </div>
+
+    <script>
+    function sellerMobNav(view, btn) {
+        // Trigger the existing nav click
+        const navItem = document.querySelector(`.nav-item[data-view="${view}"]`);
+        if (navItem) navItem.click();
+        // Update bottom nav active state
+        document.querySelectorAll('.smob-item').forEach(el => el.classList.remove('active'));
+        if (btn) btn.classList.add('active');
+        else document.getElementById('sellerMoreBtn').classList.add('active');
+    }
+    function openSellerMoreSheet() {
+        document.getElementById('sellerMoreSheet').classList.add('open');
+        document.getElementById('sellerMoreOverlay').classList.add('open');
+    }
+    function closeSellerMoreSheet() {
+        document.getElementById('sellerMoreSheet').classList.remove('open');
+        document.getElementById('sellerMoreOverlay').classList.remove('open');
+    }
+    // Sync unread message badge to mobile nav
+    function syncSellerMobBadges() {
+        const msgBadge = document.getElementById('msgTabBadge') || document.getElementById('unreadMsgBadge');
+        const smobMsg = document.getElementById('smobMsgBadge');
+        if (msgBadge && smobMsg) {
+            const cnt = msgBadge.textContent.trim();
+            smobMsg.textContent = cnt;
+            smobMsg.classList.toggle('visible', !!cnt && msgBadge.style.display !== 'none');
+        }
+    }
+    ['msgTabBadge','unreadMsgBadge'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) new MutationObserver(syncSellerMobBadges).observe(el, { attributes: true, childList: true, characterData: true, subtree: true });
+    });
+    window.addEventListener('load', syncSellerMobBadges);
     </script>
 </body>
 </html>

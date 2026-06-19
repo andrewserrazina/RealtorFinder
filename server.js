@@ -2172,6 +2172,30 @@ app.get('/api/analytics/realtor', auth.requireAuth, async (req, res) => {
     }
 });
 
+// ===== COMMISSION INTEL =====
+
+app.get('/api/analytics/realtor/commission-intel', auth.requireAuth, async (req, res) => {
+    try {
+        const realtorId = req.session.userId;
+        const [myRes, marketRes] = await Promise.all([
+            pool.query(
+                `SELECT ROUND(AVG(commission_pct)::numeric, 2) AS avg FROM proposals WHERE realtor_id = $1`,
+                [realtorId]
+            ),
+            pool.query(
+                `SELECT ROUND(AVG(commission_pct)::numeric, 2) AS avg FROM proposals WHERE status = 'accepted'`
+            )
+        ]);
+        res.json({
+            myAvg: myRes.rows[0].avg ? parseFloat(myRes.rows[0].avg) : null,
+            acceptedAvg: marketRes.rows[0].avg ? parseFloat(marketRes.rows[0].avg) : null
+        });
+    } catch (e) {
+        console.error('GET /api/analytics/realtor/commission-intel error:', e);
+        res.status(500).json({ error: 'Failed to fetch commission intel' });
+    }
+});
+
 // ===== AI LISTING DESCRIPTION =====
 
 app.post('/api/ai/listing-description', auth.requireAuth, async (req, res) => {
@@ -4143,6 +4167,28 @@ app.get('/api/listings/compare', async (req, res) => {
 });
 
 // ===== BATCH 8: NEARBY STATS =====
+
+// Proposal stats for a listing — anonymized aggregate shown to realtors
+app.get('/api/listings/:id/proposal-stats', auth.requireAuth, async (req, res) => {
+    try {
+        const listingId = parseInt(req.params.id);
+        const { rows } = await pool.query(
+            `SELECT COUNT(*) AS count,
+                    ROUND(AVG(commission_pct)::numeric, 2) AS avg_commission,
+                    MIN(commission_pct) AS min_commission
+             FROM proposals
+             WHERE listing_id = $1 AND status != 'withdrawn'`,
+            [listingId]
+        );
+        res.json({
+            count: parseInt(rows[0].count) || 0,
+            avgCommission: rows[0].avg_commission ? parseFloat(rows[0].avg_commission) : null,
+            minCommission: rows[0].min_commission ? parseFloat(rows[0].min_commission) : null
+        });
+    } catch (e) {
+        res.status(500).json({ error: 'Failed to fetch proposal stats' });
+    }
+});
 
 app.get('/api/listings/:id/nearby-stats', async (req, res) => {
     try {
