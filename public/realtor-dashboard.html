@@ -700,81 +700,6 @@
             }
         }
 
-        @media (max-width: 640px) {
-            .header-container {
-                flex-wrap: wrap;
-                gap: 0.75rem;
-                padding: 0 1rem;
-            }
-
-            .header-actions {
-                width: 100%;
-                justify-content: flex-end;
-            }
-
-            .user-info {
-                gap: 0.5rem;
-                flex-wrap: wrap;
-            }
-
-            .tabs {
-                gap: 0;
-                overflow-x: auto;
-                padding: 0 1rem;
-                scrollbar-width: none;
-            }
-
-            .tabs::-webkit-scrollbar {
-                display: none;
-            }
-
-            .tab {
-                white-space: nowrap;
-                padding: 1rem 0.75rem;
-                font-size: 0.9rem;
-            }
-
-            .dashboard-container {
-                padding: 1.5rem 1rem;
-            }
-
-            .stats-row {
-                grid-template-columns: 1fr 1fr;
-            }
-
-            .form-row {
-                grid-template-columns: 1fr;
-            }
-
-            .modal-content {
-                padding: 1.5rem;
-                width: 95%;
-            }
-
-            #map-container {
-                height: 350px;
-            }
-
-            .map-status-bar {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 0.5rem;
-            }
-
-            .filter-bar {
-                flex-direction: column;
-            }
-
-            .filter-group {
-                width: 100%;
-            }
-            .filter-group input,
-            .filter-group select {
-                min-width: unset;
-                width: 100%;
-            }
-        }
-
         /* Messaging */
         .msg-layout {
             display: grid;
@@ -937,53 +862,12 @@
             .premium-upgrade-grid { grid-template-columns: 1fr; }
         }
 
-        /* ── Mobile (≤480px): tighter layout for narrow phones ── */
-        @media (max-width: 480px) {
-            /* Tab label abbreviations */
-            .tab-label-full { display: none; }
-            .tab-label-short { display: inline !important; }
-
-            /* Tab bar: smaller text + padding, scroll-hint gradient */
-            .tabs-container {
-                top: 60px; /* header collapses tighter on mobile */
-            }
-            .tabs-container::after {
-                content: '';
-                position: absolute;
-                right: 0;
-                top: 0;
-                bottom: 0;
-                width: 36px;
-                background: linear-gradient(to right, transparent, white);
-                pointer-events: none;
-            }
-            .tabs { padding: 0 0.75rem; }
-            .tab { padding: 0.7rem 0.6rem; font-size: 0.78rem; }
-
-            /* Listing cards: shorter image, tighter content */
-            .listing-image { height: 170px; }
-            .listing-content { padding: 1rem 1rem 1.25rem; }
-            .listing-price { font-size: 1.5rem; }
-            .listing-address { font-size: 0.9rem; }
-            .listing-specs { font-size: 0.8rem; gap: 0.4rem; }
-            .listing-description { font-size: 0.82rem; -webkit-line-clamp: 2; }
-            .listing-action { padding: 0.7rem !important; font-size: 0.85rem; }
-
-            /* Stat cards: single column */
-            .stats-row { grid-template-columns: 1fr !important; gap: 0.75rem; }
-
-            /* Dashboard padding */
-            .dashboard-container { padding: 1rem 0.75rem; }
-
-            /* Filter bar labels hidden to save space */
-            .filter-group label { font-size: 0.78rem; }
-
-            /* Modals: full width */
-            .modal-content { width: 100%; border-radius: 16px 16px 0 0; margin-top: auto; padding: 1.25rem; }
-            .modal { align-items: flex-end; }
-
-            /* Headers in sections */
-            h2 { font-size: 1.5rem !important; }
+        /* ── Narrow phones (≤380px): extra-tight tweaks ── */
+        @media (max-width: 380px) {
+            .stats-row { grid-template-columns: 1fr; }
+            .listing-specs { gap: 0.4rem; font-size: 0.78rem; }
+            .mob-nav-item { font-size: 0.56rem; }
+            .mob-nav-icon { font-size: 1.15rem; }
         }
         .premium-duration-btn {
             border: 2px solid var(--border);
@@ -1094,6 +978,203 @@
         .onboarding-step-icon.pending {
             border: 2px solid #d1d5db;
             color: #d1d5db;
+        }
+
+        /* ── Mobile Bottom Navigation ── */
+        #mobileBottomNav {
+            display: none;
+        }
+        @media (max-width: 640px) {
+            /* Hide the top tab bar — bottom nav takes over */
+            .tabs-container { display: none; }
+
+            /* Compact header: one row, just logo + bell + avatar */
+            header { padding: 0.75rem 0; }
+            .header-container { padding: 0 1rem; flex-wrap: nowrap; }
+            #userName { display: none; }
+            .btn.btn-secondary[onclick="logout()"] { display: none; }
+            .user-info { gap: 0.6rem; }
+            .user-avatar { width: 34px; height: 34px; font-size: 0.8rem; }
+
+            /* Push content up from bottom nav (safe-area aware) */
+            .dashboard-container {
+                padding: 1rem 0.9rem;
+                padding-bottom: calc(70px + env(safe-area-inset-bottom, 12px));
+            }
+
+            /* Bottom nav bar */
+            #mobileBottomNav {
+                display: flex;
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                background: white;
+                border-top: 1px solid var(--border);
+                z-index: 200;
+                padding-bottom: env(safe-area-inset-bottom, 0px);
+                box-shadow: 0 -4px 20px rgba(0,0,0,0.08);
+            }
+            .mob-nav-item {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                padding: 0.55rem 0.25rem 0.5rem;
+                cursor: pointer;
+                color: #888;
+                font-size: 0.62rem;
+                font-weight: 600;
+                letter-spacing: 0.01em;
+                border: none;
+                background: none;
+                font-family: 'DM Sans', sans-serif;
+                position: relative;
+                transition: color 0.15s;
+                -webkit-tap-highlight-color: transparent;
+            }
+            .mob-nav-item.active { color: var(--accent); }
+            .mob-nav-icon {
+                font-size: 1.3rem;
+                line-height: 1;
+                margin-bottom: 0.2rem;
+            }
+            .mob-nav-badge {
+                position: absolute;
+                top: 0.3rem;
+                right: calc(50% - 0.9rem);
+                background: var(--accent);
+                color: white;
+                border-radius: 50%;
+                width: 15px;
+                height: 15px;
+                font-size: 0.58rem;
+                font-weight: 700;
+                display: none;
+                align-items: center;
+                justify-content: center;
+                line-height: 1;
+            }
+            .mob-nav-badge.visible { display: flex; }
+
+            /* More bottom sheet */
+            #moreSheet {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                background: white;
+                border-radius: 20px 20px 0 0;
+                box-shadow: 0 -8px 40px rgba(0,0,0,0.18);
+                z-index: 300;
+                padding: 0 0 env(safe-area-inset-bottom, 16px);
+                transform: translateY(100%);
+                transition: transform 0.28s cubic-bezier(0.32,0.72,0,1);
+            }
+            #moreSheet.open { transform: translateY(0); }
+            #moreSheetOverlay {
+                display: none;
+                position: fixed;
+                inset: 0;
+                background: rgba(0,0,0,0.45);
+                z-index: 299;
+            }
+            #moreSheetOverlay.open { display: block; }
+            .more-sheet-handle {
+                width: 36px;
+                height: 4px;
+                background: #d1d5db;
+                border-radius: 2px;
+                margin: 12px auto 0;
+            }
+            .more-sheet-title {
+                font-weight: 700;
+                font-size: 1rem;
+                color: var(--ink);
+                padding: 1rem 1.5rem 0.75rem;
+                border-bottom: 1px solid var(--border);
+            }
+            .more-sheet-item {
+                display: flex;
+                align-items: center;
+                gap: 1rem;
+                padding: 1rem 1.5rem;
+                cursor: pointer;
+                border-bottom: 1px solid #f3f4f6;
+                font-weight: 600;
+                font-size: 0.95rem;
+                color: var(--ink);
+                -webkit-tap-highlight-color: transparent;
+            }
+            .more-sheet-item:last-child { border-bottom: none; }
+            .more-sheet-item:active { background: #f9fafb; }
+            .more-sheet-icon { font-size: 1.4rem; width: 28px; text-align: center; }
+            .more-sheet-badge {
+                margin-left: auto;
+                background: var(--accent);
+                color: white;
+                border-radius: 10px;
+                padding: 0.1rem 0.5rem;
+                font-size: 0.72rem;
+                font-weight: 700;
+                display: none;
+            }
+            .more-sheet-badge.visible { display: inline-block; }
+            .more-sheet-logout {
+                display: flex;
+                align-items: center;
+                gap: 1rem;
+                padding: 1rem 1.5rem;
+                cursor: pointer;
+                color: #dc2626;
+                font-weight: 600;
+                font-size: 0.95rem;
+                margin-top: 0.25rem;
+                -webkit-tap-highlight-color: transparent;
+            }
+
+            /* Listing cards: full width, compact */
+            .listings-grid { grid-template-columns: 1fr; gap: 1rem; }
+            .listing-image { height: 180px; }
+            .listing-content { padding: 1rem; }
+            .listing-price { font-size: 1.5rem; }
+            .listing-address { font-size: 0.95rem; }
+            .listing-specs { font-size: 0.82rem; gap: 0.75rem; }
+
+            /* Filter bar: stack vertically, condensed */
+            .filter-bar { flex-direction: column; padding: 1rem; gap: 0.75rem; }
+            .filter-group { width: 100%; }
+            .filter-group input, .filter-group select { width: 100%; min-width: unset; }
+
+            /* Stats: 2-column on mobile */
+            .stats-row { grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 1.5rem; }
+            .stat-card { padding: 1rem; }
+            .stat-value { font-size: 1.8rem; }
+
+            /* Modals: bottom-sheet style */
+            .modal { align-items: flex-end; }
+            .modal-content {
+                width: 100%;
+                border-radius: 20px 20px 0 0;
+                padding: 1.5rem 1.25rem calc(1.5rem + env(safe-area-inset-bottom, 0px));
+                max-height: 92vh;
+            }
+
+            /* Bid cards: stack */
+            .bid-card { grid-template-columns: 1fr; gap: 1rem; padding: 1.25rem; }
+
+            /* Form rows: single column */
+            .form-row { grid-template-columns: 1fr; }
+
+            /* Map height */
+            #map-container { height: 300px; }
+
+            /* Headers */
+            h2 { font-size: 1.5rem !important; }
+
+            /* Re-engagement banner */
+            #staleRealtorBanner { padding: 1rem; }
         }
     </style>
     <link rel="manifest" href="/manifest.json">
@@ -6697,11 +6778,138 @@ Worth checking out.</div>
         </div>
     </div>
 
+    <!-- Mobile Bottom Navigation -->
+    <nav id="mobileBottomNav" aria-label="Main navigation">
+        <button class="mob-nav-item active" data-mob-view="browse" onclick="mobNavGo('browse',this)">
+            <span class="mob-nav-icon">🏠</span>
+            <span>Browse</span>
+        </button>
+        <button class="mob-nav-item" data-mob-view="pipeline" onclick="mobNavGo('pipeline',this)">
+            <span class="mob-nav-icon">📋</span>
+            <span>Pipeline</span>
+            <span class="mob-nav-badge" id="mobPipelineBadge"></span>
+        </button>
+        <button class="mob-nav-item" data-mob-view="messages" onclick="mobNavGo('messages',this)">
+            <span class="mob-nav-icon">💬</span>
+            <span>Messages</span>
+            <span class="mob-nav-badge" id="mobMsgBadge"></span>
+        </button>
+        <button class="mob-nav-item" data-mob-view="profile-hub" onclick="mobNavGo('profile-hub',this)">
+            <span class="mob-nav-icon">👤</span>
+            <span>Profile</span>
+        </button>
+        <button class="mob-nav-item" id="mobMoreBtn" onclick="openMoreSheet()">
+            <span class="mob-nav-icon">⋯</span>
+            <span>More</span>
+            <span class="mob-nav-badge" id="mobMoreBadge"></span>
+        </button>
+    </nav>
+
+    <!-- More Sheet Overlay -->
+    <div id="moreSheetOverlay" onclick="closeMoreSheet()"></div>
+
+    <!-- More Bottom Sheet -->
+    <div id="moreSheet" role="dialog" aria-label="More options">
+        <div class="more-sheet-handle"></div>
+        <div class="more-sheet-title">More</div>
+        <div class="more-sheet-item" onclick="mobNavGo('buyer-requests',null);closeMoreSheet()">
+            <span class="more-sheet-icon">🎯</span>
+            <span>Buyer Requests</span>
+            <span class="more-sheet-badge" id="mobBuyerBadge"></span>
+        </div>
+        <div class="more-sheet-item" onclick="mobNavGo('analytics',null);closeMoreSheet()">
+            <span class="more-sheet-icon">📊</span>
+            <span>Analytics</span>
+        </div>
+        <div class="more-sheet-item" onclick="mobNavGo('settings-hub',null);closeMoreSheet()">
+            <span class="more-sheet-icon">⚙️</span>
+            <span>Settings</span>
+        </div>
+        <div class="more-sheet-logout" onclick="logout()">
+            <span class="more-sheet-icon">🚪</span>
+            <span>Log Out</span>
+        </div>
+    </div>
+
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
       }
+
+      // Mobile bottom nav helpers
+      const MOB_MORE_VIEWS = new Set(['buyer-requests','analytics','settings-hub']);
+
+      function mobNavGo(view, btn) {
+        // Trigger the existing top-tab click so all existing JS logic runs
+        const topTab = document.querySelector(`.tab[data-view="${view}"]`);
+        if (topTab) topTab.click();
+
+        // Sync bottom nav active state
+        document.querySelectorAll('.mob-nav-item').forEach(el => el.classList.remove('active'));
+        if (btn) {
+          btn.classList.add('active');
+        } else if (MOB_MORE_VIEWS.has(view)) {
+          document.getElementById('mobMoreBtn').classList.add('active');
+        }
+      }
+
+      function openMoreSheet() {
+        document.getElementById('moreSheet').classList.add('open');
+        document.getElementById('moreSheetOverlay').classList.add('open');
+      }
+
+      function closeMoreSheet() {
+        document.getElementById('moreSheet').classList.remove('open');
+        document.getElementById('moreSheetOverlay').classList.remove('open');
+      }
+
+      // Keep bottom nav badges in sync with the existing badge elements
+      function syncMobBadges() {
+        // Pipeline badge
+        const pipelineSrc = document.getElementById('pipelineBadge');
+        const mobPipeline = document.getElementById('mobPipelineBadge');
+        if (pipelineSrc && mobPipeline) {
+          const visible = pipelineSrc.style.display !== 'none' && pipelineSrc.textContent.trim();
+          mobPipeline.textContent = pipelineSrc.textContent;
+          mobPipeline.classList.toggle('visible', !!visible);
+        }
+
+        // Messages badge
+        const msgSrc = document.getElementById('msgTabBadge');
+        const mobMsg = document.getElementById('mobMsgBadge');
+        if (msgSrc && mobMsg) {
+          const visible = msgSrc.style.display !== 'none' && msgSrc.textContent.trim();
+          mobMsg.textContent = msgSrc.textContent;
+          mobMsg.classList.toggle('visible', !!visible);
+        }
+
+        // Buyer requests badge
+        const buyerSrc = document.getElementById('buyerMatchBadge');
+        const mobBuyer = document.getElementById('mobBuyerBadge');
+        const mobMore = document.getElementById('mobMoreBadge');
+        if (buyerSrc && mobBuyer) {
+          const visible = buyerSrc.style.display !== 'none' && buyerSrc.textContent.trim();
+          mobBuyer.textContent = buyerSrc.textContent;
+          mobBuyer.classList.toggle('visible', !!visible);
+          // Bubble up to "More" badge if any secondary tab has alerts
+          if (mobMore) {
+            mobMore.textContent = buyerSrc.textContent;
+            mobMore.classList.toggle('visible', !!visible);
+          }
+        }
+      }
+
+      // Observe badge changes so the mob nav stays in sync
+      ['pipelineBadge','msgTabBadge','buyerMatchBadge'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+          new MutationObserver(syncMobBadges).observe(el, { attributes: true, childList: true, characterData: true, subtree: true });
+        }
+      });
+
+      // Initial sync after page load
+      window.addEventListener('load', syncMobBadges);
     </script>
 </body>
 </html>
