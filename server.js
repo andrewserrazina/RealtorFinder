@@ -10597,6 +10597,7 @@ async function seedDemoData() {
         const bcrypt = require('bcrypt');
         const demoHash = await bcrypt.hash('Demo1234!', 10);
 
+        console.log('🌱 seedDemoData: creating users...');
         // Demo seller
         const seller = await upsertUser('demo-seller@realtorfinder.net',
             `INSERT INTO users (email, password_hash, user_type, first_name, last_name, zip_code, is_approved, is_active, email_verified, created_at)
@@ -10637,6 +10638,7 @@ async function seedDemoData() {
              RETURNING id`,
             ['marcus.webb.demo@realtorfinder.net', demoHash]
         );
+        console.log('🌱 seedDemoData: users done — seller.id=%s realtor.id=%s ghost1.id=%s ghost2.id=%s', seller?.id, realtor?.id, ghost1?.id, ghost2?.id);
 
         const photos = {
             newton:    [
@@ -10698,6 +10700,7 @@ async function seedDemoData() {
             },
         ];
 
+        console.log('🌱 seedDemoData: creating listings...');
         const listingIds = [];
         for (const l of listingData) {
             // Check if listing already exists for this seller+address
@@ -10722,6 +10725,7 @@ async function seedDemoData() {
             );
             listingIds.push(listing.id);
         }
+        console.log('🌱 seedDemoData: listings done — ids=%j', listingIds);
 
         // Proposals — James (demo realtor) on all 4
         const jamesNotes = [
@@ -10800,7 +10804,7 @@ async function seedDemoData() {
 
         console.log('✅ Demo data seeded — demo@realtorfinder.net / Demo1234!');
     } catch (err) {
-        console.error('seedDemoData error:', err.message);
+        console.error('seedDemoData error:', err.message, err.stack);
     }
 }
 
