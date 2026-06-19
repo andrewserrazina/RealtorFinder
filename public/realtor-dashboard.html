@@ -887,6 +887,225 @@
             .premium-upgrade-grid { grid-template-columns: 1fr; }
         }
 
+        /* ── Listing Detail Drawer ── */
+        #listingDrawerOverlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.45);
+            z-index: 400;
+        }
+        #listingDrawerOverlay.open { display: block; }
+
+        #listingDrawer {
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 520px;
+            max-width: 100vw;
+            height: 100dvh;
+            background: white;
+            z-index: 401;
+            display: flex;
+            flex-direction: column;
+            transform: translateX(100%);
+            transition: transform 0.3s cubic-bezier(0.32,0.72,0,1);
+            box-shadow: -8px 0 40px rgba(0,0,0,0.15);
+        }
+        #listingDrawer.open { transform: translateX(0); }
+
+        .ldr-header-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+            background: white;
+        }
+        .ldr-back {
+            background: none;
+            border: none;
+            color: var(--accent);
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+            padding: 0;
+            font-family: inherit;
+        }
+        .ldr-bookmark-btn {
+            background: none;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.35rem 0.6rem;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: transform 0.15s;
+        }
+        .ldr-bookmark-btn:hover { transform: scale(1.15); }
+
+        .ldr-scroll {
+            flex: 1;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+        }
+
+        /* Photo strip */
+        .ldr-photo {
+            height: 260px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 5rem;
+            position: relative;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+        .ldr-photo img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            position: absolute;
+            inset: 0;
+        }
+        .ldr-photo-count {
+            position: absolute;
+            bottom: 0.75rem;
+            right: 0.75rem;
+            background: rgba(0,0,0,0.55);
+            color: white;
+            border-radius: 6px;
+            padding: 0.2rem 0.6rem;
+            font-size: 0.78rem;
+            font-weight: 600;
+        }
+
+        /* Drawer body */
+        .ldr-body { padding: 1.5rem 1.5rem 0; }
+
+        .ldr-price {
+            font-family: 'Crimson Pro', serif;
+            font-size: 2.4rem;
+            font-weight: 700;
+            color: var(--accent);
+            line-height: 1;
+            margin-bottom: 0.3rem;
+        }
+        .ldr-address {
+            font-size: 1.05rem;
+            font-weight: 600;
+            color: var(--ink);
+            margin-bottom: 0.5rem;
+        }
+        .ldr-meta {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 1.25rem;
+        }
+        .ldr-chip {
+            background: var(--paper);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 0.25rem 0.7rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #444;
+        }
+
+        .ldr-section { margin-bottom: 1.5rem; }
+        .ldr-section-title {
+            font-weight: 700;
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: #888;
+            margin-bottom: 0.6rem;
+        }
+
+        .ldr-specs {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+        }
+        .ldr-spec {
+            background: var(--paper);
+            border-radius: 10px;
+            padding: 0.65rem 0.9rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.1rem;
+        }
+        .ldr-spec-label { font-size: 0.72rem; color: #888; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+        .ldr-spec-value { font-size: 1rem; font-weight: 700; color: var(--ink); }
+
+        .ldr-description {
+            font-size: 0.95rem;
+            color: #444;
+            line-height: 1.7;
+            white-space: pre-wrap;
+        }
+
+        .ldr-competition {
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            border-radius: 10px;
+            padding: 0.9rem 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .ldr-competition-icon { font-size: 1.4rem; }
+        .ldr-competition-text { font-size: 0.875rem; color: #1e40af; font-weight: 600; }
+        .ldr-competition-sub { font-size: 0.78rem; color: #3b82f6; margin-top: 0.1rem; }
+
+        .ldr-mini-map {
+            height: 160px;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+
+        .ldr-zestimate {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+            color: #666;
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-radius: 8px;
+            padding: 0.5rem 0.85rem;
+            margin-top: 0.4rem;
+        }
+
+        /* Sticky CTA */
+        .ldr-cta {
+            border-top: 1px solid var(--border);
+            padding: 1rem 1.25rem calc(1rem + env(safe-area-inset-bottom, 0px));
+            background: white;
+            flex-shrink: 0;
+        }
+
+        /* Mobile: full-screen slide up */
+        @media (max-width: 640px) {
+            #listingDrawer {
+                top: auto;
+                bottom: 0;
+                right: 0;
+                left: 0;
+                width: 100%;
+                height: 93dvh;
+                border-radius: 20px 20px 0 0;
+                transform: translateY(100%);
+                box-shadow: 0 -8px 40px rgba(0,0,0,0.18);
+            }
+            #listingDrawer.open { transform: translateY(0); }
+            .ldr-photo { height: 200px; }
+            .ldr-price { font-size: 2rem; }
+        }
+
         /* ── Narrow phones (≤380px): extra-tight tweaks ── */
         @media (max-width: 380px) {
             .stats-row { grid-template-columns: 1fr; }
@@ -2722,6 +2941,222 @@ Worth checking out.</div>
         // Auto-save draft on input
         document.getElementById('bidForm').addEventListener('input', saveBidDraft);
 
+        // ── Listing Detail Drawer ──────────────────────────────────────────────
+        let _drawerListingId = null;
+        let _drawerListing = null;
+        let _drawerMap = null;
+
+        async function openListingDrawer(listingId) {
+            _drawerListingId = listingId;
+            const overlay = document.getElementById('listingDrawerOverlay');
+            const drawer = document.getElementById('listingDrawer');
+            const content = document.getElementById('listingDrawerContent');
+            const cta = document.getElementById('listingDrawerCta');
+
+            // Show skeleton while loading
+            content.innerHTML = `<div class="ldr-body" style="padding-top:2rem;">
+                <div style="height:2.4rem;background:#f3f4f6;border-radius:8px;width:55%;margin-bottom:0.75rem;"></div>
+                <div style="height:1rem;background:#f3f4f6;border-radius:6px;width:80%;margin-bottom:0.4rem;"></div>
+                <div style="height:1rem;background:#f3f4f6;border-radius:6px;width:60%;margin-bottom:2rem;"></div>
+                <div style="height:0.7rem;background:#f3f4f6;border-radius:6px;width:100%;margin-bottom:0.4rem;"></div>
+                <div style="height:0.7rem;background:#f3f4f6;border-radius:6px;width:90%;margin-bottom:0.4rem;"></div>
+                <div style="height:0.7rem;background:#f3f4f6;border-radius:6px;width:75%;"></div>
+            </div>`;
+            cta.innerHTML = '';
+            overlay.classList.add('open');
+            drawer.classList.add('open');
+            document.body.style.overflow = 'hidden';
+
+            // Destroy old mini-map
+            if (_drawerMap) { try { _drawerMap.remove(); } catch(e) {} _drawerMap = null; }
+
+            try {
+                const res = await fetch(`/api/listings/${listingId}`, { credentials: 'include' });
+                if (!res.ok) throw new Error('not found');
+                const l = await res.json();
+                _drawerListing = l;
+                renderDrawerContent(l);
+            } catch(e) {
+                content.innerHTML = `<div class="ldr-body"><p style="color:#9ca3af;padding:2rem 0;">Failed to load listing details.</p></div>`;
+            }
+        }
+
+        function renderDrawerContent(l) {
+            const content = document.getElementById('listingDrawerContent');
+            const cta = document.getElementById('listingDrawerCta');
+            const isSaved = savedListingIds.has(l.id);
+            const alreadyProposed = mySubmittedProposals.some(p => p.listing_id === l.id);
+            const hasPaidLead = purchasedListingLeadIds.has(l.id);
+            const userPlan = currentUser ? (currentUser.subscription_plan || 'free') : 'free';
+            const isFreePlan = userPlan === 'free';
+            const safeAddr = (l.address || '').replace(/'/g, "\\'");
+
+            // Bookmark button
+            const bkBtn = document.getElementById('drawerBookmarkBtn');
+            if (bkBtn) bkBtn.textContent = isSaved ? '🔖' : '🏷️';
+
+            // Photo
+            const imgs = l.image_urls && l.image_urls.length ? l.image_urls : [];
+            const photoHtml = imgs.length
+                ? `<div class="ldr-photo"><img src="${imgs[0]}" alt="Listing photo" loading="lazy">${imgs.length > 1 ? `<div class="ldr-photo-count">📷 ${imgs.length}</div>` : ''}</div>`
+                : `<div class="ldr-photo" style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);">🏡</div>`;
+
+            // Zestimate
+            const zestHtml = l.zestimate
+                ? `<div class="ldr-zestimate">🏠 Zestimate: <strong>${fmtPrice(l.zestimate)}</strong></div>`
+                : '';
+
+            // All specs
+            const specs = [
+                { label: 'Bedrooms', value: l.bedrooms, icon: '🛏️' },
+                { label: 'Bathrooms', value: l.bathrooms, icon: '🛁' },
+                { label: 'Square Feet', value: l.sqft ? l.sqft.toLocaleString() + ' sqft' : null, icon: '📏' },
+                { label: 'Property Type', value: l.property_type, icon: '🏠' },
+                { label: 'Year Built', value: l.year_built, icon: '🏗️' },
+                { label: 'Garage', value: l.garage_spaces != null ? (l.garage_spaces === 0 ? 'No garage' : l.garage_spaces + '-car garage') : null, icon: '🚗' },
+                { label: 'Lot Size', value: l.lot_size ? l.lot_size.toLocaleString() + ' sqft' : null, icon: '🌿' },
+                { label: 'HOA Fee', value: l.hoa_fee != null ? '$' + Number(l.hoa_fee).toLocaleString() + '/mo' : null, icon: '🏘️' },
+            ].filter(s => s.value != null);
+
+            const specsHtml = specs.map(s =>
+                `<div class="ldr-spec"><div class="ldr-spec-label">${s.icon} ${s.label}</div><div class="ldr-spec-value">${s.value}</div></div>`
+            ).join('');
+
+            // Competition
+            const bidCount = l.offer_count || l.offerCount || 0;
+            const competitionHtml = `<div class="ldr-competition">
+                <div class="ldr-competition-icon">${bidCount === 0 ? '🎯' : bidCount >= 5 ? '🔥' : '⚡'}</div>
+                <div>
+                    <div class="ldr-competition-text">${bidCount === 0 ? 'Be the first to submit a proposal' : bidCount + ' realtor' + (bidCount === 1 ? ' has' : 's have') + ' submitted proposals'}</div>
+                    <div class="ldr-competition-sub">${bidCount === 0 ? 'No competition yet — great opportunity.' : bidCount >= 5 ? 'High competition. Make your proposal stand out.' : 'Low competition. Good time to act.'}</div>
+                </div>
+            </div>`;
+
+            // Deadline
+            const deadlineHtml = l.proposal_deadline ? (() => {
+                const daysLeft = Math.ceil((new Date(l.proposal_deadline) - new Date()) / 86400000);
+                if (daysLeft < 0) return '';
+                const col = daysLeft <= 2 ? '#dc2626' : daysLeft <= 5 ? '#d97706' : '#059669';
+                const bg = daysLeft <= 2 ? '#fee2e2' : daysLeft <= 5 ? '#fef3c7' : '#d1fae5';
+                return `<div style="background:${bg};color:${col};font-size:0.85rem;font-weight:700;padding:0.6rem 1rem;border-radius:10px;margin-bottom:1rem;">⏰ Proposal deadline: ${new Date(l.proposal_deadline).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})} — ${daysLeft === 0 ? 'today' : daysLeft + ' day' + (daysLeft === 1 ? '' : 's') + ' left'}</div>`;
+            })() : '';
+
+            // Video
+            const videoHtml = l.video_url
+                ? `<div class="ldr-section"><div class="ldr-section-title">Video Tour</div><a href="${l.video_url}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:0.5rem;color:var(--accent);font-weight:600;font-size:0.9rem;text-decoration:none;">▶ Watch video tour →</a></div>`
+                : '';
+
+            // Map placeholder (rendered after DOM insert)
+            const hasMap = l.latitude && l.longitude;
+            const mapHtml = hasMap
+                ? `<div class="ldr-section"><div class="ldr-section-title">Location</div><div id="drawerMiniMap" class="ldr-mini-map"></div></div>`
+                : '';
+
+            // Posted date
+            const postedHtml = l.created_at
+                ? `<div style="font-size:0.78rem;color:#9ca3af;margin-bottom:1rem;">Listed ${timeAgo(l.created_at)}</div>`
+                : '';
+
+            content.innerHTML = `
+                ${photoHtml}
+                <div class="ldr-body">
+                    ${postedHtml}
+                    ${deadlineHtml}
+                    <div class="ldr-price">${fmtPrice(l.price)}</div>
+                    ${zestHtml}
+                    <div class="ldr-address">${l.address}${l.city ? ', ' + l.city : ''}${l.state ? ', ' + l.state : ''}${l.zip ? ' ' + l.zip : ''}</div>
+                    <div class="ldr-meta">
+                        <span class="ldr-chip">🛏️ ${l.bedrooms} bd</span>
+                        <span class="ldr-chip">🛁 ${l.bathrooms} ba</span>
+                        <span class="ldr-chip">📏 ${l.sqft ? l.sqft.toLocaleString() : '?'} sqft</span>
+                        ${l.property_type ? `<span class="ldr-chip">${l.property_type}</span>` : ''}
+                    </div>
+
+                    <div class="ldr-section">
+                        <div class="ldr-section-title">Details</div>
+                        <div class="ldr-specs">${specsHtml}</div>
+                    </div>
+
+                    <div class="ldr-section">
+                        <div class="ldr-section-title">Description</div>
+                        <div class="ldr-description">${esc(l.description || '')}</div>
+                    </div>
+
+                    <div class="ldr-section">
+                        <div class="ldr-section-title">Competition</div>
+                        ${competitionHtml}
+                    </div>
+
+                    ${videoHtml}
+                    ${mapHtml}
+
+                    <div class="ldr-section">
+                        <div class="ldr-section-title">About This Opportunity</div>
+                        <div style="font-size:0.875rem;color:#555;line-height:1.6;background:#f9fafb;border-radius:10px;padding:1rem;">
+                            The seller is looking for a realtor to represent this property.
+                            Submit a compelling proposal to introduce yourself — the seller will review all proposals and reach out to their preferred realtor.
+                            <br><br>
+                            <strong>Seller contact information is shared after your proposal is accepted.</strong>
+                        </div>
+                    </div>
+                    <div style="height:1rem;"></div>
+                </div>
+            `;
+
+            // Render mini map
+            if (hasMap) {
+                setTimeout(() => {
+                    const mapEl = document.getElementById('drawerMiniMap');
+                    if (!mapEl || !window.L) return;
+                    try {
+                        _drawerMap = L.map(mapEl, { zoomControl: false, attributionControl: false, dragging: false, scrollWheelZoom: false });
+                        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(_drawerMap);
+                        _drawerMap.setView([l.latitude, l.longitude], 14);
+                        L.marker([l.latitude, l.longitude]).addTo(_drawerMap);
+                    } catch(e) {}
+                }, 80);
+            }
+
+            // CTA
+            let ctaHtml;
+            if (alreadyProposed) {
+                ctaHtml = `<div style="display:flex;gap:0.75rem;">
+                    <button class="btn btn-secondary" style="flex:1;background:#e5e7eb;color:#374151;cursor:default;" disabled>✓ Proposal Submitted</button>
+                    <button class="btn btn-outline" onclick="closeListingDrawer();showProposalModal(${l.id},'${safeAddr}')" style="padding:0.875rem 1.25rem;">View</button>
+                </div>`;
+            } else if (isFreePlan && !hasPaidLead) {
+                ctaHtml = `<button class="btn btn-primary" style="width:100%;background:#16a34a;" onclick="closeListingDrawer();openListingLeadModal(${l.id},'${safeAddr}')">🔓 Unlock Lead — $15</button>
+                    <div style="text-align:center;font-size:0.78rem;color:#9ca3af;margin-top:0.5rem;">Or <a href="/pricing" style="color:var(--accent);">start a free trial</a> to submit unlimited proposals</div>`;
+            } else {
+                ctaHtml = `<button class="btn btn-primary" style="width:100%;font-size:1.05rem;padding:1rem;" onclick="closeListingDrawer();openBidModal(${l.id},'${safeAddr}')">Submit Proposal →</button>`;
+            }
+            cta.innerHTML = ctaHtml;
+        }
+
+        function closeListingDrawer() {
+            document.getElementById('listingDrawerOverlay').classList.remove('open');
+            document.getElementById('listingDrawer').classList.remove('open');
+            document.body.style.overflow = '';
+            _drawerListingId = null;
+            if (_drawerMap) { try { _drawerMap.remove(); } catch(e) {} _drawerMap = null; }
+        }
+
+        function toggleDrawerBookmark() {
+            if (!_drawerListingId) return;
+            const btn = document.getElementById('drawerBookmarkBtn');
+            toggleSave(_drawerListingId, { textContent: btn.textContent, classList: { contains: c => c === 'saved' ? savedListingIds.has(_drawerListingId) : false } });
+            // Optimistic UI
+            const nowSaved = savedListingIds.has(_drawerListingId);
+            btn.textContent = nowSaved ? '🏷️' : '🔖';
+            if (nowSaved) savedListingIds.delete(_drawerListingId);
+            else savedListingIds.add(_drawerListingId);
+            btn.textContent = savedListingIds.has(_drawerListingId) ? '🔖' : '🏷️';
+        }
+
+        // Close drawer on Escape
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') closeListingDrawer(); });
+        // ──────────────────────────────────────────────────────────────────────
+
         function closeBidModal() {
             document.getElementById('bidModal').classList.remove('active');
             document.getElementById('bidForm').reset();
@@ -2900,7 +3335,7 @@ Worth checking out.</div>
                 }
 
                 return `
-                <div class="listing-card" onclick="openBidModal(${listing.id}, '${safeAddr}')">
+                <div class="listing-card" onclick="openListingDrawer(${listing.id})">
                     <div class="listing-image" style="${img ? `background-image:url('${img}');background-size:cover;background-position:center;` : ''}">
                         ${img ? '' : '🏡'}
                         <div class="listing-badge">${listing.offerCount || 0} Bids</div>
@@ -3063,9 +3498,9 @@ Worth checking out.</div>
                             🛏️ ${listing.bedrooms} bd &nbsp;·&nbsp; 🛁 ${listing.bathrooms} ba &nbsp;·&nbsp; ${Number(listing.sqft).toLocaleString()} sqft
                         </div>
                         <div style="color:#999;font-size:0.8rem;margin-bottom:10px;">${distMiles.toFixed(1)} mi away · ${listing.offerCount || 0} bid(s)</div>
-                        <button onclick="openBidModal(${listing.id}, '${escapedAddress}')"
+                        <button onclick="openListingDrawer(${listing.id})"
                             style="width:100%;padding:8px;background:var(--accent);color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:0.88rem;">
-                            Submit Proposal
+                            View Details
                         </button>
                     </div>`,
                     { maxWidth: 280 }
@@ -4876,7 +5311,7 @@ Worth checking out.</div>
                 grid.innerHTML = listings.map(listing => {
                     const img = listing.image_urls && listing.image_urls.length > 0 ? listing.image_urls[0] : null;
                     return `
-                        <div class="listing-card" onclick="openBidModal(${listing.id}, '${listing.address.replace(/'/g, "\\'")}')">
+                        <div class="listing-card" onclick="openListingDrawer(${listing.id})">
                             <div class="listing-image" style="${img ? `background-image:url('${img}');background-size:cover;background-position:center;` : ''}">
                                 ${img ? '' : '🏡'}
                                 <div class="listing-badge">${listing.offer_count || 0} Bids</div>
@@ -6838,6 +7273,21 @@ Worth checking out.</div>
             <button id="buyCreditsCheckoutBtn" onclick="checkoutCreditPack()" style="width:100%;background:var(--accent);color:white;border:none;border-radius:8px;padding:0.875rem;font-weight:700;font-size:1rem;cursor:pointer;font-family:inherit;">Continue to Checkout</button>
         </div>
     </div>
+
+    <!-- Listing Detail Drawer -->
+    <div id="listingDrawerOverlay" onclick="closeListingDrawer()"></div>
+    <aside id="listingDrawer" aria-label="Listing details">
+        <div class="ldr-header-bar">
+            <button class="ldr-back" onclick="closeListingDrawer()">← Back</button>
+            <div style="display:flex;gap:0.5rem;align-items:center;">
+                <button class="ldr-bookmark-btn" id="drawerBookmarkBtn" onclick="toggleDrawerBookmark()" title="Save listing">🏷️</button>
+            </div>
+        </div>
+        <div class="ldr-scroll">
+            <div id="listingDrawerContent"></div>
+        </div>
+        <div class="ldr-cta" id="listingDrawerCta"></div>
+    </aside>
 
     <!-- Onboarding Status Modal -->
     <div class="onboarding-status-modal-overlay" id="onboardingStatusModal">
