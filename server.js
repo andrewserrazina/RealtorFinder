@@ -9310,7 +9310,10 @@ _schemaMigrations.push(
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS re_engagement_sent_at TIMESTAMPTZ`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMPTZ`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_slug TEXT UNIQUE`,
-    `ALTER TABLE waitlist ADD COLUMN IF NOT EXISTS nurture_sent BOOLEAN DEFAULT FALSE`
+    `ALTER TABLE waitlist ADD COLUMN IF NOT EXISTS nurture_sent BOOLEAN DEFAULT FALSE`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS brokerage VARCHAR(255)`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS years_experience INTEGER`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS service_areas TEXT`
 );
 
 // Drip email onboarding job — sends 3-step sequences to sellers, realtors, and buyers
