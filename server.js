@@ -1466,6 +1466,9 @@ app.get('/api/listings/search', async (req, res) => {
         const { city, state, type, minPrice, maxPrice, minBedrooms } = req.query;
 
         const conditions = [`l.status = 'active'`, `l.deleted_at IS NULL`];
+        if (!(req.user && req.user.email === 'demo@realtorfinder.net')) {
+            conditions.push(`l.user_id NOT IN (SELECT id FROM users WHERE email = 'demo-seller@realtorfinder.net')`);
+        }
         const params = [];
 
         if (city) {
