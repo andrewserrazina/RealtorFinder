@@ -169,6 +169,35 @@
         .hero-trust span { display: flex; align-items: center; gap: 0.4rem; }
         .hero-trust .dot { color: #4ade80; font-size: 0.9rem; }
 
+        /* ── Social proof strip ── */
+        .hero-proof {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.6rem;
+            margin: 1.5rem auto 0;
+            font-size: 0.88rem;
+            color: rgba(255,255,255,0.65);
+        }
+        .hero-proof-avatars {
+            display: flex;
+        }
+        .hero-proof-avatar {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: 2px solid rgba(255,255,255,0.25);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.65rem;
+            font-weight: 700;
+            color: white;
+            margin-left: -8px;
+        }
+        .hero-proof-avatar:first-child { margin-left: 0; }
+        .hero-proof strong { color: white; }
+
         /* ── Pre-launch capture form ── */
         .capture-box {
             background: rgba(255,255,255,0.07);
@@ -473,6 +502,16 @@
         </div>
     </div>
 
+    <div class="hero-proof" id="heroProof" style="display:none;">
+        <div class="hero-proof-avatars">
+            <div class="hero-proof-avatar" style="background:#1a4a7a;">JM</div>
+            <div class="hero-proof-avatar" style="background:#2d6a4f;">SR</div>
+            <div class="hero-proof-avatar" style="background:#7b3f00;">KL</div>
+            <div class="hero-proof-avatar" style="background:#4a1d96;">AT</div>
+        </div>
+        <span><strong id="heroRealtorCount">47</strong> realtors already signed up and ready to compete for your listing</span>
+    </div>
+
     <div class="hero-trust">
         <span><span class="dot">✓</span> Free to list, always</span>
         <span><span class="dot">✓</span> Licensed, verified agents</span>
@@ -735,6 +774,18 @@
             btn.textContent = originalText;
         }
     }
+
+    // Fetch founding realtor count and show social proof strip
+    fetch('/api/realtors/founding-count')
+        .then(r => r.json())
+        .then(data => {
+            const count = data.claimed || 0;
+            if (count > 0) {
+                document.getElementById('heroRealtorCount').textContent = count;
+                document.getElementById('heroProof').style.display = 'flex';
+            }
+        })
+        .catch(() => {});
 
     function submitHeroCapture() {
         _submitCapture(

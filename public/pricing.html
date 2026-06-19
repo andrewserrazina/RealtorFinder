@@ -519,6 +519,20 @@
     </div>
 </div>
 
+<!-- Billing Toggle -->
+<div style="text-align:center;padding:2rem 1rem 0;">
+    <div style="display:inline-flex;align-items:center;background:#f0ede9;border-radius:50px;padding:4px;gap:2px;">
+        <button id="toggleMonthly" onclick="setBilling('monthly')"
+            style="padding:0.5rem 1.5rem;border-radius:50px;border:none;font-family:inherit;font-size:0.9rem;font-weight:600;cursor:pointer;transition:all 0.2s;background:white;color:#0A2540;box-shadow:0 1px 4px rgba(0,0,0,0.1);">
+            Monthly
+        </button>
+        <button id="toggleAnnual" onclick="setBilling('annual')"
+            style="padding:0.5rem 1.5rem;border-radius:50px;border:none;font-family:inherit;font-size:0.9rem;font-weight:600;cursor:pointer;transition:all 0.2s;background:transparent;color:#6b7280;">
+            Annual <span style="background:#dcfce7;color:#166534;font-size:0.75rem;padding:2px 7px;border-radius:20px;margin-left:4px;font-weight:700;">Save 20%</span>
+        </button>
+    </div>
+</div>
+
 <!-- Pricing Cards -->
 <div class="pricing-section">
     <div class="pricing-grid">
@@ -527,7 +541,8 @@
         <div class="plan-card">
             <div class="plan-badge plan-badge-trial">30-Day Free Trial</div>
             <div class="plan-name">Basic</div>
-            <div class="plan-price">$99<span class="plan-price-unit">/month</span></div>
+            <div class="plan-price"><span id="price-basic">$99</span><span class="plan-price-unit" id="unit-basic">/month</span></div>
+            <div id="saving-basic" style="display:none;font-size:0.8rem;color:#10b981;font-weight:600;margin-top:-0.4rem;margin-bottom:0.25rem;">Billed annually — save $240/yr</div>
             <div class="plan-desc">For agents building consistent deal flow. Try free, no strings attached.</div>
             <div class="plan-divider"></div>
             <ul class="plan-features">
@@ -547,7 +562,8 @@
         <div class="plan-card featured">
             <div class="plan-badge plan-badge-popular">Most Popular</div>
             <div class="plan-name">Professional</div>
-            <div class="plan-price">$249<span class="plan-price-unit">/month</span></div>
+            <div class="plan-price"><span id="price-professional">$249</span><span class="plan-price-unit" id="unit-professional">/month</span></div>
+            <div id="saving-professional" style="display:none;font-size:0.8rem;color:#86efac;font-weight:600;margin-top:-0.4rem;margin-bottom:0.25rem;">Billed annually — save $600/yr</div>
             <div class="plan-desc">For agents serious about winning listings. Unlimited bids, priority access.</div>
             <div class="plan-divider"></div>
             <ul class="plan-features">
@@ -566,7 +582,8 @@
         <!-- Firm -->
         <div class="plan-card">
             <div class="plan-name">Firm</div>
-            <div class="plan-price">$499<span class="plan-price-unit">/location/mo</span></div>
+            <div class="plan-price"><span id="price-firm">$499</span><span class="plan-price-unit" id="unit-firm">/location/mo</span></div>
+            <div id="saving-firm" style="display:none;font-size:0.8rem;color:#10b981;font-weight:600;margin-top:-0.4rem;margin-bottom:0.25rem;">Billed annually — save $1,188/yr per location</div>
             <div class="plan-desc">For brokerages &amp; teams managing multiple agents across markets.</div>
             <div class="plan-divider"></div>
             <ul class="plan-features">
@@ -789,6 +806,35 @@
 </footer>
 
 <script>
+    // Billing toggle
+    const prices = {
+        basic:        { monthly: '$99',  annual: '$79'  },
+        professional: { monthly: '$249', annual: '$199' },
+        firm:         { monthly: '$499', annual: '$399' },
+    };
+    const units = {
+        basic:        { monthly: '/month',      annual: '/month' },
+        professional: { monthly: '/month',      annual: '/month' },
+        firm:         { monthly: '/location/mo', annual: '/location/mo' },
+    };
+
+    function setBilling(mode) {
+        ['basic', 'professional', 'firm'].forEach(plan => {
+            document.getElementById('price-' + plan).textContent = prices[plan][mode];
+            document.getElementById('unit-' + plan).textContent = units[plan][mode];
+            document.getElementById('saving-' + plan).style.display = mode === 'annual' ? 'block' : 'none';
+        });
+        const monthlyBtn = document.getElementById('toggleMonthly');
+        const annualBtn  = document.getElementById('toggleAnnual');
+        if (mode === 'annual') {
+            monthlyBtn.style.cssText = 'padding:0.5rem 1.5rem;border-radius:50px;border:none;font-family:inherit;font-size:0.9rem;font-weight:600;cursor:pointer;transition:all 0.2s;background:transparent;color:#6b7280;';
+            annualBtn.style.cssText  = 'padding:0.5rem 1.5rem;border-radius:50px;border:none;font-family:inherit;font-size:0.9rem;font-weight:600;cursor:pointer;transition:all 0.2s;background:white;color:#0A2540;box-shadow:0 1px 4px rgba(0,0,0,0.1);';
+        } else {
+            monthlyBtn.style.cssText = 'padding:0.5rem 1.5rem;border-radius:50px;border:none;font-family:inherit;font-size:0.9rem;font-weight:600;cursor:pointer;transition:all 0.2s;background:white;color:#0A2540;box-shadow:0 1px 4px rgba(0,0,0,0.1);';
+            annualBtn.style.cssText  = 'padding:0.5rem 1.5rem;border-radius:50px;border:none;font-family:inherit;font-size:0.9rem;font-weight:600;cursor:pointer;transition:all 0.2s;background:transparent;color:#6b7280;';
+        }
+    }
+
     // Nav
     const hamburger = document.getElementById('navHamburger');
     const mobileMenu = document.getElementById('mobileMenu');
