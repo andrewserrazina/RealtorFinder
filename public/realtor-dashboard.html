@@ -1211,6 +1211,26 @@
             .hub-btn { min-height: 44px; padding: 0.7rem 1rem; }
             .msg-thread-compose textarea { min-height: 44px; font-size: 16px; }
             .msg-thread-compose .btn { min-height: 44px; }
+
+            /* Upgrade plan modal: stack cards vertically */
+            .upgrade-plan-grid { grid-template-columns: 1fr !important; }
+
+            /* Profile save: sticky footer while scrolling the form */
+            .profile-save-footer {
+                position: sticky;
+                bottom: calc(70px + env(safe-area-inset-bottom, 12px));
+                background: white;
+                border-top: 1px solid var(--border);
+                padding: 0.75rem 0 0;
+                margin-top: 1rem;
+                z-index: 10;
+            }
+
+            /* Prevent iOS scroll chaining on scrollable panels */
+            .modal-content,
+            .msg-thread-body,
+            .msg-conv-list,
+            .msg-thread { overscroll-behavior: contain; }
         }
     </style>
     <link rel="manifest" href="/manifest.json">
@@ -1624,7 +1644,9 @@
                             <label>Bio</label>
                             <textarea name="bio" rows="4" style="width:100%;padding:0.875rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:1rem;resize:vertical;" placeholder="Tell sellers about yourself and your experience…"></textarea>
                         </div>
-                        <button type="submit" class="btn btn-primary" style="padding:1rem 2rem;">Save Profile</button>
+                        <div class="profile-save-footer">
+                            <button type="submit" class="btn btn-primary" style="padding:1rem 2rem;width:100%;">Save Profile</button>
+                        </div>
                     </form>
 
                     <!-- License Document -->
@@ -2265,7 +2287,7 @@ Worth checking out.</div>
                 <h2 style="font-family:'Crimson Pro',serif;font-size:2rem;font-weight:900;color:#0A2540;margin-bottom:0.5rem;">Start winning listings today</h2>
                 <p style="color:#6B7280;font-size:0.95rem;">Pick a plan and get full access free for 30 days — no credit card required.</p>
             </div>
-            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.5rem;" id="upgradePlanGrid">
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.5rem;" id="upgradePlanGrid" class="upgrade-plan-grid">
                 <!-- plan cards injected by JS -->
             </div>
             <div style="text-align:center;">
@@ -6982,6 +7004,21 @@ Worth checking out.</div>
       });
 
       window.addEventListener('load', syncMobBadges);
+
+      // Keyboard-aware bottom nav: shrink out of the way when soft keyboard opens
+      if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', () => {
+          const nav = document.getElementById('mobileBottomNav');
+          if (!nav) return;
+          const keyboardHeight = window.innerHeight - window.visualViewport.height;
+          if (keyboardHeight > 100) {
+            // Keyboard is open — hide bottom nav so it doesn't block the compose area
+            nav.style.transform = `translateY(${keyboardHeight}px)`;
+          } else {
+            nav.style.transform = '';
+          }
+        });
+      }
     </script>
 </body>
 </html>
