@@ -10714,13 +10714,13 @@ async function seedDemoData() {
             }
             const { rows: [listing] } = await pool.query(
                 `INSERT INTO listings (user_id, address, city, state, zip, price, property_type, bedrooms, bathrooms,
-                  sqft, description, owner_name, owner_email, status, image_urls, year_built, garage_spaces,
+                  sqft, description, owner_name, owner_email, owner_phone, status, image_urls, year_built, garage_spaces,
                   lot_size, hoa_fee, owner_attested, created_at, updated_at)
-                 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,'active',$14,$15,$16,$17,$18,TRUE,
+                 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,'active',$15,$16,$17,$18,$19,TRUE,
                          NOW() - INTERVAL '7 days', NOW() - INTERVAL '7 days')
                  RETURNING id`,
                 [seller.id, l.address, l.city, l.state, l.zip, l.price, l.property_type,
-                 l.bedrooms, l.bathrooms, l.sqft, l.description, l.owner_name, l.owner_email,
+                 l.bedrooms, l.bathrooms, l.sqft, l.description, l.owner_name, l.owner_email, '555-000-0000',
                  l.photos, l.year_built, l.garage_spaces, l.lot_size, l.hoa_fee || null]
             );
             listingIds.push(listing.id);

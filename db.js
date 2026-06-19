@@ -812,7 +812,7 @@ const db = {
 
     async getRealtorBuyerResponses(realtorUserId) {
         const result = await pool.query(
-            `SELECT brr.buyer_request_id FROM buyer_request_responses
+            `SELECT buyer_request_id FROM buyer_request_responses
              WHERE realtor_user_id = $1`,
             [realtorUserId]
         );
