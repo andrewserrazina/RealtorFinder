@@ -10586,7 +10586,8 @@ async function runFoundingProspectFollowUpJob() {
 
 async function seedDemoData() {
     const upsertUser = async (email, insertSql, params) => {
-        const { rows } = await pool.query(insertSql + ` ON CONFLICT (email) DO NOTHING RETURNING id`, params);
+        const base = insertSql.replace(/\s*RETURNING\s+id\s*$/i, '');
+        const { rows } = await pool.query(base + ` ON CONFLICT (email) DO NOTHING RETURNING id`, params);
         if (rows[0]) return rows[0];
         const { rows: existing } = await pool.query(`SELECT id FROM users WHERE email = $1`, [email]);
         return existing[0];
