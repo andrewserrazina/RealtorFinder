@@ -75,6 +75,7 @@ const auth = {
                 `SELECT id, email, user_type, first_name, last_name, zip_code,
                         email_verified, is_admin, is_active, is_approved,
                         phone, license_number, bio, years_experience, service_areas,
+                        subscription_plan, is_founding_member,
                         created_at
                  FROM users WHERE id = $1`,
                 [userId]

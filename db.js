@@ -224,14 +224,14 @@ const db = {
                     l.created_at, l.user_id, l.latitude, l.longitude, l.status,
                     l.boosted_until,
                     COALESCE(l.view_count, 0) as view_count,
-                    (SELECT COUNT(*) FROM offers WHERE listing_id = l.id) as offer_count
+                    (SELECT COUNT(*) FROM proposals WHERE listing_id = l.id) as offer_count
              FROM listings l
              ${where}
              ORDER BY
                CASE WHEN l.boosted_until IS NOT NULL AND l.boosted_until > NOW() THEN 0 ELSE 1 END ASC,
                ${sort === 'price_asc' ? 'l.price ASC NULLS LAST' :
                  sort === 'price_desc' ? 'l.price DESC NULLS LAST' :
-                 sort === 'most_bids' ? '(SELECT COUNT(*) FROM offers WHERE listing_id = l.id) DESC' :
+                 sort === 'most_bids' ? '(SELECT COUNT(*) FROM proposals WHERE listing_id = l.id) DESC' :
                  'l.created_at DESC'}
              LIMIT $${params.length - 1} OFFSET $${params.length}`,
             params

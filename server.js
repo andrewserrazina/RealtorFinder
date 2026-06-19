@@ -3610,10 +3610,16 @@ app.post('/api/stripe/checkout', auth.requireAuth, async (req, res) => {
         );
         const existingCustomer = custRows[0]?.stripe_customer_id;
 
+        const { rows: [userRow] } = await pool.query(
+            `SELECT is_founding_member, founding_credit_applied FROM users WHERE id = $1`, [req.session.userId]
+        );
+        const trialDays = (userRow?.is_founding_member && !userRow?.founding_credit_applied) ? 60 : 30;
+
         const sessionParams = {
             mode: 'subscription',
             payment_method_types: ['card'],
             line_items: [{ price: priceId, quantity: 1 }],
+            subscription_data: { trial_period_days: trialDays },
             success_url: `${base}/dashboard/realtor?upgraded=1`,
             cancel_url: `${base}/pricing`,
             metadata: { userId: String(req.session.userId), plan },
