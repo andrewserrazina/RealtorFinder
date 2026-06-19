@@ -3788,25 +3788,13 @@ app.post('/api/webhook/stripe', express.raw({ type: 'application/json' }), async
                 await client.query('COMMIT');
                 console.log(`✅ Stripe: upgraded user ${userId} to ${plan}`);
 
-                // Apply founding member 2-month Professional credit (outside transaction — non-critical)
+                // Mark founding credit as applied — trial was already set at checkout session creation
                 if (sess.subscription) {
-                    const { rows: foundingRows } = await pool.query(
-                        `SELECT is_founding_member, founding_credit_applied FROM users WHERE id = $1`, [userId]
-                    );
-                    if (foundingRows[0]?.is_founding_member && !foundingRows[0]?.founding_credit_applied) {
-                        try {
-                            await stripe.subscriptions.update(sess.subscription, {
-                                trial_end: Math.floor(Date.now() / 1000) + (60 * 24 * 60 * 60), // 60 days
-                                proration_behavior: 'none',
-                            });
-                            await pool.query(
-                                `UPDATE users SET founding_credit_applied = TRUE WHERE id = $1`, [userId]
-                            );
-                            console.log(`🏅 Stripe: applied 60-day founding credit to user ${userId}`);
-                        } catch (e) {
-                            console.error('Founding credit Stripe error:', e.message);
-                        }
-                    }
+                    pool.query(
+                        `UPDATE users SET founding_credit_applied = TRUE
+                         WHERE id = $1 AND is_founding_member = TRUE AND founding_credit_applied = FALSE`,
+                        [userId]
+                    ).catch(e => console.error('founding_credit_applied update error:', e.message));
                 }
 
                 // Credit referrer $25 on first subscription — guard with referral_credit_paid to survive webhook retries
