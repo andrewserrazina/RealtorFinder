@@ -10527,6 +10527,207 @@ async function runFoundingProspectFollowUpJob() {
     }
 }
 
+async function seedDemoData() {
+    try {
+        const { rows: existing } = await pool.query(`SELECT id FROM users WHERE email = 'demo@realtorfinder.net' LIMIT 1`);
+        if (existing.length > 0) return;
+
+        const bcrypt = require('bcrypt');
+        const demoHash = await bcrypt.hash('Demo1234!', 10);
+
+        // Demo seller
+        const { rows: [seller] } = await pool.query(
+            `INSERT INTO users (email, password_hash, user_type, first_name, last_name, zip_code, is_approved, is_active, email_verified, created_at)
+             VALUES ($1, $2, 'seller', 'Sarah', 'Mitchell', '02461', TRUE, TRUE, TRUE, NOW() - INTERVAL '14 days')
+             RETURNING id`,
+            ['demo-seller@realtorfinder.net', demoHash]
+        );
+
+        // Demo realtor (main account)
+        const { rows: [realtor] } = await pool.query(
+            `INSERT INTO users (email, password_hash, user_type, first_name, last_name, zip_code, is_approved, is_active,
+              email_verified, license_number, license_verified, brokerage, years_experience, service_areas, bio,
+              profile_photo, subscription_plan, is_founding_member, onboarding_completed, created_at)
+             VALUES ($1, $2, 'realtor', 'James', 'Rodriguez', '02116', TRUE, TRUE,
+               TRUE, 'MA9045123', TRUE, 'Meridian Real Estate Partners', 12,
+               'Boston, Newton, Brookline, Cambridge, Somerville, Plymouth, Portsmouth NH',
+               'I''ve spent 12 years helping New England families navigate one of the most competitive real estate markets in the country. Before joining Meridian Real Estate Partners, I was a top producer at a national firm where I closed over $40M in volume. My approach is straightforward: I listen first, then I build a marketing strategy around your specific home — not a template.\n\nI specialize in the Boston metro area and South Shore, with deep relationships across Newton, Brookline, and Cambridge. Most of my business comes from referrals, which I take as the highest compliment. When you work with me, you get direct access — not a team of assistants.',
+               'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&auto=format&fit=crop&q=80',
+               'professional', TRUE, TRUE, NOW() - INTERVAL '30 days')
+             RETURNING id`,
+            ['demo@realtorfinder.net', demoHash]
+        );
+
+        // Ghost realtors for competing proposals
+        const { rows: [ghost1] } = await pool.query(
+            `INSERT INTO users (email, password_hash, user_type, first_name, last_name, zip_code, is_approved, is_active,
+              email_verified, brokerage, years_experience, service_areas, subscription_plan, created_at)
+             VALUES ($1, $2, 'realtor', 'Emma', 'Chen', '02134', TRUE, TRUE, TRUE,
+               'Coldwell Banker Realty', 8, 'Boston, Cambridge, Somerville, Newton', 'basic', NOW() - INTERVAL '20 days')
+             RETURNING id`,
+            ['emma.chen.demo@realtorfinder.net', demoHash]
+        );
+        const { rows: [ghost2] } = await pool.query(
+            `INSERT INTO users (email, password_hash, user_type, first_name, last_name, zip_code, is_approved, is_active,
+              email_verified, brokerage, years_experience, service_areas, subscription_plan, created_at)
+             VALUES ($1, $2, 'realtor', 'Marcus', 'Webb', '02301', TRUE, TRUE, TRUE,
+               'RE/MAX Advantage', 15, 'Plymouth, Brockton, Taunton, Cape Cod', 'basic', NOW() - INTERVAL '25 days')
+             RETURNING id`,
+            ['marcus.webb.demo@realtorfinder.net', demoHash]
+        );
+
+        const photos = {
+            newton:    [
+                'https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=1200&h=800&auto=format&fit=crop&q=80',
+                'https://images.unsplash.com/photo-1583608205776-bfd35f0d9f83?w=1200&h=800&auto=format&fit=crop&q=80',
+                'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=1200&h=800&auto=format&fit=crop&q=80',
+                'https://images.unsplash.com/photo-1600566753086-00f18fb6b3ea?w=1200&h=800&auto=format&fit=crop&q=80',
+            ],
+            plymouth:  [
+                'https://images.unsplash.com/photo-1570129477492-1f1f5745e4de?w=1200&h=800&auto=format&fit=crop&q=80',
+                'https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?w=1200&h=800&auto=format&fit=crop&q=80',
+                'https://images.unsplash.com/photo-1560448075-bb485b067938?w=1200&h=800&auto=format&fit=crop&q=80',
+            ],
+            brookline: [
+                'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=1200&h=800&auto=format&fit=crop&q=80',
+                'https://images.unsplash.com/photo-1586023492125-27264fee0dc4?w=1200&h=800&auto=format&fit=crop&q=80',
+                'https://images.unsplash.com/photo-1484154218962-a197022b5858?w=1200&h=800&auto=format&fit=crop&q=80',
+                'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=1200&h=800&auto=format&fit=crop&q=80',
+            ],
+            portsmouth: [
+                'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=1200&h=800&auto=format&fit=crop&q=80',
+                'https://images.unsplash.com/photo-1600596405974-c3a33d9c6f7b?w=1200&h=800&auto=format&fit=crop&q=80',
+                'https://images.unsplash.com/photo-1575517111839-3a3843ee7f5d?w=1200&h=800&auto=format&fit=crop&q=80',
+            ],
+        };
+
+        const listingData = [
+            {
+                address: '47 Maple Street', city: 'Newton', state: 'MA', zip: '02461',
+                price: 875000, property_type: 'Single Family', bedrooms: 4, bathrooms: 3.0, sqft: 2200,
+                year_built: 1998, garage_spaces: 2, lot_size: 7200,
+                description: `Beautifully updated colonial in Newton Centre's most sought-after pocket. This 4-bedroom, 3-bathroom home was fully renovated in 2021 — new kitchen with quartz countertops and SubZero appliances, spa-inspired primary bath, and wide-plank white oak floors throughout.\n\nThe open-concept main level flows from a chef's kitchen to a sunlit family room with gas fireplace. Upstairs: a generous primary suite with walk-in closet, three additional bedrooms, and a hall bath. The finished lower level adds another 600 sqft of flexible living space.\n\nOutside: a professionally landscaped half-acre yard with bluestone patio, mature trees, and two-car garage. Walk to Newton Centre T stop, top-rated Bigelow Elementary, and shops on Langley Road.`,
+                owner_name: 'Sarah Mitchell', owner_email: 'demo-seller@realtorfinder.net',
+                photos: photos.newton,
+            },
+            {
+                address: '128 Harbor View Road', city: 'Plymouth', state: 'MA', zip: '02360',
+                price: 649000, property_type: 'Single Family', bedrooms: 3, bathrooms: 2.5, sqft: 1850,
+                year_built: 2004, garage_spaces: 1, lot_size: 9800,
+                description: `Classic Cape Cod with sweeping harbor views from every room on the back of the house. Set on a quiet road just minutes from Plymouth Center, this 3-bedroom home was renovated in 2022 with a new primary suite addition, updated kitchen, and composite deck off the dining room.\n\nThe light-filled living room has hardwood floors and a wood-burning fireplace. The renovated kitchen features shaker cabinets, granite counters, and stainless appliances. Upstairs, the primary suite addition includes a vaulted ceiling, walk-in closet, and tiled bath.\n\nThe backyard is fully fenced with raised garden beds and perennial plantings. One-car attached garage plus extra parking. Ten minutes to Plymouth Beach.`,
+                owner_name: 'Sarah Mitchell', owner_email: 'demo-seller@realtorfinder.net',
+                photos: photos.plymouth,
+            },
+            {
+                address: '215 Chestnut Hill Avenue', city: 'Brookline', state: 'MA', zip: '02467',
+                price: 1250000, property_type: 'Single Family', bedrooms: 5, bathrooms: 3.5, sqft: 3100,
+                year_built: 1912, garage_spaces: 2, lot_size: 8400, hoa_fee: null,
+                description: `Stately Victorian in Chestnut Hill — one of Brookline's most coveted addresses. Built in 1912 and meticulously maintained, this 5-bedroom, 3.5-bath home retains its original character: 10-foot ceilings, mahogany crown molding, three decorative fireplaces, and original pine floors — while offering fully updated systems, kitchen, and baths.\n\nThe first floor offers a gracious entry hall, formal living room, dining room with coffered ceiling, and a completely redesigned eat-in kitchen with marble island, Wolf range, and Miele dishwasher. French doors open to a bluestone terrace and private garden.\n\nUpstairs: a sun-filled primary suite with sitting room, dual closets, and marble bath; three additional bedrooms; and a hall bath. Third floor has the 5th bedroom and bonus room. Detached two-car carriage house garage.\n\nWalking distance to Chestnut Hill T stop, The Street shops, and The Country Club.`,
+                owner_name: 'Sarah Mitchell', owner_email: 'demo-seller@realtorfinder.net',
+                photos: photos.brookline,
+            },
+            {
+                address: '89 Elm Avenue', city: 'Portsmouth', state: 'NH', zip: '03801',
+                price: 529000, property_type: 'Single Family', bedrooms: 4, bathrooms: 2.0, sqft: 1650,
+                year_built: 1987, garage_spaces: 1, lot_size: 6600,
+                description: `Move-in ready craftsman in one of Portsmouth's most walkable neighborhoods. Four bedrooms, two full baths, and a flexible floor plan that works for families and remote workers alike.\n\nThe renovated kitchen (2020) features butcher block counters, tile backsplash, and a breakfast bar that opens to the dining area. The living room has original hardwood floors, a gas fireplace, and large windows facing the private backyard. First-floor bedroom and full bath make it accessible and guest-friendly.\n\nUpstairs: primary bedroom with double closets, two additional bedrooms, and an updated hall bath with subway tile. Walk-out basement with laundry and storage. One-car garage with overhead storage.\n\nThree blocks to Portsmouth's historic downtown, Market Square, and the waterfront. No HOA. City water and sewer.`,
+                owner_name: 'Sarah Mitchell', owner_email: 'demo-seller@realtorfinder.net',
+                photos: photos.portsmouth,
+            },
+        ];
+
+        const listingIds = [];
+        for (const l of listingData) {
+            const { rows: [listing] } = await pool.query(
+                `INSERT INTO listings (user_id, address, city, state, zip, price, property_type, bedrooms, bathrooms,
+                  sqft, description, owner_name, owner_email, status, image_urls, year_built, garage_spaces,
+                  lot_size, hoa_fee, owner_attested, created_at, updated_at)
+                 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,'active',$14,$15,$16,$17,$18,TRUE,
+                         NOW() - INTERVAL '7 days', NOW() - INTERVAL '7 days')
+                 RETURNING id`,
+                [seller.id, l.address, l.city, l.state, l.zip, l.price, l.property_type,
+                 l.bedrooms, l.bathrooms, l.sqft, l.description, l.owner_name, l.owner_email,
+                 l.photos, l.year_built, l.garage_spaces, l.lot_size, l.hoa_fee || null]
+            );
+            listingIds.push(listing.id);
+        }
+
+        // Proposals — James (demo realtor) on all 4
+        const jamesNotes = [
+            `Hi Sarah — 47 Maple Street caught my attention immediately. I've sold four homes on this street in the past three years and have a deep understanding of what buyers in Newton Centre will pay for. My most recent comp closed at $412/sqft in March.\n\nFor your marketing plan: professional staging consultation, HDR photography, 3D Matterport tour, and a broker open before the public open. I'd target the Boston Globe Real Estate section and my database of 340+ Newton-area buyer leads. I'm confident we can exceed asking if we time the launch to a Thursday open weekend.`,
+            `Hi Sarah — Plymouth harbor views are in high demand right now and I've had three buyer clients specifically searching on Harbor View Road this spring. I know exactly who to call.\n\nMy plan: launch mid-April before competing inventory hits, lead with the harbor view angle in all marketing, and pre-market to my Plymouth/South Shore buyer database before hitting MLS. I can have you under contract in under 21 days.`,
+            `Hi Sarah — the Chestnut Hill Avenue Victorian is exactly the type of home I specialize in. I've closed seven transactions over $1M in Brookline in the past 18 months and understand the buyer pool at this price point deeply.\n\nFor a home of this caliber, presentation is everything. I partner with a Brookline-based stager who knows exactly how to position period homes for today's buyers. We'll invest in editorial-quality photography, feature in Dwell and Boston Magazine's real estate section, and hold private showings before the first public open.`,
+            `Hi Sarah — I grew up in Portsmouth and still have strong relationships with buyers relocating from Boston and the South Shore looking for value. Elm Avenue is a fantastic location and I think we can generate real competition.\n\nMy plan: pre-market to my relocation buyer database, professional photography on a Tuesday (best light for that side of the street), launch Thursday, offer review Sunday evening. In this market I expect 3–6 offers.`,
+        ];
+
+        for (let i = 0; i < listingIds.length; i++) {
+            await pool.query(
+                `INSERT INTO proposals (listing_id, realtor_id, commission_pct, cover_note, timeline, status, created_at)
+                 VALUES ($1, $2, $3, $4, $5, 'pending', NOW() - INTERVAL '4 days')
+                 ON CONFLICT (listing_id, realtor_id) DO NOTHING`,
+                [listingIds[i], realtor.id, 2.5, jamesNotes[i], '3–4 weeks from listing']
+            );
+        }
+
+        // Ghost proposals — Emma Chen
+        const emmaNotes = [
+            `I have 8 years of Newton experience and a strong buyer network in the metro west corridor. Commission is negotiable based on final sale price.`,
+            `Plymouth is a market I know well. Happy to discuss my recent comps and marketing approach in more detail.`,
+            `Chestnut Hill is my core market. I'd love to discuss my specific strategy for homes at this price point.`,
+            `Portsmouth NH is seeing strong demand from Boston relocators. I can move quickly on this one.`,
+        ];
+        for (let i = 0; i < listingIds.length; i++) {
+            await pool.query(
+                `INSERT INTO proposals (listing_id, realtor_id, commission_pct, cover_note, timeline, status, created_at)
+                 VALUES ($1, $2, $3, $4, $5, 'pending', NOW() - INTERVAL '3 days')
+                 ON CONFLICT (listing_id, realtor_id) DO NOTHING`,
+                [listingIds[i], ghost1.id, 2.75, emmaNotes[i], '4–5 weeks from listing']
+            );
+        }
+
+        // Ghost proposals — Marcus Webb (only on listings 2 and 4 — his market)
+        await pool.query(
+            `INSERT INTO proposals (listing_id, realtor_id, commission_pct, cover_note, timeline, status, created_at)
+             VALUES ($1, $2, 2.5, $3, '2–3 weeks from listing', 'pending', NOW() - INTERVAL '5 days')
+             ON CONFLICT (listing_id, realtor_id) DO NOTHING`,
+            [listingIds[1], ghost2.id, `Plymouth is my primary market — I've closed 14 transactions here in the past two years. I can show you comps that support strong pricing and have buyers ready.`]
+        );
+        await pool.query(
+            `INSERT INTO proposals (listing_id, realtor_id, commission_pct, cover_note, timeline, status, created_at)
+             VALUES ($1, $2, 2.75, $3, '3–4 weeks from listing', 'pending', NOW() - INTERVAL '2 days')
+             ON CONFLICT (listing_id, realtor_id) DO NOTHING`,
+            [listingIds[3], ghost2.id, `Portsmouth is a market I know deeply having lived here for 10 years. Elm Avenue is a wonderful street and I think the $529K ask is right on target.`]
+        );
+
+        // Reviews for demo realtor
+        const reviewSellers = [
+            { first: 'Linda', last: 'K.', rating: 5, comment: `James sold our Newton home in 9 days over asking. His market knowledge is exceptional — he predicted the exact price range before we even listed. The photography and staging consultation he arranged made a real difference. I've already referred him to two neighbors.` },
+            { first: 'Tom', last: 'B.', rating: 5, comment: `We were nervous about listing our Brookline Victorian but James made the process seamless. He handled every detail from staging to negotiation and kept us informed throughout. Closed above asking with no contingencies. Couldn't be happier.` },
+            { first: 'Rachel', last: 'M.', rating: 5, comment: `Professional, responsive, and genuinely knowledgeable. James had buyers lined up before we hit the MLS and we had multiple offers by Sunday. His negotiating made us an extra $18K over our original ask. Highly recommend.` },
+        ];
+        for (const rv of reviewSellers) {
+            const { rows: [rev_user] } = await pool.query(
+                `INSERT INTO users (email, password_hash, user_type, first_name, last_name, zip_code, is_approved, is_active, email_verified, created_at)
+                 VALUES ($1, $2, 'seller', $3, $4, '02461', TRUE, TRUE, TRUE, NOW() - INTERVAL '60 days')
+                 ON CONFLICT (email) DO NOTHING RETURNING id`,
+                [`${rv.first.toLowerCase()}.${rv.last.toLowerCase().replace('.','')}.review@realtorfinder.net`, demoHash, rv.first, rv.last]
+            );
+            if (rev_user) {
+                await pool.query(
+                    `INSERT INTO realtor_reviews (realtor_id, seller_id, rating, body, created_at)
+                     VALUES ($1, $2, $3, $4, NOW() - INTERVAL '${Math.floor(Math.random()*30)+10} days')
+                     ON CONFLICT (seller_id, listing_id) DO NOTHING`,
+                    [realtor.id, rev_user.id, rv.rating, rv.comment]
+                );
+            }
+        }
+
+        console.log('✅ Demo data seeded — demo@realtorfinder.net / Demo1234!');
+    } catch (err) {
+        console.error('seedDemoData error:', err.message);
+    }
+}
+
 // Run all schema migrations then start listening
 async function startServer() {
     for (const sql of _schemaMigrations) {
@@ -10541,6 +10742,7 @@ async function startServer() {
     }
     await backfillProfileSlugs();
     await seedBlogPosts();
+    await seedDemoData();
     app.listen(PORT, () => {
         console.log(`🏠 RealtorFinder server running on port ${PORT}`);
         console.log(`📍 http://localhost:${PORT}`);
