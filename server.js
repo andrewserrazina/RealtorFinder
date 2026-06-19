@@ -1420,6 +1420,8 @@ app.get('/api/listings', async (req, res) => {
         if (swLat && swLng && neLat && neLng) { filters.swLat = swLat; filters.swLng = swLng; filters.neLat = neLat; filters.neLng = neLng; }
         if (['newest', 'price_asc', 'price_desc', 'most_bids'].includes(sort)) filters.sort = sort;
 
+        const isDemoUser = req.user && req.user.email === 'demo@realtorfinder.net';
+        if (!isDemoUser) filters.excludeDemoListings = true;
         const result = await db.getFilteredListings(filters, parseInt(page), Math.min(parseInt(limit), 50));
         res.json({
             listings: result.listings.map(formatListing),
@@ -4769,6 +4771,58 @@ app.get('/robots.txt', (req, res) => {
         '',
         `Sitemap: ${base}/sitemap-index.xml`,
     ].join('\n'));
+});
+
+app.get('/llms.txt', (req, res) => {
+    const base = (process.env.FRONTEND_URL || 'https://www.realtorfinder.net').replace(/\/$/, '');
+    res.type('text/plain');
+    res.send(`# RealtorFinder
+
+> RealtorFinder is a marketplace where home sellers post their property and receive competing proposals from licensed realtors — then choose the agent they want to work with based on commission rate, marketing plan, and experience.
+
+RealtorFinder flips the traditional model: instead of sellers calling agents, agents compete for listings. Sellers list for free and review multiple proposals before committing to anyone. The platform is in a founding-member pre-launch phase (sellers go live August 2026); realtors can sign up now to claim their market and get guaranteed access to every new listing in their area.
+
+## Public Pages
+
+- [Home](${base}/): Seller-facing landing page explaining the value proposition, how the process works, and an email capture for early access
+- [For Sellers](${base}/sellers): Detailed seller guide — step-by-step process, what realtor proposals include, FAQs
+- [For Realtors](${base}/realtors): Realtor landing page with founding-member offer, pricing plans, and signup CTA
+- [Pricing](${base}/pricing): Three subscription tiers — Basic ($99/mo), Professional ($249/mo), Firm ($499/location/mo) — with annual billing option (save 20%)
+- [About](${base}/about): Company mission, founding story, team background
+- [Blog](${base}/blog): Real estate advice for sellers and realtors; articles on pricing, staging, choosing an agent, market trends
+- [Contact](${base}/contact): Contact form and support email
+- [For Buyers](${base}/buyers): Buyer-focused landing page with find-an-agent flow
+- [Find an Agent](${base}/find-agent): Buyers enter their criteria and get matched with local realtors
+- [FAQ](${base}/faq): Frequently asked questions for both sellers and realtors
+- [Realtor Directory](${base}/realtor-directory): Browse licensed realtors by market
+- [Fair Housing](${base}/fair-housing): Fair Housing Act compliance statement
+- [Privacy Policy](${base}/privacy): Data collection and usage policy
+- [Terms of Service](${base}/terms): Platform terms and conditions
+- [Cookie Policy](${base}/cookies): Cookie usage and preferences
+
+## Authenticated Pages (login required)
+
+- [Seller Dashboard](${base}/dashboard/seller): Sellers manage their listings, view incoming proposals, compare agents, and accept/decline offers
+- [Realtor Dashboard](${base}/dashboard/realtor): Realtors browse active listings, submit proposals, track proposal status, and manage their profile
+- [Inbox](${base}/inbox): Messaging between sellers and realtors after a proposal is submitted
+- [Login / Signup](${base}/login): Unified login and registration page for sellers and realtors
+
+## API (JSON, authentication required for most endpoints)
+
+- \`GET /api/listings\` — Active listings (realtors/public); seller's own listings when authenticated as seller
+- \`POST /api/listings\` — Create a new listing (seller only)
+- \`POST /api/offers\` — Submit a proposal on a listing (realtor only)
+- \`GET /api/offers/:listingId\` — Get proposals for a listing (seller who owns it)
+- \`POST /api/auth/login\` — Authenticate and start session
+- \`POST /api/auth/signup\` — Register new seller or realtor account
+- \`GET /api/realtors/founding-count\` — Returns \`{ claimed, total, remaining, city_claimed }\` for social proof display
+- \`GET /api/reviews/:realtorId\` — Public reviews for a realtor profile
+
+## Optional
+
+- [Sitemap](${base}/sitemap-index.xml)
+- [Robots.txt](${base}/robots.txt)
+`);
 });
 
 // Sitemap index — points to per-state sitemaps

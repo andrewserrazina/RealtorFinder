@@ -165,10 +165,14 @@ const db = {
 
     // Filtered listings with pagination (realtors — active only)
     async getFilteredListings(filters = {}, page = 1, limit = 20) {
-        const { city, type, minPrice, maxPrice, minBeds, maxBeds, minBaths, zip, swLat, swLng, neLat, neLng, sort } = filters;
+        const { city, type, minPrice, maxPrice, minBeds, maxBeds, minBaths, zip, swLat, swLng, neLat, neLng, sort, excludeDemoListings } = filters;
         const offset = (page - 1) * limit;
         const params = [];
         const conditions = ["(l.status = 'active' OR l.status IS NULL)", "l.deleted_at IS NULL"];
+
+        if (excludeDemoListings) {
+            conditions.push(`l.user_id NOT IN (SELECT id FROM users WHERE email = 'demo-seller@realtorfinder.net')`);
+        }
 
         if (city) {
             params.push(`%${city.trim()}%`);
