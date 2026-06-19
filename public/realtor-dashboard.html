@@ -936,6 +936,55 @@
         @media (max-width: 480px) {
             .premium-upgrade-grid { grid-template-columns: 1fr; }
         }
+
+        /* ── Mobile (≤480px): tighter layout for narrow phones ── */
+        @media (max-width: 480px) {
+            /* Tab label abbreviations */
+            .tab-label-full { display: none; }
+            .tab-label-short { display: inline !important; }
+
+            /* Tab bar: smaller text + padding, scroll-hint gradient */
+            .tabs-container {
+                top: 60px; /* header collapses tighter on mobile */
+            }
+            .tabs-container::after {
+                content: '';
+                position: absolute;
+                right: 0;
+                top: 0;
+                bottom: 0;
+                width: 36px;
+                background: linear-gradient(to right, transparent, white);
+                pointer-events: none;
+            }
+            .tabs { padding: 0 0.75rem; }
+            .tab { padding: 0.7rem 0.6rem; font-size: 0.78rem; }
+
+            /* Listing cards: shorter image, tighter content */
+            .listing-image { height: 170px; }
+            .listing-content { padding: 1rem 1rem 1.25rem; }
+            .listing-price { font-size: 1.5rem; }
+            .listing-address { font-size: 0.9rem; }
+            .listing-specs { font-size: 0.8rem; gap: 0.4rem; }
+            .listing-description { font-size: 0.82rem; -webkit-line-clamp: 2; }
+            .listing-action { padding: 0.7rem !important; font-size: 0.85rem; }
+
+            /* Stat cards: single column */
+            .stats-row { grid-template-columns: 1fr !important; gap: 0.75rem; }
+
+            /* Dashboard padding */
+            .dashboard-container { padding: 1rem 0.75rem; }
+
+            /* Filter bar labels hidden to save space */
+            .filter-group label { font-size: 0.78rem; }
+
+            /* Modals: full width */
+            .modal-content { width: 100%; border-radius: 16px 16px 0 0; margin-top: auto; padding: 1.25rem; }
+            .modal { align-items: flex-end; }
+
+            /* Headers in sections */
+            h2 { font-size: 1.5rem !important; }
+        }
         .premium-duration-btn {
             border: 2px solid var(--border);
             border-radius: 10px;
@@ -1097,7 +1146,7 @@
         <div class="tabs">
             <div class="tab active" data-view="browse">Browse</div>
             <div class="tab" data-view="pipeline">Pipeline <span id="pipelineBadge" style="display:none;background:var(--accent);color:white;border-radius:50%;width:16px;height:16px;font-size:0.65rem;font-weight:700;text-align:center;line-height:16px;margin-left:4px;vertical-align:middle;"></span></div>
-            <div class="tab" data-view="buyer-requests">Buyer Requests <span id="buyerMatchBadge" style="display:none;background:var(--accent);color:white;border-radius:50%;width:16px;height:16px;font-size:0.65rem;font-weight:700;text-align:center;line-height:16px;margin-left:4px;vertical-align:middle;"></span></div>
+            <div class="tab" data-view="buyer-requests"><span class="tab-label-full">Buyer Requests</span><span class="tab-label-short" style="display:none">Buyers</span> <span id="buyerMatchBadge" style="display:none;background:var(--accent);color:white;border-radius:50%;width:16px;height:16px;font-size:0.65rem;font-weight:700;text-align:center;line-height:16px;margin-left:4px;vertical-align:middle;"></span></div>
             <div class="tab" data-view="messages" id="msgTab">Messages <span id="msgTabBadge" style="display:none;background:var(--accent);color:white;border-radius:50%;width:16px;height:16px;font-size:0.65rem;font-weight:700;text-align:center;line-height:16px;margin-left:4px;vertical-align:middle;"></span></div>
             <div class="tab" data-view="analytics">Analytics</div>
             <div class="tab" data-view="profile-hub">Profile</div>
