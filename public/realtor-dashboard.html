@@ -736,6 +736,31 @@
             .msg-thread { height: 400px; }
         }
 
+        @media (max-width: 640px) {
+            /* Messages: full-screen panel switching */
+            .msg-layout {
+                display: block;
+                border: none;
+                background: transparent;
+            }
+            .msg-conv-list {
+                max-height: none;
+                border: 1px solid var(--border);
+                border-radius: 12px;
+                background: white;
+            }
+            .msg-conv-list.mob-hidden { display: none; }
+            .msg-thread {
+                height: calc(100svh - 200px);
+                border: 1px solid var(--border);
+                border-radius: 12px;
+                background: white;
+                display: none;
+            }
+            .msg-thread.mob-visible { display: flex; }
+            #msgBackBtn { display: flex !important; }
+        }
+
         /* ── Batch 10+11 additions ────────────────────────────────────────────── */
 
         /* Plan Usage Bar */
@@ -1175,6 +1200,17 @@
 
             /* Re-engagement banner */
             #staleRealtorBanner { padding: 1rem; }
+
+            /* Touch targets: minimum 44px for iOS comfort */
+            .btn { min-height: 44px; }
+            .filter-group input,
+            .filter-group select,
+            .form-group input,
+            .form-group select,
+            .form-group textarea { min-height: 44px; font-size: 16px; /* prevent iOS zoom */ }
+            .hub-btn { min-height: 44px; padding: 0.7rem 1rem; }
+            .msg-thread-compose textarea { min-height: 44px; font-size: 16px; }
+            .msg-thread-compose .btn { min-height: 44px; }
         }
     </style>
     <link rel="manifest" href="/manifest.json">
@@ -1208,7 +1244,7 @@
                         <button class="notif-bell" id="notifBell" onclick="toggleNotifDropdown()" title="Notifications" style="background:none;border:1px solid var(--border);border-radius:8px;padding:0.45rem 0.65rem;cursor:pointer;font-size:1.1rem;position:relative;line-height:1;">🔔
                             <span id="notifBadge" style="display:none;position:absolute;top:-6px;right:-6px;background:var(--accent);color:white;border-radius:50%;font-size:0.65rem;font-weight:700;width:18px;height:18px;align-items:center;justify-content:center;display:none;">0</span>
                         </button>
-                        <div id="notifDropdown" style="display:none;position:absolute;top:calc(100% + 8px);right:0;background:white;border:1px solid var(--border);border-radius:12px;width:340px;max-height:420px;overflow-y:auto;box-shadow:0 8px 30px rgba(0,0,0,0.12);z-index:500;">
+                        <div id="notifDropdown" style="display:none;position:absolute;top:calc(100% + 8px);right:0;background:white;border:1px solid var(--border);border-radius:12px;width:340px;max-width:calc(100vw - 2rem);max-height:420px;overflow-y:auto;box-shadow:0 8px 30px rgba(0,0,0,0.12);z-index:500;">
                             <div style="display:flex;justify-content:space-between;align-items:center;padding:1rem 1.25rem 0.75rem;border-bottom:1px solid var(--border);font-weight:600;font-size:0.95rem;">
                                 <span>Notifications</span>
                                 <button onclick="markAllNotifRead()" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:0.8rem;font-family:inherit;">Mark all read</button>
@@ -2201,8 +2237,10 @@ Worth checking out.</div>
 
         <!-- Messages View -->
         <section id="messages-view" class="view-section">
-            <h2 style="font-family:'Crimson Pro',serif;font-size:2rem;margin-bottom:1.5rem;">Messages</h2>
-            <p style="color:#666;margin-bottom:2rem;">Conversations with sellers about their listings</p>
+            <h2 style="font-family:'Crimson Pro',serif;font-size:2rem;margin-bottom:0.5rem;" id="msgViewTitle">Messages</h2>
+            <p style="color:#666;margin-bottom:1.5rem;" id="msgViewSubtitle">Conversations with sellers about their listings</p>
+            <!-- Mobile back button — shown only when viewing a thread on small screens -->
+            <button id="msgBackBtn" onclick="mobMsgShowList()" style="display:none;align-items:center;gap:0.5rem;background:none;border:none;color:var(--accent);font-weight:600;font-size:0.95rem;cursor:pointer;padding:0;margin-bottom:1rem;font-family:inherit;">← Back to conversations</button>
             <div class="msg-layout" id="msgLayout">
                 <div class="msg-conv-list" id="msgConvList">
                     <div class="msg-conv-empty">Loading conversations…</div>
@@ -5269,12 +5307,26 @@ Worth checking out.</div>
             }
         }
 
+        function mobMsgShowList() {
+            document.getElementById('msgConvList').classList.remove('mob-hidden');
+            document.getElementById('msgThread').classList.remove('mob-visible');
+            document.getElementById('msgBackBtn').style.display = 'none';
+        }
+        function mobMsgShowThread() {
+            if (window.innerWidth <= 640) {
+                document.getElementById('msgConvList').classList.add('mob-hidden');
+                document.getElementById('msgThread').classList.add('mob-visible');
+                document.getElementById('msgBackBtn').style.display = 'flex';
+            }
+        }
+
         async function openConv(userId, listingId, name) {
             activeConvUserId = userId;
             activeConvListingId = listingId;
             activeConvName = name;
             document.querySelectorAll('.msg-conv-item').forEach(el => el.classList.remove('active'));
             event.currentTarget.classList.add('active');
+            mobMsgShowThread();
             const thread = document.getElementById('msgThread');
             thread.innerHTML = `
                 <div class="msg-thread-header">${esc(name)}</div>
@@ -6841,11 +6893,8 @@ Worth checking out.</div>
       const MOB_MORE_VIEWS = new Set(['buyer-requests','analytics','settings-hub']);
 
       function mobNavGo(view, btn) {
-        // Trigger the existing top-tab click so all existing JS logic runs
         const topTab = document.querySelector(`.tab[data-view="${view}"]`);
         if (topTab) topTab.click();
-
-        // Sync bottom nav active state
         document.querySelectorAll('.mob-nav-item').forEach(el => el.classList.remove('active'));
         if (btn) {
           btn.classList.add('active');
@@ -6864,9 +6913,37 @@ Worth checking out.</div>
         document.getElementById('moreSheetOverlay').classList.remove('open');
       }
 
-      // Keep bottom nav badges in sync with the existing badge elements
+      // Swipe-to-dismiss on the More sheet
+      (function() {
+        const sheet = document.getElementById('moreSheet');
+        let startY = 0, currentY = 0, dragging = false;
+        sheet.addEventListener('touchstart', e => {
+          startY = e.touches[0].clientY;
+          currentY = startY;
+          dragging = true;
+          sheet.style.transition = 'none';
+        }, { passive: true });
+        sheet.addEventListener('touchmove', e => {
+          if (!dragging) return;
+          currentY = e.touches[0].clientY;
+          const dy = Math.max(0, currentY - startY);
+          sheet.style.transform = `translateY(${dy}px)`;
+        }, { passive: true });
+        sheet.addEventListener('touchend', () => {
+          if (!dragging) return;
+          dragging = false;
+          sheet.style.transition = '';
+          const dy = currentY - startY;
+          if (dy > 80) {
+            sheet.style.transform = '';
+            closeMoreSheet();
+          } else {
+            sheet.style.transform = '';
+          }
+        });
+      })();
+
       function syncMobBadges() {
-        // Pipeline badge
         const pipelineSrc = document.getElementById('pipelineBadge');
         const mobPipeline = document.getElementById('mobPipelineBadge');
         if (pipelineSrc && mobPipeline) {
@@ -6875,7 +6952,6 @@ Worth checking out.</div>
           mobPipeline.classList.toggle('visible', !!visible);
         }
 
-        // Messages badge
         const msgSrc = document.getElementById('msgTabBadge');
         const mobMsg = document.getElementById('mobMsgBadge');
         if (msgSrc && mobMsg) {
@@ -6884,7 +6960,6 @@ Worth checking out.</div>
           mobMsg.classList.toggle('visible', !!visible);
         }
 
-        // Buyer requests badge
         const buyerSrc = document.getElementById('buyerMatchBadge');
         const mobBuyer = document.getElementById('mobBuyerBadge');
         const mobMore = document.getElementById('mobMoreBadge');
@@ -6892,7 +6967,6 @@ Worth checking out.</div>
           const visible = buyerSrc.style.display !== 'none' && buyerSrc.textContent.trim();
           mobBuyer.textContent = buyerSrc.textContent;
           mobBuyer.classList.toggle('visible', !!visible);
-          // Bubble up to "More" badge if any secondary tab has alerts
           if (mobMore) {
             mobMore.textContent = buyerSrc.textContent;
             mobMore.classList.toggle('visible', !!visible);
@@ -6900,7 +6974,6 @@ Worth checking out.</div>
         }
       }
 
-      // Observe badge changes so the mob nav stays in sync
       ['pipelineBadge','msgTabBadge','buyerMatchBadge'].forEach(id => {
         const el = document.getElementById(id);
         if (el) {
@@ -6908,7 +6981,6 @@ Worth checking out.</div>
         }
       });
 
-      // Initial sync after page load
       window.addEventListener('load', syncMobBadges);
     </script>
 </body>
