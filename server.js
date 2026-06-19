@@ -10585,15 +10585,19 @@ async function runFoundingProspectFollowUpJob() {
 }
 
 async function seedDemoData() {
-    try {
-        const { rows: existing } = await pool.query(`SELECT id FROM users WHERE email = 'demo@realtorfinder.net' LIMIT 1`);
-        if (existing.length > 0) return;
+    const upsertUser = async (email, insertSql, params) => {
+        const { rows } = await pool.query(insertSql + ` ON CONFLICT (email) DO NOTHING RETURNING id`, params);
+        if (rows[0]) return rows[0];
+        const { rows: existing } = await pool.query(`SELECT id FROM users WHERE email = $1`, [email]);
+        return existing[0];
+    };
 
+    try {
         const bcrypt = require('bcrypt');
         const demoHash = await bcrypt.hash('Demo1234!', 10);
 
         // Demo seller
-        const { rows: [seller] } = await pool.query(
+        const seller = await upsertUser('demo-seller@realtorfinder.net',
             `INSERT INTO users (email, password_hash, user_type, first_name, last_name, zip_code, is_approved, is_active, email_verified, created_at)
              VALUES ($1, $2, 'seller', 'Sarah', 'Mitchell', '02461', TRUE, TRUE, TRUE, NOW() - INTERVAL '14 days')
              RETURNING id`,
@@ -10601,7 +10605,7 @@ async function seedDemoData() {
         );
 
         // Demo realtor (main account)
-        const { rows: [realtor] } = await pool.query(
+        const realtor = await upsertUser('demo@realtorfinder.net',
             `INSERT INTO users (email, password_hash, user_type, first_name, last_name, zip_code, is_approved, is_active,
               email_verified, license_number, license_verified, brokerage, years_experience, service_areas, bio,
               profile_photo, subscription_plan, is_founding_member, onboarding_completed, created_at)
@@ -10616,7 +10620,7 @@ async function seedDemoData() {
         );
 
         // Ghost realtors for competing proposals
-        const { rows: [ghost1] } = await pool.query(
+        const ghost1 = await upsertUser('emma.chen.demo@realtorfinder.net',
             `INSERT INTO users (email, password_hash, user_type, first_name, last_name, zip_code, is_approved, is_active,
               email_verified, brokerage, years_experience, service_areas, subscription_plan, created_at)
              VALUES ($1, $2, 'realtor', 'Emma', 'Chen', '02134', TRUE, TRUE, TRUE,
@@ -10624,7 +10628,7 @@ async function seedDemoData() {
              RETURNING id`,
             ['emma.chen.demo@realtorfinder.net', demoHash]
         );
-        const { rows: [ghost2] } = await pool.query(
+        const ghost2 = await upsertUser('marcus.webb.demo@realtorfinder.net',
             `INSERT INTO users (email, password_hash, user_type, first_name, last_name, zip_code, is_approved, is_active,
               email_verified, brokerage, years_experience, service_areas, subscription_plan, created_at)
              VALUES ($1, $2, 'realtor', 'Marcus', 'Webb', '02301', TRUE, TRUE, TRUE,
@@ -10695,6 +10699,15 @@ async function seedDemoData() {
 
         const listingIds = [];
         for (const l of listingData) {
+            // Check if listing already exists for this seller+address
+            const { rows: existing } = await pool.query(
+                `SELECT id FROM listings WHERE user_id = $1 AND address = $2 AND deleted_at IS NULL LIMIT 1`,
+                [seller.id, l.address]
+            );
+            if (existing[0]) {
+                listingIds.push(existing[0].id);
+                continue;
+            }
             const { rows: [listing] } = await pool.query(
                 `INSERT INTO listings (user_id, address, city, state, zip, price, property_type, bedrooms, bathrooms,
                   sqft, description, owner_name, owner_email, status, image_urls, year_built, garage_spaces,
@@ -10770,12 +10783,17 @@ async function seedDemoData() {
                 [`${rv.first.toLowerCase()}.${rv.last.toLowerCase().replace('.','')}.review@realtorfinder.net`, demoHash, rv.first, rv.last]
             );
             if (rev_user) {
-                await pool.query(
-                    `INSERT INTO realtor_reviews (realtor_id, seller_id, rating, body, created_at)
-                     VALUES ($1, $2, $3, $4, NOW() - INTERVAL '${Math.floor(Math.random()*30)+10} days')
-                     ON CONFLICT (seller_id, listing_id) DO NOTHING`,
-                    [realtor.id, rev_user.id, rv.rating, rv.comment]
+                const { rows: existingReview } = await pool.query(
+                    `SELECT id FROM realtor_reviews WHERE realtor_id = $1 AND seller_id = $2 LIMIT 1`,
+                    [realtor.id, rev_user.id]
                 );
+                if (!existingReview[0]) {
+                    await pool.query(
+                        `INSERT INTO realtor_reviews (realtor_id, seller_id, rating, body, created_at)
+                         VALUES ($1, $2, $3, $4, NOW() - INTERVAL '${Math.floor(Math.random()*30)+10} days')`,
+                        [realtor.id, rev_user.id, rv.rating, rv.comment]
+                    );
+                }
             }
         }
 
