@@ -3038,6 +3038,8 @@ Worth checking out.</div>
             overlay.classList.add('open');
             drawer.classList.add('open');
             document.body.style.overflow = 'hidden';
+            const closeBtn = drawer.querySelector('.drawer-close-btn, button[onclick*="closeListingDrawer"], .ldr-back');
+            if (closeBtn) closeBtn.focus();
 
             // Destroy old mini-map
             if (_drawerMap) { try { _drawerMap.remove(); } catch(e) {} _drawerMap = null; }
@@ -3581,11 +3583,11 @@ Worth checking out.</div>
             overlay.id = 'wonNextStepsModal';
             overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1050;display:flex;align-items:center;justify-content:center;padding:1rem;';
             overlay.innerHTML = `
-                <div style="background:white;border-radius:16px;padding:2rem;max-width:480px;width:100%;position:relative;max-height:90vh;overflow-y:auto;">
+                <div role="dialog" aria-modal="true" aria-labelledby="wonNextStepsTitle" style="background:white;border-radius:16px;padding:2rem;max-width:480px;width:100%;position:relative;max-height:90vh;overflow-y:auto;">
                     <button onclick="document.getElementById('wonNextStepsModal').remove()" style="position:absolute;top:1rem;right:1rem;background:none;border:none;font-size:1.4rem;cursor:pointer;color:#9ca3af;">&times;</button>
                     <div style="text-align:center;margin-bottom:1.5rem;">
                         <div style="font-size:3rem;margin-bottom:0.5rem;">🎉</div>
-                        <h2 style="font-family:'Crimson Pro',serif;font-size:1.6rem;font-weight:700;color:var(--ink);margin-bottom:0.25rem;">You Won This Listing!</h2>
+                        <h2 id="wonNextStepsTitle" style="font-family:'Crimson Pro',serif;font-size:1.6rem;font-weight:700;color:var(--ink);margin-bottom:0.25rem;">You Won This Listing!</h2>
                         <p style="color:#666;font-size:0.875rem;">${esc(listing.address || 'Property')}</p>
                     </div>
                     <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:1.25rem;margin-bottom:1.5rem;">
@@ -3606,6 +3608,8 @@ Worth checking out.</div>
             `;
             overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
             document.body.appendChild(overlay);
+            const primaryBtn = overlay.querySelector('button[onclick*="messages"]');
+            if (primaryBtn) primaryBtn.focus();
         }
 
         // ===== MAP FUNCTIONS =====
@@ -6455,12 +6459,12 @@ Worth checking out.</div>
             overlay.id = 'submittedProposalOverlay';
             overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1050;display:flex;align-items:center;justify-content:center;padding:1rem;';
             overlay.innerHTML = `
-                <div style="background:white;border-radius:16px;padding:2rem;max-width:480px;width:100%;max-height:90vh;overflow-y:auto;position:relative;">
+                <div role="dialog" aria-modal="true" aria-labelledby="submittedProposalTitle" style="background:white;border-radius:16px;padding:2rem;max-width:480px;width:100%;max-height:90vh;overflow-y:auto;position:relative;">
                     <button onclick="closeSubmittedProposalModal()" style="position:absolute;top:1rem;right:1rem;background:none;border:none;font-size:1.4rem;cursor:pointer;color:#9ca3af;">&times;</button>
                     <div style="margin-bottom:1.25rem;">
                         <span style="background:${bg};color:${col};padding:0.3rem 0.9rem;border-radius:20px;font-size:0.8rem;font-weight:700;">${statusLabel}</span>
                     </div>
-                    <h2 style="font-family:'Crimson Pro',serif;font-size:1.6rem;font-weight:700;color:var(--ink);margin-bottom:0.25rem;">Your Proposal</h2>
+                    <h2 id="submittedProposalTitle" style="font-family:'Crimson Pro',serif;font-size:1.6rem;font-weight:700;color:var(--ink);margin-bottom:0.25rem;">Your Proposal</h2>
                     <p style="color:#666;font-size:0.875rem;margin-bottom:1.5rem;">${esc(listingAddress || (p.address ? p.address + (p.city ? ', '+p.city : '') : ''))}</p>
 
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1.25rem;">
@@ -6490,6 +6494,8 @@ Worth checking out.</div>
             `;
             overlay.addEventListener('click', e => { if (e.target === overlay) closeSubmittedProposalModal(); });
             document.body.appendChild(overlay);
+            const primaryBtn = overlay.querySelector('button[onclick*="openFollowUpModal"], button[onclick*="closeSubmittedProposalModal"]');
+            if (primaryBtn) primaryBtn.focus();
         }
 
         function closeSubmittedProposalModal() {
@@ -7610,25 +7616,25 @@ Worth checking out.</div>
 
     <!-- Mobile Bottom Navigation -->
     <nav id="mobileBottomNav" aria-label="Main navigation">
-        <button class="mob-nav-item active" data-mob-view="browse" onclick="mobNavGo('browse',this)">
+        <button class="mob-nav-item active" data-mob-view="browse" onclick="mobNavGo('browse',this)" aria-label="Browse listings" aria-current="page">
             <span class="mob-nav-icon">🏠</span>
             <span>Browse</span>
         </button>
-        <button class="mob-nav-item" data-mob-view="pipeline" onclick="mobNavGo('pipeline',this)">
+        <button class="mob-nav-item" data-mob-view="pipeline" onclick="mobNavGo('pipeline',this)" aria-label="Proposal pipeline">
             <span class="mob-nav-icon">📋</span>
             <span>Pipeline</span>
             <span class="mob-nav-badge" id="mobPipelineBadge"></span>
         </button>
-        <button class="mob-nav-item" data-mob-view="messages" onclick="mobNavGo('messages',this)">
+        <button class="mob-nav-item" data-mob-view="messages" onclick="mobNavGo('messages',this)" aria-label="Messages">
             <span class="mob-nav-icon">💬</span>
             <span>Messages</span>
             <span class="mob-nav-badge" id="mobMsgBadge"></span>
         </button>
-        <button class="mob-nav-item" data-mob-view="profile-hub" onclick="mobNavGo('profile-hub',this)">
+        <button class="mob-nav-item" data-mob-view="profile-hub" onclick="mobNavGo('profile-hub',this)" aria-label="Realtor profile">
             <span class="mob-nav-icon">👤</span>
             <span>Profile</span>
         </button>
-        <button class="mob-nav-item" id="mobMoreBtn" onclick="openMoreSheet()">
+        <button class="mob-nav-item" id="mobMoreBtn" onclick="openMoreSheet()" aria-label="More options">
             <span class="mob-nav-icon">⋯</span>
             <span>More</span>
             <span class="mob-nav-badge" id="mobMoreBadge"></span>
@@ -7639,7 +7645,7 @@ Worth checking out.</div>
     <div id="moreSheetOverlay" onclick="closeMoreSheet()"></div>
 
     <!-- More Bottom Sheet -->
-    <div id="moreSheet" role="dialog" aria-label="More options">
+    <div id="moreSheet" role="dialog" aria-modal="true" aria-label="More options">
         <div class="more-sheet-handle"></div>
         <div class="more-sheet-title">More</div>
         <div class="more-sheet-item" onclick="mobNavGo('buyer-requests',null);closeMoreSheet()">
@@ -7672,23 +7678,35 @@ Worth checking out.</div>
       function mobNavGo(view, btn) {
         const topTab = document.querySelector(`.tab[data-view="${view}"]`);
         if (topTab) topTab.click();
-        document.querySelectorAll('.mob-nav-item').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.mob-nav-item').forEach(el => { el.classList.remove('active'); el.removeAttribute('aria-current'); });
         if (btn) {
           btn.classList.add('active');
+          btn.setAttribute('aria-current', 'page');
         } else if (MOB_MORE_VIEWS.has(view)) {
-          document.getElementById('mobMoreBtn').classList.add('active');
+          const moreBtn = document.getElementById('mobMoreBtn');
+          moreBtn.classList.add('active');
+          moreBtn.setAttribute('aria-current', 'page');
         }
       }
 
       function openMoreSheet() {
         document.getElementById('moreSheet').classList.add('open');
         document.getElementById('moreSheetOverlay').classList.add('open');
+        const firstItem = document.querySelector('#moreSheet .more-sheet-item');
+        if (firstItem) firstItem.focus();
       }
 
       function closeMoreSheet() {
         document.getElementById('moreSheet').classList.remove('open');
         document.getElementById('moreSheetOverlay').classList.remove('open');
+        document.querySelector('#mobileBottomNav .mob-nav-item[data-mob-view="more"], #mobileBottomNav .mob-nav-item:last-child').focus();
       }
+
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && document.getElementById('moreSheet').classList.contains('open')) {
+          closeMoreSheet();
+        }
+      });
 
       // Swipe-to-dismiss on the More sheet
       (function() {
