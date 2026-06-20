@@ -2175,6 +2175,7 @@ app.get('/api/analytics/realtor', auth.requireAuth, async (req, res) => {
 // ===== COMMISSION INTEL =====
 
 app.get('/api/analytics/realtor/commission-intel', auth.requireAuth, async (req, res) => {
+    if (req.user.user_type !== 'realtor') return res.status(403).json({ error: 'Realtors only' });
     try {
         const realtorId = req.session.userId;
         const [myRes, marketRes] = await Promise.all([
@@ -4170,8 +4171,10 @@ app.get('/api/listings/compare', async (req, res) => {
 
 // Proposal stats for a listing — anonymized aggregate shown to realtors
 app.get('/api/listings/:id/proposal-stats', auth.requireAuth, async (req, res) => {
+    if (req.user.user_type !== 'realtor') return res.status(403).json({ error: 'Realtors only' });
     try {
         const listingId = parseInt(req.params.id);
+        if (isNaN(listingId)) return res.status(400).json({ error: 'Invalid listing id' });
         const { rows } = await pool.query(
             `SELECT COUNT(*) AS count,
                     ROUND(AVG(commission_pct)::numeric, 2) AS avg_commission,
@@ -5511,6 +5514,9 @@ app.put('/api/proposals/:id/accept', auth.requireAuth, async (req, res) => {
         if (!pRows.length) return res.status(404).json({ error: 'Proposal not found' });
         const proposal = pRows[0];
         if (proposal.listing_owner_id !== req.session.userId) return res.status(403).json({ error: 'Forbidden' });
+        if (['declined', 'withdrawn'].includes(proposal.status)) {
+            return res.status(409).json({ error: 'Cannot accept a proposal that is already declined or withdrawn' });
+        }
         const client = await pool.connect();
         try {
             await client.query('BEGIN');
@@ -10554,6 +10560,291 @@ VALUES (
 <p><a href="/founding" style="color:#FF6B35;font-weight:700;">See how RealtorFinder''s founding program works →</a></p>$blog2$,
     TRUE,
     NOW()
+)
+ON CONFLICT (slug) DO NOTHING
+`);
+
+_schemaMigrations.push(`
+INSERT INTO blog_posts (slug, title, excerpt, author, category, read_time_minutes, content, is_published, published_at)
+VALUES (
+    'how-to-choose-a-real-estate-agent',
+    'How to Choose a Real Estate Agent: A Seller''s Complete Guide',
+    'Choosing the right listing agent is one of the most consequential decisions you''ll make when selling your home. Here''s how to evaluate agents fairly — and avoid the most common mistakes.',
+    'RealtorFinder Editorial Team',
+    'Seller Guides',
+    7,
+    $blog3$<h1>How to Choose a Real Estate Agent: A Seller's Complete Guide</h1>
+
+<p>Selling a home is likely the largest financial transaction of your life. The agent you choose to represent you will negotiate your sale price, market your property, coordinate showings, and guide you through closing. Getting that choice right is worth more time than most sellers give it.</p>
+
+<p>Here's a straightforward framework for evaluating listing agents — including the questions most sellers forget to ask.</p>
+
+<h2>Start With Local Track Record, Not Name Recognition</h2>
+
+<p>A nationally recognized brokerage name does not mean the individual agent assigned to your listing is the right fit. What matters is the specific agent's performance in your market and price range over the past 12–24 months.</p>
+
+<p>Ask every agent you interview:</p>
+<ul>
+  <li>How many homes have you listed in this ZIP code in the past year?</li>
+  <li>What was your average list-to-sale price ratio?</li>
+  <li>What was the average days on market for your listings?</li>
+  <li>Can you show me three homes you've sold that are comparable to mine?</li>
+</ul>
+
+<p>An agent who has closed 15 homes in your neighborhood in the past year is almost always a better choice than a high-volume agent who works 40 miles away and is expanding their territory.</p>
+
+<h2>Understand What You're Paying For</h2>
+
+<p>Most sellers accept the commission rate an agent quotes without asking what's included. That's a mistake. Before you sign a listing agreement, get clarity on:</p>
+
+<ul>
+  <li>What percentage goes to the buyer's agent versus the listing agent?</li>
+  <li>What marketing is included — professional photography, floor plans, video tour, paid social ads, MLS syndication?</li>
+  <li>Who covers staging consultation, open house costs, or pre-listing repairs?</li>
+  <li>What is the listing agreement term, and what are the exit terms if the home doesn't sell?</li>
+</ul>
+
+<p>Commission rates are negotiable. The typical listing agent commission runs 2.5–3% of the sale price on the listing side, but there's meaningful variation — especially for homes priced above $500,000. Getting competing proposals makes that variation visible.</p>
+
+<h2>Look for Communication Style Fit</h2>
+
+<p>Selling a home takes 30 to 90 days on average, and during that time you'll be in regular contact with your agent. Pay attention during your initial conversations to how quickly they respond, how clearly they explain the process, and whether they listen to your priorities or push a standard pitch.</p>
+
+<p>Ask: "How will you communicate with me during the listing period — weekly calls, email updates, or as-needed?" There's no right answer, but their answer should match your expectations.</p>
+
+<h2>Interview at Least Three Agents</h2>
+
+<p>Most sellers choose the first agent they meet — often someone referred by a friend or a yard sign they've seen. Interviewing at least three agents costs you a few hours and can save you tens of thousands of dollars. You'll hear different opinions on pricing strategy, commission structures, and marketing approaches. That range of perspectives helps you make a much better decision.</p>
+
+<p>Platforms like <a href="/" style="color:#FF6B35;font-weight:700;">RealtorFinder</a> make this easier by letting you post your property and receive structured proposals from multiple licensed agents in your area — each one including their commission rate, marketing plan, and experience. Instead of scheduling separate interviews, you compare everything side by side.</p>
+
+<h2>Check Reviews and References</h2>
+
+<p>Online reviews on Google, Zillow, and Realtor.com give you a starting point, but they skew toward happy clients. Ask the agent directly for two or three seller references — not buyer references — from homes they've closed in the past six months. Call them. Ask how the process went, what surprised them, and whether they'd use the agent again.</p>
+
+<h2>Be Careful With Overpricing</h2>
+
+<p>Some agents win listings by suggesting an aggressive list price that flatters the seller's expectations. This often leads to price reductions, extended days on market, and ultimately a lower sale price than a realistic initial price would have achieved. Ask each agent to walk you through their pricing methodology and what data supports their recommended list price.</p>
+
+<h2>Conclusion</h2>
+
+<p>The right listing agent is someone with a verifiable track record in your market, a clear marketing plan, a commission structure that makes sense for your situation, and a communication style that works for you. The only way to find that combination is to compare multiple agents — not just accept whoever calls you first.</p>
+
+<p><a href="/" style="color:#FF6B35;font-weight:700;">Post your home on RealtorFinder and receive competing proposals from licensed agents in your area →</a></p>$blog3$,
+    TRUE,
+    NOW() - INTERVAL '3 days'
+)
+ON CONFLICT (slug) DO NOTHING
+`);
+
+_schemaMigrations.push(`
+INSERT INTO blog_posts (slug, title, excerpt, author, category, read_time_minutes, content, is_published, published_at)
+VALUES (
+    'what-is-a-good-real-estate-commission-rate',
+    'What Is a Good Real Estate Commission Rate? What Sellers Need to Know in 2025',
+    'The typical agent commission is 2.5–3% on the listing side — but what you actually pay depends on your home price, market, and how you shop for an agent. Here''s how it works and how to negotiate.',
+    'RealtorFinder Editorial Team',
+    'Seller Guides',
+    6,
+    $blog4$<h1>What Is a Good Real Estate Commission Rate? What Sellers Need to Know in 2025</h1>
+
+<p>If you're selling a home, commission is one of your largest transaction costs — and one of the least transparent. Most sellers don't know what rate is typical, what's negotiable, or how to evaluate whether they're getting a fair deal. This guide breaks it down.</p>
+
+<h2>What Is the Standard Real Estate Commission?</h2>
+
+<p>The traditional total real estate commission in the United States has been around 5–6% of the sale price, split between the listing agent (who represents the seller) and the buyer's agent. That means on a $500,000 home, total commissions could run $25,000–$30,000.</p>
+
+<p>Since the National Association of Realtors settlement that took effect in August 2024, the rules around buyer's agent compensation have changed. Sellers are no longer required to offer a specific buyer's agent commission through the MLS. This has introduced more variation in how commissions are structured — but in practice, most transactions still involve compensating a buyer's agent in some form, either directly or through the sale price.</p>
+
+<p>For the listing side specifically, a typical commission rate today is <strong>2.5–3% of the sale price</strong>. Some agents charge less for higher-priced homes. Some charge more for properties that require extra marketing effort.</p>
+
+<h2>What Factors Affect Commission Rates?</h2>
+
+<p>Commission rates vary based on several factors:</p>
+
+<ul>
+  <li><strong>Home price:</strong> Agents are often more willing to negotiate rates on higher-priced homes because the absolute dollar amount is larger even at a lower percentage.</li>
+  <li><strong>Market conditions:</strong> In a hot seller's market where homes move quickly, there's more room to negotiate. In slower markets, agents may resist discounts.</li>
+  <li><strong>Agent experience and demand:</strong> Top-performing agents in competitive markets often hold firm on rates because they have more listings than they need. Newer or less-busy agents may be more flexible.</li>
+  <li><strong>Services included:</strong> A lower commission rate isn't always better if it means reduced marketing, no professional photography, or limited availability for showings and negotiations.</li>
+</ul>
+
+<h2>Is Commission Negotiable?</h2>
+
+<p>Yes — commission is always negotiable. Legally, there is no fixed rate. The challenge is that most sellers don't know this, or they feel uncomfortable bringing it up after an agent has already built rapport during a listing presentation.</p>
+
+<p>The most effective way to negotiate commission is to create competition. When an agent knows you're evaluating multiple agents and their proposals will be compared side by side, they have an incentive to put their best rate forward upfront rather than after you've already selected them.</p>
+
+<p>This is exactly why platforms like <a href="/" style="color:#FF6B35;font-weight:700;">RealtorFinder</a> exist. Sellers post their property, agents submit proposals that include their commission rate and marketing plan, and sellers compare everything at once. The result is transparent pricing without an awkward negotiation conversation.</p>
+
+<h2>What Should You Be Getting for Your Commission?</h2>
+
+<p>Whatever rate you pay, make sure it includes:</p>
+
+<ul>
+  <li>Professional photography (and ideally video or 3D tour for homes over $400K)</li>
+  <li>MLS listing with full syndication to Zillow, Realtor.com, Redfin, and other portals</li>
+  <li>A written marketing plan, not just a promise to "market aggressively"</li>
+  <li>Active communication throughout the listing period</li>
+  <li>Skilled negotiation on your behalf when offers come in</li>
+</ul>
+
+<p>An agent charging 2.5% who delivers all of that is a better deal than an agent charging 2% who posts a few photos and waits for inquiries.</p>
+
+<h2>What About Discount Brokers and Flat-Fee Services?</h2>
+
+<p>Discount brokerages (like certain online-first options) offer lower commissions, sometimes as low as 1–1.5% on the listing side, often by reducing service levels. Flat-fee MLS services charge a fixed amount to list your home on the MLS but leave everything else — negotiations, paperwork, showings — to you.</p>
+
+<p>These options can work well for experienced sellers in strong seller's markets. For most people, especially first-time sellers or those dealing with a complex property, a full-service agent who earns their commission typically delivers more value than the savings suggest.</p>
+
+<h2>Conclusion</h2>
+
+<p>A good real estate commission rate on the listing side is 2.5–3%, with room to negotiate depending on your home price and market. The most important thing isn't paying the lowest rate — it's making sure you understand what you're getting for what you're paying, and that you've compared more than one option before signing a listing agreement.</p>
+
+<p><a href="/" style="color:#FF6B35;font-weight:700;">See what agents in your area propose for your home — compare commission rates and marketing plans on RealtorFinder →</a></p>$blog4$,
+    TRUE,
+    NOW() - INTERVAL '6 days'
+)
+ON CONFLICT (slug) DO NOTHING
+`);
+
+_schemaMigrations.push(`
+INSERT INTO blog_posts (slug, title, excerpt, author, category, read_time_minutes, content, is_published, published_at)
+VALUES (
+    'how-to-sell-your-home-without-overpaying-agent-fees',
+    'How to Sell Your Home Without Overpaying Agent Fees',
+    'Sellers who accept the first commission rate they''re quoted pay more than they have to. Here''s a practical approach to getting full-service representation at a rate you actually negotiated.',
+    'RealtorFinder Editorial Team',
+    'Seller Guides',
+    7,
+    $blog5$<h1>How to Sell Your Home Without Overpaying Agent Fees</h1>
+
+<p>On a $600,000 home sale, a 3% listing commission is $18,000. Most sellers pay it without question because that's what the agent quoted and there wasn't an obvious moment to push back. The result is that sellers routinely overpay for representation — not because full-service agents aren't worth it, but because there was never any competition to establish a fair price.</p>
+
+<p>Here's how to fix that.</p>
+
+<h2>Understand What You're Actually Paying For</h2>
+
+<p>The first step is separating the listing agent's commission from the buyer's agent's commission. Traditionally, the seller paid both — typically 2.5–3% to each side, for a total of 5–6%. Following the 2024 NAR settlement, seller-paid buyer's agent commissions are no longer mandated through the MLS, which gives you more flexibility on the buyer's side of the equation.</p>
+
+<p>On the listing side, you're paying your agent to:</p>
+<ul>
+  <li>Price your home accurately based on comparable sales data</li>
+  <li>Prepare, photograph, and market the property</li>
+  <li>Manage showings and buyer inquiries</li>
+  <li>Negotiate offers on your behalf</li>
+  <li>Coordinate inspection, appraisal, and closing logistics</li>
+</ul>
+
+<p>That's real work with real value. The question isn't whether to pay for it — it's whether you're paying a fair price given who you're hiring and what they're offering.</p>
+
+<h2>The Problem With the Standard Process</h2>
+
+<p>The way most sellers hire a listing agent works against them. You get a referral from a friend, or you call the agent whose name is on a yard sign in the neighborhood, or you fill out a form on Zillow and get called by whoever bought your contact information. You meet with one or two agents, you feel some rapport, and you sign.</p>
+
+<p>At no point in that process did you see competing offers. You don't know whether the commission rate is typical or high. You don't know whether another equally qualified agent in your ZIP code would have done more marketing for less. You made a major financial decision without the information you'd need to make it well.</p>
+
+<h2>Create Competition Before You Sign Anything</h2>
+
+<p>The single most effective thing you can do to avoid overpaying is to get proposals from at least three agents before you commit to one. Not just casual conversations — structured proposals where each agent states their commission rate, their marketing plan, and their relevant experience in writing.</p>
+
+<p>When agents know they're competing, a few things happen:</p>
+<ul>
+  <li>They put their best rate forward rather than anchoring high and hoping you don't push back</li>
+  <li>They're more specific about what marketing they'll actually do, not just promise</li>
+  <li>You have a real basis for comparison, including agents you might never have contacted on your own</li>
+</ul>
+
+<p>This is the model behind <a href="/" style="color:#FF6B35;font-weight:700;">RealtorFinder</a>. Sellers post their property on the platform, and licensed agents in their area submit proposals that include their commission rate, marketing strategy, recent sales, and a personal pitch. You compare them side by side and choose the one that makes the most sense for your situation — without a single awkward commission negotiation.</p>
+
+<h2>Don't Default to the Lowest Rate</h2>
+
+<p>Overpaying is a real problem, but so is under-representing your property. An agent who charges 1.5% and takes their own photos with an iPhone, skips the MLS syndication setup, and is hard to reach during offer negotiations can cost you far more in final sale price than the commission savings are worth.</p>
+
+<p>When evaluating proposals, look at the total picture: commission rate, marketing plan, track record in your price range and area, and responsiveness during the proposal process itself. How an agent treats you when they're trying to win your business is often a preview of how they'll treat you when they have it.</p>
+
+<h2>Know Your Leverage Points</h2>
+
+<p>A few situations give you more negotiating leverage:</p>
+<ul>
+  <li><strong>Higher-priced homes:</strong> Agents are often more flexible on percentage when the absolute dollar amount is larger.</li>
+  <li><strong>Strong seller's markets:</strong> When homes are selling quickly with multiple offers, agents do less work per transaction — there's a reasonable case for a lower rate.</li>
+  <li><strong>Repeat business or referrals:</strong> If you're selling and buying, or if you'll refer others, mention it. Agents value long-term relationships.</li>
+  <li><strong>Simple properties:</strong> A turnkey home in a strong location requires less marketing effort than a unique or difficult property.</li>
+</ul>
+
+<h2>Conclusion</h2>
+
+<p>You don't have to choose between full service and fair pricing. The key is getting competing proposals before you sign with anyone — so you know what the market actually looks like rather than accepting the first number you heard.</p>
+
+<p><a href="/" style="color:#FF6B35;font-weight:700;">Post your home on RealtorFinder and receive competing proposals from licensed agents — compare rates and marketing plans before you commit →</a></p>$blog5$,
+    TRUE,
+    NOW() - INTERVAL '10 days'
+)
+ON CONFLICT (slug) DO NOTHING
+`);
+
+_schemaMigrations.push(`
+INSERT INTO blog_posts (slug, title, excerpt, author, category, read_time_minutes, content, is_published, published_at)
+VALUES (
+    'how-to-find-a-realtor-near-me',
+    'How to Find a Realtor Near Me: What Actually Works (and What Doesn''t)',
+    'Searching "realtor near me" returns ads and directories, not answers. Here''s how to find a listing agent who actually knows your local market — across more than 1,000 markets nationwide.',
+    'RealtorFinder Editorial Team',
+    'Seller Guides',
+    6,
+    $blog6$<h1>How to Find a Realtor Near Me: What Actually Works (and What Doesn't)</h1>
+
+<p>If you've searched "realtor near me" hoping for a clear answer, you've probably found a wall of ads, agent directories, and platforms that want your contact information before they tell you anything useful. The search intent is simple — find a good local agent — but the results rarely deliver on it.</p>
+
+<p>Here's a more useful framework for finding a listing agent who actually knows your market.</p>
+
+<h2>Why "Near Me" Matters More Than You Think</h2>
+
+<p>Real estate is intensely local. An agent who is excellent in one part of a metro area may have almost no presence in a neighborhood 10 miles away. Local expertise means knowing which streets have noise issues, which school district boundaries affect buyer demand, how quickly homes in your specific price range have been moving, and which buyers' agents are most active in the area.</p>
+
+<p>An agent who has closed 20 transactions in your ZIP code in the past two years brings knowledge that no amount of general real estate experience can replicate. When you're evaluating agents, always ask how many listings they've handled in your specific area — not just their city or region.</p>
+
+<h2>Where Most Sellers Look (and the Limitations)</h2>
+
+<p><strong>Referrals from friends and family</strong> are the most common way people find agents — and they're a reasonable starting point. The limitation is that your friend's great experience may have been in a different part of town, at a different price point, or years ago when market conditions were different. Always verify that the referred agent is still active and relevant in your specific market.</p>
+
+<p><strong>Yard signs and neighborhood presence</strong> tell you an agent is active in your area, but they don't tell you whether that agent's listings are selling at good prices or lingering on the market. Visibility isn't the same as performance.</p>
+
+<p><strong>Online directories</strong> like Zillow's agent finder and Realtor.com's agent search rank agents partly based on advertising spend, not just performance. The agent at the top of the list paid to be there.</p>
+
+<p><strong>Brokerage websites</strong> will direct you to agents affiliated with that brokerage, which narrows your options artificially. Some of the best agents in any market work at smaller local brokerages.</p>
+
+<h2>A Better Approach: Let Agents Come to You</h2>
+
+<p>Instead of filtering through directories and hoping you land on the right agent, consider reversing the process. Post your property and let qualified local agents submit proposals to represent you.</p>
+
+<p>This is how <a href="/" style="color:#FF6B35;font-weight:700;">RealtorFinder</a> works. Sellers post their home — address, estimated price range, timeline — and licensed agents in the area submit structured proposals. Each proposal includes the agent's commission rate, marketing strategy, relevant local sales, and a personal pitch. You see multiple qualified agents who are actively competing for your listing, all in one place.</p>
+
+<p>RealtorFinder covers more than 1,077 markets across the United States, with licensed agents in each one. Whether you're selling in Boston, Phoenix, Charlotte, or a smaller metro, the platform surfaces agents who have specifically chosen to serve your area.</p>
+
+<h2>What to Look for When Evaluating Local Agents</h2>
+
+<p>Once you have a shortlist — whether from referrals, a platform like RealtorFinder, or your own research — evaluate each agent on:</p>
+
+<ul>
+  <li><strong>Recent local sales:</strong> Ask for a list of homes they've sold in your area in the past 12 months, including list price, sale price, and days on market.</li>
+  <li><strong>List-to-sale ratio:</strong> A consistently high ratio (98–102% of list price) suggests accurate pricing and good negotiation. A low ratio may mean they tend to overprice listings and then reduce.</li>
+  <li><strong>Marketing plan specifics:</strong> What exactly will they do to market your home? Professional photography, MLS syndication, video tour, paid advertising? Get it in writing.</li>
+  <li><strong>Availability and communication:</strong> Will you have direct access to the agent, or will you mostly work with a team member? How quickly do they respond to your initial inquiry?</li>
+</ul>
+
+<h2>Don't Hire Without Interviewing at Least Three Agents</h2>
+
+<p>Most sellers hire the first or second agent they meet. That's understandable — the interview process can feel uncomfortable, and once you like someone it's tempting to stop looking. But interviewing at least three agents gives you a real baseline: for pricing strategy, commission rates, marketing approaches, and local knowledge. The differences are often significant.</p>
+
+<h2>Conclusion</h2>
+
+<p>Finding a great realtor near you isn't about searching harder — it's about building in comparison from the start. The agents who know your neighborhood best aren't always the ones who show up first in a generic search. Get multiple proposals, verify local track records, and choose based on substance rather than whoever happened to call you first.</p>
+
+<p><a href="/" style="color:#FF6B35;font-weight:700;">Find licensed realtors in your market on RealtorFinder — post your home and compare proposals across 1,077+ markets →</a></p>$blog6$,
+    TRUE,
+    NOW() - INTERVAL '14 days'
 )
 ON CONFLICT (slug) DO NOTHING
 `);
