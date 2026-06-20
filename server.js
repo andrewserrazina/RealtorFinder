@@ -10286,6 +10286,13 @@ _schemaMigrations.push(
     `ALTER TABLE city_leads ADD COLUMN IF NOT EXISTS address TEXT`
 );
 
+_schemaMigrations.push(`
+    ALTER TABLE city_leads
+      ADD COLUMN IF NOT EXISTS drip1_sent_at TIMESTAMPTZ,
+      ADD COLUMN IF NOT EXISTS drip2_sent_at TIMESTAMPTZ,
+      ADD COLUMN IF NOT EXISTS drip3_sent_at TIMESTAMPTZ
+`);
+
 _schemaMigrations.push(
     `CREATE TABLE IF NOT EXISTS admin_crm_notes (
         id SERIAL PRIMARY KEY,
@@ -10911,6 +10918,76 @@ async function runFoundingProspectFollowUpJob() {
     }
 }
 
+async function runCityLeadDripJob() {
+    // Pass 1: Day 1+ — drip1 not sent yet
+    try {
+        const { rows: drip1Leads } = await pool.query(`
+            SELECT id, email, type, city_name FROM city_leads
+            WHERE converted_user_id IS NULL
+              AND drip1_sent_at IS NULL
+              AND created_at < NOW() - INTERVAL '1 day'
+              AND email_unsubscribed IS NOT TRUE
+            LIMIT 50
+        `);
+        for (const lead of drip1Leads) {
+            try {
+                const cityName = lead.city_name || null;
+                if (lead.type === 'seller') await emailService.sendCityLeadSellerDrip1(lead.email, cityName);
+                else if (lead.type === 'realtor') await emailService.sendCityLeadRealtorDrip1(lead.email, cityName);
+                await pool.query(`UPDATE city_leads SET drip1_sent_at = NOW() WHERE id = $1`, [lead.id]);
+            } catch(e) { console.error('City lead drip1 error:', e.message); }
+            await sleep(300);
+        }
+        if (drip1Leads.length) console.log(`📬 City lead drip1: sent ${drip1Leads.length} emails`);
+    } catch(e) { console.error('City lead drip1 job error:', e.message); }
+
+    // Pass 2: Day 3+ — drip1 sent, drip2 not sent
+    try {
+        const { rows: drip2Leads } = await pool.query(`
+            SELECT id, email, type, city_name FROM city_leads
+            WHERE converted_user_id IS NULL
+              AND drip1_sent_at IS NOT NULL
+              AND drip2_sent_at IS NULL
+              AND created_at < NOW() - INTERVAL '3 days'
+              AND email_unsubscribed IS NOT TRUE
+            LIMIT 50
+        `);
+        for (const lead of drip2Leads) {
+            try {
+                const cityName = lead.city_name || null;
+                if (lead.type === 'seller') await emailService.sendCityLeadSellerDrip3(lead.email, cityName);
+                else if (lead.type === 'realtor') await emailService.sendCityLeadRealtorDrip3(lead.email, cityName);
+                await pool.query(`UPDATE city_leads SET drip2_sent_at = NOW() WHERE id = $1`, [lead.id]);
+            } catch(e) { console.error('City lead drip2 error:', e.message); }
+            await sleep(300);
+        }
+        if (drip2Leads.length) console.log(`📬 City lead drip2: sent ${drip2Leads.length} emails`);
+    } catch(e) { console.error('City lead drip2 job error:', e.message); }
+
+    // Pass 3: Day 7+ — drip2 sent, drip3 not sent
+    try {
+        const { rows: drip3Leads } = await pool.query(`
+            SELECT id, email, type, city_name FROM city_leads
+            WHERE converted_user_id IS NULL
+              AND drip2_sent_at IS NOT NULL
+              AND drip3_sent_at IS NULL
+              AND created_at < NOW() - INTERVAL '7 days'
+              AND email_unsubscribed IS NOT TRUE
+            LIMIT 50
+        `);
+        for (const lead of drip3Leads) {
+            try {
+                const cityName = lead.city_name || null;
+                if (lead.type === 'seller') await emailService.sendCityLeadSellerDrip7(lead.email, cityName);
+                else if (lead.type === 'realtor') await emailService.sendCityLeadRealtorDrip7(lead.email, cityName);
+                await pool.query(`UPDATE city_leads SET drip3_sent_at = NOW() WHERE id = $1`, [lead.id]);
+            } catch(e) { console.error('City lead drip3 error:', e.message); }
+            await sleep(300);
+        }
+        if (drip3Leads.length) console.log(`📬 City lead drip3: sent ${drip3Leads.length} emails`);
+    } catch(e) { console.error('City lead drip3 job error:', e.message); }
+}
+
 async function seedDemoData() {
     const upsertUser = async (email, insertSql, params) => {
         const base = insertSql.replace(/\s*RETURNING\s+id\s*$/i, '');
@@ -11186,6 +11263,8 @@ async function startServer() {
         setInterval(() => runProposalExpiryReminder(), 24 * 60 * 60 * 1000).unref();
         runFoundingProspectFollowUpJob();
         setInterval(runFoundingProspectFollowUpJob, 60 * 60 * 1000).unref();
+        runCityLeadDripJob();
+        setInterval(runCityLeadDripJob, 6 * 60 * 60 * 1000).unref();
     });
 }
 startServer().catch(err => {

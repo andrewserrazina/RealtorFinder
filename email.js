@@ -1559,6 +1559,186 @@ const emailService = {
             await send({ to: toEmail, subject: `Your RealtorFinder founding spot${cityLine} is still open`, html: emailWrap('Founding Realtor', body) });
         } catch (error) { logSendgridError('Founding prospect follow-up', error); }
     },
+
+    // ─── City Lead Drip Emails (Pre-Launch) ──────────────────────────────────────
+    // Sent to city_leads who haven't converted to a full account yet.
+    // No unsubscribe token — city_leads are not full users yet.
+
+    // City lead — Seller Day 1
+    async sendCityLeadSellerDrip1(email, cityName) {
+        const area = cityName || 'your area';
+        const body = `
+            ${h1('How RealtorFinder works — and why it\'s free for you')}
+            ${p(`You recently signed up to learn more about selling your home in ${area}. Here's how the platform works — it's simpler than you might expect.`)}
+            <div style="background:#F8F6F3;border-radius:12px;padding:24px 28px;margin:24px 0;border:1px solid #E5E1DB;">
+                <div style="margin-bottom:20px;">
+                    <div style="font-size:15px;font-weight:700;color:#0A2540;margin-bottom:6px;">You post your listing — for free</div>
+                    <p style="color:#444;font-size:14px;line-height:1.7;margin:0;">List your home on RealtorFinder at no cost. No fees, no catch. We charge realtors for access, not sellers.</p>
+                </div>
+                <div style="margin-bottom:20px;">
+                    <div style="font-size:15px;font-weight:700;color:#0A2540;margin-bottom:6px;">Licensed realtors in ${area} submit proposals</div>
+                    <p style="color:#444;font-size:14px;line-height:1.7;margin:0;">Verified, local agents browse your listing and send you competing proposals — each with their commission rate and marketing plan. You don't have to chase anyone down.</p>
+                </div>
+                <div style="margin-bottom:20px;">
+                    <div style="font-size:15px;font-weight:700;color:#0A2540;margin-bottom:6px;">You compare at your own pace</div>
+                    <p style="color:#444;font-size:14px;line-height:1.7;margin:0;">Review all proposals side by side. Message any agent with questions. Take your time — there's no pressure and no obligation.</p>
+                </div>
+                <div>
+                    <div style="font-size:15px;font-weight:700;color:#0A2540;margin-bottom:6px;">You choose the best fit</div>
+                    <p style="color:#444;font-size:14px;line-height:1.7;margin:0;">When you find the right agent, accept their proposal. That's it. No cold calls, no awkward first meetings, no wondering if you picked the right person.</p>
+                </div>
+            </div>
+            ${p('We launch in August 2026. Early listers are first to receive proposals when we open.')}
+            ${btn(`${BASE_URL}/sellers`, 'See How It Works')}
+            ${divider()}
+            <p style="color:#999;font-size:13px;margin:0;">The RealtorFinder Team<br><a href="${BASE_URL}" style="color:#FF6B35;text-decoration:none;">realtorfinder.net</a></p>
+        `;
+        try {
+            await send({ to: email, subject: 'How RealtorFinder works — and why it\'s free for you', html: emailWrap('For Sellers', body) });
+        } catch (error) { logSendgridError('City lead seller drip 1', error); }
+    },
+
+    // City lead — Seller Day 3
+    async sendCityLeadSellerDrip3(email, cityName) {
+        const area = cityName || 'your area';
+        const body = `
+            ${h1('What a competing proposal actually looks like')}
+            ${p(`When you list on RealtorFinder, realtors in ${area} submit structured proposals to represent your home. Here's what that looks like in practice.`)}
+            <div style="background:linear-gradient(135deg,#0A2540,#0d3659);border-radius:12px;padding:28px 32px;margin:24px 0;color:white;">
+                <div style="font-family:Georgia,serif;font-size:20px;font-weight:900;margin-bottom:12px;">A sample proposal might include:</div>
+                <div style="font-size:14px;line-height:2.2;opacity:0.9;">
+                    &bull; &nbsp;<strong>2.5% commission rate</strong> — stated upfront, no guessing<br>
+                    &bull; &nbsp;<strong>Local sales history</strong> — homes they've sold in ${area} in the past 12 months<br>
+                    &bull; &nbsp;<strong>90-day marketing plan</strong> — professional photography, MLS, paid ads, open houses<br>
+                    &bull; &nbsp;<strong>A personal note</strong> — why they want to represent your listing specifically
+                </div>
+            </div>
+            ${p('You receive all of this in your inbox — from every agent who wants to work with you. Multiple proposals means leverage. You're not taking whatever rate the first agent quotes you. You're choosing from a competitive field.')}
+            <div style="background:#F8F6F3;border-radius:12px;padding:24px 28px;margin:24px 0;border:1px solid #E5E1DB;">
+                <div style="font-size:15px;font-weight:700;color:#0A2540;margin-bottom:6px;">What sellers tell us</div>
+                <p style="color:#444;font-size:14px;line-height:1.7;margin:0;">The most common thing we hear from sellers is that they didn't realize how much commission rates varied until they saw proposals side by side. The difference between agents can be significant — and you'd never know without comparing.</p>
+            </div>
+            ${p('We launch August 2026. Post your listing free and start receiving proposals on day one.')}
+            ${btn(`${BASE_URL}/login?tab=signup&type=seller`, 'Post Your Free Listing')}
+            ${divider()}
+            <p style="color:#999;font-size:13px;margin:0;">The RealtorFinder Team<br><a href="${BASE_URL}" style="color:#FF6B35;text-decoration:none;">realtorfinder.net</a></p>
+        `;
+        try {
+            await send({ to: email, subject: 'What a competing proposal actually looks like', html: emailWrap('For Sellers', body) });
+        } catch (error) { logSendgridError('City lead seller drip 3', error); }
+    },
+
+    // City lead — Seller Day 7
+    async sendCityLeadSellerDrip7(email, cityName) {
+        const area = cityName || 'your area';
+        const body = `
+            ${h1('Still thinking about selling? Here\'s what you\'d get')}
+            ${p(`A quick note from the RealtorFinder team — we wanted to reach out one more time before we launch in August 2026.`)}
+            <div style="background:#F8F6F3;border-radius:12px;padding:24px 28px;margin:24px 0;border:1px solid #E5E1DB;">
+                <div style="margin-bottom:16px;">
+                    <div style="font-size:15px;font-weight:700;color:#0A2540;margin-bottom:6px;">Here's what you get as an early lister in ${area}:</div>
+                </div>
+                <div style="font-size:14px;line-height:2.2;color:#444;">
+                    ✓ &nbsp;Free listing — no cost, ever<br>
+                    ✓ &nbsp;Competing proposals from licensed, verified realtors<br>
+                    ✓ &nbsp;Commission rates, marketing plans, and cover notes in one inbox<br>
+                    ✓ &nbsp;No pressure to accept — choose on your timeline<br>
+                    ✓ &nbsp;First to receive proposals when we launch in August
+                </div>
+            </div>
+            ${p('Early listers are first in line when the platform goes live. Realtors are actively waiting to submit proposals — the sooner your listing is up, the more competition you'll see from day one.')}
+            ${p('No commitment required. You can post a listing and review proposals without accepting anything.')}
+            ${btn(`${BASE_URL}/login?tab=signup&type=seller`, 'Join the Early Access List')}
+            ${divider()}
+            <p style="color:#999;font-size:13px;margin:0;">The RealtorFinder Team<br><a href="${BASE_URL}" style="color:#FF6B35;text-decoration:none;">realtorfinder.net</a></p>
+        `;
+        try {
+            await send({ to: email, subject: 'Still thinking about selling? Here\'s what you\'d get', html: emailWrap('For Sellers', body) });
+        } catch (error) { logSendgridError('City lead seller drip 7', error); }
+    },
+
+    // City lead — Realtor Day 1
+    async sendCityLeadRealtorDrip1(email, cityName) {
+        const area = cityName || 'your area';
+        const body = `
+            ${h1('How RealtorFinder works for agents')}
+            ${p(`You recently expressed interest in RealtorFinder. Here's how the platform works for realtors in ${area}.`)}
+            <div style="background:#F8F6F3;border-radius:12px;padding:24px 28px;margin:24px 0;border:1px solid #E5E1DB;">
+                <div style="margin-bottom:20px;">
+                    <div style="font-size:15px;font-weight:700;color:#0A2540;margin-bottom:6px;">Sellers post listings</div>
+                    <p style="color:#444;font-size:14px;line-height:1.7;margin:0;">Homeowners in ${area} post their homes on RealtorFinder when they're ready to sell. Every listing is from a real, motivated seller — not scraped data or recycled leads.</p>
+                </div>
+                <div style="margin-bottom:20px;">
+                    <div style="font-size:15px;font-weight:700;color:#0A2540;margin-bottom:6px;">You browse and submit proposals</div>
+                    <p style="color:#444;font-size:14px;line-height:1.7;margin:0;">You see every active listing in your service areas. Click into any listing and submit a proposal — your commission rate, brokerage, marketing plan, and a personal pitch to the seller. No cold calls. No shared leads. You compete on the quality of your pitch.</p>
+                </div>
+                <div style="margin-bottom:20px;">
+                    <div style="font-size:15px;font-weight:700;color:#0A2540;margin-bottom:6px;">The seller picks the best fit</div>
+                    <p style="color:#444;font-size:14px;line-height:1.7;margin:0;">The seller reviews all proposals and chooses the agent they want to work with. If they choose you, you get their contact information and the listing process begins.</p>
+                </div>
+                <div>
+                    <div style="font-size:15px;font-weight:700;color:#0A2540;margin-bottom:6px;">No per-lead fees. Flat monthly subscription.</div>
+                    <p style="color:#444;font-size:14px;line-height:1.7;margin:0;">No commission splits, no per-lead charges. One flat monthly fee gives you unlimited access to all listings in your service areas. We launch August 2026.</p>
+                </div>
+            </div>
+            ${btn(`${BASE_URL}/realtors`, 'See How It Works')}
+            ${divider()}
+            <p style="color:#999;font-size:13px;margin:0;">The RealtorFinder Team<br><a href="${BASE_URL}" style="color:#FF6B35;text-decoration:none;">realtorfinder.net</a></p>
+        `;
+        try {
+            await send({ to: email, subject: 'How RealtorFinder works for agents', html: emailWrap('For Realtors', body) });
+        } catch (error) { logSendgridError('City lead realtor drip 1', error); }
+    },
+
+    // City lead — Realtor Day 3
+    async sendCityLeadRealtorDrip3(email, cityName) {
+        const area = cityName || 'your area';
+        const body = `
+            ${h1('Founding Member spots are limited — here\'s what you get')}
+            ${p(`We're reserving Founding Member status for the first 100 realtors on RealtorFinder. We're close to that limit. Here's why it matters for agents in ${area}.`)}
+            <div style="background:linear-gradient(135deg,#0A2540,#0d3659);border-radius:12px;padding:28px 32px;margin:24px 0;color:white;">
+                <div style="font-family:Georgia,serif;font-size:20px;font-weight:900;margin-bottom:16px;">Founding Member Benefits</div>
+                <div style="font-size:14px;line-height:2.2;opacity:0.9;">
+                    <div style="margin-bottom:10px;"><span style="background:#FF6B35;color:white;border-radius:4px;padding:2px 8px;font-size:12px;font-weight:700;margin-right:8px;">BADGE</span> Permanent "Founding Member" badge on your public profile — forever</div>
+                    <div style="margin-bottom:10px;"><span style="background:#FF6B35;color:white;border-radius:4px;padding:2px 8px;font-size:12px;font-weight:700;margin-right:8px;">RATE</span> Subscription price locked in permanently — never increases as long as you stay</div>
+                    <div><span style="background:#FF6B35;color:white;border-radius:4px;padding:2px 8px;font-size:12px;font-weight:700;margin-right:8px;">EARLY</span> First access to listings when we launch — 24 hours before general release</div>
+                </div>
+            </div>
+            ${p(`When sellers in ${area} go live in August, founding members see their listings first. That early window is only for founding members — it's not available at any price after launch.`)}
+            ${p('Spots are limited and we're close. Once the 100th founding member joins, this tier closes.')}
+            ${btn(`${BASE_URL}/login?tab=signup&type=realtor`, 'Claim Your Founding Member Spot')}
+            ${divider()}
+            <p style="color:#999;font-size:13px;margin:0;">The RealtorFinder Team<br><a href="${BASE_URL}" style="color:#FF6B35;text-decoration:none;">realtorfinder.net</a></p>
+        `;
+        try {
+            await send({ to: email, subject: 'Founding Member spots are limited — here\'s what you get', html: emailWrap('For Realtors', body) });
+        } catch (error) { logSendgridError('City lead realtor drip 3', error); }
+    },
+
+    // City lead — Realtor Day 7
+    async sendCityLeadRealtorDrip7(email, cityName) {
+        const area = cityName || 'your area';
+        const body = `
+            ${h1('Last chance — we launch in August 2026')}
+            ${p(`We wanted to reach out one more time before we go live. Sellers in ${area} are already signed up and waiting. Realtors who join now will be ready when the listings go live.`)}
+            <div style="background:#F8F6F3;border-radius:12px;padding:24px 28px;margin:24px 0;border:1px solid #E5E1DB;">
+                <div style="font-size:14px;line-height:2.2;color:#444;">
+                    ✓ &nbsp;Founding Member badge — permanent, on your profile<br>
+                    ✓ &nbsp;Rate locked forever — pay today's price no matter what we charge later<br>
+                    ✓ &nbsp;August 2026 launch — we're weeks away<br>
+                    ✓ &nbsp;First access to listings in ${area} before anyone else
+                </div>
+            </div>
+            ${p('Don\'t start August cold — setting up your profile, service areas, and first proposal templates takes time. Founding members who join now will be ready to submit proposals on day one.')}
+            ${p('Sellers are waiting. The only question is whether you\'ll be in front of them when they go live.')}
+            ${btn(`${BASE_URL}/login?tab=signup&type=realtor`, 'Join Before We Launch')}
+            ${divider()}
+            <p style="color:#999;font-size:13px;margin:0;">The RealtorFinder Team<br><a href="${BASE_URL}" style="color:#FF6B35;text-decoration:none;">realtorfinder.net</a></p>
+        `;
+        try {
+            await send({ to: email, subject: 'Last chance — we launch in August 2026', html: emailWrap('For Realtors', body) });
+        } catch (error) { logSendgridError('City lead realtor drip 7', error); }
+    },
 };
 
 module.exports = emailService;
