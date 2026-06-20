@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real Estate Commission Savings Calculator | RealtorFinder</title>
+    <meta name="description" content="Calculate how much you could save on real estate agent commissions. Enter your home sale price and see your potential savings when agents compete for your listing on RealtorFinder.">
+    <link rel="canonical" href="https://www.realtorfinder.net/calculator">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://www.realtorfinder.net/calculator">
+    <meta property="og:title" content="Real Estate Commission Savings Calculator | RealtorFinder">
+    <meta property="og:description" content="Calculate how much you could save on real estate agent commissions when agents compete for your listing.">
+    <meta property="og:image" content="https://www.realtorfinder.net/og-default.png">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Real Estate Commission Savings Calculator | RealtorFinder">
+    <meta name="twitter:description" content="Calculate how much you could save on real estate agent commissions when agents compete for your listing.">
+    <meta name="twitter:image" content="https://www.realtorfinder.net/og-default.png">
+    <!-- Google Analytics 4 -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-BRGVVNKT65"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-BRGVVNKT65');
+    </script>
+    <!-- Microsoft Clarity -->
+    <script type="text/javascript">
+        (function(c,l,a,r,i,t,y){
+            c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+            t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+            y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+        })(window, document, "clarity", "script", "wxvaz0g7tq");
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #0A2540;
+            --accent: #FF6B35;
+            --soft-bg: #F8F6F3;
+            --text: #1A1A1A;
+            --border: #E5E1DB;
+            --muted: #6B7280;
+            --green: #10b981;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'DM Sans', sans-serif; background: var(--soft-bg); color: var(--text); line-height: 1.6; }
+
+        @keyframes slideDown {
+            from { transform: translateY(-100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        nav {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            background: var(--soft-bg);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border);
+            z-index: 1000;
+            animation: slideDown 0.6s ease-out;
+        }
+        .nav-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1.25rem 3rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .logo { font-family: 'Playfair Display', serif; font-size: 1.8rem; font-weight: 900; color: var(--primary); letter-spacing: -0.5px; text-decoration: none; }
+        .logo span { color: var(--accent); }
+        .nav-links { display: flex; gap: 2.5rem; align-items: center; }
+        .nav-links a { text-decoration: none; color: var(--text); font-weight: 500; font-size: 0.95rem; transition: color 0.3s; position: relative; }
+        .nav-links a::after { content: ''; position: absolute; bottom: -5px; left: 0; width: 0; height: 2px; background: var(--accent); transition: width 0.3s; }
+        .nav-links a:hover::after { width: 100%; }
+        .nav-cta { background: var(--accent); color: white !important; padding: 0.75rem 1.75rem; border-radius: 50px; transition: all 0.3s; }
+        .nav-cta::after { display: none !important; }
+        .nav-cta:hover { background: var(--primary); transform: translateY(-2px); box-shadow: 0 10px 30px rgba(10,37,64,0.3); }
+
+        /* Hero */
+        .hero {
+            background: var(--primary);
+            color: white;
+            text-align: center;
+            padding: 5rem 2rem 4rem;
+            margin-top: 73px;
+        }
+        .hero-eyebrow {
+            display: inline-block;
+            background: rgba(255,107,53,0.18);
+            color: var(--accent);
+            font-weight: 600;
+            font-size: 0.82rem;
+            padding: 0.35rem 1rem;
+            border-radius: 20px;
+            margin-bottom: 1.5rem;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+        }
+        .hero h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 3rem;
+            font-weight: 900;
+            line-height: 1.1;
+            max-width: 700px;
+            margin: 0 auto 1.25rem;
+        }
+        .hero h1 span { color: var(--accent); }
+        .hero p {
+            font-size: 1.1rem;
+            color: rgba(255,255,255,0.75);
+            max-width: 520px;
+            margin: 0 auto;
+            line-height: 1.7;
+        }
+
+        /* Main layout */
+        .page-body {
+            max-width: 920px;
+            margin: 0 auto;
+            padding: 3rem 2rem 5rem;
+        }
+
+        /* Calculator card */
+        .calc-card {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 2.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 24px rgba(10,37,64,0.06);
+        }
+        .calc-card h2 {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.6rem;
+            font-weight: 900;
+            color: var(--primary);
+            margin-bottom: 0.4rem;
+        }
+        .calc-card .subtitle {
+            font-size: 0.95rem;
+            color: var(--muted);
+            margin-bottom: 2rem;
+        }
+
+        /* Inputs */
+        .input-group {
+            margin-bottom: 1.75rem;
+        }
+        .input-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 0.6rem;
+        }
+        .input-label label {
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: var(--primary);
+        }
+        .input-label .value-display {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.3rem;
+            font-weight: 900;
+            color: var(--accent);
+        }
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: var(--border);
+            outline: none;
+            margin-bottom: 0.5rem;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(255,107,53,0.4);
+            transition: transform 0.15s;
+        }
+        input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.15); }
+        input[type="range"]::-moz-range-thumb {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 8px rgba(255,107,53,0.4);
+        }
+        .number-input {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 0.4rem;
+        }
+        .number-input span { color: var(--muted); font-size: 0.9rem; }
+        .number-input input[type="number"] {
+            width: 130px;
+            padding: 0.5rem 0.75rem;
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.95rem;
+            color: var(--primary);
+            font-weight: 600;
+            transition: border-color 0.2s;
+        }
+        .number-input input[type="number"]:focus { outline: none; border-color: var(--accent); }
+
+        .inputs-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        /* Results */
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+        .result-box {
+            background: var(--soft-bg);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 1.25rem 1.5rem;
+        }
+        .result-box.savings {
+            background: #ecfdf5;
+            border-color: #6ee7b7;
+            grid-column: span 2;
+        }
+        .result-box .result-label {
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            color: var(--muted);
+            margin-bottom: 0.4rem;
+        }
+        .result-box.savings .result-label { color: #065f46; }
+        .result-box .result-value {
+            font-family: 'Playfair Display', serif;
+            font-size: 2rem;
+            font-weight: 900;
+            color: var(--primary);
+            line-height: 1;
+        }
+        .result-box.savings .result-value {
+            color: var(--green);
+            font-size: 2.6rem;
+        }
+        .result-box .result-sub {
+            font-size: 0.85rem;
+            color: var(--muted);
+            margin-top: 0.3rem;
+        }
+        .result-box.savings .result-sub { color: #059669; font-weight: 600; }
+
+        /* Divider */
+        .calc-divider {
+            border: none;
+            border-top: 1px solid var(--border);
+            margin: 2rem 0;
+        }
+
+        /* CTA section below calc */
+        .calc-cta {
+            background: var(--primary);
+            border-radius: 16px;
+            padding: 2rem 2.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .calc-cta-text h3 {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.4rem;
+            font-weight: 900;
+            color: white;
+            margin-bottom: 0.35rem;
+        }
+        .calc-cta-text p { font-size: 0.9rem; color: rgba(255,255,255,0.7); line-height: 1.5; }
+        .calc-cta-btn {
+            background: var(--accent);
+            color: white;
+            padding: 0.9rem 2rem;
+            border-radius: 50px;
+            font-weight: 700;
+            font-size: 0.95rem;
+            text-decoration: none;
+            white-space: nowrap;
+            transition: all 0.3s;
+            flex-shrink: 0;
+        }
+        .calc-cta-btn:hover { background: white; color: var(--accent); transform: translateY(-2px); }
+
+        /* Rate comparison table */
+        .table-card {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            overflow: hidden;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 24px rgba(10,37,64,0.06);
+        }
+        .table-header {
+            background: var(--primary);
+            color: white;
+            padding: 1.25rem 1.75rem;
+        }
+        .table-header h3 {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.25rem;
+            font-weight: 900;
+        }
+        .table-header p { font-size: 0.85rem; color: rgba(255,255,255,0.65); margin-top: 0.2rem; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        thead th {
+            text-align: left;
+            padding: 0.85rem 1.75rem;
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--muted);
+            background: var(--soft-bg);
+            border-bottom: 1px solid var(--border);
+        }
+        tbody tr { border-bottom: 1px solid var(--border); }
+        tbody tr:last-child { border-bottom: none; }
+        tbody tr:hover { background: rgba(255,107,53,0.03); }
+        tbody td {
+            padding: 0.85rem 1.75rem;
+            font-size: 0.95rem;
+            color: var(--text);
+        }
+        tbody td:first-child { font-weight: 600; color: var(--primary); }
+        tbody td.highlight { color: var(--green); font-weight: 700; }
+        tbody tr.current-row { background: #fffbf9; }
+        tbody tr.current-row td:first-child { color: var(--accent); }
+
+        /* Share section */
+        .share-card {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 1.75rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .share-card-text h3 {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.1rem;
+            font-weight: 900;
+            color: var(--primary);
+            margin-bottom: 0.2rem;
+        }
+        .share-card-text p { font-size: 0.88rem; color: var(--muted); }
+        .share-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            font-family: 'DM Sans', sans-serif;
+            transition: all 0.3s;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        .share-btn:hover { background: var(--accent); transform: translateY(-1px); }
+        .share-btn.copied { background: var(--green); }
+
+        /* FAQ */
+        .section-heading {
+            font-family: 'Playfair Display', serif;
+            font-size: 2rem;
+            font-weight: 900;
+            color: var(--primary);
+            line-height: 1.15;
+            margin-bottom: 1.25rem;
+        }
+        .eyebrow {
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--accent);
+            margin-bottom: 0.75rem;
+        }
+        .faq-list { margin-top: 1.5rem; }
+        .faq-item {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem 1.75rem;
+            margin-bottom: 1rem;
+        }
+        .faq-item h3 {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+        .faq-item p { font-size: 0.93rem; color: #555; line-height: 1.7; }
+
+        /* Footer */
+        footer {
+            background: var(--primary);
+            color: rgba(255,255,255,0.5);
+            text-align: center;
+            padding: 2rem;
+            font-size: 0.85rem;
+        }
+        footer a { color: rgba(255,255,255,0.5); text-decoration: none; }
+        footer a:hover { color: white; }
+
+        /* Hamburger */
+        .nav-hamburger {
+            display: none;
+            flex-direction: column;
+            gap: 5px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 4px;
+        }
+        .nav-hamburger span {
+            display: block;
+            width: 24px;
+            height: 2px;
+            background: var(--primary);
+            border-radius: 2px;
+            transition: all 0.2s;
+        }
+        .mobile-menu {
+            display: none;
+            background: var(--soft-bg);
+            width: 100%;
+            position: fixed;
+            top: 73px;
+            left: 0;
+            z-index: 999;
+            border-top: 1px solid var(--border);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+        }
+        .mobile-menu.open { display: block; }
+        .mobile-menu a {
+            display: block;
+            color: var(--text);
+            text-decoration: none;
+            font-size: 1rem;
+            font-weight: 500;
+            padding: 1rem 2rem;
+            border-bottom: 1px solid var(--border);
+        }
+        .mobile-menu a:hover { color: var(--accent); background: rgba(255,107,53,0.04); }
+        .mobile-menu .nav-cta {
+            margin: 1rem 2rem;
+            display: block;
+            text-align: center;
+            border-radius: 50px;
+            background: var(--accent);
+            color: white !important;
+            font-weight: 600 !important;
+            border-bottom: none;
+        }
+        .mobile-menu .nav-cta:hover { background: var(--primary); }
+
+        @media (max-width: 700px) {
+            .hero h1 { font-size: 2.2rem; }
+            .results-grid { grid-template-columns: 1fr; }
+            .result-box.savings { grid-column: span 1; }
+            .inputs-row { grid-template-columns: 1fr; }
+            .calc-cta { flex-direction: column; text-align: center; }
+            .share-card { flex-direction: column; text-align: center; }
+            .nav-links { display: none; }
+            .nav-hamburger { display: flex; }
+            thead th, tbody td { padding: 0.75rem 1rem; }
+        }
+    </style>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#0A2540">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="RealtorFinder">
+</head>
+<body>
+
+<nav>
+    <div class="nav-container">
+        <a href="/realtors" class="logo">Realtor<span>Finder</span></a>
+        <div class="nav-links">
+            <a href="/realtors#benefits">How It Works</a>
+            <a href="/realtors#founding" style="color:#F59E0B;font-weight:600;">&#127885; Founding Members</a>
+            <a href="/realtors#referral-program">Referrals</a>
+            <a href="/pricing">Pricing</a>
+            <a href="/features">Features</a>
+            <a href="/about">About</a>
+            <a href="/contact">Contact</a>
+            <a href="/login?tab=signup&amp;type=realtor" class="nav-cta">Create Account</a>
+        </div>
+        <button class="nav-hamburger" id="navHamburger" aria-label="Open menu" aria-expanded="false">
+            <span></span><span></span><span></span>
+        </button>
+    </div>
+</nav>
+<div class="mobile-menu" id="mobileMenu" role="navigation">
+    <a href="/realtors#benefits" onclick="closeMobileMenu()">How It Works</a>
+    <a href="/realtors#founding" onclick="closeMobileMenu()" style="color:#F59E0B;font-weight:600;">&#127885; Founding Members</a>
+    <a href="/realtors#referral-program" onclick="closeMobileMenu()">Referrals</a>
+    <a href="/pricing" onclick="closeMobileMenu()">Pricing</a>
+    <a href="/features" onclick="closeMobileMenu()">Features</a>
+    <a href="/about" onclick="closeMobileMenu()">About</a>
+    <a href="/login?tab=signup&amp;type=realtor" class="nav-cta" onclick="closeMobileMenu()">Create Account</a>
+</div>
+
+<!-- Hero -->
+<section class="hero">
+    <div class="hero-eyebrow">Free Tool</div>
+    <h1>Real Estate Commission <span>Savings Calculator</span></h1>
+    <p>See how much you could save when agents compete for your listing — instead of you paying whatever rate walks in the door.</p>
+</section>
+
+<div class="page-body">
+
+    <!-- Calculator Card -->
+    <div class="calc-card">
+        <h2>Commission Savings Calculator</h2>
+        <p class="subtitle">Adjust the sliders to match your home and expected commission rate.</p>
+
+        <!-- Home sale price -->
+        <div class="input-group">
+            <div class="input-label">
+                <label for="homePriceRange">Home sale price</label>
+                <div class="value-display" id="homePriceDisplay">$450,000</div>
+            </div>
+            <input type="range" id="homePriceRange" min="100000" max="3000000" step="5000" value="450000">
+            <div class="number-input">
+                <span>$</span>
+                <input type="number" id="homePriceNumber" value="450000" min="50000" max="10000000" step="1000">
+            </div>
+        </div>
+
+        <div class="inputs-row">
+            <!-- Traditional commission -->
+            <div class="input-group">
+                <div class="input-label">
+                    <label for="tradCommRange">Traditional commission</label>
+                    <div class="value-display" id="tradCommDisplay">6.0%</div>
+                </div>
+                <input type="range" id="tradCommRange" min="3" max="8" step="0.1" value="6">
+                <div class="number-input">
+                    <input type="number" id="tradCommNumber" value="6" min="1" max="10" step="0.1">
+                    <span>%</span>
+                </div>
+            </div>
+
+            <!-- Competitive commission -->
+            <div class="input-group">
+                <div class="input-label">
+                    <label for="compCommRange">With RealtorFinder</label>
+                    <div class="value-display" id="compCommDisplay">4.5%</div>
+                </div>
+                <input type="range" id="compCommRange" min="1" max="7" step="0.1" value="4.5">
+                <div class="number-input">
+                    <input type="number" id="compCommNumber" value="4.5" min="0.5" max="8" step="0.1">
+                    <span>%</span>
+                </div>
+            </div>
+        </div>
+
+        <hr class="calc-divider">
+
+        <!-- Results -->
+        <div class="results-grid">
+            <div class="result-box">
+                <div class="result-label">Traditional agent cost</div>
+                <div class="result-value" id="tradCost">$27,000</div>
+                <div class="result-sub" id="tradCommSub">at 6.0% commission</div>
+            </div>
+            <div class="result-box">
+                <div class="result-label">With RealtorFinder</div>
+                <div class="result-value" id="compCost">$20,250</div>
+                <div class="result-sub" id="compCommSub">at 4.5% commission</div>
+            </div>
+            <div class="result-box savings">
+                <div class="result-label">Your potential savings</div>
+                <div class="result-value" id="savingsAmount">$6,750</div>
+                <div class="result-sub" id="savingsPct">That's 25.0% less in commissions</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CTA -->
+    <div class="calc-cta">
+        <div class="calc-cta-text">
+            <h3>See competing proposals for your home</h3>
+            <p>When agents compete for your listing, commission rates come down. Post your home free and receive proposals from licensed agents in your market.</p>
+        </div>
+        <a href="/" class="calc-cta-btn">Get Free Competing Proposals</a>
+    </div>
+
+    <!-- Rate comparison table -->
+    <div class="table-card">
+        <div class="table-header">
+            <h3>Commission Rate Comparison</h3>
+            <p id="tableSubhead">Commission cost at different rates for a $450,000 home</p>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Commission rate</th>
+                    <th>Commission cost</th>
+                    <th>vs. 6% traditional</th>
+                </tr>
+            </thead>
+            <tbody id="comparisonTableBody">
+                <!-- filled by JS -->
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Share section -->
+    <div class="share-card">
+        <div class="share-card-text">
+            <h3>Share this calculator</h3>
+            <p>Know someone buying or selling a home? Send them this free tool.</p>
+        </div>
+        <button class="share-btn" id="shareBtn">Copy link</button>
+    </div>
+
+    <!-- FAQ -->
+    <div class="eyebrow" style="margin-top:1rem;">Common Questions</div>
+    <h2 class="section-heading">Real estate commission FAQ</h2>
+    <div class="faq-list">
+        <div class="faq-item">
+            <h3>What is the average real estate commission?</h3>
+            <p>The traditional total commission on a home sale has historically been 5–6%, typically split between the buyer's agent and the seller's agent. Following the 2024 NAR settlement, how buyer's agent compensation is negotiated is changing — but seller's agent commissions remain negotiable. Many sellers still pay 2.5–3% just for listing agent representation, on top of any buyer's agent concession.</p>
+        </div>
+        <div class="faq-item">
+            <h3>Can I negotiate a lower real estate commission?</h3>
+            <p>Yes — commissions have always been negotiable by law. The challenge is that most sellers only talk to one or two agents before signing a listing agreement, which limits their leverage. When multiple agents submit competing proposals (as on RealtorFinder), sellers see the full range of rates and services available in their market, which naturally drives more competitive offers.</p>
+        </div>
+        <div class="faq-item">
+            <h3>How does commission competition work on RealtorFinder?</h3>
+            <p>Sellers post their home on RealtorFinder for free and receive written proposals from licensed agents in their area. Each proposal includes the agent's commission rate, marketing plan, and credentials. Because agents know they are competing with others, they have an incentive to put their best rate and strategy forward. Sellers then choose whichever agent they prefer — there is no pressure and no obligation.</p>
+        </div>
+        <div class="faq-item">
+            <h3>Does a lower commission mean a worse agent?</h3>
+            <p>Not at all. Commission rate and agent quality are separate variables. A highly experienced agent who wants to build their volume may offer a competitive rate. A newer agent may charge the full rate to signal confidence. The point of competing proposals is that you get to evaluate both the rate and the agent's qualifications side by side — rather than accepting a rate quoted in isolation.</p>
+        </div>
+    </div>
+
+</div>
+
+<footer>
+    <p>&copy; 2025 RealtorFinder &nbsp;&middot;&nbsp; <a href="/privacy">Privacy</a> &nbsp;&middot;&nbsp; <a href="/terms">Terms</a> &nbsp;&middot;&nbsp; <a href="/cookies">Cookies</a> &nbsp;&middot;&nbsp; <a href="/about">About</a> &nbsp;&middot;&nbsp; <a href="/contact">Contact</a></p>
+</footer>
+
+<script>
+    // ── Nav hamburger ───────────────────────────────────────────────────────────
+    const hamburger = document.getElementById('navHamburger');
+    const mobileMenu = document.getElementById('mobileMenu');
+    hamburger.addEventListener('click', function() {
+        const isOpen = mobileMenu.classList.toggle('open');
+        hamburger.setAttribute('aria-expanded', isOpen);
+    });
+    function closeMobileMenu() {
+        mobileMenu.classList.remove('open');
+        hamburger.setAttribute('aria-expanded', 'false');
+    }
+
+    // ── Calculator logic ────────────────────────────────────────────────────────
+    const RATE_ROWS = [6, 5.5, 5, 4.5, 4, 3];
+
+    function fmt(n) {
+        return '$' + Math.round(n).toLocaleString('en-US');
+    }
+    function pct(n) {
+        return n.toFixed(1) + '%';
+    }
+
+    function getValues() {
+        return {
+            price: parseFloat(document.getElementById('homePriceRange').value) || 450000,
+            trad:  parseFloat(document.getElementById('tradCommRange').value)  || 6,
+            comp:  parseFloat(document.getElementById('compCommRange').value)  || 4.5,
+        };
+    }
+
+    function update() {
+        const { price, trad, comp } = getValues();
+        const tradCost = price * trad  / 100;
+        const compCost = price * comp  / 100;
+        const savings  = tradCost - compCost;
+        const savingsPct = trad > 0 ? (savings / tradCost * 100) : 0;
+
+        document.getElementById('homePriceDisplay').textContent = fmt(price);
+        document.getElementById('tradCommDisplay').textContent  = pct(trad);
+        document.getElementById('compCommDisplay').textContent  = pct(comp);
+
+        document.getElementById('tradCost').textContent     = fmt(tradCost);
+        document.getElementById('compCost').textContent     = fmt(compCost);
+        document.getElementById('tradCommSub').textContent  = 'at ' + pct(trad) + ' commission';
+        document.getElementById('compCommSub').textContent  = 'at ' + pct(comp) + ' commission';
+        document.getElementById('savingsAmount').textContent = fmt(Math.max(0, savings));
+        document.getElementById('savingsPct').textContent   = "That's " + pct(Math.max(0, savingsPct)) + ' less in commissions';
+
+        // table
+        document.getElementById('tableSubhead').textContent = 'Commission cost at different rates for a ' + fmt(price) + ' home';
+        const tbody = document.getElementById('comparisonTableBody');
+        const tradBase = price * 6 / 100;
+        tbody.innerHTML = RATE_ROWS.map(r => {
+            const cost = price * r / 100;
+            const diff = cost - tradBase;
+            const diffStr = diff === 0 ? 'Baseline' : fmt(Math.abs(diff)) + (diff < 0 ? ' less' : ' more');
+            const isCurrent = Math.abs(r - comp) < 0.05;
+            return '<tr' + (isCurrent ? ' class="current-row"' : '') + '>' +
+                '<td>' + pct(r) + (isCurrent ? ' &larr; your estimate' : '') + '</td>' +
+                '<td>' + fmt(cost) + '</td>' +
+                '<td class="' + (diff < 0 ? 'highlight' : '') + '">' + diffStr + '</td>' +
+                '</tr>';
+        }).join('');
+    }
+
+    // Sync range + number inputs
+    function syncPair(rangeId, numberId, onUpdate) {
+        const range  = document.getElementById(rangeId);
+        const number = document.getElementById(numberId);
+        range.addEventListener('input', () => { number.value = range.value; onUpdate(); });
+        number.addEventListener('input', () => { range.value = number.value; onUpdate(); });
+    }
+
+    syncPair('homePriceRange', 'homePriceNumber', update);
+    syncPair('tradCommRange',  'tradCommNumber',  update);
+    syncPair('compCommRange',  'compCommNumber',  update);
+
+    update(); // initial render
+
+    // ── Share button ────────────────────────────────────────────────────────────
+    document.getElementById('shareBtn').addEventListener('click', function() {
+        const url = 'https://www.realtorfinder.net/calculator';
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(url).then(() => {
+                this.textContent = 'Link copied!';
+                this.classList.add('copied');
+                setTimeout(() => { this.textContent = 'Copy link'; this.classList.remove('copied'); }, 2500);
+            });
+        } else {
+            // fallback
+            const ta = document.createElement('textarea');
+            ta.value = url;
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+            this.textContent = 'Link copied!';
+            this.classList.add('copied');
+            setTimeout(() => { this.textContent = 'Copy link'; this.classList.remove('copied'); }, 2500);
+        }
+    });
+</script>
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
+  }
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "What is the average real estate commission?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "The traditional total commission on a home sale has historically been 5–6%, typically split between the buyer's agent and the seller's agent. Following the 2024 NAR settlement, how buyer's agent compensation is negotiated is changing, but seller's agent commissions remain negotiable."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Can I negotiate a lower real estate commission?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes — commissions have always been negotiable by law. When multiple agents submit competing proposals (as on RealtorFinder), sellers see the full range of rates and services available in their market, which naturally drives more competitive offers."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How does commission competition work on RealtorFinder?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Sellers post their home on RealtorFinder for free and receive written proposals from licensed agents in their area. Each proposal includes the agent's commission rate, marketing plan, and credentials. Because agents know they are competing with others, they have an incentive to put their best rate and strategy forward."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Does a lower commission mean a worse agent?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Not at all. Commission rate and agent quality are separate variables. The point of competing proposals is that you get to evaluate both the rate and the agent's qualifications side by side — rather than accepting a rate quoted in isolation."
+      }
+    }
+  ]
+}
+</script>
+</body>
+</html>
