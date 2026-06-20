@@ -31,7 +31,6 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
     <script src="https://js.stripe.com/v3/"></script>
     <style>
         :root {
@@ -2954,7 +2953,7 @@ Worth checking out.</div>
                 mapBtn.style.color = 'white';
                 gridBtn.style.background = '#f3f4f6';
                 gridBtn.style.color = '#374151';
-                setTimeout(() => { if (!window._leafletMap) initMap(); else window._leafletMap.invalidateSize(); }, 50);
+                ensureLeaflet().then(() => { setTimeout(() => { if (!window._leafletMap) initMap(); else window._leafletMap.invalidateSize(); }, 50); });
             }
         }
 
@@ -3004,7 +3003,22 @@ Worth checking out.</div>
         let _drawerListing = null;
         let _drawerMap = null;
 
+        function ensureLeaflet() {
+            return new Promise(resolve => {
+                if (window.L) return resolve();
+                const link = document.createElement('link');
+                link.rel = 'stylesheet';
+                link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+                document.head.appendChild(link);
+                const script = document.createElement('script');
+                script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+                script.onload = resolve;
+                document.head.appendChild(script);
+            });
+        }
+
         async function openListingDrawer(listingId) {
+            await ensureLeaflet();
             _drawerListingId = listingId;
             const overlay = document.getElementById('listingDrawerOverlay');
             const drawer = document.getElementById('listingDrawer');
@@ -3862,7 +3876,7 @@ Worth checking out.</div>
                 if (p.service_areas) document.getElementById('wizardAreas').value = p.service_areas;
                 if (p.profile_photo) {
                     document.getElementById('wizardPhotoPreview').innerHTML =
-                        `<img src="${p.profile_photo}" style="width:100%;height:100%;object-fit:cover;">`;
+                        `<img src="${p.profile_photo}" style="width:100%;height:100%;object-fit:cover;" loading="lazy">`;
                 }
             } catch {}
         }
@@ -3881,7 +3895,7 @@ Worth checking out.</div>
             const reader = new FileReader();
             reader.onload = e => {
                 const preview = document.getElementById('wizardPhotoPreview');
-                preview.innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;">`;
+                preview.innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;" loading="lazy">`;
             };
             reader.readAsDataURL(file);
             document.getElementById('wizardPhotoBtn').textContent = 'Upload & Continue →';
@@ -4347,7 +4361,7 @@ Worth checking out.</div>
                 document.getElementById('profilePhotoInitials').textContent = initials.toUpperCase();
                 if (p.profile_photo) {
                     const wrap = document.getElementById('profilePhotoWrap');
-                    wrap.innerHTML = `<img src="${p.profile_photo}" style="width:100%;height:100%;object-fit:cover;">`;
+                    wrap.innerHTML = `<img src="${p.profile_photo}" style="width:100%;height:100%;object-fit:cover;" loading="lazy">`;
                 }
                 // Public profile URL
                 const base = 'https://www.realtorfinder.net';
@@ -4402,7 +4416,7 @@ Worth checking out.</div>
                 if (!res.ok) throw new Error();
                 const { url } = await res.json();
                 const wrap = document.getElementById('profilePhotoWrap');
-                wrap.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover;">`;
+                wrap.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover;" loading="lazy">`;
                 statusEl.textContent = '✓ Photo updated';
                 setTimeout(() => { statusEl.textContent = ''; }, 3000);
             } catch {
@@ -7647,7 +7661,6 @@ Worth checking out.</div>
         </div>
     </div>
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
