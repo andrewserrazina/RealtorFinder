@@ -10850,6 +10850,123 @@ VALUES (
 ON CONFLICT (slug) DO NOTHING
 `);
 
+_schemaMigrations.push(`
+INSERT INTO blog_posts (slug, title, excerpt, author, category, read_time_minutes, content, is_published, published_at)
+VALUES (
+    '2026-new-england-home-sales-report',
+    'The 2026 New England Home Sales Report',
+    'The Northeast housing market continues to outperform the rest of the country. We analyzed NAR data, FRED economic indicators, and Realtor.com market rankings to surface what''s driving demand across New England.',
+    'RealtorFinder Research',
+    'Research',
+    4,
+    $blog_ne2026$<p class="report-meta" style="font-size:0.9rem;color:#6B7280;margin-bottom:1.5rem;">Published June 20, 2026 &middot; RealtorFinder Research &middot; 4 min read</p>
+
+<div style="background:rgba(10,37,64,0.04);border:1px solid #E5E1DB;border-left:4px solid #FF6B35;border-radius:0 10px 10px 0;padding:1.5rem 1.75rem;margin-bottom:2rem;">
+<strong style="display:block;font-size:0.82rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#FF6B35;margin-bottom:0.75rem;">Key Findings</strong>
+<ul style="margin:0;padding-left:1.25rem;">
+<li style="margin-bottom:0.5rem;">Approximately <strong>1,260 existing homes</strong> are sold each day across the Northeast region</li>
+<li style="margin-bottom:0.5rem;">Existing-home sales increased to a <strong>4.17 million annualized pace</strong> nationally in May 2026 (+3.2% month-over-month)</li>
+<li style="margin-bottom:0.5rem;">The Northeast experienced an <strong>8.7% increase in pending home sales</strong> activity during May 2026 &mdash; the strongest regional increase in the US</li>
+<li style="margin-bottom:0.5rem;"><strong>Hartford, Connecticut</strong> was ranked Realtor.com&apos;s #1 housing market in America for 2026</li>
+<li style="margin-bottom:0.5rem;"><strong>Worcester, Massachusetts</strong> ranked #3</li>
+<li><strong>Six of Realtor.com&apos;s Top 10</strong> housing markets for 2026 were located in the Northeast</li>
+</ul>
+</div>
+
+<h2>Northeast Home Sales Activity</h2>
+
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:2rem;">
+<div style="background:#F8F6F3;border:1px solid #E5E1DB;border-radius:10px;padding:1.25rem;text-align:center;">
+<div style="font-size:2rem;font-weight:700;color:#FF6B35;line-height:1;margin-bottom:0.3rem;">460,000</div>
+<div style="font-size:0.82rem;color:#6B7280;">Annualized existing-home sales pace in the Northeast</div>
+</div>
+<div style="background:#F8F6F3;border:1px solid #E5E1DB;border-radius:10px;padding:1.25rem;text-align:center;">
+<div style="font-size:2rem;font-weight:700;color:#FF6B35;line-height:1;margin-bottom:0.3rem;">38,333</div>
+<div style="font-size:0.82rem;color:#6B7280;">Estimated monthly existing-home sales in the Northeast</div>
+</div>
+<div style="background:#F8F6F3;border:1px solid #E5E1DB;border-radius:10px;padding:1.25rem;text-align:center;">
+<div style="font-size:2rem;font-weight:700;color:#FF6B35;line-height:1;margin-bottom:0.3rem;">1,260</div>
+<div style="font-size:0.82rem;color:#6B7280;">Homes sold per day across the Northeast region</div>
+</div>
+</div>
+
+<p>The Northeast housing market entered 2026 with sustained momentum. According to the National Association of Realtors, existing-home sales in the Northeast Census Region are running at an annualized pace of approximately 460,000 units &mdash; translating to roughly 38,333 homes changing hands each month, or approximately 1,260 per day. Nationally, existing-home sales reached a 4.17 million annualized pace in May 2026, a 3.2% increase month-over-month, according to NAR&apos;s June 2026 report. The Federal Reserve Bank of St. Louis (FRED) tracks the Northeast regional series separately, confirming the regional pace is consistent with these national trends.</p>
+
+<h2>Pending Sales Signal Growth</h2>
+
+<p>Pending home sales &mdash; contracts signed but not yet closed &mdash; are a leading indicator of where closed sales are headed. In May 2026, the Northeast posted an <strong>8.7% increase in pending home sales activity</strong>, the strongest regional gain in the country, according to data reported by Reuters on June 17, 2026. This figure suggests that closed-sale volumes in the Northeast are likely to remain elevated through late summer and into fall 2026, as these contracts convert to closings over the following 30 to 60 days.</p>
+
+<p>The Northeast outperformed all other Census regions &mdash; South, Midwest, and West &mdash; in pending sales growth during May, reinforcing the region&apos;s position as one of the most active housing markets in the country entering the second half of 2026.</p>
+
+<h2>Top Housing Markets in the Northeast</h2>
+
+<table style="width:100%;border-collapse:collapse;font-size:0.9rem;margin-bottom:2rem;border:1px solid #E5E1DB;border-radius:10px;overflow:hidden;">
+<thead>
+<tr style="background:#F8F6F3;">
+<th style="padding:0.75rem 1rem;text-align:left;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.05em;color:#0A2540;border-bottom:1px solid #E5E1DB;">National Rank</th>
+<th style="padding:0.75rem 1rem;text-align:left;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.05em;color:#0A2540;border-bottom:1px solid #E5E1DB;">Market</th>
+<th style="padding:0.75rem 1rem;text-align:left;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.05em;color:#0A2540;border-bottom:1px solid #E5E1DB;">State</th>
+<th style="padding:0.75rem 1rem;text-align:left;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.05em;color:#0A2540;border-bottom:1px solid #E5E1DB;">Source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="padding:0.75rem 1rem;border-bottom:1px solid #E5E1DB;"><span style="background:#FF6B35;color:white;font-size:0.75rem;font-weight:700;padding:0.15rem 0.5rem;border-radius:100px;">#1</span></td>
+<td style="padding:0.75rem 1rem;border-bottom:1px solid #E5E1DB;font-weight:600;">Hartford</td>
+<td style="padding:0.75rem 1rem;border-bottom:1px solid #E5E1DB;">Connecticut</td>
+<td style="padding:0.75rem 1rem;border-bottom:1px solid #E5E1DB;">Realtor.com, 2026</td>
+</tr>
+<tr>
+<td style="padding:0.75rem 1rem;border-bottom:1px solid #E5E1DB;"><span style="background:#FF6B35;color:white;font-size:0.75rem;font-weight:700;padding:0.15rem 0.5rem;border-radius:100px;">#3</span></td>
+<td style="padding:0.75rem 1rem;border-bottom:1px solid #E5E1DB;font-weight:600;">Worcester</td>
+<td style="padding:0.75rem 1rem;border-bottom:1px solid #E5E1DB;">Massachusetts</td>
+<td style="padding:0.75rem 1rem;border-bottom:1px solid #E5E1DB;">Realtor.com, 2026</td>
+</tr>
+<tr>
+<td style="padding:0.75rem 1rem;border-bottom:1px solid #E5E1DB;">Top 10</td>
+<td style="padding:0.75rem 1rem;border-bottom:1px solid #E5E1DB;font-weight:600;">Springfield</td>
+<td style="padding:0.75rem 1rem;border-bottom:1px solid #E5E1DB;">Massachusetts</td>
+<td style="padding:0.75rem 1rem;border-bottom:1px solid #E5E1DB;">Realtor.com Hottest Markets, 2026</td>
+</tr>
+<tr>
+<td colspan="2" style="padding:0.75rem 1rem;font-style:italic;">Three additional Northeast markets in Realtor.com Top 10</td>
+<td colspan="2" style="padding:0.75rem 1rem;">Northeast (6 of 10 total)</td>
+</tr>
+</tbody>
+</table>
+
+<p>Realtor.com&apos;s annual housing market rankings for 2026 placed Hartford, Connecticut at the top of the list nationally &mdash; ranking it the #1 housing market in the United States. Worcester, Massachusetts came in at #3. Springfield, Massachusetts also appeared on Realtor.com&apos;s hottest markets list. In total, six of the ten top-ranked housing markets in the United States for 2026 were located in the Northeast, a concentration that reflects the region&apos;s structural housing dynamics: high demand, constrained supply, and strong buyer fundamentals.</p>
+
+<h2>Why New England Remains Competitive</h2>
+
+<ul>
+<li style="margin-bottom:0.75rem;"><strong>Limited inventory:</strong> New England&apos;s housing stock is older and denser, with fewer large-scale new-construction developments than Sun Belt metros. Supply constraints put sustained upward pressure on prices and reduce days-on-market.</li>
+<li style="margin-bottom:0.75rem;"><strong>Strong employment centers:</strong> Boston, Hartford, and Providence anchor major employment clusters in biotech, finance, healthcare, and higher education, sustaining buyer demand across the region.</li>
+<li style="margin-bottom:0.75rem;"><strong>High household incomes:</strong> The Northeast consistently posts above-average household incomes relative to national benchmarks, supporting purchase activity even as rates remain elevated.</li>
+<li style="margin-bottom:0.75rem;"><strong>Limited new construction:</strong> Zoning constraints, environmental regulation, and land scarcity limit new residential construction, meaning existing-home sales remain the dominant transaction channel.</li>
+<li><strong>Strong quality-of-life metrics:</strong> School quality, walkability, and access to urban amenities continue to drive in-migration to select New England markets from higher-cost coastal cities.</li>
+</ul>
+
+<h2>Outlook</h2>
+
+<p>The Northeast will continue to be one of the most active housing regions in the United States through the remainder of 2026. The combination of improving inventory conditions and the strongest pending sales growth in the country suggests that transaction volumes in H2 2026 are likely to be supported, if not modestly higher than H1. Markets like Hartford and Worcester, already ranked at the top of national housing indices, are positioned to maintain that momentum as buyer demand remains stable and supply adjusts only gradually.</p>
+
+<p>For sellers in New England markets, the data points to continued favorable conditions: high demand relative to available inventory, competitive buyer pools, and a regional market that is outperforming national trends on multiple indicators simultaneously.</p>
+
+<div style="background:#f4f2ef;border-left:3px solid #FF6B35;border-radius:0 8px 8px 0;padding:1.25rem 1.5rem;margin-top:2rem;font-size:0.875rem;color:#555;line-height:1.7;">
+<strong style="color:#0A2540;">Sources</strong><br>
+National Association of Realtors. <em>Existing-Home Sales Report</em>, June 2026.<br>
+Federal Reserve Bank of St. Louis (FRED). <em>Existing Home Sales in Northeast Census Region (EXHOSLUSNEM495S)</em>, retrieved June 2026.<br>
+Reuters. &ldquo;US pending home sales increase to a six-month high in May.&rdquo; June 17, 2026.<br>
+Realtor.com. <em>Existing-Home Sales Housing Snapshot</em>, June 2026.<br>
+Kiplinger. &ldquo;Top Housing Markets in the US 2026.&rdquo; May 2026.
+</div>$blog_ne2026$,
+    TRUE,
+    '2026-06-20'
+)
+ON CONFLICT (slug) DO NOTHING
+`);
+
 // Auto-expire proposals whose expires_at has passed
 async function runProposalExpiryJob() {
     try {
