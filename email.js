@@ -1613,7 +1613,7 @@ const emailService = {
                     &bull; &nbsp;<strong>A personal note</strong> — why they want to represent your listing specifically
                 </div>
             </div>
-            ${p('You receive all of this in your inbox — from every agent who wants to work with you. Multiple proposals means leverage. You're not taking whatever rate the first agent quotes you. You're choosing from a competitive field.')}
+            ${p('You receive all of this in your inbox — from every agent who wants to work with you. Multiple proposals means leverage. You\'re not taking whatever rate the first agent quotes you. You\'re choosing from a competitive field.')}
             <div style="background:#F8F6F3;border-radius:12px;padding:24px 28px;margin:24px 0;border:1px solid #E5E1DB;">
                 <div style="font-size:15px;font-weight:700;color:#0A2540;margin-bottom:6px;">What sellers tell us</div>
                 <p style="color:#444;font-size:14px;line-height:1.7;margin:0;">The most common thing we hear from sellers is that they didn't realize how much commission rates varied until they saw proposals side by side. The difference between agents can be significant — and you'd never know without comparing.</p>
@@ -1646,7 +1646,7 @@ const emailService = {
                     ✓ &nbsp;First to receive proposals when we launch in August
                 </div>
             </div>
-            ${p('Early listers are first in line when the platform goes live. Realtors are actively waiting to submit proposals — the sooner your listing is up, the more competition you'll see from day one.')}
+            ${p('Early listers are first in line when the platform goes live. Realtors are actively waiting to submit proposals — the sooner your listing is up, the more competition you\'ll see from day one.')}
             ${p('No commitment required. You can post a listing and review proposals without accepting anything.')}
             ${btn(`${BASE_URL}/login?tab=signup&type=seller`, 'Join the Early Access List')}
             ${divider()}
@@ -1705,7 +1705,7 @@ const emailService = {
                 </div>
             </div>
             ${p(`When sellers in ${area} go live in August, founding members see their listings first. That early window is only for founding members — it's not available at any price after launch.`)}
-            ${p('Spots are limited and we're close. Once the 100th founding member joins, this tier closes.')}
+            ${p('Spots are limited and we\'re close. Once the 100th founding member joins, this tier closes.')}
             ${btn(`${BASE_URL}/login?tab=signup&type=realtor`, 'Claim Your Founding Member Spot')}
             ${divider()}
             <p style="color:#999;font-size:13px;margin:0;">The RealtorFinder Team<br><a href="${BASE_URL}" style="color:#FF6B35;text-decoration:none;">realtorfinder.net</a></p>
