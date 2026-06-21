@@ -1564,11 +1564,18 @@ const emailService = {
     // Sent to city_leads who haven't converted to a full account yet.
     // No unsubscribe token — city_leads are not full users yet.
 
+    async _sendCityLeadDrip(email, accentBar, subject, bodyHtml, logLabel) {
+        try {
+            await send({ to: email, subject, html: emailWrap(accentBar, bodyHtml) });
+        } catch (error) { logSendgridError(logLabel, error); }
+    },
+
     // City lead — Seller Day 1
     async sendCityLeadSellerDrip1(email, cityName) {
         const area = cityName || 'your area';
-        const body = `
-            ${h1('How RealtorFinder works — and why it\'s free for you')}
+        await this._sendCityLeadDrip(email, 'For Sellers',
+            'How RealtorFinder works — and why it\'s free for you',
+            `${h1('How RealtorFinder works — and why it\'s free for you')}
             ${p(`You recently signed up to learn more about selling your home in ${area}. Here's how the platform works — it's simpler than you might expect.`)}
             <div style="background:#F8F6F3;border-radius:12px;padding:24px 28px;margin:24px 0;border:1px solid #E5E1DB;">
                 <div style="margin-bottom:20px;">
@@ -1591,18 +1598,16 @@ const emailService = {
             ${p('We launch in August 2026. Early listers are first to receive proposals when we open.')}
             ${btn(`${BASE_URL}/sellers`, 'See How It Works')}
             ${divider()}
-            <p style="color:#999;font-size:13px;margin:0;">The RealtorFinder Team<br><a href="${BASE_URL}" style="color:#FF6B35;text-decoration:none;">realtorfinder.net</a></p>
-        `;
-        try {
-            await send({ to: email, subject: 'How RealtorFinder works — and why it\'s free for you', html: emailWrap('For Sellers', body) });
-        } catch (error) { logSendgridError('City lead seller drip 1', error); }
+            <p style="color:#999;font-size:13px;margin:0;">The RealtorFinder Team<br><a href="${BASE_URL}" style="color:#FF6B35;text-decoration:none;">realtorfinder.net</a></p>`,
+            'City lead seller drip 1');
     },
 
     // City lead — Seller Day 3
     async sendCityLeadSellerDrip3(email, cityName) {
         const area = cityName || 'your area';
-        const body = `
-            ${h1('What a competing proposal actually looks like')}
+        await this._sendCityLeadDrip(email, 'For Sellers',
+            'What a competing proposal actually looks like',
+            `${h1('What a competing proposal actually looks like')}
             ${p(`When you list on RealtorFinder, realtors in ${area} submit structured proposals to represent your home. Here's what that looks like in practice.`)}
             <div style="background:linear-gradient(135deg,#0A2540,#0d3659);border-radius:12px;padding:28px 32px;margin:24px 0;color:white;">
                 <div style="font-family:Georgia,serif;font-size:20px;font-weight:900;margin-bottom:12px;">A sample proposal might include:</div>
@@ -1621,18 +1626,16 @@ const emailService = {
             ${p('We launch August 2026. Post your listing free and start receiving proposals on day one.')}
             ${btn(`${BASE_URL}/login?tab=signup&type=seller`, 'Post Your Free Listing')}
             ${divider()}
-            <p style="color:#999;font-size:13px;margin:0;">The RealtorFinder Team<br><a href="${BASE_URL}" style="color:#FF6B35;text-decoration:none;">realtorfinder.net</a></p>
-        `;
-        try {
-            await send({ to: email, subject: 'What a competing proposal actually looks like', html: emailWrap('For Sellers', body) });
-        } catch (error) { logSendgridError('City lead seller drip 3', error); }
+            <p style="color:#999;font-size:13px;margin:0;">The RealtorFinder Team<br><a href="${BASE_URL}" style="color:#FF6B35;text-decoration:none;">realtorfinder.net</a></p>`,
+            'City lead seller drip 3');
     },
 
     // City lead — Seller Day 7
     async sendCityLeadSellerDrip7(email, cityName) {
         const area = cityName || 'your area';
-        const body = `
-            ${h1('Still thinking about selling? Here\'s what you\'d get')}
+        await this._sendCityLeadDrip(email, 'For Sellers',
+            'Still thinking about selling? Here\'s what you\'d get',
+            `${h1('Still thinking about selling? Here\'s what you\'d get')}
             ${p(`A quick note from the RealtorFinder team — we wanted to reach out one more time before we launch in August 2026.`)}
             <div style="background:#F8F6F3;border-radius:12px;padding:24px 28px;margin:24px 0;border:1px solid #E5E1DB;">
                 <div style="margin-bottom:16px;">
@@ -1650,18 +1653,16 @@ const emailService = {
             ${p('No commitment required. You can post a listing and review proposals without accepting anything.')}
             ${btn(`${BASE_URL}/login?tab=signup&type=seller`, 'Join the Early Access List')}
             ${divider()}
-            <p style="color:#999;font-size:13px;margin:0;">The RealtorFinder Team<br><a href="${BASE_URL}" style="color:#FF6B35;text-decoration:none;">realtorfinder.net</a></p>
-        `;
-        try {
-            await send({ to: email, subject: 'Still thinking about selling? Here\'s what you\'d get', html: emailWrap('For Sellers', body) });
-        } catch (error) { logSendgridError('City lead seller drip 7', error); }
+            <p style="color:#999;font-size:13px;margin:0;">The RealtorFinder Team<br><a href="${BASE_URL}" style="color:#FF6B35;text-decoration:none;">realtorfinder.net</a></p>`,
+            'City lead seller drip 7');
     },
 
     // City lead — Realtor Day 1
     async sendCityLeadRealtorDrip1(email, cityName) {
         const area = cityName || 'your area';
-        const body = `
-            ${h1('How RealtorFinder works for agents')}
+        await this._sendCityLeadDrip(email, 'For Realtors',
+            'How RealtorFinder works for agents',
+            `${h1('How RealtorFinder works for agents')}
             ${p(`You recently expressed interest in RealtorFinder. Here's how the platform works for realtors in ${area}.`)}
             <div style="background:#F8F6F3;border-radius:12px;padding:24px 28px;margin:24px 0;border:1px solid #E5E1DB;">
                 <div style="margin-bottom:20px;">
@@ -1683,18 +1684,16 @@ const emailService = {
             </div>
             ${btn(`${BASE_URL}/realtors`, 'See How It Works')}
             ${divider()}
-            <p style="color:#999;font-size:13px;margin:0;">The RealtorFinder Team<br><a href="${BASE_URL}" style="color:#FF6B35;text-decoration:none;">realtorfinder.net</a></p>
-        `;
-        try {
-            await send({ to: email, subject: 'How RealtorFinder works for agents', html: emailWrap('For Realtors', body) });
-        } catch (error) { logSendgridError('City lead realtor drip 1', error); }
+            <p style="color:#999;font-size:13px;margin:0;">The RealtorFinder Team<br><a href="${BASE_URL}" style="color:#FF6B35;text-decoration:none;">realtorfinder.net</a></p>`,
+            'City lead realtor drip 1');
     },
 
     // City lead — Realtor Day 3
     async sendCityLeadRealtorDrip3(email, cityName) {
         const area = cityName || 'your area';
-        const body = `
-            ${h1('Founding Member spots are limited — here\'s what you get')}
+        await this._sendCityLeadDrip(email, 'For Realtors',
+            'Founding Member spots are limited — here\'s what you get',
+            `${h1('Founding Member spots are limited — here\'s what you get')}
             ${p(`We're reserving Founding Member status for the first 100 realtors on RealtorFinder. We're close to that limit. Here's why it matters for agents in ${area}.`)}
             <div style="background:linear-gradient(135deg,#0A2540,#0d3659);border-radius:12px;padding:28px 32px;margin:24px 0;color:white;">
                 <div style="font-family:Georgia,serif;font-size:20px;font-weight:900;margin-bottom:16px;">Founding Member Benefits</div>
@@ -1708,18 +1707,16 @@ const emailService = {
             ${p('Spots are limited and we\'re close. Once the 100th founding member joins, this tier closes.')}
             ${btn(`${BASE_URL}/login?tab=signup&type=realtor`, 'Claim Your Founding Member Spot')}
             ${divider()}
-            <p style="color:#999;font-size:13px;margin:0;">The RealtorFinder Team<br><a href="${BASE_URL}" style="color:#FF6B35;text-decoration:none;">realtorfinder.net</a></p>
-        `;
-        try {
-            await send({ to: email, subject: 'Founding Member spots are limited — here\'s what you get', html: emailWrap('For Realtors', body) });
-        } catch (error) { logSendgridError('City lead realtor drip 3', error); }
+            <p style="color:#999;font-size:13px;margin:0;">The RealtorFinder Team<br><a href="${BASE_URL}" style="color:#FF6B35;text-decoration:none;">realtorfinder.net</a></p>`,
+            'City lead realtor drip 3');
     },
 
     // City lead — Realtor Day 7
     async sendCityLeadRealtorDrip7(email, cityName) {
         const area = cityName || 'your area';
-        const body = `
-            ${h1('Last chance — we launch in August 2026')}
+        await this._sendCityLeadDrip(email, 'For Realtors',
+            'Last chance — we launch in August 2026',
+            `${h1('Last chance — we launch in August 2026')}
             ${p(`We wanted to reach out one more time before we go live. Sellers in ${area} are already signed up and waiting. Realtors who join now will be ready when the listings go live.`)}
             <div style="background:#F8F6F3;border-radius:12px;padding:24px 28px;margin:24px 0;border:1px solid #E5E1DB;">
                 <div style="font-size:14px;line-height:2.2;color:#444;">
@@ -1733,11 +1730,8 @@ const emailService = {
             ${p('Sellers are waiting. The only question is whether you\'ll be in front of them when they go live.')}
             ${btn(`${BASE_URL}/login?tab=signup&type=realtor`, 'Join Before We Launch')}
             ${divider()}
-            <p style="color:#999;font-size:13px;margin:0;">The RealtorFinder Team<br><a href="${BASE_URL}" style="color:#FF6B35;text-decoration:none;">realtorfinder.net</a></p>
-        `;
-        try {
-            await send({ to: email, subject: 'Last chance — we launch in August 2026', html: emailWrap('For Realtors', body) });
-        } catch (error) { logSendgridError('City lead realtor drip 7', error); }
+            <p style="color:#999;font-size:13px;margin:0;">The RealtorFinder Team<br><a href="${BASE_URL}" style="color:#FF6B35;text-decoration:none;">realtorfinder.net</a></p>`,
+            'City lead realtor drip 7');
     },
 };
 
