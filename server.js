@@ -5514,8 +5514,8 @@ app.put('/api/proposals/:id/accept', auth.requireAuth, async (req, res) => {
         if (!pRows.length) return res.status(404).json({ error: 'Proposal not found' });
         const proposal = pRows[0];
         if (proposal.listing_owner_id !== req.session.userId) return res.status(403).json({ error: 'Forbidden' });
-        if (['declined', 'withdrawn'].includes(proposal.status)) {
-            return res.status(409).json({ error: 'Cannot accept a proposal that is already declined or withdrawn' });
+        if (['declined', 'withdrawn', 'accepted', 'expired'].includes(proposal.status)) {
+            return res.status(409).json({ error: `Cannot accept a proposal with status '${proposal.status}'` });
         }
         const client = await pool.connect();
         try {
@@ -10292,6 +10292,11 @@ _schemaMigrations.push(`
       ADD COLUMN IF NOT EXISTS drip1_sent_at TIMESTAMPTZ,
       ADD COLUMN IF NOT EXISTS drip2_sent_at TIMESTAMPTZ,
       ADD COLUMN IF NOT EXISTS drip3_sent_at TIMESTAMPTZ
+`);
+
+_schemaMigrations.push(`
+    ALTER TABLE city_leads
+      ADD COLUMN IF NOT EXISTS email_unsubscribed BOOLEAN DEFAULT FALSE
 `);
 
 _schemaMigrations.push(
