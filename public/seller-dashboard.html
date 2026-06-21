@@ -1128,10 +1128,6 @@
                         <span>Buyer Offers</span>
                         <span class="badge" id="buyerOfferCount" style="display:none;">0</span>
                     </div>
-                    <div class="nav-item" data-view="showings">
-                        <span class="nav-icon">🏠</span>
-                        <span>Showings</span>
-                    </div>
                     <div class="nav-item" data-view="messages">
                         <span class="nav-icon">💬</span>
                         <span>Messages</span>
@@ -1253,20 +1249,6 @@
                     <p class="page-subtitle">Direct purchase offers from buyers on your listings</p>
                 </div>
                 <div id="buyerOffersContainer"></div>
-            </section>
-
-            <!-- Showings View -->
-            <section id="showings-view" class="view-section">
-                <div class="page-header">
-                    <h1 class="page-title">Showing Requests</h1>
-                    <p class="page-subtitle">Buyer requests &amp; realtor showing requests for your listings</p>
-                </div>
-                <div style="display:flex;gap:0.5rem;margin-bottom:1.5rem;">
-                    <button id="sellerShowingsTabBuyer" onclick="switchSellerShowingsTab('buyer')" style="background:#0a2540;color:white;border:none;border-radius:6px;padding:0.4rem 1rem;cursor:pointer;font-weight:600;font-size:0.85rem;font-family:inherit;">Buyer Requests</button>
-                    <button id="sellerShowingsTabRealtor" onclick="switchSellerShowingsTab('realtor')" style="background:#f3f4f6;color:#374151;border:none;border-radius:6px;padding:0.4rem 1rem;cursor:pointer;font-weight:600;font-size:0.85rem;font-family:inherit;">Realtor Requests</button>
-                </div>
-                <div id="sellerShowingsList"></div>
-                <div id="sellerRealtorShowingsList" style="display:none;"></div>
             </section>
 
             <!-- Messages View -->
@@ -1748,7 +1730,6 @@
                 if (view === 'realtors') { loadProposals(); loadOffers(); }
                 if (view === 'buyer-offers') loadBuyerOffers();
                 if (view === 'messages') loadConversations();
-                if (view === 'showings') loadSellerShowings();
                 if (view === 'settings') { loadNotifPrefs(); sellerInitPushToggle(); }
                 startSellerPoll(view);
             });

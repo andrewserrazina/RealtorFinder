@@ -881,7 +881,7 @@
             margin-bottom: 0.5rem;
         }
 
-        /* Premium Profile Section */
+        /* Premium Profile Section — hidden, kept for future use */
         .premium-profile-card {
             background: white;
             border-radius: 12px;
@@ -1655,7 +1655,6 @@
             <div class="hub-subnav">
                 <button class="hub-btn active" onclick="switchPipelineTab('proposals')">My Proposals</button>
                 <button class="hub-btn" onclick="switchPipelineTab('won')">Won Listings</button>
-                <button class="hub-btn" onclick="switchPipelineTab('showings')">Showings</button>
             </div>
 
             <!-- Proposals sub-section -->
@@ -1722,22 +1721,6 @@
                 </div>
             </div>
 
-            <!-- Showings sub-section -->
-            <div id="pipeline-showings" class="hub-section">
-                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem;">
-                    <div>
-                        <h2 style="font-family:'Crimson Pro',serif;font-size:2rem;margin-bottom:0.25rem;">Showings</h2>
-                        <p style="color:#666;font-size:0.95rem;">Buyer showing requests &amp; your realtor showing requests</p>
-                    </div>
-                    <button onclick="openRealtorShowingModal()" style="background:var(--accent);color:white;border:none;border-radius:8px;padding:0.65rem 1.25rem;font-weight:600;cursor:pointer;font-size:0.9rem;font-family:inherit;">+ Request Showing</button>
-                </div>
-                <div style="display:flex;gap:0.5rem;margin-bottom:1.5rem;">
-                    <button id="showingsTabBuyer" onclick="switchShowingsTab('buyer')" style="background:var(--primary);color:white;border:none;border-radius:6px;padding:0.4rem 1rem;cursor:pointer;font-weight:600;font-size:0.85rem;font-family:inherit;">Buyer Requests</button>
-                    <button id="showingsTabRealtor" onclick="switchShowingsTab('realtor')" style="background:#f3f4f6;color:#374151;border:none;border-radius:6px;padding:0.4rem 1rem;cursor:pointer;font-weight:600;font-size:0.85rem;font-family:inherit;">My Requests</button>
-                </div>
-                <div id="showingsList" class="bids-list"></div>
-                <div id="realtorShowingsList" class="bids-list" style="display:none;"></div>
-            </div>
         </section>
 
         <!-- Saved Listings View -->
@@ -2183,48 +2166,6 @@ Worth checking out.</div>
                         <div id="settingsCompletenessBar" style="height:100%;width:0%;border-radius:6px;transition:width 0.5s,background 0.5s;background:var(--accent);"></div>
                     </div>
                     <div class="completeness-step-list" id="settingsCompletenessSteps"></div>
-                </div>
-
-                <!-- Premium Profile -->
-                <div class="premium-profile-card" id="premiumProfileCard">
-                    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;margin-bottom:0.25rem;">
-                        <h3>Premium Profile</h3>
-                        <span id="premiumStatusBadge" style="font-size:0.82rem;font-weight:600;padding:0.3rem 0.85rem;border-radius:20px;background:#f3f4f6;color:#374151;">Checking…</span>
-                    </div>
-                    <p style="font-size:0.875rem;color:#666;margin-bottom:1rem;">Premium profiles appear at the top of search results with a highlighted badge.</p>
-                    <div id="premiumUpgradeSection">
-                        <div class="premium-upgrade-grid">
-                            <button class="premium-duration-btn" onclick="premiumCheckout('monthly')">
-                                <div class="duration-name">1 Month</div>
-                                <div class="duration-price">$49</div>
-                            </button>
-                            <button class="premium-duration-btn" onclick="premiumCheckout('quarterly')">
-                                <div class="duration-name">3 Months</div>
-                                <div class="duration-price">$99</div>
-                                <div style="font-size:0.72rem;color:#10b981;font-weight:600;margin-top:2px;">Save 33%</div>
-                            </button>
-                        </div>
-                    </div>
-                    <!-- Banner image upload -->
-                    <div style="margin-top:1.25rem;padding-top:1.25rem;border-top:1px solid var(--border);">
-                        <div style="font-weight:600;font-size:0.9rem;color:var(--ink);margin-bottom:0.4rem;">Banner Image</div>
-                        <div style="font-size:0.82rem;color:#666;margin-bottom:0.65rem;">Shown at the top of your public profile. JPG/PNG, max 5MB.</div>
-                        <label style="cursor:pointer;display:inline-block;padding:0.45rem 1rem;border:1.5px solid var(--border);border-radius:8px;font-size:0.85rem;font-weight:600;color:var(--ink);">
-                            Upload Banner
-                            <input type="file" id="bannerInput" accept="image/*" style="display:none;" onchange="uploadBannerImage(this)">
-                        </label>
-                        <span id="bannerUploadStatus" style="font-size:0.8rem;color:#666;margin-left:0.75rem;"></span>
-                    </div>
-                    <!-- Video URL -->
-                    <div style="margin-top:1rem;">
-                        <div style="font-weight:600;font-size:0.9rem;color:var(--ink);margin-bottom:0.4rem;">Profile Video URL</div>
-                        <div style="font-size:0.82rem;color:#666;margin-bottom:0.65rem;">YouTube or Vimeo link shown on your profile page.</div>
-                        <div style="display:flex;gap:0.5rem;">
-                            <input type="url" id="profileVideoUrl" placeholder="https://youtube.com/watch?v=…" style="flex:1;padding:0.6rem 0.875rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.875rem;">
-                            <button onclick="saveVideoUrl()" style="background:var(--accent);color:white;border:none;padding:0.6rem 1.1rem;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.875rem;font-family:inherit;white-space:nowrap;">Save</button>
-                        </div>
-                        <span id="videoSaveStatus" style="font-size:0.8rem;color:#059669;display:none;margin-top:0.35rem;">✓ Saved</span>
-                    </div>
                 </div>
 
                 <!-- Change Password -->
@@ -2882,7 +2823,6 @@ Worth checking out.</div>
                 if (view === 'pipeline') {
                     loadDashboard();
                     loadMyProposals();
-                    loadShowings();
                 }
                 if (view === 'messages' || view === 'pipeline') startPoll(view);
                 else stopPoll();
@@ -2899,7 +2839,6 @@ Worth checking out.</div>
                     loadTemplates();
                     loadSavedSearches();
                     loadSubscriptionLimits();
-                    loadPremiumStatus();
                     loadSettingsCompleteness();
                     loadAvailability();
                     loadCompany();
@@ -2913,7 +2852,6 @@ Worth checking out.</div>
             document.querySelectorAll('#pipeline-view .hub-section').forEach(s => s.classList.remove('active'));
             document.querySelector(`#pipeline-view .hub-btn[onclick*="${sub}"]`).classList.add('active');
             document.getElementById(`pipeline-${sub}`).classList.add('active');
-            if (sub === 'showings') loadShowings();
         }
 
         function switchProfileTab(sub) {
