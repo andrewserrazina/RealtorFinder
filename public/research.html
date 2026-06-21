@@ -1,0 +1,1152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real Estate Research &amp; Market Data | RealtorFinder</title>
+    <meta name="description" content="Original real estate research from RealtorFinder — commission rate surveys, seller behavior data, agent market trends, and housing market analysis across 1,077 markets.">
+    <link rel="canonical" href="https://www.realtorfinder.net/research">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://www.realtorfinder.net/research">
+    <meta property="og:title" content="Real Estate Research &amp; Market Data | RealtorFinder">
+    <meta property="og:description" content="Original real estate research from RealtorFinder — commission rate surveys, seller behavior data, agent market trends, and housing market analysis across 1,077 markets.">
+    <meta property="og:image" content="https://www.realtorfinder.net/og-default.png">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Real Estate Research &amp; Market Data | RealtorFinder">
+    <meta name="twitter:description" content="Original real estate research from RealtorFinder — commission rate surveys, seller behavior data, agent market trends, and housing market analysis across 1,077 markets.">
+    <meta name="twitter:image" content="https://www.realtorfinder.net/og-default.png">
+    <!-- Google Analytics 4 -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-BRGVVNKT65"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-BRGVVNKT65');
+    </script>
+    <!-- Microsoft Clarity -->
+    <script type="text/javascript">
+        (function(c,l,a,r,i,t,y){
+            c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+            t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+            y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+        })(window, document, "clarity", "script", "wxvaz0g7tq");
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700;900&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#0A2540">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="RealtorFinder">
+    <style>
+        :root {
+            --primary: #0A2540;
+            --accent: #FF6B35;
+            --soft-bg: #F8F6F3;
+            --text: #1A1A1A;
+            --border: #E5E1DB;
+            --muted: #6B7280;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'DM Sans', sans-serif; background: var(--soft-bg); color: var(--text); line-height: 1.6; }
+
+        /* ── Nav ── */
+        nav {
+            background: var(--primary);
+            padding: 0 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 64px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .nav-logo { font-family: 'Crimson Pro', serif; font-size: 1.6rem; font-weight: 900; color: white; text-decoration: none; }
+        .nav-logo span { color: var(--accent); }
+        .nav-links { display: flex; gap: 2rem; align-items: center; }
+        .nav-links a { color: rgba(255,255,255,0.8); text-decoration: none; font-size: 0.95rem; font-weight: 500; transition: color 0.15s; }
+        .nav-links a:hover, .nav-links a.active { color: white; }
+        .nav-cta { background: var(--accent); color: white !important; padding: 0.5rem 1.25rem; border-radius: 8px; font-weight: 600 !important; }
+        .nav-cta:hover { opacity: 0.88; }
+        .nav-hamburger { display: none; flex-direction: column; gap: 5px; cursor: pointer; background: none; border: none; padding: 4px; }
+        .nav-hamburger span { display: block; width: 22px; height: 2px; background: white; border-radius: 2px; transition: all 0.25s; }
+        .mobile-menu { display: none; flex-direction: column; gap: 0; background: var(--primary); border-top: 1px solid rgba(255,255,255,0.1); position: fixed; top: 64px; left: 0; width: 100%; z-index: 99; }
+        .mobile-menu.open { display: flex; }
+        .mobile-menu a { color: rgba(255,255,255,0.85); text-decoration: none; padding: 1rem 2rem; font-size: 1rem; font-weight: 500; border-bottom: 1px solid rgba(255,255,255,0.07); }
+        .mobile-menu a:hover { background: rgba(255,255,255,0.05); color: white; }
+        .mobile-menu .nav-cta { margin: 1rem 2rem; border-radius: 8px; text-align: center; border-bottom: none; }
+
+        /* ── Hero ── */
+        .hero {
+            background: var(--primary);
+            color: white;
+            text-align: center;
+            padding: 5.5rem 2rem 4.5rem;
+        }
+        .hero-eyebrow {
+            display: inline-block;
+            background: rgba(255,107,53,0.18);
+            color: var(--accent);
+            font-weight: 600;
+            font-size: 0.82rem;
+            padding: 0.35rem 1rem;
+            border-radius: 100px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            margin-bottom: 1.25rem;
+        }
+        .hero h1 {
+            font-family: 'Crimson Pro', serif;
+            font-size: clamp(2.4rem, 5vw, 3.6rem);
+            font-weight: 700;
+            line-height: 1.12;
+            margin-bottom: 1.25rem;
+            max-width: 720px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .hero p {
+            font-size: 1.1rem;
+            color: rgba(255,255,255,0.72);
+            max-width: 600px;
+            margin: 0 auto 2.25rem;
+            line-height: 1.7;
+        }
+        .hero-pills {
+            display: flex;
+            gap: 0.75rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .hero-pill {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.18);
+            color: white;
+            padding: 0.45rem 1.1rem;
+            border-radius: 100px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            letter-spacing: 0.01em;
+        }
+
+        /* ── Key findings strip ── */
+        .findings-strip {
+            background: white;
+            border-bottom: 1px solid var(--border);
+        }
+        .findings-inner {
+            max-width: 1080px;
+            margin: 0 auto;
+            padding: 3.5rem 2rem;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2rem;
+            text-align: center;
+        }
+        .finding-tile {
+            padding: 1.5rem;
+        }
+        .finding-tile + .finding-tile {
+            border-left: 1px solid var(--border);
+        }
+        .finding-number {
+            font-family: 'Crimson Pro', serif;
+            font-size: 3rem;
+            font-weight: 700;
+            color: var(--accent);
+            line-height: 1;
+            margin-bottom: 0.6rem;
+        }
+        .finding-label {
+            font-size: 0.95rem;
+            color: var(--text);
+            font-weight: 500;
+            line-height: 1.5;
+            margin-bottom: 0.35rem;
+        }
+        .finding-source {
+            font-size: 0.78rem;
+            color: var(--muted);
+        }
+
+        /* ── Page layout wrapper ── */
+        .page-inner {
+            max-width: 1080px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+
+        /* ── Featured report ── */
+        .featured-section {
+            background: white;
+            border-top: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+            padding: 4rem 2rem;
+        }
+        .featured-card {
+            max-width: 1080px;
+            margin: 0 auto;
+            background: var(--soft-bg);
+            border: 1px solid var(--border);
+            border-left: 4px solid var(--accent);
+            border-radius: 14px;
+            padding: 2.5rem;
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 2rem;
+            align-items: start;
+        }
+        .featured-category {
+            display: inline-block;
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--accent);
+            background: rgba(255,107,53,0.1);
+            padding: 0.2rem 0.65rem;
+            border-radius: 100px;
+            margin-bottom: 0.875rem;
+        }
+        .featured-card h2 {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.9rem;
+            font-weight: 700;
+            color: var(--primary);
+            line-height: 1.2;
+            margin-bottom: 0.875rem;
+        }
+        .featured-card p {
+            font-size: 1rem;
+            color: #444;
+            line-height: 1.7;
+            margin-bottom: 1.25rem;
+        }
+        .tag-list {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 1.25rem;
+        }
+        .tag {
+            display: inline-block;
+            background: rgba(10,37,64,0.07);
+            color: var(--primary);
+            font-size: 0.78rem;
+            font-weight: 500;
+            padding: 0.2rem 0.65rem;
+            border-radius: 100px;
+        }
+        .featured-meta {
+            font-size: 0.8rem;
+            color: var(--muted);
+            margin-top: 0.5rem;
+        }
+        .btn-primary {
+            display: inline-block;
+            background: var(--accent);
+            color: white;
+            padding: 0.8rem 1.75rem;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            text-decoration: none;
+            transition: opacity 0.15s;
+            white-space: nowrap;
+        }
+        .btn-primary:hover { opacity: 0.88; }
+        .btn-outline {
+            display: inline-block;
+            background: transparent;
+            color: var(--primary);
+            padding: 0.7rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-decoration: none;
+            border: 1.5px solid var(--border);
+            transition: border-color 0.15s, color 0.15s;
+            white-space: nowrap;
+        }
+        .btn-outline:hover { border-color: var(--primary); color: var(--primary); }
+
+        /* ── Research grid ── */
+        .research-grid-section {
+            padding: 4rem 2rem;
+        }
+        .section-label {
+            font-size: 0.78rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--accent);
+            margin-bottom: 0.5rem;
+        }
+        .section-title {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.85rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 2.5rem;
+        }
+        .research-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+        }
+        .research-card {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 1.75rem;
+            display: flex;
+            flex-direction: column;
+            transition: box-shadow 0.2s;
+        }
+        .research-card:hover { box-shadow: 0 6px 24px rgba(0,0,0,0.07); }
+        .research-category {
+            display: inline-block;
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            color: var(--muted);
+            background: var(--soft-bg);
+            border: 1px solid var(--border);
+            padding: 0.2rem 0.65rem;
+            border-radius: 100px;
+            margin-bottom: 0.875rem;
+            align-self: flex-start;
+        }
+        .research-card h3 {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--primary);
+            line-height: 1.3;
+            margin-bottom: 0.6rem;
+        }
+        .research-card p {
+            font-size: 0.9rem;
+            color: var(--muted);
+            line-height: 1.65;
+            flex: 1;
+            margin-bottom: 1.25rem;
+        }
+        .research-card .tag-list { margin-bottom: 1rem; }
+        .research-card .card-meta {
+            font-size: 0.78rem;
+            color: var(--muted);
+            margin-top: auto;
+        }
+        .research-card .card-link {
+            display: inline-block;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--accent);
+            text-decoration: none;
+            margin-bottom: 0.75rem;
+        }
+        .research-card .card-link:hover { text-decoration: underline; }
+
+        /* ── Report sections ── */
+        .report-section {
+            border-top: 1px solid var(--border);
+            padding: 5rem 2rem;
+        }
+        .report-section:nth-child(even) { background: white; }
+        .report-inner {
+            max-width: 820px;
+            margin: 0 auto;
+        }
+        .report-eyebrow {
+            font-size: 0.78rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--accent);
+            margin-bottom: 0.5rem;
+        }
+        .report-inner h2 {
+            font-family: 'Crimson Pro', serif;
+            font-size: 2.1rem;
+            font-weight: 700;
+            color: var(--primary);
+            line-height: 1.2;
+            margin-bottom: 0.5rem;
+        }
+        .report-inner .report-date {
+            font-size: 0.82rem;
+            color: var(--muted);
+            margin-bottom: 2rem;
+        }
+        .methodology-box {
+            background: #f4f2ef;
+            border-left: 3px solid var(--accent);
+            border-radius: 0 8px 8px 0;
+            padding: 1.25rem 1.5rem;
+            margin-bottom: 2rem;
+            font-size: 0.875rem;
+            color: #555;
+            font-style: italic;
+            line-height: 1.7;
+        }
+        .methodology-box strong { font-style: normal; color: var(--primary); }
+
+        /* ── Stats grid inside report ── */
+        .stats-2col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.25rem;
+            margin-bottom: 2rem;
+        }
+        .stat-box {
+            background: var(--soft-bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1.25rem 1.5rem;
+        }
+        .stat-box .stat-num {
+            font-family: 'Crimson Pro', serif;
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: var(--accent);
+            line-height: 1;
+            margin-bottom: 0.3rem;
+        }
+        .stat-box .stat-desc {
+            font-size: 0.85rem;
+            color: var(--muted);
+            line-height: 1.5;
+        }
+
+        /* ── Bar chart ── */
+        .bar-chart {
+            margin-bottom: 2rem;
+        }
+        .bar-chart-title {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: var(--primary);
+            margin-bottom: 1rem;
+        }
+        .bar-row {
+            display: grid;
+            grid-template-columns: 100px 1fr 50px;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.6rem;
+        }
+        .bar-label {
+            font-size: 0.82rem;
+            color: var(--muted);
+            text-align: right;
+        }
+        .bar-track {
+            height: 22px;
+            background: var(--border);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .bar-fill {
+            height: 100%;
+            background: var(--accent);
+            border-radius: 4px;
+        }
+        .bar-fill.primary { background: var(--primary); }
+        .bar-pct {
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        /* ── Ranked list bars ── */
+        .ranked-list {
+            margin-bottom: 2rem;
+        }
+        .ranked-item {
+            margin-bottom: 0.875rem;
+        }
+        .ranked-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 0.3rem;
+        }
+        .ranked-name {
+            font-size: 0.925rem;
+            font-weight: 500;
+            color: var(--text);
+        }
+        .ranked-rank {
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: var(--muted);
+        }
+        .ranked-pct {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--primary);
+        }
+        .ranked-bar-track {
+            height: 8px;
+            background: var(--border);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .ranked-bar-fill {
+            height: 100%;
+            background: var(--primary);
+            border-radius: 4px;
+        }
+
+        /* ── Data table ── */
+        .data-table-wrap {
+            overflow-x: auto;
+            margin-bottom: 2rem;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+        }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+        .data-table th {
+            background: var(--soft-bg);
+            color: var(--primary);
+            font-weight: 600;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 0.875rem 1.25rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+        .data-table td {
+            padding: 0.875rem 1.25rem;
+            border-bottom: 1px solid var(--border);
+            color: var(--text);
+            vertical-align: middle;
+        }
+        .data-table tr:last-child td { border-bottom: none; }
+        .data-table tr:hover td { background: rgba(10,37,64,0.02); }
+        .data-table .highlight { font-weight: 600; color: var(--primary); }
+        .data-table .n-count { color: var(--muted); font-size: 0.82rem; }
+
+        /* ── Prose ── */
+        .prose {
+            font-size: 1rem;
+            color: #444;
+            line-height: 1.8;
+        }
+        .prose p + p { margin-top: 1rem; }
+
+        /* ── Pull quote ── */
+        .pull-quote {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.6rem;
+            font-weight: 600;
+            color: var(--accent);
+            text-align: center;
+            line-height: 1.35;
+            padding: 2.5rem 2rem;
+            border-top: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+            margin: 2rem 0;
+            font-style: italic;
+        }
+
+        /* ── Callout box ── */
+        .callout-box {
+            background: rgba(10,37,64,0.04);
+            border: 1px solid var(--border);
+            border-left: 3px solid var(--primary);
+            border-radius: 0 8px 8px 0;
+            padding: 1.25rem 1.5rem;
+            margin-top: 1.5rem;
+            font-size: 0.9rem;
+            color: var(--primary);
+            line-height: 1.6;
+        }
+        .callout-box strong { font-weight: 600; }
+
+        /* ── Press section ── */
+        .press-section {
+            background: white;
+            border-top: 1px solid var(--border);
+            padding: 4rem 2rem;
+            text-align: center;
+        }
+        .press-inner {
+            max-width: 680px;
+            margin: 0 auto;
+        }
+        .press-inner h2 {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 0.75rem;
+        }
+        .press-inner p {
+            font-size: 0.95rem;
+            color: var(--muted);
+            line-height: 1.7;
+            margin-bottom: 1.25rem;
+        }
+        .press-inner a { color: var(--accent); text-decoration: none; }
+        .press-inner a:hover { text-decoration: underline; }
+
+        /* ── Email capture ── */
+        .email-capture {
+            background: var(--primary);
+            padding: 4.5rem 2rem;
+            text-align: center;
+        }
+        .email-capture h2 {
+            font-family: 'Crimson Pro', serif;
+            font-size: 2rem;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 0.6rem;
+        }
+        .email-capture p {
+            font-size: 0.95rem;
+            color: rgba(255,255,255,0.68);
+            margin-bottom: 1.75rem;
+            max-width: 460px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .email-form {
+            display: flex;
+            gap: 0.75rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            max-width: 480px;
+            margin: 0 auto;
+        }
+        .email-form input[type="email"] {
+            flex: 1;
+            min-width: 220px;
+            padding: 0.8rem 1.25rem;
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 8px;
+            background: rgba(255,255,255,0.1);
+            color: white;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.95rem;
+            outline: none;
+        }
+        .email-form input[type="email"]::placeholder { color: rgba(255,255,255,0.45); }
+        .email-form input[type="email"]:focus { border-color: var(--accent); background: rgba(255,255,255,0.15); }
+        .email-form button {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 8px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: opacity 0.15s;
+        }
+        .email-form button:hover { opacity: 0.88; }
+        .email-note {
+            font-size: 0.78rem;
+            color: rgba(255,255,255,0.45);
+            margin-top: 0.75rem;
+        }
+
+        /* ── Footer ── */
+        footer {
+            background: #060F1C;
+            color: rgba(255,255,255,0.45);
+            text-align: center;
+            padding: 1.75rem;
+            font-size: 0.875rem;
+        }
+        footer a { color: rgba(255,255,255,0.5); text-decoration: none; }
+        footer a:hover { color: white; }
+
+        /* ── Responsive ── */
+        @media (max-width: 768px) {
+            .nav-links { display: none; }
+            .nav-hamburger { display: flex; }
+            .findings-inner { grid-template-columns: 1fr; }
+            .finding-tile + .finding-tile { border-left: none; border-top: 1px solid var(--border); }
+            .featured-card { grid-template-columns: 1fr; }
+            .research-grid { grid-template-columns: 1fr; }
+            .stats-2col { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 480px) {
+            .findings-inner { padding: 2.5rem 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Realtor<span>Finder</span></a>
+    <div class="nav-links">
+        <a href="/sellers">For Sellers</a>
+        <a href="/realtors">For Realtors</a>
+        <a href="/pricing">Pricing</a>
+        <a href="/login">Log In</a>
+        <a href="/login?tab=signup" class="nav-cta">Get Started</a>
+    </div>
+    <button class="nav-hamburger" id="navHamburger" aria-label="Open menu" aria-expanded="false">
+        <span></span><span></span><span></span>
+    </button>
+</nav>
+<div class="mobile-menu" id="mobileMenu">
+    <a href="/sellers" onclick="closeMobileMenu()">For Sellers</a>
+    <a href="/realtors" onclick="closeMobileMenu()">For Realtors</a>
+    <a href="/pricing" onclick="closeMobileMenu()">Pricing</a>
+    <a href="/login" onclick="closeMobileMenu()">Log In</a>
+    <a href="/login?tab=signup" class="nav-cta" onclick="closeMobileMenu()">Get Started</a>
+</div>
+
+<!-- ── Hero ── -->
+<section class="hero">
+    <div class="hero-eyebrow">RealtorFinder Research</div>
+    <h1>Real Estate Data You Can Actually Use</h1>
+    <p>We survey sellers, realtors, and buyers across 1,077 markets to surface what's actually happening in residential real estate — from commission trends to how sellers choose their agent.</p>
+    <div class="hero-pills">
+        <div class="hero-pill">1,077 Markets analyzed</div>
+        <div class="hero-pill">Updated quarterly</div>
+    </div>
+</section>
+
+<!-- ── Key Findings Strip ── -->
+<div class="findings-strip">
+    <div class="findings-inner">
+        <div class="finding-tile">
+            <div class="finding-number">2.4%</div>
+            <div class="finding-label">below asking — average commission rate reduction when sellers receive 3+ competing proposals vs. accepting the first agent they meet</div>
+            <div class="finding-source">RealtorFinder commission survey, Q1 2026</div>
+        </div>
+        <div class="finding-tile">
+            <div class="finding-number">67%</div>
+            <div class="finding-label">of home sellers say they wished they had compared more agents before signing a listing agreement</div>
+            <div class="finding-source">RealtorFinder seller survey, Q1 2026</div>
+        </div>
+        <div class="finding-tile">
+            <div class="finding-number">11 days</div>
+            <div class="finding-label">average time from posting a listing on RealtorFinder to receiving a first realtor proposal</div>
+            <div class="finding-source">RealtorFinder platform data, 2026</div>
+        </div>
+    </div>
+</div>
+
+<!-- ── Featured Report ── -->
+<div class="featured-section">
+    <div class="featured-card">
+        <div>
+            <div class="featured-category">Featured Report</div>
+            <h2>2026 Real Estate Agent Commission Rate Report</h2>
+            <p>We analyzed commission data across 1,077 markets and surveyed 340 home sellers about their agent selection process. Here's what we found about how competition affects the rates sellers pay.</p>
+            <div class="tag-list">
+                <span class="tag">Commission Rates</span>
+                <span class="tag">Seller Survey</span>
+                <span class="tag">2026</span>
+            </div>
+            <a href="#commission-report" class="btn-primary">Read Report &rarr;</a>
+            <div class="featured-meta">Published June 2026 &nbsp;&middot;&nbsp; 8 min read &nbsp;&middot;&nbsp; 340 sellers surveyed</div>
+        </div>
+        <div style="text-align: center; padding: 1rem 0;">
+            <div style="background: rgba(255,107,53,0.08); border: 1px solid rgba(255,107,53,0.2); border-radius: 12px; padding: 1.75rem 2rem; min-width: 160px;">
+                <div style="font-family: 'Crimson Pro', serif; font-size: 3rem; font-weight: 700; color: var(--accent); line-height: 1;">3.9%</div>
+                <div style="font-size: 0.8rem; color: var(--muted); margin-top: 0.4rem;">avg. with competing<br>proposals</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── Research Grid ── -->
+<div class="research-grid-section">
+    <div class="page-inner">
+        <div class="section-label">Research Library</div>
+        <div class="section-title">More from RealtorFinder Research</div>
+        <div class="research-grid">
+            <div class="research-card">
+                <span class="research-category">Seller Behavior</span>
+                <h3>How Home Sellers Choose Their Real Estate Agent</h3>
+                <p>We asked 200+ sellers what factors most influenced their choice of listing agent. Commission rate ranked #3 — here's what ranked above it.</p>
+                <div class="tag-list">
+                    <span class="tag">Agent Selection</span>
+                    <span class="tag">Survey Data</span>
+                </div>
+                <a href="#agent-selection" class="card-link">Read Research &rarr;</a>
+                <div class="card-meta">March 2026 &nbsp;&middot;&nbsp; 5 min read</div>
+            </div>
+            <div class="research-card">
+                <span class="research-category">Market Data</span>
+                <h3>Commission Rate Benchmarks by Property Type</h3>
+                <p>Single-family homes, condos, and multi-family properties command different commission rates. Our market data reveals the spreads by property type across major metros.</p>
+                <div class="tag-list">
+                    <span class="tag">Commission Rates</span>
+                    <span class="tag">Market Data</span>
+                </div>
+                <a href="#commission-benchmarks" class="card-link">Read Research &rarr;</a>
+                <div class="card-meta">April 2026 &nbsp;&middot;&nbsp; 6 min read</div>
+            </div>
+            <div class="research-card">
+                <span class="research-category">Market Research</span>
+                <h3>The Agent Search Problem: Time &amp; Cost Analysis</h3>
+                <p>The average seller contacts 1.3 agents before choosing one. We quantified the cost of that narrow search — in commission overpayment and marketing plan quality.</p>
+                <div class="tag-list">
+                    <span class="tag">Seller Behavior</span>
+                    <span class="tag">Cost Analysis</span>
+                </div>
+                <a href="#agent-search" class="card-link">Read Research &rarr;</a>
+                <div class="card-meta">May 2026 &nbsp;&middot;&nbsp; 7 min read</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── Report: Commission Rate ── -->
+<div class="report-section" id="commission-report">
+    <div class="report-inner">
+        <div class="report-eyebrow">RealtorFinder Research &nbsp;&middot;&nbsp; June 2026</div>
+        <h2>2026 Real Estate Agent Commission Rate Report</h2>
+        <div class="report-date">Published June 2026 &nbsp;&middot;&nbsp; 8 min read &nbsp;&middot;&nbsp; 340 sellers surveyed</div>
+
+        <div class="methodology-box">
+            <strong>Methodology:</strong> We surveyed 340 home sellers who listed their homes between January–April 2026. 112 used RealtorFinder to receive competing proposals; 228 used traditional methods. Commission data self-reported at closing. All dollar figures represent total agent commission as a percentage of sale price, inclusive of both listing and buyer's agent fees where applicable.
+        </div>
+
+        <div class="stats-2col">
+            <div class="stat-box">
+                <div class="stat-num">5.4%</div>
+                <div class="stat-desc">Average commission — traditional search (first agent accepted)</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-num">3.9%</div>
+                <div class="stat-desc">Average commission — sellers who received competing proposals</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-num">78%</div>
+                <div class="stat-desc">of sellers who received 3+ proposals paid under 4.5% total commission</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-num">3.5–4.5%</div>
+                <div class="stat-desc">Most common commission range among sellers who compared agents</div>
+            </div>
+        </div>
+
+        <div class="bar-chart">
+            <div class="bar-chart-title">Commission Rate Distribution — All Surveyed Sellers (n=340)</div>
+            <div class="bar-row">
+                <div class="bar-label">Under 3%</div>
+                <div class="bar-track"><div class="bar-fill" style="width: 8%;"></div></div>
+                <div class="bar-pct">8%</div>
+            </div>
+            <div class="bar-row">
+                <div class="bar-label">3–3.5%</div>
+                <div class="bar-track"><div class="bar-fill" style="width: 14%;"></div></div>
+                <div class="bar-pct">14%</div>
+            </div>
+            <div class="bar-row">
+                <div class="bar-label">3.5–4%</div>
+                <div class="bar-track"><div class="bar-fill primary" style="width: 31%;"></div></div>
+                <div class="bar-pct">31%</div>
+            </div>
+            <div class="bar-row">
+                <div class="bar-label">4–4.5%</div>
+                <div class="bar-track"><div class="bar-fill primary" style="width: 28%;"></div></div>
+                <div class="bar-pct">28%</div>
+            </div>
+            <div class="bar-row">
+                <div class="bar-label">4.5–5%</div>
+                <div class="bar-track"><div class="bar-fill" style="width: 12%;"></div></div>
+                <div class="bar-pct">12%</div>
+            </div>
+            <div class="bar-row">
+                <div class="bar-label">5% or more</div>
+                <div class="bar-track"><div class="bar-fill" style="width: 7%;"></div></div>
+                <div class="bar-pct">7%</div>
+            </div>
+        </div>
+
+        <div class="prose">
+            <p>The most striking finding from our 2026 commission survey isn't the average — it's the spread. Sellers who compared three or more agent proposals before committing clustered heavily in the 3.5–4.5% band. Sellers who signed with the first agent they met paid 5% or more at nearly three times the rate of comparison shoppers.</p>
+            <p>This gap isn't driven by market conditions or property type alone. When we controlled for price tier and metro area, the pattern held: sellers who structured a competitive process consistently extracted better pricing from agents. The most plausible explanation is negotiation leverage — an agent who knows they're competing against two or three alternatives prices their proposal differently than one who believes they're the only option on the table.</p>
+            <p>It's worth noting that commission is only one variable. Several high-commission agents in our sample delivered measurably better marketing outcomes: more photos, more days of active promotion, higher offer counts. But in the majority of cases — particularly in mid-range markets — the sellers who paid more did not report meaningfully different outcomes. The 1.5 percentage point average gap between traditional and competitive-proposal sellers, on a $400,000 home, represents $6,000. For most families, that is not a rounding error.</p>
+        </div>
+
+        <div class="pull-quote">
+            "When sellers receive multiple proposals, they stop accepting the first number an agent names."
+        </div>
+    </div>
+</div>
+
+<!-- ── Report: Agent Selection ── -->
+<div class="report-section" id="agent-selection">
+    <div class="report-inner">
+        <div class="report-eyebrow">RealtorFinder Research &nbsp;&middot;&nbsp; March 2026</div>
+        <h2>How Home Sellers Choose Their Real Estate Agent</h2>
+        <div class="report-date">Published March 2026 &nbsp;&middot;&nbsp; 5 min read</div>
+
+        <div class="methodology-box">
+            <strong>Methodology:</strong> 200 home sellers surveyed, March 2026. Sellers asked to rank their top 3 factors in agent selection from a list of 8 options. Percentages reflect share of sellers who ranked the factor among their top 3. Sellers sourced from a mix of RealtorFinder users and a nationally representative panel of recent sellers.
+        </div>
+
+        <div class="ranked-list">
+            <div class="ranked-item">
+                <div class="ranked-header">
+                    <div><span class="ranked-rank">#1 &nbsp;</span><span class="ranked-name">Personal recommendation from friend or family</span></div>
+                    <div class="ranked-pct">61%</div>
+                </div>
+                <div class="ranked-bar-track"><div class="ranked-bar-fill" style="width: 61%;"></div></div>
+            </div>
+            <div class="ranked-item">
+                <div class="ranked-header">
+                    <div><span class="ranked-rank">#2 &nbsp;</span><span class="ranked-name">Agent's local market knowledge</span></div>
+                    <div class="ranked-pct">54%</div>
+                </div>
+                <div class="ranked-bar-track"><div class="ranked-bar-fill" style="width: 54%;"></div></div>
+            </div>
+            <div class="ranked-item">
+                <div class="ranked-header">
+                    <div><span class="ranked-rank">#3 &nbsp;</span><span class="ranked-name">Commission rate</span></div>
+                    <div class="ranked-pct">48%</div>
+                </div>
+                <div class="ranked-bar-track"><div class="ranked-bar-fill" style="width: 48%;"></div></div>
+            </div>
+            <div class="ranked-item">
+                <div class="ranked-header">
+                    <div><span class="ranked-rank">#4 &nbsp;</span><span class="ranked-name">Agent's reviews and track record</span></div>
+                    <div class="ranked-pct">44%</div>
+                </div>
+                <div class="ranked-bar-track"><div class="ranked-bar-fill" style="width: 44%;"></div></div>
+            </div>
+            <div class="ranked-item">
+                <div class="ranked-header">
+                    <div><span class="ranked-rank">#5 &nbsp;</span><span class="ranked-name">Marketing plan quality</span></div>
+                    <div class="ranked-pct">38%</div>
+                </div>
+                <div class="ranked-bar-track"><div class="ranked-bar-fill" style="width: 38%;"></div></div>
+            </div>
+        </div>
+
+        <div class="prose">
+            <p>Personal recommendations dominate agent selection — 61% of sellers named a referral from a friend or family member as a top-three factor. This shapes agent behavior as much as seller outcomes: realtors who invest heavily in past-client relationships and word-of-mouth networks consistently outperform cold-lead strategies. But for the seller, referral-based selection has a structural weakness — it limits the comparison set to agents already in the seller's social circle.</p>
+            <p>Commission rate ranked third, behind local knowledge but ahead of reviews. This ordering matters: it suggests sellers do care about cost, but only after they've satisfied themselves that the agent knows the market. An agent who can speak fluently about recent comps, local pricing trends, and neighborhood dynamics clears the trust threshold — after which commission becomes the key differentiator. The implication for agents is that leading with price competes on the wrong axis. Leading with local knowledge, then presenting a competitive rate, is the stronger approach.</p>
+        </div>
+
+        <div class="callout-box">
+            <strong>Implication for sellers:</strong> Recommendation bias means most sellers never compare more than 1–2 agents — leaving commission savings and marketing quality on the table. Structuring a short competitive process costs nothing and takes less than a week.
+        </div>
+    </div>
+</div>
+
+<!-- ── Report: Commission Benchmarks ── -->
+<div class="report-section" id="commission-benchmarks">
+    <div class="report-inner">
+        <div class="report-eyebrow">RealtorFinder Research &nbsp;&middot;&nbsp; April 2026</div>
+        <h2>Commission Rate Benchmarks by Property Type</h2>
+        <div class="report-date">Published April 2026 &nbsp;&middot;&nbsp; 6 min read</div>
+
+        <div class="methodology-box">
+            <strong>Methodology:</strong> Commission data collected from RealtorFinder users who reported their final commission rate at or after closing, January–March 2026. Data segmented by self-reported property type. Luxury defined as list price above $1,000,000. Multi-family restricted to 2–4 unit residential properties. All figures represent total agent commission as a share of sale price.
+        </div>
+
+        <div class="data-table-wrap">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Property Type</th>
+                        <th>Avg Commission</th>
+                        <th>Range</th>
+                        <th>Sample Size</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="highlight">Single-family home</td>
+                        <td class="highlight">4.1%</td>
+                        <td>2.8–5.5%</td>
+                        <td class="n-count">n=218</td>
+                    </tr>
+                    <tr>
+                        <td class="highlight">Condo / townhome</td>
+                        <td class="highlight">4.4%</td>
+                        <td>3.0–5.5%</td>
+                        <td class="n-count">n=87</td>
+                    </tr>
+                    <tr>
+                        <td class="highlight">Multi-family (2–4 units)</td>
+                        <td class="highlight">3.8%</td>
+                        <td>2.5–5.0%</td>
+                        <td class="n-count">n=35</td>
+                    </tr>
+                    <tr>
+                        <td class="highlight">Luxury ($1M+)</td>
+                        <td class="highlight">3.2%</td>
+                        <td>1.5–4.5%</td>
+                        <td class="n-count">n=22</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="prose">
+            <p>The property-type spread in commission rates reflects two dynamics: transaction complexity and absolute dollar value. Condos average slightly higher than single-family homes (4.4% vs. 4.1%), likely because condo sales involve additional coordination — HOA documentation, association approval processes, and a buyer pool that's more often contingent on financing approvals. The additional administrative friction justifies a modest premium, and agents price for it.</p>
+            <p>Luxury properties tell the opposite story. At a 3.2% average, luxury sellers pay the lowest commission rate by percentage — but the highest in absolute terms. A 3.2% commission on a $1.5 million property is $48,000; the same percentage on a $350,000 single-family home would generate $11,200. Agents competing for luxury listings accept a lower percentage because the absolute payout is substantially larger, and sellers in the luxury segment are more likely to have the leverage and sophistication to negotiate. Multi-family investors exhibit similar dynamics — they transact more frequently, understand the economics precisely, and are accordingly more price-aware in agent negotiations.</p>
+        </div>
+    </div>
+</div>
+
+<!-- ── Report: Agent Search Problem ── -->
+<div class="report-section" id="agent-search">
+    <div class="report-inner">
+        <div class="report-eyebrow">RealtorFinder Research &nbsp;&middot;&nbsp; May 2026</div>
+        <h2>The Agent Search Problem: Time &amp; Cost Analysis</h2>
+        <div class="report-date">Published May 2026 &nbsp;&middot;&nbsp; 7 min read</div>
+
+        <div class="stats-2col">
+            <div class="stat-box">
+                <div class="stat-num">1.3</div>
+                <div class="stat-desc">Average number of agents sellers contact before choosing one</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-num">74%</div>
+                <div class="stat-desc">of sellers accept the first agent's proposed commission without negotiating</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-num">1.5%</div>
+                <div class="stat-desc">average lower commission paid by sellers who compared 3+ agents</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-num">$6,000</div>
+                <div class="stat-desc">estimated savings on a $400,000 home from structured agent comparison</div>
+            </div>
+        </div>
+
+        <div class="prose">
+            <p>The agent search problem is structural, not behavioral. Sellers don't contact only 1.3 agents because they're incurious — they do it because the dominant agent-selection channel (personal referrals) delivers a name, not a marketplace. When a trusted friend recommends an agent, evaluating additional options feels like doubting the recommendation. The result is a process that looks like a choice but functions more like a default.</p>
+            <p>The financial cost is measurable. Sellers who contacted three or more agents before selecting one paid on average 1.5 percentage points less in total commission than sellers who contacted one agent and signed. On a $400,000 home, that differential is $6,000. The process to obtain three competing proposals — posting a listing, receiving proposals, reviewing them — takes less time than most sellers spend researching which refrigerator to buy. The gap between the effort required and the financial outcome available is one of the more striking inefficiencies in residential real estate.</p>
+        </div>
+    </div>
+</div>
+
+<!-- ── Press / Citation ── -->
+<div class="press-section">
+    <div class="press-inner">
+        <h2>Citing this research?</h2>
+        <p>We welcome press coverage and academic use of RealtorFinder research data. Please attribute: <strong>RealtorFinder Research, 2026.</strong> For press inquiries, licensing, or methodology questions, contact us at <a href="mailto:press@realtorfinder.net">press@realtorfinder.net</a>.</p>
+        <a href="/press" class="btn-outline">Visit our Press Room &rarr;</a>
+    </div>
+</div>
+
+<!-- ── Email Capture ── -->
+<div class="email-capture">
+    <h2>Get new research in your inbox</h2>
+    <p>We publish quarterly reports on commission trends, seller behavior, and agent market data.</p>
+    <form class="email-form" id="researchSubscribeForm" onsubmit="handleResearchSubscribe(event)">
+        <input type="email" placeholder="Your email address" required>
+        <button type="submit">Subscribe to Research</button>
+    </form>
+    <div class="email-note" id="researchMsg"></div>
+</div>
+
+<!-- ── Footer ── -->
+<footer>
+    <p>&copy; 2026 RealtorFinder &nbsp;&middot;&nbsp; <a href="/privacy">Privacy</a> &nbsp;&middot;&nbsp; <a href="/terms">Terms</a> &nbsp;&middot;&nbsp; <a href="/cookies">Cookies</a> &nbsp;&middot;&nbsp; <a href="/about">About</a> &nbsp;&middot;&nbsp; <a href="/research">Research</a> &nbsp;&middot;&nbsp; <a href="/press">Press</a> &nbsp;&middot;&nbsp; <a href="/contact">Contact</a></p>
+</footer>
+
+<script>
+    // Mobile nav
+    const hamburger = document.getElementById('navHamburger');
+    const mobileMenu = document.getElementById('mobileMenu');
+    hamburger.addEventListener('click', function() {
+        const isOpen = mobileMenu.classList.toggle('open');
+        hamburger.setAttribute('aria-expanded', isOpen);
+    });
+    function closeMobileMenu() {
+        mobileMenu.classList.remove('open');
+        hamburger.setAttribute('aria-expanded', 'false');
+    }
+
+    // Research email subscribe
+    async function handleResearchSubscribe(e) {
+        e.preventDefault();
+        const form = e.target;
+        const email = form.querySelector('input[type="email"]').value;
+        const msgEl = document.getElementById('researchMsg');
+        try {
+            const res = await fetch('/api/waitlist', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, type: 'research_subscriber' })
+            });
+            if (res.ok) {
+                msgEl.textContent = "You're subscribed. We'll send you new reports when they publish.";
+                msgEl.style.color = 'rgba(255,255,255,0.75)';
+                form.reset();
+            } else {
+                msgEl.textContent = 'Something went wrong. Please try again.';
+                msgEl.style.color = '#ff9980';
+            }
+        } catch {
+            msgEl.textContent = 'Something went wrong. Please try again.';
+            msgEl.style.color = '#ff9980';
+        }
+    }
+</script>
+
+<script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
+    }
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Dataset",
+  "name": "RealtorFinder Real Estate Research 2026",
+  "description": "Original real estate research from RealtorFinder covering commission rate surveys, seller behavior data, agent selection patterns, and housing market analysis across 1,077 U.S. markets.",
+  "url": "https://www.realtorfinder.net/research",
+  "publisher": {
+    "@type": "Organization",
+    "name": "RealtorFinder",
+    "url": "https://www.realtorfinder.net"
+  },
+  "creator": {
+    "@type": "Organization",
+    "name": "RealtorFinder Research",
+    "url": "https://www.realtorfinder.net/research"
+  },
+  "datePublished": "2026-06-01",
+  "dateModified": "2026-06-21",
+  "license": "https://creativecommons.org/licenses/by/4.0/",
+  "keywords": ["real estate commission rates", "home seller survey", "agent selection", "housing market data", "commission benchmarks"],
+  "spatialCoverage": {
+    "@type": "Place",
+    "name": "United States"
+  },
+  "hasPart": [
+    {
+      "@type": "Dataset",
+      "name": "2026 Real Estate Agent Commission Rate Report",
+      "description": "Commission data from 340 home sellers across 1,077 markets, January-April 2026."
+    },
+    {
+      "@type": "Dataset",
+      "name": "How Home Sellers Choose Their Real Estate Agent",
+      "description": "Survey of 200 home sellers on agent selection factors, March 2026."
+    }
+  ]
+}
+</script>
+
+</body>
+</html>
