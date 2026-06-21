@@ -3459,6 +3459,20 @@
                     body: JSON.stringify({ status: newStatus })
                 });
                 if (!res.ok) throw new Error('Failed');
+                if (newStatus === 'sold') {
+                    showToast('🎉 Congratulations on your sale! A review request has been sent to your email.');
+                    try {
+                        const pRes = await fetch(`/api/proposals/listing/${listingId}`, { credentials: 'include' });
+                        if (pRes.ok) {
+                            const proposals = await pRes.json();
+                            const accepted = proposals.find(p => p.status === 'accepted');
+                            if (accepted) {
+                                const rname = `${accepted.first_name || ''} ${accepted.last_name || ''}`.trim() || 'your realtor';
+                                setTimeout(() => showReviewPrompt(accepted.realtor_id, rname, listingId), 4000);
+                            }
+                        }
+                    } catch {}
+                }
                 loadDashboard();
             } catch { alert('Failed to update status.'); }
         }

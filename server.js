@@ -59,7 +59,7 @@ const { db, pool } = require('./db');
 const emailService = require('./email');
 const auth = require('./auth');
 const cities = require('./cities');
-const { generateCityPage } = require('./cityTemplate');
+const { generateCityPage, generateFindAgentCityPage } = require('./cityTemplate');
 
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
@@ -4746,7 +4746,7 @@ app.get('/sitemap-index.xml', async (req, res) => {
 app.get('/sitemap-static.xml', (req, res) => {
     const base = (process.env.FRONTEND_URL || 'https://www.realtorfinder.net').replace(/\/$/, '');
     const today = new Date().toISOString().split('T')[0];
-    const urls = ['/', '/sellers', '/realtors', '/pricing', '/about', '/about-sellers', '/buyers', '/locations', '/blog', '/contact', '/faq', '/find-agent'];
+    const urls = ['/', '/sellers', '/realtors', '/pricing', '/about', '/about-sellers', '/buyers', '/locations', '/blog', '/contact', '/faq', '/find-agent', '/press', '/calculator', '/research', '/realtor-directory'];
     const entries = urls.map(u => `  <url><loc>${base}${u}</loc><lastmod>${today}</lastmod><priority>${u === '/' ? '1.0' : '0.7'}</priority></url>`).join('\n');
     res.type('application/xml');
     res.send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${entries}\n</urlset>`);
@@ -4761,7 +4761,7 @@ app.get('/sitemap-:stateCode\\.xml', async (req, res) => {
     try { cities = await db.getCitiesByState(stateCode); } catch (e) {}
     const stateEntry = `  <url><loc>${base}/locations/${stateCode.toLowerCase()}</loc><lastmod>${today}</lastmod><priority>0.8</priority></url>`;
     const cityEntries = cities.map(c =>
-        `  <url><loc>${base}/locations/${stateCode.toLowerCase()}/${c.slug}</loc><lastmod>${today}</lastmod><priority>0.8</priority></url>`
+        `  <url><loc>${base}/locations/${stateCode.toLowerCase()}/${c.slug}</loc><lastmod>${today}</lastmod><priority>0.8</priority></url>\n  <url><loc>${base}/find-agent/${stateCode.toLowerCase()}/${c.slug}</loc><lastmod>${today}</lastmod><priority>0.7</priority></url>`
     ).join('\n');
     res.type('application/xml');
     res.send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${stateEntry}\n${cityEntries}\n</urlset>`);
@@ -8260,6 +8260,22 @@ app.get('/pricing', (req, res) => {
 
 app.get('/find-agent', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'find-agent.html'));
+});
+
+app.get('/find-agent/:stateCode/:citySlug', async (req, res) => {
+    try {
+        const city = await db.getCityPage(req.params.stateCode, req.params.citySlug);
+        if (!city) return res.status(404).sendFile(path.join(__dirname, 'public', '404.html'));
+        let liveData = { realtorCount: 0 };
+        if (city.zip) {
+            try { liveData = await db.getCityLiveCounts(city.zip); } catch (e) {}
+        }
+        res.set('Cache-Control', 'public, max-age=3600');
+        res.send(generateFindAgentCityPage(city, liveData));
+    } catch (err) {
+        console.error('Find-agent city page error:', err);
+        res.status(500).send('Server error');
+    }
 });
 
 app.get('/sellers', (req, res) => {

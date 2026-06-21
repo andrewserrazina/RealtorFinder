@@ -810,4 +810,548 @@ ${neContent}
 </html>`;
 }
 
-module.exports = { generateCityPage };
+function generateFindAgentCityPage(city, liveData = {}) {
+    const { realtorCount = 0 } = liveData;
+    const stateCode = (city.state_code || 'MA').toUpperCase();
+    const stateName = city.state_name || 'Massachusetts';
+    const title = `Find a Realtor in ${city.name}, ${stateCode} | RealtorFinder`;
+    const metaDesc = `Find top-rated realtors in ${city.name}, ${stateCode}. Compare commission rates, read reviews, and connect with licensed local agents — free for buyers and sellers.`;
+    const canonicalUrl = `https://www.realtorfinder.net/find-agent/${stateCode.toLowerCase()}/${city.slug}`;
+    const schemaOrg = JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'RealEstateAgent',
+        'name': `Find a Realtor in ${city.name}, ${stateCode} — RealtorFinder`,
+        'description': metaDesc,
+        'url': canonicalUrl,
+        'areaServed': { '@type': 'City', 'name': city.name, 'addressRegion': stateCode, 'addressCountry': 'US' },
+        'serviceType': 'Real Estate Agent Matching'
+    });
+
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${title}</title>
+    <meta name="description" content="${metaDesc}">
+    <link rel="canonical" href="${canonicalUrl}">
+    <meta property="og:title" content="${title}">
+    <meta property="og:description" content="${metaDesc}">
+    <meta property="og:url" content="${canonicalUrl}">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="RealtorFinder">
+    <meta property="og:image" content="https://realtorfinder.net/og-default.png">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="${title}">
+    <meta name="twitter:description" content="${metaDesc}">
+    <script type="application/ld+json">${schemaOrg}</script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-BRGVVNKT65"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-BRGVVNKT65');</script>
+    <script type="text/javascript">
+        (function(c,l,a,r,i,t,y){
+            c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+            t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+            y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+        })(window, document, "clarity", "script", "wxvaz0g7tq");
+    </script>
+    <style>
+        :root {
+            --primary: #0A2540;
+            --accent: #FF6B35;
+            --accent-dark: #e55a2b;
+            --text: #1a1a2e;
+            --muted: #6b7280;
+            --border: #e5e7eb;
+            --soft-bg: #f8f9fa;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Work Sans', sans-serif; color: var(--text); line-height: 1.6; }
+        a { color: inherit; text-decoration: none; }
+        nav {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+            background: rgba(255,255,255,0.97); backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border); padding: 0 5%;
+            display: flex; align-items: center; justify-content: space-between; height: 68px;
+        }
+        .nav-logo { font-family: 'Playfair Display', serif; font-size: 1.5rem; font-weight: 900; color: var(--primary); }
+        .nav-logo span { color: var(--accent); }
+        .nav-links { display: flex; align-items: center; gap: 28px; }
+        .nav-links a { font-weight: 500; color: var(--primary); font-size: 0.95rem; }
+        .nav-links a:hover { color: var(--accent); }
+        .nav-cta { background: var(--accent); color: #fff !important; padding: 10px 22px; border-radius: 8px; font-weight: 600; }
+        .nav-cta:hover { background: var(--accent-dark) !important; }
+        @media (max-width: 640px) { .nav-links .hide-mobile { display: none; } }
+        .hero {
+            background: linear-gradient(135deg, var(--primary) 0%, #0d3a5c 60%, #133a5e 100%);
+            color: #fff; padding: 140px 5% 80px; text-align: center; position: relative; overflow: hidden;
+        }
+        .hero::before {
+            content: ''; position: absolute; top: -40%; right: -20%;
+            width: 700px; height: 700px;
+            background: radial-gradient(circle, rgba(255,107,53,0.12) 0%, transparent 65%);
+            border-radius: 50%;
+        }
+        .hero-eyebrow {
+            display: inline-block; background: rgba(255,107,53,0.2); color: #FF6B35;
+            border: 1px solid rgba(255,107,53,0.4); border-radius: 20px; padding: 6px 18px;
+            font-size: 0.85rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 20px;
+        }
+        .hero h1 {
+            font-family: 'Playfair Display', serif; font-size: clamp(2.2rem, 5vw, 3.4rem);
+            font-weight: 900; line-height: 1.15; margin-bottom: 18px; max-width: 800px; margin-left: auto; margin-right: auto;
+        }
+        .hero h1 em { color: var(--accent); font-style: normal; }
+        .hero-sub { font-size: 1.12rem; color: rgba(255,255,255,0.82); max-width: 620px; margin: 0 auto 36px; line-height: 1.7; }
+        .hero-ctas { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+        .btn-primary {
+            background: var(--accent); color: #fff; border: none; padding: 15px 32px;
+            border-radius: 8px; font-size: 1rem; font-weight: 700; cursor: pointer;
+            transition: background 0.2s, transform 0.15s;
+        }
+        .btn-primary:hover { background: var(--accent-dark); transform: translateY(-2px); }
+        .btn-outline {
+            background: transparent; color: #fff; border: 2px solid rgba(255,255,255,0.5);
+            padding: 13px 28px; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer;
+            transition: border-color 0.2s, background 0.2s;
+        }
+        .btn-outline:hover { border-color: #fff; background: rgba(255,255,255,0.08); }
+        .stats-bar {
+            background: #fff; border-bottom: 1px solid var(--border); padding: 28px 5%;
+            display: flex; gap: 40px; justify-content: center; flex-wrap: wrap;
+        }
+        .stat { text-align: center; }
+        .stat-num { font-family: 'Playfair Display', serif; font-size: 2rem; font-weight: 900; color: var(--primary); }
+        .stat-num span { font-size: 1rem; color: #22c55e; }
+        .stat-label { font-size: 0.8rem; color: var(--muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 4px; }
+        .section { padding: 80px 5%; }
+        .section-alt { background: var(--soft-bg); }
+        .section-center { text-align: center; }
+        .eyebrow { font-size: 0.8rem; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 10px; }
+        h2 { font-family: 'Playfair Display', serif; font-size: clamp(1.7rem, 3.5vw, 2.4rem); font-weight: 900; color: var(--primary); margin-bottom: 16px; }
+        .section-intro { color: var(--muted); font-size: 1.05rem; max-width: 680px; margin: 0 auto 48px; line-height: 1.7; }
+        .realtor-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.25rem; max-width: 1100px; margin: 0 auto;
+        }
+        .realtor-card {
+            background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem;
+            text-align: left; transition: box-shadow 0.2s;
+        }
+        .realtor-card:hover { box-shadow: 0 8px 24px rgba(0,0,0,0.09); }
+        .realtor-avatar {
+            width: 56px; height: 56px; border-radius: 50%; background: var(--primary);
+            display: flex; align-items: center; justify-content: center;
+            font-family: 'Playfair Display', serif; font-size: 1.4rem; font-weight: 900; color: #fff; margin-bottom: 0.75rem;
+        }
+        .realtor-name { font-family: 'Playfair Display', serif; font-weight: 700; font-size: 1.05rem; color: var(--primary); margin-bottom: 0.2rem; }
+        .realtor-meta { font-size: 0.85rem; color: var(--muted); margin-bottom: 0.75rem; }
+        .realtor-badge { display: inline-block; background: #ecfdf5; color: #059669; font-size: 0.75rem; font-weight: 600; padding: 2px 8px; border-radius: 20px; margin-right: 4px; }
+        .steps { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 2rem; max-width: 900px; margin: 0 auto; }
+        .step { text-align: center; }
+        .step-num {
+            width: 52px; height: 52px; border-radius: 50%; background: var(--accent);
+            color: #fff; font-family: 'Playfair Display', serif; font-size: 1.4rem; font-weight: 900;
+            display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;
+        }
+        .step h4 { font-size: 1.1rem; color: var(--primary); font-weight: 700; margin-bottom: 8px; }
+        .step p { font-size: 0.95rem; color: var(--muted); line-height: 1.6; }
+        .two-panel { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; max-width: 1000px; margin: 0 auto; }
+        @media (max-width: 768px) { .two-panel { grid-template-columns: 1fr; } }
+        .panel { padding: 32px; border: 1px solid var(--border); border-radius: 16px; background: #fff; }
+        .panel.accent-panel { background: var(--primary); color: #fff; }
+        .panel h3 { font-family: 'Playfair Display', serif; font-size: 1.4rem; font-weight: 900; margin-bottom: 12px; color: inherit; }
+        .panel p { color: var(--muted); margin-bottom: 20px; line-height: 1.7; }
+        .panel.accent-panel p { color: rgba(255,255,255,0.78); }
+        .panel ul { list-style: none; margin-bottom: 24px; }
+        .panel ul li { padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 0.95rem; display: flex; gap: 8px; align-items: flex-start; }
+        .panel.accent-panel ul li { border-color: rgba(255,255,255,0.12); }
+        .panel ul li::before { content: '✓'; color: var(--accent); font-weight: 700; flex-shrink: 0; }
+        .btn-accent { background: var(--accent); color: #fff; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 700; font-size: 0.95rem; cursor: pointer; width: 100%; transition: background 0.2s; }
+        .btn-accent:hover { background: var(--accent-dark); }
+        .btn-white { background: #fff; color: var(--primary); border: none; padding: 12px 24px; border-radius: 8px; font-weight: 700; font-size: 0.95rem; cursor: pointer; width: 100%; transition: opacity 0.2s; }
+        .btn-white:hover { opacity: 0.9; }
+        .nearby-links { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 24px; }
+        .nearby-link {
+            padding: 8px 18px; background: #fff; border: 1px solid var(--border);
+            border-radius: 20px; font-size: 0.88rem; font-weight: 500; color: var(--primary);
+            transition: border-color 0.2s, color 0.2s;
+        }
+        .nearby-link:hover { border-color: var(--accent); color: var(--accent); }
+        .lead-section { background: var(--primary); padding: 72px 5%; }
+        .lead-inner { max-width: 1000px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center; }
+        @media (max-width: 768px) { .lead-inner { grid-template-columns: 1fr; gap: 36px; } }
+        .lead-copy { color: #fff; }
+        .lead-copy .eyebrow { color: rgba(255,107,53,0.9); }
+        .lead-copy h2 { color: #fff; margin-bottom: 14px; }
+        .lead-copy p { color: rgba(255,255,255,0.78); font-size: 1.02rem; line-height: 1.7; }
+        .lead-form-card { background: #fff; border-radius: 16px; padding: 36px; box-shadow: 0 16px 48px rgba(0,0,0,0.2); }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-weight: 600; font-size: 0.9rem; margin-bottom: 6px; color: var(--primary); }
+        .form-group input { width: 100%; padding: 11px 14px; border: 1px solid var(--border); border-radius: 8px; font-size: 0.95rem; font-family: inherit; }
+        .form-group input:focus { outline: none; border-color: var(--accent); }
+        .form-submit { width: 100%; background: var(--accent); color: #fff; border: none; padding: 13px; border-radius: 8px; font-weight: 700; font-size: 1rem; cursor: pointer; margin-top: 4px; }
+        .form-note { font-size: 0.78rem; color: var(--muted); text-align: center; margin-top: 10px; }
+        .type-toggle { display: flex; gap: 10px; margin-bottom: 20px; }
+        .type-btn { flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--soft-bg); font-size: 0.9rem; font-weight: 600; cursor: pointer; }
+        .type-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+        footer { background: var(--primary); color: rgba(255,255,255,0.7); text-align: center; padding: 48px 5%; }
+        .footer-logo { font-family: 'Playfair Display', serif; font-size: 1.5rem; font-weight: 900; color: #fff; margin-bottom: 14px; }
+        .footer-logo span { color: var(--accent); }
+        footer a { color: rgba(255,255,255,0.6); margin: 0 12px; font-size: 0.88rem; }
+        footer a:hover { color: var(--accent); }
+        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 1000; align-items: center; justify-content: center; }
+        .modal-overlay.open { display: flex; }
+        .modal { background: #fff; border-radius: 16px; padding: 40px; max-width: 440px; width: 90%; max-height: 90vh; overflow-y: auto; position: relative; }
+        .modal-close { position: absolute; top: 14px; right: 18px; background: none; border: none; font-size: 1.6rem; cursor: pointer; color: var(--muted); line-height: 1; }
+        .modal-eyebrow { font-size: 0.78rem; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; }
+        .modal h2 { font-family: 'Playfair Display', serif; font-size: 1.7rem; font-weight: 900; color: var(--primary); margin-bottom: 8px; }
+        .modal-sub { color: var(--muted); font-size: 0.97rem; margin-bottom: 24px; }
+        .modal-success { display: none; text-align: center; padding: 20px 0; }
+        .modal-success .check { font-size: 3rem; margin-bottom: 16px; }
+        .modal-success h3 { font-family: 'Playfair Display', serif; font-size: 1.5rem; color: var(--primary); margin-bottom: 10px; }
+        .modal-success p { color: var(--muted); font-size: 0.97rem; line-height: 1.6; }
+    </style>
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Realtor<span>Finder</span></a>
+    <div class="nav-links">
+        <a href="/buyers" class="hide-mobile">For Buyers</a>
+        <a href="/realtors" class="hide-mobile">For Realtors</a>
+        <a href="/login" class="nav-cta">Get Started Free</a>
+    </div>
+</nav>
+
+<section class="hero">
+    <div class="hero-eyebrow">${city.county ? city.county + ' County, ' : ''}${stateName}</div>
+    <h1>Find the Best Realtors in <em>${city.name}</em></h1>
+    <p class="hero-sub">Compare licensed ${city.name}-area agents by commission rate, reviews, and marketing plan — then choose the one who earns your business. Free to use.</p>
+    <div class="hero-ctas">
+        <button class="btn-primary" onclick="openLead('buyer')">Find My Realtor — Free</button>
+        <button class="btn-outline" onclick="openLead('realtor')">I'm a Realtor →</button>
+    </div>
+</section>
+
+<div class="stats-bar">
+    <div class="stat">
+        <div class="stat-num">${realtorCount > 0 ? realtorCount : '10+'}${realtorCount > 0 ? '' : ''}</div>
+        <div class="stat-label">Local Realtors</div>
+    </div>
+    <div class="stat">
+        <div class="stat-num">${city.median_price || 'N/A'}</div>
+        <div class="stat-label">Median Home Price</div>
+    </div>
+    <div class="stat">
+        <div class="stat-num">${city.avg_dom || '—'}${city.avg_dom ? '<span> days</span>' : ''}</div>
+        <div class="stat-label">Avg. Days on Market</div>
+    </div>
+    <div class="stat">
+        <div class="stat-num">$0</div>
+        <div class="stat-label">Cost to Find Agent</div>
+    </div>
+</div>
+
+<section class="section section-center">
+    <div class="eyebrow">How It Works</div>
+    <h2>Find Your ${city.name} Realtor in 3 Steps</h2>
+    <p class="section-intro">RealtorFinder flips the script — instead of cold-calling agents, local realtors compete for your listing so you can pick the best fit.</p>
+    <div class="steps">
+        <div class="step">
+            <div class="step-num">1</div>
+            <h4>Post Your Home</h4>
+            <p>Create a free listing with your property details. Takes less than 5 minutes, no credit card needed.</p>
+        </div>
+        <div class="step">
+            <div class="step-num">2</div>
+            <h4>Realtors Compete</h4>
+            <p>Licensed ${city.name}-area agents submit proposals with their commission rate and marketing plan.</p>
+        </div>
+        <div class="step">
+            <div class="step-num">3</div>
+            <h4>You Choose</h4>
+            <p>Compare agents side-by-side and pick the realtor who offers the best terms and expertise.</p>
+        </div>
+    </div>
+</section>
+
+<section class="section section-alt section-center">
+    <div class="eyebrow">Realtors in ${city.name}</div>
+    <h2>Licensed Agents Serving ${city.name}, ${stateCode}</h2>
+    <p class="section-intro">These realtors are active on RealtorFinder and ready to compete for your listing. Post your home to receive their proposals.</p>
+    <div class="realtor-grid" id="realtorGrid">
+        <div style="grid-column:1/-1;color:var(--muted);padding:2rem 0;">Loading local realtors…</div>
+    </div>
+    <p id="noRealtorsMsg" style="display:none;color:var(--muted);margin-top:1rem;">Be the first to find a realtor in ${city.name} — <button onclick="openLead('buyer')" style="background:none;border:none;color:var(--accent);font-weight:600;cursor:pointer;text-decoration:underline;">post your listing now</button>.</p>
+</section>
+
+<section class="section">
+    <div class="two-panel">
+        <div class="panel">
+            <div class="eyebrow">For Home Sellers</div>
+            <h3>Let Realtors Come to You</h3>
+            <p>Stop wasting time interviewing agents who aren't motivated. On RealtorFinder, ${city.name} agents compete for your listing.</p>
+            <ul>
+                <li>Post your home for free — no upfront fees</li>
+                <li>Receive competing proposals from local agents</li>
+                <li>Compare commission rates and marketing plans</li>
+                <li>Read reviews from other sellers</li>
+                <li>Choose the agent who earns your business</li>
+            </ul>
+            <button class="btn-accent" onclick="openLead('buyer')">Find a Realtor in ${city.name}</button>
+        </div>
+        <div class="panel accent-panel">
+            <div class="eyebrow" style="color:rgba(255,107,53,0.9);">For Realtors</div>
+            <h3>Win Listings in ${city.name}</h3>
+            <p>RealtorFinder gives you direct access to motivated sellers in ${city.name} before they sign with anyone else.</p>
+            <ul>
+                <li>Browse new ${city.name} listings the moment they're posted</li>
+                <li>Submit proposals with your rate and pitch</li>
+                <li>Beat out-of-area agents with local expertise</li>
+                <li>Plans from $99/month — cancel anytime</li>
+                <li>No lead fees, no referral cuts</li>
+            </ul>
+            <button class="btn-white" onclick="openLead('realtor')">Get Access in ${city.name}</button>
+        </div>
+    </div>
+</section>
+
+<section class="section section-alt section-center">
+    <div class="eyebrow">Also Serving</div>
+    <h2>${stateName} Coverage</h2>
+    <p class="section-intro">RealtorFinder connects buyers and sellers with agents across ${city.county ? city.county + ' County and ' : ''}${stateName}, including ${city.nearby || 'nearby communities'}.</p>
+    <div class="nearby-links" id="nearbyLinks"></div>
+    <p style="margin-top:20px;"><a href="/locations/${stateCode.toLowerCase()}" style="color:var(--accent);font-weight:600;">View all ${stateName} cities →</a></p>
+</section>
+
+<section class="lead-section">
+    <div class="lead-inner">
+        <div class="lead-copy">
+            <div class="eyebrow">Get Started Today</div>
+            <h2>Find the Right Realtor in ${city.name}</h2>
+            <p>Post your home and let ${city.name} agents compete for your listing — or sign up as a realtor to access new ${city.name} listings before they hit Zillow.</p>
+        </div>
+        <div class="lead-form-card">
+            <div id="inlineFormWrap">
+                <div class="type-toggle">
+                    <button class="type-btn active" id="inline-seller-btn" onclick="setInlineType('buyer')">🏠 I Need a Realtor</button>
+                    <button class="type-btn" id="inline-realtor-btn" onclick="setInlineType('realtor')">🤝 I'm a Realtor</button>
+                </div>
+                <form id="inlineLeadForm" onsubmit="submitInlineLead(event)">
+                    <input type="hidden" id="inlineType" value="buyer">
+                    <div class="form-group">
+                        <label for="inlineName">Your Name</label>
+                        <input type="text" id="inlineName" placeholder="Jane Smith" autocomplete="name">
+                    </div>
+                    <div class="form-group">
+                        <label for="inlineEmail">Email Address *</label>
+                        <input type="email" id="inlineEmail" placeholder="jane@email.com" required autocomplete="email">
+                    </div>
+                    <div class="form-group">
+                        <label for="inlinePhone">Phone <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
+                        <input type="tel" id="inlinePhone" placeholder="(555) 555-5555" autocomplete="tel">
+                    </div>
+                    <button type="submit" class="form-submit" id="inlineSubmitBtn">Find My Realtor →</button>
+                    <p class="form-note">No spam. No credit card. Cancel anytime.</p>
+                </form>
+            </div>
+            <div id="inlineSuccess" style="display:none;text-align:center;padding:20px 0;">
+                <div style="font-size:3rem;margin-bottom:16px;">✅</div>
+                <h3 style="font-family:'Playfair Display',serif;font-size:1.5rem;color:var(--primary);margin-bottom:10px;">You're on the list!</h3>
+                <p style="color:var(--muted);">We'll connect you with top ${city.name} realtors within 24 hours.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<footer>
+    <div class="footer-logo">Realtor<span>Finder</span></div>
+    <p>Connecting ${city.name} home sellers with the best local realtors since 2025.</p>
+    <p style="margin-top:12px;">
+        <a href="/">Home</a>
+        <a href="/buyers">For Buyers</a>
+        <a href="/locations">All Cities</a>
+        <a href="/realtors">For Realtors</a>
+        <a href="/login">Sign Up</a>
+        <a href="/privacy">Privacy</a>
+        <a href="/terms">Terms</a>
+    </p>
+    <p style="margin-top:16px;font-size:0.78rem;opacity:0.5;">© ${new Date().getFullYear()} RealtorFinder. All rights reserved. Market data is approximate and for informational purposes only.</p>
+</footer>
+
+<script>
+    const CITY_SLUG  = '${city.slug}';
+    const CITY_NAME  = '${city.name.replace(/'/g, "\\'")}';
+    const STATE_CODE = '${stateCode}';
+
+    // Load local realtors
+    (async function() {
+        try {
+            const r = await fetch('/api/realtors/search?city=' + encodeURIComponent(CITY_NAME) + '&state=' + encodeURIComponent(STATE_CODE) + '&limit=6');
+            const data = await r.json();
+            const realtors = Array.isArray(data) ? data : (data.realtors || []);
+            const grid = document.getElementById('realtorGrid');
+            if (!realtors.length) {
+                grid.innerHTML = '';
+                document.getElementById('noRealtorsMsg').style.display = 'block';
+                return;
+            }
+            grid.innerHTML = realtors.map(r => {
+                const initial = (r.first_name || 'R').charAt(0).toUpperCase();
+                const name = ((r.first_name || '') + ' ' + (r.last_name || '')).trim() || 'Local Realtor';
+                const verified = r.license_verified ? '<span class="realtor-badge">✓ Verified</span>' : '';
+                const exp = r.years_experience ? '<span class="realtor-badge" style="background:#eff6ff;color:#1e40af;">' + r.years_experience + ' yrs exp</span>' : '';
+                return '<div class="realtor-card"><div class="realtor-avatar">' + initial + '</div>'
+                    + '<div class="realtor-name">' + name + '</div>'
+                    + '<div class="realtor-meta">' + (r.brokerage || '') + (r.brokerage && r.service_areas ? ' · ' : '') + (r.service_areas || '') + '</div>'
+                    + '<div>' + verified + exp + '</div>'
+                    + '<a href="/realtor/' + r.id + '" style="display:inline-block;margin-top:12px;color:var(--accent);font-weight:600;font-size:0.9rem;">View Profile →</a>'
+                    + '</div>';
+            }).join('');
+        } catch(e) {
+            document.getElementById('realtorGrid').innerHTML = '<div style="grid-column:1/-1;color:var(--muted);padding:2rem 0;">Unable to load local realtors. <button onclick="openLead(\'buyer\')" style="background:none;border:none;color:var(--accent);font-weight:600;cursor:pointer;text-decoration:underline;">Post your listing to connect directly.</button></div>';
+        }
+    })();
+
+    // Load nearby city links
+    fetch('/api/cities/${stateCode.toLowerCase()}')
+        .then(r => r.json())
+        .then(cities => {
+            const container = document.getElementById('nearbyLinks');
+            cities.filter(c => c.slug !== '${city.slug}').slice(0, 12).forEach(c => {
+                const a = document.createElement('a');
+                a.href = '/find-agent/${stateCode.toLowerCase()}/' + c.slug;
+                a.className = 'nearby-link';
+                a.textContent = 'Find Realtors in ' + c.name;
+                container.appendChild(a);
+            });
+        })
+        .catch(() => {});
+
+    function openLead(type) {
+        document.getElementById('inlineType').value = type;
+        document.getElementById('inline-seller-btn').classList.toggle('active', type === 'buyer');
+        document.getElementById('inline-realtor-btn').classList.toggle('active', type === 'realtor');
+        document.getElementById('inlineSubmitBtn').textContent =
+            type === 'buyer' ? 'Find My Realtor →' : 'Get Listing Access →';
+        document.getElementById('inlineLeadForm').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    function setInlineType(type) {
+        document.getElementById('inlineType').value = type;
+        document.getElementById('inline-seller-btn').classList.toggle('active', type === 'buyer');
+        document.getElementById('inline-realtor-btn').classList.toggle('active', type === 'realtor');
+        document.getElementById('inlineSubmitBtn').textContent =
+            type === 'buyer' ? 'Find My Realtor →' : 'Get Listing Access →';
+    }
+
+    async function submitInlineLead(e) {
+        e.preventDefault();
+        const btn = document.getElementById('inlineSubmitBtn');
+        btn.disabled = true;
+        btn.textContent = 'Submitting…';
+        try {
+            const res = await fetch('/api/city-lead', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    type: document.getElementById('inlineType').value,
+                    name: document.getElementById('inlineName').value,
+                    email: document.getElementById('inlineEmail').value,
+                    phone: document.getElementById('inlinePhone').value,
+                    city_slug: CITY_SLUG, city_name: CITY_NAME, state_code: STATE_CODE
+                })
+            });
+            if (res.ok) {
+                gtag('event', 'generate_lead', { lead_type: document.getElementById('inlineType').value, city: CITY_NAME, state: STATE_CODE });
+                document.getElementById('inlineFormWrap').style.display = 'none';
+                document.getElementById('inlineSuccess').style.display = 'block';
+            } else {
+                btn.disabled = false;
+                btn.textContent = 'Try Again';
+            }
+        } catch {
+            btn.disabled = false;
+            btn.textContent = 'Try Again';
+        }
+    }
+</script>
+
+<div class="modal-overlay" id="leadModal">
+    <div class="modal">
+        <button class="modal-close" onclick="document.getElementById('leadModal').classList.remove('open')" aria-label="Close">×</button>
+        <div id="modalFormWrap">
+            <div class="modal-eyebrow">Free — No Commitment</div>
+            <h2>Find a Realtor in ${city.name}</h2>
+            <p class="modal-sub">Tell us who you are and we'll connect you with the right people.</p>
+            <div class="type-toggle">
+                <button class="type-btn active" id="modal-seller-btn" onclick="setModalType('buyer')">🏠 I Need a Realtor</button>
+                <button class="type-btn" id="modal-realtor-btn" onclick="setModalType('realtor')">🤝 I'm a Realtor</button>
+            </div>
+            <form onsubmit="submitModalLead(event)">
+                <input type="hidden" id="modalType" value="buyer">
+                <div class="form-group">
+                    <label for="modalName">Your Name</label>
+                    <input type="text" id="modalName" placeholder="Jane Smith" autocomplete="name">
+                </div>
+                <div class="form-group">
+                    <label for="modalEmail">Email Address *</label>
+                    <input type="email" id="modalEmail" placeholder="jane@email.com" required autocomplete="email">
+                </div>
+                <div class="form-group">
+                    <label for="modalPhone">Phone <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
+                    <input type="tel" id="modalPhone" placeholder="(555) 555-5555" autocomplete="tel">
+                </div>
+                <button type="submit" class="form-submit" id="modalSubmitBtn">Find My Realtor →</button>
+                <p class="form-note">No spam. No credit card. Cancel anytime.</p>
+            </form>
+        </div>
+        <div class="modal-success" id="modalSuccess">
+            <div class="check">✅</div>
+            <h3>You're on the list!</h3>
+            <p>We'll connect you with top ${city.name} realtors within 24 hours.</p>
+            <button onclick="document.getElementById('leadModal').classList.remove('open')" class="btn-accent" style="margin-top:20px;border:none;cursor:pointer;">Done</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    function setModalType(type) {
+        document.getElementById('modalType').value = type;
+        document.getElementById('modal-seller-btn').classList.toggle('active', type === 'buyer');
+        document.getElementById('modal-realtor-btn').classList.toggle('active', type === 'realtor');
+        document.getElementById('modalSubmitBtn').textContent =
+            type === 'buyer' ? 'Find My Realtor →' : 'Get Listing Access →';
+    }
+    async function submitModalLead(e) {
+        e.preventDefault();
+        const btn = document.getElementById('modalSubmitBtn');
+        btn.disabled = true; btn.textContent = 'Submitting…';
+        try {
+            const res = await fetch('/api/city-lead', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    type: document.getElementById('modalType').value,
+                    name: document.getElementById('modalName').value,
+                    email: document.getElementById('modalEmail').value,
+                    phone: document.getElementById('modalPhone').value,
+                    city_slug: CITY_SLUG, city_name: CITY_NAME, state_code: STATE_CODE
+                })
+            });
+            if (res.ok) {
+                document.getElementById('modalFormWrap').style.display = 'none';
+                document.getElementById('modalSuccess').style.display = 'block';
+            } else { btn.disabled = false; btn.textContent = 'Try Again'; }
+        } catch { btn.disabled = false; btn.textContent = 'Try Again'; }
+    }
+</script>
+
+</body>
+</html>`;
+}
+
+module.exports = { generateCityPage, generateFindAgentCityPage };
