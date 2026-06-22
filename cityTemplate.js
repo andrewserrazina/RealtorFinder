@@ -1,5 +1,16 @@
 // cityTemplate.js — Generates SEO-optimized HTML for city landing pages
 
+// Safe JSON serialization for values embedded inside inline <script> blocks.
+// JSON.stringify handles ", \, and control chars; the replacements prevent
+// </script> from closing the enclosing script block and neutralize < / > to
+// stop HTML parsers from treating the JSON as markup.
+function safeInlineJson(val) {
+    return JSON.stringify(val)
+        .replace(/</g, '\\u003c')
+        .replace(/>/g, '\\u003e')
+        .replace(/&/g, '\\u0026');
+}
+
 function generateNESection(city, stateCode) {
     const stateContent = {
         MA: {
@@ -642,9 +653,9 @@ ${neContent}
         .catch(() => {});
 
     // ── Modal ──────────────────────────────────────────────
-    const CITY_SLUG  = '${city.slug}';
-    const CITY_NAME  = '${city.name.replace(/'/g, "\\'")}';
-    const STATE_CODE = '${stateCode}';
+    const CITY_SLUG  = ${safeInlineJson(city.slug)};
+    const CITY_NAME  = ${safeInlineJson(city.name)};
+    const STATE_CODE = ${safeInlineJson(stateCode)};
 
     function openLead(type) {
         document.getElementById('modalType').value = type;
@@ -1183,14 +1194,18 @@ function generateFindAgentCityPage(city, liveData = {}) {
 </footer>
 
 <script>
-    const CITY_SLUG  = '${city.slug}';
-    const CITY_NAME  = '${city.name.replace(/'/g, "\\'")}';
-    const STATE_CODE = '${stateCode}';
+    const CITY_SLUG  = ${safeInlineJson(city.slug)};
+    const CITY_NAME  = ${safeInlineJson(city.name)};
+    const STATE_CODE = ${safeInlineJson(stateCode)};
+
+    function escHtml(s) {
+        return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    }
 
     // Load local realtors
     (async function() {
         try {
-            const r = await fetch('/api/realtors/search?city=' + encodeURIComponent(CITY_NAME) + '&state=' + encodeURIComponent(STATE_CODE) + '&limit=6');
+            const r = await fetch('/api/realtors/search?city=' + encodeURIComponent(CITY_NAME) + '&limit=6');
             const data = await r.json();
             const realtors = Array.isArray(data) ? data : (data.realtors || []);
             const grid = document.getElementById('realtorGrid');
@@ -1200,15 +1215,17 @@ function generateFindAgentCityPage(city, liveData = {}) {
                 return;
             }
             grid.innerHTML = realtors.map(r => {
-                const initial = (r.first_name || 'R').charAt(0).toUpperCase();
-                const name = ((r.first_name || '') + ' ' + (r.last_name || '')).trim() || 'Local Realtor';
+                const initial = escHtml((r.first_name || 'R').charAt(0).toUpperCase());
+                const name = escHtml(((r.first_name || '') + ' ' + (r.last_name || '')).trim() || 'Local Realtor');
+                const meta = escHtml(r.brokerage || '') + (r.brokerage && r.service_areas ? ' · ' : '') + escHtml(r.service_areas || '');
                 const verified = r.license_verified ? '<span class="realtor-badge">✓ Verified</span>' : '';
-                const exp = r.years_experience ? '<span class="realtor-badge" style="background:#eff6ff;color:#1e40af;">' + r.years_experience + ' yrs exp</span>' : '';
+                const exp = r.years_experience ? '<span class="realtor-badge" style="background:#eff6ff;color:#1e40af;">' + escHtml(String(r.years_experience)) + ' yrs exp</span>' : '';
+                const profileUrl = '/realtor/' + encodeURIComponent(parseInt(r.id, 10));
                 return '<div class="realtor-card"><div class="realtor-avatar">' + initial + '</div>'
                     + '<div class="realtor-name">' + name + '</div>'
-                    + '<div class="realtor-meta">' + (r.brokerage || '') + (r.brokerage && r.service_areas ? ' · ' : '') + (r.service_areas || '') + '</div>'
+                    + '<div class="realtor-meta">' + meta + '</div>'
                     + '<div>' + verified + exp + '</div>'
-                    + '<a href="/realtor/' + r.id + '" style="display:inline-block;margin-top:12px;color:var(--accent);font-weight:600;font-size:0.9rem;">View Profile →</a>'
+                    + '<a href="' + profileUrl + '" style="display:inline-block;margin-top:12px;color:var(--accent);font-weight:600;font-size:0.9rem;">View Profile →</a>'
                     + '</div>';
             }).join('');
         } catch(e) {
@@ -1277,76 +1294,6 @@ function generateFindAgentCityPage(city, liveData = {}) {
             btn.disabled = false;
             btn.textContent = 'Try Again';
         }
-    }
-</script>
-
-<div class="modal-overlay" id="leadModal">
-    <div class="modal">
-        <button class="modal-close" onclick="document.getElementById('leadModal').classList.remove('open')" aria-label="Close">×</button>
-        <div id="modalFormWrap">
-            <div class="modal-eyebrow">Free — No Commitment</div>
-            <h2>Find a Realtor in ${city.name}</h2>
-            <p class="modal-sub">Tell us who you are and we'll connect you with the right people.</p>
-            <div class="type-toggle">
-                <button class="type-btn active" id="modal-seller-btn" onclick="setModalType('buyer')">🏠 I Need a Realtor</button>
-                <button class="type-btn" id="modal-realtor-btn" onclick="setModalType('realtor')">🤝 I'm a Realtor</button>
-            </div>
-            <form onsubmit="submitModalLead(event)">
-                <input type="hidden" id="modalType" value="buyer">
-                <div class="form-group">
-                    <label for="modalName">Your Name</label>
-                    <input type="text" id="modalName" placeholder="Jane Smith" autocomplete="name">
-                </div>
-                <div class="form-group">
-                    <label for="modalEmail">Email Address *</label>
-                    <input type="email" id="modalEmail" placeholder="jane@email.com" required autocomplete="email">
-                </div>
-                <div class="form-group">
-                    <label for="modalPhone">Phone <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
-                    <input type="tel" id="modalPhone" placeholder="(555) 555-5555" autocomplete="tel">
-                </div>
-                <button type="submit" class="form-submit" id="modalSubmitBtn">Find My Realtor →</button>
-                <p class="form-note">No spam. No credit card. Cancel anytime.</p>
-            </form>
-        </div>
-        <div class="modal-success" id="modalSuccess">
-            <div class="check">✅</div>
-            <h3>You're on the list!</h3>
-            <p>We'll connect you with top ${city.name} realtors within 24 hours.</p>
-            <button onclick="document.getElementById('leadModal').classList.remove('open')" class="btn-accent" style="margin-top:20px;border:none;cursor:pointer;">Done</button>
-        </div>
-    </div>
-</div>
-
-<script>
-    function setModalType(type) {
-        document.getElementById('modalType').value = type;
-        document.getElementById('modal-seller-btn').classList.toggle('active', type === 'buyer');
-        document.getElementById('modal-realtor-btn').classList.toggle('active', type === 'realtor');
-        document.getElementById('modalSubmitBtn').textContent =
-            type === 'buyer' ? 'Find My Realtor →' : 'Get Listing Access →';
-    }
-    async function submitModalLead(e) {
-        e.preventDefault();
-        const btn = document.getElementById('modalSubmitBtn');
-        btn.disabled = true; btn.textContent = 'Submitting…';
-        try {
-            const res = await fetch('/api/city-lead', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    type: document.getElementById('modalType').value,
-                    name: document.getElementById('modalName').value,
-                    email: document.getElementById('modalEmail').value,
-                    phone: document.getElementById('modalPhone').value,
-                    city_slug: CITY_SLUG, city_name: CITY_NAME, state_code: STATE_CODE
-                })
-            });
-            if (res.ok) {
-                document.getElementById('modalFormWrap').style.display = 'none';
-                document.getElementById('modalSuccess').style.display = 'block';
-            } else { btn.disabled = false; btn.textContent = 'Try Again'; }
-        } catch { btn.disabled = false; btn.textContent = 'Try Again'; }
     }
 </script>
 

@@ -2366,20 +2366,6 @@
             } catch { alert('Failed to update listing. Please try again.'); }
         }
 
-        // Mark listing as sold
-        async function markListingSold(listingId) {
-            if (!confirm('Mark this listing as Sold? It will be removed from active listings.')) return;
-            try {
-                const res = await fetch(`${API_BASE_URL}/listings/${listingId}/status`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify({ status: 'sold' })
-                });
-                if (!res.ok) throw new Error('Failed');
-                loadDashboard();
-            } catch { alert('Failed to update listing. Please try again.'); }
-        }
 
         // Delete listing
         async function deleteListing(listingId) {

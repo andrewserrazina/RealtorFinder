@@ -4746,7 +4746,7 @@ app.get('/sitemap-index.xml', async (req, res) => {
 app.get('/sitemap-static.xml', (req, res) => {
     const base = (process.env.FRONTEND_URL || 'https://www.realtorfinder.net').replace(/\/$/, '');
     const today = new Date().toISOString().split('T')[0];
-    const urls = ['/', '/sellers', '/realtors', '/pricing', '/about', '/about-sellers', '/buyers', '/locations', '/blog', '/contact', '/faq', '/find-agent', '/press', '/calculator', '/research', '/realtor-directory'];
+    const urls = ['/', '/sellers', '/realtors', '/pricing', '/about', '/about-sellers', '/buyers', '/locations', '/blog', '/contact', '/faq', '/find-agent', '/realtor-directory'];
     const entries = urls.map(u => `  <url><loc>${base}${u}</loc><lastmod>${today}</lastmod><priority>${u === '/' ? '1.0' : '0.7'}</priority></url>`).join('\n');
     res.type('application/xml');
     res.send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${entries}\n</urlset>`);
