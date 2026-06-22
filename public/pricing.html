@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pricing for Realtors — RealtorFinder</title>
     <meta name="description" content="Start RealtorFinder free for 30 days — no credit card required. Choose Basic, Professional, or Firm. No commission splits, no hidden fees.">
+    <link rel="canonical" href="https://www.realtorfinder.net/pricing">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://www.realtorfinder.net/pricing">
     <meta property="og:title" content="Pricing for Realtors — RealtorFinder">
@@ -518,6 +519,20 @@
     </div>
 </div>
 
+<!-- Billing Toggle -->
+<div style="text-align:center;padding:2rem 1rem 0;">
+    <div style="display:inline-flex;align-items:center;background:#f0ede9;border-radius:50px;padding:4px;gap:2px;">
+        <button id="toggleMonthly" onclick="setBilling('monthly')"
+            style="padding:0.5rem 1.5rem;border-radius:50px;border:none;font-family:inherit;font-size:0.9rem;font-weight:600;cursor:pointer;transition:all 0.2s;background:white;color:#0A2540;box-shadow:0 1px 4px rgba(0,0,0,0.1);">
+            Monthly
+        </button>
+        <button id="toggleAnnual" onclick="setBilling('annual')"
+            style="padding:0.5rem 1.5rem;border-radius:50px;border:none;font-family:inherit;font-size:0.9rem;font-weight:600;cursor:pointer;transition:all 0.2s;background:transparent;color:#6b7280;">
+            Annual <span style="background:#dcfce7;color:#166534;font-size:0.75rem;padding:2px 7px;border-radius:20px;margin-left:4px;font-weight:700;">Save 20%</span>
+        </button>
+    </div>
+</div>
+
 <!-- Pricing Cards -->
 <div class="pricing-section">
     <div class="pricing-grid">
@@ -526,7 +541,8 @@
         <div class="plan-card">
             <div class="plan-badge plan-badge-trial">30-Day Free Trial</div>
             <div class="plan-name">Basic</div>
-            <div class="plan-price">$99<span class="plan-price-unit">/month</span></div>
+            <div class="plan-price"><span id="price-basic">$99</span><span class="plan-price-unit" id="unit-basic">/month</span></div>
+            <div id="saving-basic" style="display:none;font-size:0.8rem;color:#10b981;font-weight:600;margin-top:-0.4rem;margin-bottom:0.25rem;">Billed annually — save $240/yr</div>
             <div class="plan-desc">For agents building consistent deal flow. Try free, no strings attached.</div>
             <div class="plan-divider"></div>
             <ul class="plan-features">
@@ -546,7 +562,8 @@
         <div class="plan-card featured">
             <div class="plan-badge plan-badge-popular">Most Popular</div>
             <div class="plan-name">Professional</div>
-            <div class="plan-price">$249<span class="plan-price-unit">/month</span></div>
+            <div class="plan-price"><span id="price-professional">$249</span><span class="plan-price-unit" id="unit-professional">/month</span></div>
+            <div id="saving-professional" style="display:none;font-size:0.8rem;color:#86efac;font-weight:600;margin-top:-0.4rem;margin-bottom:0.25rem;">Billed annually — save $600/yr</div>
             <div class="plan-desc">For agents serious about winning listings. Unlimited bids, priority access.</div>
             <div class="plan-divider"></div>
             <ul class="plan-features">
@@ -565,7 +582,8 @@
         <!-- Firm -->
         <div class="plan-card">
             <div class="plan-name">Firm</div>
-            <div class="plan-price">$499<span class="plan-price-unit">/location/mo</span></div>
+            <div class="plan-price"><span id="price-firm">$499</span><span class="plan-price-unit" id="unit-firm">/location/mo</span></div>
+            <div id="saving-firm" style="display:none;font-size:0.8rem;color:#10b981;font-weight:600;margin-top:-0.4rem;margin-bottom:0.25rem;">Billed annually — save $1,188/yr per location</div>
             <div class="plan-desc">For brokerages &amp; teams managing multiple agents across markets.</div>
             <div class="plan-divider"></div>
             <ul class="plan-features">
@@ -584,8 +602,13 @@
     </div>
 </div>
 
+<!-- Pay Per Lead Callout -->
+<div style="max-width:900px;margin:-1rem auto 0;padding:0 2rem 2.5rem;text-align:center;">
+    <p style="font-size:0.9rem;color:#6b7280;">Not ready for a monthly plan? <a href="#pay-per-lead" style="color:#FF6B35;font-weight:700;text-decoration:none;">Try Pay Per Lead — $15/listing, no commitment →</a></p>
+</div>
+
 <!-- Pay Per Lead -->
-<div style="max-width:900px;margin:0 auto 4rem;padding:0 2rem;">
+<div id="pay-per-lead" style="max-width:900px;margin:0 auto 4rem;padding:0 2rem;">
     <div style="background:white;border-radius:24px;border:1.5px solid var(--border);padding:2.5rem 2.5rem 2rem;display:flex;gap:2.5rem;align-items:center;flex-wrap:wrap;box-shadow:0 4px 24px rgba(0,0,0,0.05);">
         <div style="flex:1;min-width:260px;">
             <div style="display:inline-block;background:rgba(255,107,53,0.1);color:var(--accent);font-weight:700;font-size:0.72rem;padding:0.3rem 0.9rem;border-radius:20px;letter-spacing:0.08em;text-transform:uppercase;border:1px solid rgba(255,107,53,0.2);margin-bottom:1rem;">No Subscription Needed</div>
@@ -783,6 +806,35 @@
 </footer>
 
 <script>
+    // Billing toggle
+    const prices = {
+        basic:        { monthly: '$99',  annual: '$79'  },
+        professional: { monthly: '$249', annual: '$199' },
+        firm:         { monthly: '$499', annual: '$399' },
+    };
+    const units = {
+        basic:        { monthly: '/month',      annual: '/month' },
+        professional: { monthly: '/month',      annual: '/month' },
+        firm:         { monthly: '/location/mo', annual: '/location/mo' },
+    };
+
+    function setBilling(mode) {
+        ['basic', 'professional', 'firm'].forEach(plan => {
+            document.getElementById('price-' + plan).textContent = prices[plan][mode];
+            document.getElementById('unit-' + plan).textContent = units[plan][mode];
+            document.getElementById('saving-' + plan).style.display = mode === 'annual' ? 'block' : 'none';
+        });
+        const monthlyBtn = document.getElementById('toggleMonthly');
+        const annualBtn  = document.getElementById('toggleAnnual');
+        if (mode === 'annual') {
+            monthlyBtn.style.cssText = 'padding:0.5rem 1.5rem;border-radius:50px;border:none;font-family:inherit;font-size:0.9rem;font-weight:600;cursor:pointer;transition:all 0.2s;background:transparent;color:#6b7280;';
+            annualBtn.style.cssText  = 'padding:0.5rem 1.5rem;border-radius:50px;border:none;font-family:inherit;font-size:0.9rem;font-weight:600;cursor:pointer;transition:all 0.2s;background:white;color:#0A2540;box-shadow:0 1px 4px rgba(0,0,0,0.1);';
+        } else {
+            monthlyBtn.style.cssText = 'padding:0.5rem 1.5rem;border-radius:50px;border:none;font-family:inherit;font-size:0.9rem;font-weight:600;cursor:pointer;transition:all 0.2s;background:white;color:#0A2540;box-shadow:0 1px 4px rgba(0,0,0,0.1);';
+            annualBtn.style.cssText  = 'padding:0.5rem 1.5rem;border-radius:50px;border:none;font-family:inherit;font-size:0.9rem;font-weight:600;cursor:pointer;transition:all 0.2s;background:transparent;color:#6b7280;';
+        }
+    }
+
     // Nav
     const hamburger = document.getElementById('navHamburger');
     const mobileMenu = document.getElementById('mobileMenu');
@@ -844,6 +896,70 @@
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
     }
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Can I cancel any time?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes — cancel your subscription at any time from your dashboard. You'll retain access through the end of your billing period with no further charges."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How does the 30-day free trial work?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Every plan starts with a 30-day free trial — no credit card required. You get full access to all features in your chosen plan from day one. At the end of 30 days, you'll be prompted to add a payment method to continue. If you don't, your account pauses with no charge."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What's the difference between Basic and Professional?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Basic caps you at 10 proposals/month, which works well for agents testing the waters. Professional removes that cap and adds priority alerts, enhanced profile features, and a Featured Agent badge that makes you stand out to sellers."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How does the Firm plan work for multiple locations?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "The Firm plan is priced per location at $499/month each. You get unlimited agents and bids at every location, plus a shared firm dashboard with team reporting and bulk bid tools."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Can I upgrade or downgrade my plan?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. You can change plans from your account dashboard at any time. Upgrades take effect immediately; downgrades apply at the next billing cycle."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What payment methods do you accept?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "All major credit and debit cards (Visa, Mastercard, Amex, Discover), as well as Apple Pay and Google Pay where supported. Payments are processed securely by Stripe."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How does Pay Per Lead work?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Sign up free — no credit card required. You can browse all active seller listings immediately. When you find one worth pursuing, pay $15 to unlock the full contact details for that lead. There's no monthly fee, no proposals cap, and no commitment. You can upgrade to a subscription plan any time, and unused lead credits carry over."
+      }
+    }
+  ]
+}
 </script>
 </body>
 </html>

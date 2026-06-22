@@ -521,6 +521,7 @@
                         <h1>${esc(r.first_name)} ${esc(r.last_name)}</h1>
                         ${r.company_name || r.brokerage ? `<div class="company-name">${esc(r.company_name || r.brokerage)}</div>` : ''}
                         <div class="badges" style="margin-top:0.6rem;">
+                            ${r.is_founding_member ? '<span class="badge" style="background:#FFF7ED;color:#C2410C;border:1px solid #FED7AA;">🏅 Founding Member</span>' : ''}
                             ${isFeatured ? '<span class="badge badge-featured">⭐ Featured Agent</span>' : ''}
                             ${r.license_verified
                                 ? '<span class="badge badge-verified" style="background:#ECFDF5;color:#059669;">✓ License Verified</span>'

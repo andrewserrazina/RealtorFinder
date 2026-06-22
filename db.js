@@ -165,10 +165,14 @@ const db = {
 
     // Filtered listings with pagination (realtors — active only)
     async getFilteredListings(filters = {}, page = 1, limit = 20) {
-        const { city, type, minPrice, maxPrice, minBeds, maxBeds, minBaths, zip, swLat, swLng, neLat, neLng, sort } = filters;
+        const { city, type, minPrice, maxPrice, minBeds, maxBeds, minBaths, zip, swLat, swLng, neLat, neLng, sort, excludeDemoListings } = filters;
         const offset = (page - 1) * limit;
         const params = [];
         const conditions = ["(l.status = 'active' OR l.status IS NULL)", "l.deleted_at IS NULL"];
+
+        if (excludeDemoListings) {
+            conditions.push(`l.user_id NOT IN (SELECT id FROM users WHERE email = 'demo-seller@realtorfinder.net')`);
+        }
 
         if (city) {
             params.push(`%${city.trim()}%`);
@@ -220,14 +224,14 @@ const db = {
                     l.created_at, l.user_id, l.latitude, l.longitude, l.status,
                     l.boosted_until,
                     COALESCE(l.view_count, 0) as view_count,
-                    (SELECT COUNT(*) FROM offers WHERE listing_id = l.id) as offer_count
+                    (SELECT COUNT(*) FROM proposals WHERE listing_id = l.id) as offer_count
              FROM listings l
              ${where}
              ORDER BY
                CASE WHEN l.boosted_until IS NOT NULL AND l.boosted_until > NOW() THEN 0 ELSE 1 END ASC,
                ${sort === 'price_asc' ? 'l.price ASC NULLS LAST' :
                  sort === 'price_desc' ? 'l.price DESC NULLS LAST' :
-                 sort === 'most_bids' ? '(SELECT COUNT(*) FROM offers WHERE listing_id = l.id) DESC' :
+                 sort === 'most_bids' ? '(SELECT COUNT(*) FROM proposals WHERE listing_id = l.id) DESC' :
                  'l.created_at DESC'}
              LIMIT $${params.length - 1} OFFSET $${params.length}`,
             params
@@ -808,7 +812,7 @@ const db = {
 
     async getRealtorBuyerResponses(realtorUserId) {
         const result = await pool.query(
-            `SELECT brr.buyer_request_id FROM buyer_request_responses
+            `SELECT buyer_request_id FROM buyer_request_responses
              WHERE realtor_user_id = $1`,
             [realtorUserId]
         );

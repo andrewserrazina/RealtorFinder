@@ -3,11 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Join as a Founding Realtor — RealtorFinder</title>
-    <meta name="description" content="Join RealtorFinder as a Founding Realtor. Get 6 months free, a Founding badge, and early access to motivated sellers in your area.">
-    <meta name="robots" content="noindex">
+    <title>Founding Realtor Program — RealtorFinder</title>
+    <meta name="description" content="Join RealtorFinder as a Founding Realtor. Get 2 months free and early access to motivated sellers in your area.">
+    <link rel="canonical" href="https://www.realtorfinder.net/founding">
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
-    <!-- Google Analytics 4 -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
+    <link rel="apple-touch-icon" href="/icon-192.png">
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-BRGVVNKT65"></script>
     <script>
       window.dataLayer = window.dataLayer || [];
@@ -15,167 +17,237 @@
       gtag('js', new Date());
       gtag('config', 'G-BRGVVNKT65');
     </script>
+    <script type="text/javascript">
+        (function(c,l,a,r,i,t,y){
+            c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+            t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+            y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+        })(window, document, "clarity", "script", "wxvaz0g7tq");
+    </script>
+    <script>
+      !function(f,b,e,v,n,t,s)
+      {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+      n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+      if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+      n.queue=[];t=b.createElement(e);t.async=!0;
+      t.src=v;s=b.getElementsByTagName(e)[0];
+      s.parentNode.insertBefore(t,s)}(window, document,'script',
+      'https://connect.facebook.net/en_US/fbevents.js');
+      fbq('init', '1189752893170212');
+      fbq('track', 'PageView');
+    </script>
+    <noscript><img height="1" width="1" style="display:none"
+      src="https://www.facebook.com/tr?id=1189752893170212&ev=PageView&noscript=1"/></noscript>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Work+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
         :root {
             --primary: #0A2540;
-            --primary-dark: #061828;
             --accent: #FF6B35;
-            --accent-dark: #e55a26;
             --soft-bg: #F8F6F3;
-            --border: #E5E1DB;
             --text: #1A1A1A;
-            --text-muted: #6B7280;
-            --white: #ffffff;
+            --text-light: #5A5A5A;
+            --border: #E5E1DB;
+            --success: #10B981;
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
-            font-family: 'Helvetica Neue', Arial, sans-serif;
+            font-family: 'Work Sans', sans-serif;
             background: var(--soft-bg);
             color: var(--text);
-            min-height: 100vh;
+            line-height: 1.6;
+            overflow-x: hidden;
         }
 
-        /* ── Minimal nav ── */
-        .nav {
-            background: var(--primary);
-            padding: 0 24px;
-            height: 56px;
+        /* ── Nav ── */
+        nav {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            background: rgba(248, 246, 243, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border);
+            z-index: 1000;
+        }
+        .nav-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1.25rem 3rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .logo {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.8rem;
+            font-weight: 900;
+            color: var(--primary);
+            letter-spacing: -0.5px;
+            text-decoration: none;
+        }
+        .logo span { color: var(--accent); }
+        .nav-pill {
+            background: rgba(255, 107, 53, 0.1);
+            color: var(--accent);
+            padding: 0.5rem 1.25rem;
+            border-radius: 50px;
+            font-size: 0.85rem;
+            font-weight: 600;
             display: flex;
             align-items: center;
-            justify-content: center;
+            gap: 6px;
         }
-        .nav-logo {
-            font-family: Georgia, 'Times New Roman', serif;
-            font-size: 22px;
-            font-weight: 900;
-            color: white;
-            text-decoration: none;
-            letter-spacing: -0.5px;
-        }
-        .nav-logo span { color: var(--accent); }
-
-        /* ── Hero ── */
-        .hero {
-            background: var(--primary);
-            padding: 64px 24px 72px;
-            text-align: center;
-            position: relative;
-            overflow: hidden;
-        }
-        .hero::before {
-            content: '';
-            position: absolute;
-            top: -60px; right: -60px;
-            width: 320px; height: 320px;
-            background: radial-gradient(circle, rgba(255,107,53,0.12) 0%, transparent 70%);
-            pointer-events: none;
-        }
-        .hero::after {
-            content: '';
-            position: absolute;
-            bottom: -80px; left: -40px;
-            width: 280px; height: 280px;
-            background: radial-gradient(circle, rgba(255,107,53,0.08) 0%, transparent 70%);
-            pointer-events: none;
-        }
-
-        .founding-pill {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            background: rgba(255,107,53,0.15);
-            border: 1px solid rgba(255,107,53,0.35);
-            color: #ffb89a;
-            font-size: 12px;
-            font-weight: 700;
-            padding: 6px 14px;
-            border-radius: 20px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 24px;
-        }
-        .founding-pill .dot {
-            width: 6px; height: 6px;
+        .nav-pill .dot {
+            width: 7px; height: 7px;
             background: var(--accent);
             border-radius: 50%;
             animation: pulse 2s infinite;
         }
         @keyframes pulse {
             0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.5; transform: scale(0.8); }
+            50% { opacity: 0.4; transform: scale(0.75); }
+        }
+
+        /* ── Hero ── */
+        .hero {
+            margin-top: 74px;
+            min-height: 88vh;
+            display: flex;
+            align-items: center;
+            background: linear-gradient(135deg, var(--primary) 0%, #0D3152 100%);
+            color: white;
+            position: relative;
+            overflow: hidden;
+        }
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: -20%; right: -5%;
+            width: 700px; height: 700px;
+            background: radial-gradient(circle, rgba(255,107,53,0.15) 0%, transparent 70%);
+            border-radius: 50%;
+            animation: float 20s ease-in-out infinite;
+        }
+        @keyframes float {
+            0%, 100% { transform: translate(0,0); }
+            50% { transform: translate(20px,-30px); }
+        }
+
+        .hero-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 4rem 3rem;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 5rem;
+            align-items: center;
+            position: relative;
+            z-index: 1;
+            width: 100%;
+        }
+
+        .hero-content { animation: fadeInUp 0.8s ease-out 0.2s both; }
+        .hero-visual  { animation: fadeInUp 0.8s ease-out 0.4s both; }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .founding-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255,107,53,0.18);
+            color: #ffb89a;
+            padding: 0.5rem 1.25rem;
+            border-radius: 50px;
+            font-size: 0.88rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            border: 1px solid rgba(255,107,53,0.3);
+        }
+        .founding-tag .dot {
+            width: 7px; height: 7px;
+            background: var(--accent);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
         }
 
         .hero h1 {
-            font-family: Georgia, 'Times New Roman', serif;
-            font-size: clamp(28px, 5vw, 48px);
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(2.6rem, 4.5vw, 4rem);
             font-weight: 900;
-            color: white;
-            line-height: 1.15;
-            letter-spacing: -0.5px;
-            margin-bottom: 16px;
-            max-width: 720px;
-            margin-left: auto;
-            margin-right: auto;
+            line-height: 1.1;
+            margin-bottom: 1.5rem;
+            letter-spacing: -1.5px;
         }
-        .hero h1 .city-name { color: var(--accent); }
+        .hero h1 .highlight { color: var(--accent); }
 
         .hero-sub {
-            font-size: clamp(16px, 2.5vw, 20px);
-            color: rgba(255,255,255,0.75);
-            line-height: 1.6;
-            max-width: 560px;
-            margin: 0 auto 36px;
+            font-size: 1.15rem;
+            opacity: 0.85;
+            max-width: 520px;
+            font-weight: 300;
+            line-height: 1.7;
+            margin-bottom: 2.5rem;
         }
 
-        /* ── Offer badges ── */
-        .offer-badges {
-            display: flex;
-            gap: 12px;
-            justify-content: center;
-            flex-wrap: wrap;
-            margin-bottom: 40px;
+        .hero-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-top: 2.5rem;
         }
-        .offer-badge {
-            display: flex;
-            align-items: center;
-            gap: 7px;
+        .stat-box {
             background: rgba(255,255,255,0.08);
+            backdrop-filter: blur(10px);
+            padding: 1.25rem 1rem;
+            border-radius: 14px;
             border: 1px solid rgba(255,255,255,0.15);
-            color: rgba(255,255,255,0.9);
-            font-size: 13px;
-            font-weight: 600;
-            padding: 8px 14px;
-            border-radius: 8px;
+            text-align: center;
         }
-        .offer-badge .icon { font-size: 15px; }
+        .stat-number {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.9rem;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 0.25rem;
+            display: block;
+        }
+        .stat-label {
+            font-size: 0.82rem;
+            opacity: 0.8;
+            font-weight: 400;
+            line-height: 1.3;
+        }
 
         /* ── Form card ── */
         .form-card {
             background: white;
-            border-radius: 16px;
-            padding: 36px 32px;
-            max-width: 460px;
-            margin: 0 auto;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.25);
-            position: relative;
-            z-index: 1;
+            border-radius: 24px;
+            padding: 2.25rem 2rem;
+            box-shadow: 0 40px 100px rgba(0,0,0,0.28);
+            color: var(--text);
         }
-
-        .form-card h2 {
-            font-family: Georgia, serif;
-            font-size: 22px;
+        .form-card-header {
+            margin-bottom: 1.5rem;
+            padding-bottom: 1.25rem;
+            border-bottom: 1px solid var(--border);
+        }
+        .form-card-header h2 {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.5rem;
             font-weight: 900;
             color: var(--primary);
-            margin-bottom: 6px;
-            text-align: center;
+            margin-bottom: 4px;
         }
-        .form-card p {
-            font-size: 14px;
-            color: var(--text-muted);
-            text-align: center;
-            margin-bottom: 24px;
+        .form-card-header p {
+            font-size: 0.88rem;
+            color: var(--text-light);
         }
 
         .form-row {
@@ -183,25 +255,24 @@
             grid-template-columns: 1fr 1fr;
             gap: 12px;
         }
-        .form-group {
-            margin-bottom: 14px;
-        }
+        .form-group { margin-bottom: 12px; }
         .form-group label {
             display: block;
-            font-size: 12px;
-            font-weight: 700;
-            color: var(--text-muted);
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-light);
             text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 6px;
+            letter-spacing: 0.05em;
+            margin-bottom: 5px;
         }
         .form-group input,
         .form-group select {
             width: 100%;
-            padding: 11px 14px;
+            padding: 0.75rem 1rem;
             border: 1.5px solid var(--border);
-            border-radius: 8px;
-            font-size: 15px;
+            border-radius: 10px;
+            font-family: 'Work Sans', sans-serif;
+            font-size: 0.95rem;
             color: var(--text);
             background: white;
             transition: border-color 0.15s;
@@ -212,638 +283,769 @@
             outline: none;
             border-color: var(--primary);
         }
+        .form-group input::placeholder { color: #c0bab4; }
 
         .submit-btn {
             width: 100%;
-            padding: 15px;
+            padding: 1rem;
             background: var(--accent);
             color: white;
             border: none;
-            border-radius: 10px;
-            font-size: 17px;
-            font-weight: 700;
+            border-radius: 50px;
+            font-family: 'Work Sans', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
             cursor: pointer;
-            transition: background 0.15s, transform 0.1s;
-            margin-top: 6px;
-            letter-spacing: -0.2px;
+            transition: all 0.3s;
+            margin-top: 4px;
+            box-shadow: 0 10px 30px rgba(255,107,53,0.3);
         }
-        .submit-btn:hover { background: var(--accent-dark); }
+        .submit-btn:hover {
+            background: var(--primary);
+            box-shadow: 0 15px 40px rgba(10,37,64,0.3);
+            transform: translateY(-2px);
+        }
         .submit-btn:active { transform: scale(0.98); }
+        .submit-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
 
         .form-fine {
-            font-size: 12px;
-            color: var(--text-muted);
+            font-size: 0.75rem;
+            color: var(--text-light);
             text-align: center;
-            margin-top: 12px;
-            line-height: 1.5;
+            margin-top: 10px;
         }
-        .form-fine a { color: var(--accent); text-decoration: none; }
+        .form-fine a { color: var(--text-light); text-decoration: underline; }
 
-        /* ── Spots counter ── */
-        .spots-bar {
-            background: var(--soft-bg);
+        /* Spots bar */
+        .spots-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 1.25rem;
+            padding-top: 1.25rem;
             border-top: 1px solid var(--border);
-            padding: 20px 24px;
-            text-align: center;
-        }
-        .spots-inner {
-            max-width: 460px;
-            margin: 0 auto;
-        }
-        .spots-label {
-            font-size: 13px;
-            font-weight: 700;
-            color: var(--primary);
-            margin-bottom: 8px;
         }
         .spots-track {
-            height: 6px;
+            flex: 1;
+            height: 5px;
             background: var(--border);
             border-radius: 20px;
             overflow: hidden;
-            margin-bottom: 6px;
         }
         .spots-fill {
             height: 100%;
             background: var(--accent);
             border-radius: 20px;
-            width: 7%;
+            width: 0%;
             transition: width 1s ease;
         }
-        .spots-sub {
-            font-size: 12px;
-            color: var(--text-muted);
+        .spots-text {
+            font-size: 0.78rem;
+            color: var(--text-light);
+            white-space: nowrap;
+            font-weight: 500;
         }
 
-        /* ── Social proof ── */
-        .proof-strip {
-            padding: 32px 24px;
-            background: white;
-            border-top: 1px solid var(--border);
-            border-bottom: 1px solid var(--border);
-            text-align: center;
+        /* Inline field errors */
+        .field-error {
+            font-size: 0.78rem;
+            color: #dc2626;
+            margin-top: 4px;
+            display: none;
         }
-        .proof-label {
-            font-size: 12px;
+        .form-group.has-error input,
+        .form-group.has-error select {
+            border-color: #dc2626;
+        }
+        .form-group.has-error .field-error { display: block; }
+
+        /* Social proof */
+        .social-proof {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 12px;
+            font-size: 0.82rem;
+            color: var(--text-light);
+        }
+        .social-proof-avatars {
+            display: flex;
+        }
+        .social-proof-avatar {
+            width: 26px; height: 26px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: white;
+            font-size: 0.65rem;
             font-weight: 700;
+            display: flex; align-items: center; justify-content: center;
+            border: 2px solid white;
+            margin-left: -6px;
+            flex-shrink: 0;
+        }
+        .social-proof-avatars .social-proof-avatar:first-child { margin-left: 0; }
+
+        /* What happens next */
+        .next-steps {
+            margin-top: 10px;
+            padding: 10px 12px;
+            background: #f0fdf4;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            color: #065f46;
+            line-height: 1.5;
+        }
+        .next-steps strong { color: #047857; }
+
+        /* Sticky CTA bar (mobile) */
+        .sticky-cta {
+            display: none;
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            background: var(--primary);
+            padding: 0.875rem 1.5rem;
+            z-index: 999;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.2);
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+        .sticky-cta p {
+            color: rgba(255,255,255,0.85);
+            font-size: 0.85rem;
+            line-height: 1.3;
+        }
+        .sticky-cta p strong { color: white; display: block; }
+        .sticky-cta a {
+            background: var(--accent);
+            color: white;
+            font-weight: 600;
+            font-size: 0.9rem;
+            padding: 0.7rem 1.25rem;
+            border-radius: 50px;
+            text-decoration: none;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        @media (max-width: 900px) {
+            .sticky-cta { display: flex; }
+        }
+
+        /* ── Benefits section ── */
+        .benefits {
+            padding: 7rem 3rem;
+            background: white;
+        }
+        .benefits-container { max-width: 1200px; margin: 0 auto; }
+
+        .section-header { text-align: center; margin-bottom: 4rem; }
+        .section-tag {
+            display: inline-block;
+            background: rgba(255,107,53,0.1);
+            color: var(--accent);
+            padding: 0.4rem 1.25rem;
+            border-radius: 50px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
             text-transform: uppercase;
             letter-spacing: 1px;
-            color: var(--text-muted);
-            margin-bottom: 16px;
         }
-        .proof-stats {
-            display: flex;
-            gap: 0;
-            justify-content: center;
-            max-width: 500px;
+        .section-header h2 {
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(2rem, 4vw, 3rem);
+            color: var(--primary);
+            font-weight: 900;
+            letter-spacing: -1px;
+            margin-bottom: 1rem;
+        }
+        .section-header p {
+            font-size: 1.1rem;
+            color: var(--text-light);
+            max-width: 600px;
             margin: 0 auto;
         }
-        .proof-stat {
-            flex: 1;
-            padding: 0 16px;
-            border-right: 1px solid var(--border);
+
+        .benefits-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 2rem;
         }
-        .proof-stat:last-child { border-right: none; }
-        .proof-value {
-            font-family: Georgia, serif;
-            font-size: 28px;
-            font-weight: 900;
+        .benefit-card {
+            display: flex;
+            gap: 1.5rem;
+            padding: 2rem;
+            background: var(--soft-bg);
+            border-radius: 20px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .benefit-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 16px 40px rgba(0,0,0,0.08);
+        }
+        .benefit-icon {
+            width: 52px; height: 52px;
+            background: var(--primary);
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            flex-shrink: 0;
+        }
+        .benefit-card h3 {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.2rem;
+            font-weight: 700;
             color: var(--primary);
-            display: block;
+            margin-bottom: 0.4rem;
         }
-        .proof-desc {
-            font-size: 12px;
-            color: var(--text-muted);
-            margin-top: 2px;
+        .benefit-card p {
+            font-size: 0.92rem;
+            color: var(--text-light);
+            line-height: 1.65;
         }
 
         /* ── How it works ── */
-        .section {
-            padding: 64px 24px;
-            max-width: 840px;
-            margin: 0 auto;
+        .how-it-works {
+            padding: 7rem 3rem;
+            background: var(--soft-bg);
         }
-        .section-label {
-            font-size: 12px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 1.5px;
-            color: var(--accent);
-            text-align: center;
-            margin-bottom: 12px;
-        }
-        .section-title {
-            font-family: Georgia, serif;
-            font-size: clamp(22px, 4vw, 32px);
-            font-weight: 900;
-            color: var(--primary);
-            text-align: center;
-            margin-bottom: 8px;
-            letter-spacing: -0.3px;
-        }
-        .section-sub {
-            font-size: 16px;
-            color: var(--text-muted);
-            text-align: center;
-            max-width: 480px;
-            margin: 0 auto 48px;
-            line-height: 1.6;
-        }
-
-        .steps {
+        .hiw-container { max-width: 1200px; margin: 0 auto; }
+        .steps-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 24px;
+            gap: 2rem;
+            margin-top: 3.5rem;
         }
         .step {
-            text-align: center;
-            padding: 28px 20px;
             background: white;
-            border-radius: 14px;
+            border-radius: 20px;
+            padding: 2rem 1.75rem;
+            text-align: center;
             border: 1px solid var(--border);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .step:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 16px 40px rgba(0,0,0,0.07);
         }
         .step-num {
-            width: 40px; height: 40px;
+            width: 44px; height: 44px;
             background: var(--primary);
             color: white;
-            font-family: Georgia, serif;
-            font-size: 18px;
+            font-family: 'Playfair Display', serif;
+            font-size: 1.2rem;
             font-weight: 900;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 0 auto 14px;
+            margin: 0 auto 1.25rem;
         }
         .step h3 {
-            font-size: 15px;
+            font-family: 'Playfair Display', serif;
+            font-size: 1.15rem;
             font-weight: 700;
             color: var(--primary);
-            margin-bottom: 8px;
+            margin-bottom: 0.6rem;
         }
         .step p {
-            font-size: 14px;
-            color: var(--text-muted);
-            line-height: 1.6;
+            font-size: 0.9rem;
+            color: var(--text-light);
+            line-height: 1.65;
         }
 
-        /* ── Founding offer box ── */
+        /* ── Offer / CTA ── */
         .offer-section {
-            padding: 0 24px 64px;
-        }
-        .offer-box {
-            max-width: 840px;
-            margin: 0 auto;
+            padding: 7rem 3rem;
             background: var(--primary);
-            border-radius: 20px;
-            padding: 48px 40px;
-            display: grid;
-            grid-template-columns: 1fr auto;
-            gap: 32px;
-            align-items: center;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
         }
-        .offer-box h2 {
-            font-family: Georgia, serif;
-            font-size: clamp(22px, 3vw, 30px);
+        .offer-section::before {
+            content: '';
+            position: absolute;
+            top: -30%; left: 50%;
+            transform: translateX(-50%);
+            width: 800px; height: 800px;
+            background: radial-gradient(circle, rgba(255,107,53,0.12) 0%, transparent 65%);
+            pointer-events: none;
+        }
+        .offer-inner {
+            max-width: 800px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+        }
+        .offer-section h2 {
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(2rem, 4vw, 3.2rem);
             font-weight: 900;
             color: white;
-            letter-spacing: -0.3px;
-            margin-bottom: 8px;
+            letter-spacing: -1px;
+            margin-bottom: 0.75rem;
         }
-        .offer-box p {
+        .offer-section p {
+            font-size: 1.1rem;
             color: rgba(255,255,255,0.7);
-            font-size: 15px;
-            line-height: 1.6;
-            margin-bottom: 20px;
+            margin-bottom: 2.5rem;
+            font-weight: 300;
         }
-        .offer-list {
-            list-style: none;
+        .offer-perks {
             display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-        .offer-list li {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 15px;
-            color: rgba(255,255,255,0.9);
-        }
-        .offer-list li::before {
-            content: '✓';
-            width: 22px; height: 22px;
-            background: var(--accent);
-            color: white;
-            font-size: 11px;
-            font-weight: 900;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
+            gap: 1rem;
             justify-content: center;
-            flex-shrink: 0;
+            flex-wrap: wrap;
+            margin-bottom: 2.5rem;
         }
-        .offer-cta {
+        .offer-perk {
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.15);
+            color: rgba(255,255,255,0.9);
+            padding: 0.6rem 1.25rem;
+            border-radius: 50px;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        .offer-btn {
             display: inline-block;
             background: var(--accent);
             color: white;
-            font-size: 16px;
-            font-weight: 700;
-            padding: 16px 32px;
-            border-radius: 10px;
+            font-family: 'Work Sans', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 600;
+            padding: 1.1rem 3rem;
+            border-radius: 50px;
             text-decoration: none;
-            text-align: center;
-            white-space: nowrap;
-            transition: background 0.15s;
+            box-shadow: 0 20px 40px rgba(255,107,53,0.3);
+            transition: all 0.3s;
         }
-        .offer-cta:hover { background: var(--accent-dark); }
+        .offer-btn:hover {
+            background: white;
+            color: var(--primary);
+            transform: translateY(-3px);
+            box-shadow: 0 25px 50px rgba(255,255,255,0.2);
+        }
 
-        /* ── Objections ── */
+        /* ── FAQ ── */
         .faq-section {
-            padding: 0 24px 72px;
-            max-width: 720px;
+            padding: 6rem 3rem;
+            background: white;
+        }
+        .faq-container {
+            max-width: 760px;
             margin: 0 auto;
         }
         .faq-item {
             border-bottom: 1px solid var(--border);
-            padding: 20px 0;
+            padding: 1.5rem 0;
         }
         .faq-item:first-child { border-top: 1px solid var(--border); }
         .faq-q {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.05rem;
             font-weight: 700;
             color: var(--primary);
-            font-size: 16px;
-            margin-bottom: 8px;
+            margin-bottom: 0.5rem;
         }
         .faq-a {
-            color: var(--text-muted);
-            font-size: 15px;
-            line-height: 1.7;
+            font-size: 0.95rem;
+            color: var(--text-light);
+            line-height: 1.75;
+            font-weight: 300;
         }
-
-        /* ── Bottom CTA ── */
-        .bottom-cta {
-            background: var(--soft-bg);
-            border-top: 1px solid var(--border);
-            padding: 48px 24px;
-            text-align: center;
-        }
-        .bottom-cta h2 {
-            font-family: Georgia, serif;
-            font-size: clamp(20px, 3.5vw, 28px);
-            font-weight: 900;
-            color: var(--primary);
-            margin-bottom: 8px;
-        }
-        .bottom-cta p {
-            color: var(--text-muted);
-            margin-bottom: 24px;
-            font-size: 15px;
-        }
-        .bottom-cta a {
-            display: inline-block;
-            background: var(--accent);
-            color: white;
-            font-weight: 700;
-            font-size: 16px;
-            padding: 14px 32px;
-            border-radius: 10px;
-            text-decoration: none;
-            transition: background 0.15s;
-        }
-        .bottom-cta a:hover { background: var(--accent-dark); }
 
         /* ── Footer ── */
-        .footer {
-            padding: 20px 24px;
+        footer {
+            background: var(--primary);
+            padding: 2rem 3rem;
             text-align: center;
-            font-size: 12px;
-            color: var(--text-muted);
-            border-top: 1px solid var(--border);
         }
-        .footer a { color: var(--text-muted); text-decoration: none; }
-        .footer a:hover { color: var(--primary); }
+        footer p {
+            color: rgba(255,255,255,0.45);
+            font-size: 0.82rem;
+        }
+        footer a { color: rgba(255,255,255,0.45); text-decoration: none; }
+        footer a:hover { color: rgba(255,255,255,0.75); }
 
         /* ── Responsive ── */
-        @media (max-width: 640px) {
-            .hero { padding: 48px 20px 56px; }
-            .form-card { padding: 28px 20px; margin: 0 16px; border-radius: 12px; }
+        @media (max-width: 900px) {
+            .hero-container { grid-template-columns: 1fr; gap: 3rem; padding: 3rem 1.75rem; }
+            .hero { min-height: auto; padding: 1rem 0 3rem; }
+            .hero h1 { font-size: 2.6rem; }
+            .hero-stats { grid-template-columns: repeat(3, 1fr); }
+            .benefits-grid { grid-template-columns: 1fr; }
+            .steps-grid { grid-template-columns: 1fr; }
+            .nav-container { padding: 1.25rem 1.5rem; }
+            .benefits, .how-it-works, .offer-section, .faq-section { padding: 4rem 1.5rem; }
+        }
+        @media (max-width: 560px) {
+            .hero h1 { font-size: 2.2rem; letter-spacing: -0.5px; }
+            .hero-stats { grid-template-columns: 1fr 1fr; }
+            .hero-stats .stat-box:last-child { grid-column: 1 / -1; }
             .form-row { grid-template-columns: 1fr; gap: 0; }
-            .steps { grid-template-columns: 1fr; }
-            .offer-box { grid-template-columns: 1fr; text-align: center; padding: 36px 24px; }
-            .offer-list li { text-align: left; }
-            .offer-cta { width: 100%; }
-            .proof-stats { flex-direction: column; gap: 16px; }
-            .proof-stat { border-right: none; border-bottom: 1px solid var(--border); padding: 0 0 16px; }
-            .proof-stat:last-child { border-bottom: none; padding-bottom: 0; }
+            .form-card { padding: 1.5rem 1.25rem; }
+            .offer-perks { flex-direction: column; align-items: center; }
         }
     </style>
 </head>
 <body>
 
-<!-- Minimal nav: logo only -->
-<nav class="nav">
-    <a href="/" class="nav-logo"><span>Realtor</span>Finder</a>
+<nav>
+    <div class="nav-container">
+        <span class="logo"><span>Realtor</span>Finder</span>
+        <div class="nav-pill"><span class="dot"></span> Founding Realtor Program</div>
+    </div>
 </nav>
 
-<!-- Hero + form -->
+<!-- Hero -->
 <section class="hero">
-    <div class="founding-pill">
-        <span class="dot"></span>
-        Founding Cohort — Limited Spots
-    </div>
-    <h1 id="hero-headline">
-        <span class="city-name" id="city-display">New England</span> realtors:<br>
-        get 6 months free
-    </h1>
-    <p class="hero-sub" id="hero-sub">
-        Be one of the first agents in <span id="city-sub">your area</span> on RealtorFinder.
-        Connect with motivated sellers who are ready to list — no cold calls, no Zillow bidding wars.
-    </p>
-    <div class="offer-badges">
-        <div class="offer-badge"><span class="icon">🎁</span> 6 months free</div>
-        <div class="offer-badge"><span class="icon">🏅</span> Founding Realtor badge</div>
-        <div class="offer-badge"><span class="icon">⚡</span> 24hr head start on listings</div>
-    </div>
-
-    <div class="form-card">
-        <h2>Claim your spot</h2>
-        <p>Takes 30 seconds. No credit card required.</p>
-        <form id="join-form" novalidate>
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="first-name">First name</label>
-                    <input type="text" id="first-name" placeholder="Jane" required autocomplete="given-name">
-                </div>
-                <div class="form-group">
-                    <label for="last-name">Last name</label>
-                    <input type="text" id="last-name" placeholder="Smith" required autocomplete="family-name">
-                </div>
+    <div class="hero-container">
+        <div class="hero-content">
+            <div class="founding-tag">
+                <span class="dot"></span>
+                <span id="founding-tag-text">Founding Cohort — Limited Spots</span>
             </div>
-            <div class="form-group">
-                <label for="email">Email address</label>
-                <input type="email" id="email" placeholder="jane@smithrealty.com" required autocomplete="email">
-            </div>
-            <div class="form-group">
-                <label for="phone">Phone number <span style="font-weight:400;text-transform:none;">(optional)</span></label>
-                <input type="tel" id="phone" placeholder="(617) 555-0100" autocomplete="tel">
-            </div>
-            <div class="form-group">
-                <label for="city-select">Your primary market</label>
-                <select id="city-select" required>
-                    <option value="">Select your city / area…</option>
-                    <optgroup label="Massachusetts">
-                        <option value="boston">Boston</option>
-                        <option value="cambridge">Cambridge</option>
-                        <option value="somerville">Somerville</option>
-                        <option value="worcester">Worcester</option>
-                        <option value="springfield">Springfield</option>
-                        <option value="lowell">Lowell</option>
-                        <option value="brockton">Brockton</option>
-                        <option value="new-bedford">New Bedford</option>
-                        <option value="fall-river">Fall River</option>
-                        <option value="quincy">Quincy</option>
-                        <option value="lynn">Lynn</option>
-                        <option value="newton">Newton</option>
-                        <option value="waltham">Waltham</option>
-                        <option value="medford">Medford</option>
-                        <option value="malden">Malden</option>
-                        <option value="brookline">Brookline</option>
-                        <option value="framingham">Framingham</option>
-                        <option value="haverhill">Haverhill</option>
-                        <option value="taunton">Taunton</option>
-                        <option value="attleboro">Attleboro</option>
-                        <option value="lawrence">Lawrence</option>
-                        <option value="peabody">Peabody</option>
-                        <option value="salem">Salem</option>
-                        <option value="beverly">Beverly</option>
-                        <option value="gloucester">Gloucester</option>
-                        <option value="newburyport">Newburyport</option>
-                        <option value="andover">Andover</option>
-                        <option value="lexington">Lexington</option>
-                        <option value="concord">Concord</option>
-                        <option value="needham">Needham</option>
-                        <option value="wellesley">Wellesley</option>
-                        <option value="natick">Natick</option>
-                        <option value="marlborough">Marlborough</option>
-                        <option value="shrewsbury">Shrewsbury</option>
-                        <option value="fitchburg">Fitchburg</option>
-                        <option value="leominster">Leominster</option>
-                        <option value="gardner">Gardner</option>
-                        <option value="milford">Milford</option>
-                        <option value="plymouth">Plymouth</option>
-                        <option value="braintree">Braintree</option>
-                        <option value="weymouth">Weymouth</option>
-                        <option value="hingham">Hingham</option>
-                        <option value="barnstable">Barnstable</option>
-                        <option value="falmouth">Falmouth</option>
-                        <option value="yarmouth">Yarmouth</option>
-                        <option value="dennis">Dennis</option>
-                        <option value="harwich">Harwich</option>
-                        <option value="chatham">Chatham</option>
-                        <option value="northampton">Northampton</option>
-                        <option value="amherst">Amherst</option>
-                        <option value="holyoke">Holyoke</option>
-                        <option value="chicopee">Chicopee</option>
-                        <option value="pittsfield">Pittsfield</option>
-                        <option value="westfield">Westfield</option>
-                        <option value="great-barrington">Great Barrington</option>
-                    </optgroup>
-                    <optgroup label="Connecticut">
-                        <option value="hartford">Hartford</option>
-                        <option value="new-haven">New Haven</option>
-                        <option value="bridgeport">Bridgeport</option>
-                        <option value="stamford">Stamford</option>
-                        <option value="waterbury">Waterbury</option>
-                        <option value="norwalk">Norwalk</option>
-                        <option value="danbury">Danbury</option>
-                        <option value="new-britain">New Britain</option>
-                        <option value="west-hartford">West Hartford</option>
-                        <option value="greenwich">Greenwich</option>
-                        <option value="fairfield">Fairfield</option>
-                        <option value="westport">Westport</option>
-                        <option value="darien">Darien</option>
-                        <option value="new-canaan">New Canaan</option>
-                        <option value="ridgefield">Ridgefield</option>
-                        <option value="wilton">Wilton</option>
-                        <option value="manchester">Manchester</option>
-                        <option value="east-hartford">East Hartford</option>
-                        <option value="enfield">Enfield</option>
-                        <option value="glastonbury">Glastonbury</option>
-                        <option value="simsbury">Simsbury</option>
-                        <option value="bristol">Bristol</option>
-                        <option value="meriden">Meriden</option>
-                        <option value="middletown">Middletown</option>
-                        <option value="milford-ct">Milford</option>
-                        <option value="shelton">Shelton</option>
-                        <option value="torrington">Torrington</option>
-                        <option value="wallingford">Wallingford</option>
-                        <option value="southington">Southington</option>
-                        <option value="naugatuck">Naugatuck</option>
-                        <option value="ansonia">Ansonia</option>
-                        <option value="guilford">Guilford</option>
-                        <option value="madison">Madison</option>
-                        <option value="groton">Groton</option>
-                        <option value="new-london">New London</option>
-                        <option value="mystic">Mystic</option>
-                        <option value="stonington">Stonington</option>
-                        <option value="old-lyme">Old Lyme</option>
-                    </optgroup>
-                    <optgroup label="Rhode Island">
-                        <option value="providence">Providence</option>
-                        <option value="cranston">Cranston</option>
-                        <option value="warwick">Warwick</option>
-                        <option value="pawtucket">Pawtucket</option>
-                        <option value="east-providence">East Providence</option>
-                        <option value="woonsocket">Woonsocket</option>
-                        <option value="newport">Newport</option>
-                        <option value="north-providence">North Providence</option>
-                        <option value="johnston">Johnston</option>
-                        <option value="lincoln">Lincoln</option>
-                        <option value="north-kingstown">North Kingstown</option>
-                        <option value="south-kingstown">South Kingstown</option>
-                        <option value="coventry">Coventry</option>
-                        <option value="west-warwick">West Warwick</option>
-                        <option value="cumberland">Cumberland</option>
-                        <option value="barrington">Barrington</option>
-                        <option value="bristol-ri">Bristol</option>
-                        <option value="middletown-ri">Middletown</option>
-                        <option value="narragansett">Narragansett</option>
-                        <option value="westerly">Westerly</option>
-                        <option value="charlestown">Charlestown</option>
-                    </optgroup>
-                </select>
-            </div>
-            <button type="submit" class="submit-btn" id="submit-btn">
-                Claim my founding spot →
-            </button>
-            <p class="form-fine">
-                By continuing you agree to our
-                <a href="/terms" target="_blank">Terms</a> and
-                <a href="/privacy" target="_blank">Privacy Policy</a>.
-                No spam, ever.
+            <h1>
+                <span id="city-display">Local</span> Realtors:<br>
+                <span class="highlight">Sellers Are Waiting</span><br>
+                For You
+            </h1>
+            <p class="hero-sub" id="hero-sub">
+                Sellers post their listings on RealtorFinder and you submit proposals.
+                Win quality listings in <span id="city-sub">your area</span> by competing on merit — no cold calls, no referral fees.
             </p>
-        </form>
+
+            <div class="hero-stats">
+                <div class="stat-box">
+                    <span class="stat-number">$0</span>
+                    <div class="stat-label">Cost for 2 months as a founding member</div>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-number">24hr</span>
+                    <div class="stat-label">Head start on listings before other agents</div>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-number">0%</span>
+                    <div class="stat-label">Commission splits or referral fees ever</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="hero-visual">
+            <div class="form-card">
+                <div class="form-card-header">
+                    <h2>Claim Your Founding Spot</h2>
+                    <p>Takes 30 seconds · No credit card required</p>
+                </div>
+                <form id="join-form" novalidate>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="first-name">First name</label>
+                            <input type="text" id="first-name" placeholder="Jane" required autocomplete="given-name">
+                            <div class="field-error" id="error-first-name">Please enter your first name.</div>
+                        </div>
+                        <div class="form-group">
+                            <label for="last-name">Last name</label>
+                            <input type="text" id="last-name" placeholder="Smith" required autocomplete="family-name">
+                            <div class="field-error" id="error-last-name">Please enter your last name.</div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="email">Email address</label>
+                        <input type="email" id="email" placeholder="jane@smithrealty.com" required autocomplete="email">
+                        <div class="field-error" id="error-email">Please enter a valid email address.</div>
+                    </div>
+                    <div class="form-group">
+                        <label for="phone">Phone <span style="font-weight:400;text-transform:none;">(optional)</span></label>
+                        <input type="tel" id="phone" placeholder="(617) 555-0100" autocomplete="tel">
+                    </div>
+                    <div class="form-group">
+                        <label for="city-select">Primary market</label>
+                        <select id="city-select" required>
+                            <option value="">Select your city / area…</option>
+                            <optgroup label="Massachusetts">
+                                <option value="boston">Boston</option>
+                                <option value="cambridge">Cambridge</option>
+                                <option value="somerville">Somerville</option>
+                                <option value="worcester">Worcester</option>
+                                <option value="springfield">Springfield</option>
+                                <option value="lowell">Lowell</option>
+                                <option value="brockton">Brockton</option>
+                                <option value="new-bedford">New Bedford</option>
+                                <option value="fall-river">Fall River</option>
+                                <option value="quincy">Quincy</option>
+                                <option value="lynn">Lynn</option>
+                                <option value="newton">Newton</option>
+                                <option value="waltham">Waltham</option>
+                                <option value="medford">Medford</option>
+                                <option value="malden">Malden</option>
+                                <option value="brookline">Brookline</option>
+                                <option value="framingham">Framingham</option>
+                                <option value="haverhill">Haverhill</option>
+                                <option value="taunton">Taunton</option>
+                                <option value="attleboro">Attleboro</option>
+                                <option value="lawrence">Lawrence</option>
+                                <option value="peabody">Peabody</option>
+                                <option value="salem">Salem</option>
+                                <option value="beverly">Beverly</option>
+                                <option value="gloucester">Gloucester</option>
+                                <option value="newburyport">Newburyport</option>
+                                <option value="andover">Andover</option>
+                                <option value="lexington">Lexington</option>
+                                <option value="concord">Concord</option>
+                                <option value="needham">Needham</option>
+                                <option value="wellesley">Wellesley</option>
+                                <option value="natick">Natick</option>
+                                <option value="marlborough">Marlborough</option>
+                                <option value="shrewsbury">Shrewsbury</option>
+                                <option value="fitchburg">Fitchburg</option>
+                                <option value="leominster">Leominster</option>
+                                <option value="gardner">Gardner</option>
+                                <option value="milford">Milford</option>
+                                <option value="plymouth">Plymouth</option>
+                                <option value="braintree">Braintree</option>
+                                <option value="weymouth">Weymouth</option>
+                                <option value="hingham">Hingham</option>
+                                <option value="barnstable">Barnstable</option>
+                                <option value="falmouth">Falmouth</option>
+                                <option value="yarmouth">Yarmouth</option>
+                                <option value="dennis">Dennis</option>
+                                <option value="harwich">Harwich</option>
+                                <option value="chatham">Chatham</option>
+                                <option value="northampton">Northampton</option>
+                                <option value="amherst">Amherst</option>
+                                <option value="holyoke">Holyoke</option>
+                                <option value="chicopee">Chicopee</option>
+                                <option value="pittsfield">Pittsfield</option>
+                                <option value="westfield">Westfield</option>
+                                <option value="great-barrington">Great Barrington</option>
+                                <option value="cape-cod">Cape Cod</option>
+                            </optgroup>
+                            <optgroup label="Connecticut">
+                                <option value="hartford">Hartford</option>
+                                <option value="new-haven">New Haven</option>
+                                <option value="bridgeport">Bridgeport</option>
+                                <option value="stamford">Stamford</option>
+                                <option value="waterbury">Waterbury</option>
+                                <option value="norwalk">Norwalk</option>
+                                <option value="danbury">Danbury</option>
+                                <option value="new-britain">New Britain</option>
+                                <option value="west-hartford">West Hartford</option>
+                                <option value="greenwich">Greenwich</option>
+                                <option value="fairfield">Fairfield</option>
+                                <option value="westport">Westport</option>
+                                <option value="darien">Darien</option>
+                                <option value="new-canaan">New Canaan</option>
+                                <option value="ridgefield">Ridgefield</option>
+                                <option value="wilton">Wilton</option>
+                                <option value="manchester">Manchester</option>
+                                <option value="east-hartford">East Hartford</option>
+                                <option value="enfield">Enfield</option>
+                                <option value="glastonbury">Glastonbury</option>
+                                <option value="simsbury">Simsbury</option>
+                                <option value="bristol">Bristol</option>
+                                <option value="meriden">Meriden</option>
+                                <option value="middletown">Middletown</option>
+                                <option value="milford-ct">Milford</option>
+                                <option value="shelton">Shelton</option>
+                                <option value="torrington">Torrington</option>
+                                <option value="wallingford">Wallingford</option>
+                                <option value="southington">Southington</option>
+                                <option value="naugatuck">Naugatuck</option>
+                                <option value="ansonia">Ansonia</option>
+                                <option value="guilford">Guilford</option>
+                                <option value="madison">Madison</option>
+                                <option value="groton">Groton</option>
+                                <option value="new-london">New London</option>
+                                <option value="mystic">Mystic</option>
+                                <option value="stonington">Stonington</option>
+                                <option value="old-lyme">Old Lyme</option>
+                            </optgroup>
+                            <optgroup label="Rhode Island">
+                                <option value="providence">Providence</option>
+                                <option value="cranston">Cranston</option>
+                                <option value="warwick">Warwick</option>
+                                <option value="pawtucket">Pawtucket</option>
+                                <option value="east-providence">East Providence</option>
+                                <option value="woonsocket">Woonsocket</option>
+                                <option value="newport">Newport</option>
+                                <option value="north-providence">North Providence</option>
+                                <option value="johnston">Johnston</option>
+                                <option value="lincoln">Lincoln</option>
+                                <option value="north-kingstown">North Kingstown</option>
+                                <option value="south-kingstown">South Kingstown</option>
+                                <option value="coventry">Coventry</option>
+                                <option value="west-warwick">West Warwick</option>
+                                <option value="cumberland">Cumberland</option>
+                                <option value="barrington">Barrington</option>
+                                <option value="bristol-ri">Bristol</option>
+                                <option value="middletown-ri">Middletown</option>
+                                <option value="narragansett">Narragansett</option>
+                                <option value="westerly">Westerly</option>
+                                <option value="charlestown">Charlestown</option>
+                            </optgroup>
+                        </select>
+                    </div>
+                    <button type="submit" class="submit-btn" id="submit-btn">
+                        Get 2 Months Free →
+                    </button>
+                    <div class="next-steps">
+                        <strong>What happens next:</strong> You'll create your free account and set up your profile. No credit card needed until after your 2 free months.
+                    </div>
+                    <p class="form-fine">
+                        By continuing you agree to our
+                        <a href="/terms" target="_blank">Terms</a> and
+                        <a href="/privacy" target="_blank">Privacy Policy</a>.
+                        No spam, ever.
+                    </p>
+                </form>
+                <div class="spots-row">
+                    <div class="spots-track"><div class="spots-fill" id="spots-fill"></div></div>
+                    <div class="spots-text" id="spots-text">Loading…</div>
+                </div>
+                <div class="social-proof" id="social-proof" style="display:none;">
+                    <div class="social-proof-avatars" id="social-proof-avatars"></div>
+                    <span id="social-proof-text"></span>
+                </div>
+            </div>
+        </div>
     </div>
 </section>
 
-<!-- Spots bar -->
-<div class="spots-bar">
-    <div class="spots-inner">
-        <div class="spots-label" id="spots-label">Loading founding spots…</div>
-        <div class="spots-track"><div class="spots-fill" id="spots-fill" style="width:0%"></div></div>
-        <div class="spots-sub">Founding cohort closes when 150 realtors join</div>
+<!-- Benefits -->
+<section class="benefits">
+    <div class="benefits-container">
+        <div class="section-header">
+            <div class="section-tag">Why realtors join</div>
+            <h2>Everything You Need to Win More Listings</h2>
+            <p>A better way to find motivated sellers — without the cold calls or referral fees.</p>
+        </div>
+        <div class="benefits-grid">
+            <div class="benefit-card">
+                <div class="benefit-icon">🎯</div>
+                <div>
+                    <h3>Motivated Sellers Only</h3>
+                    <p>Every listing on RealtorFinder was posted by a homeowner who wants to sell. No tire-kickers, no cold outreach — just sellers who are ready.</p>
+                </div>
+            </div>
+            <div class="benefit-card">
+                <div class="benefit-icon">📋</div>
+                <div>
+                    <h3>Pitch Your Full Value</h3>
+                    <p>Submit a full proposal — commission rate, marketing plan, track record. Sellers see the whole picture, not just your headshot.</p>
+                </div>
+            </div>
+            <div class="benefit-card">
+                <div class="benefit-icon">⚡</div>
+                <div>
+                    <h3>First-Mover Advantage</h3>
+                    <p>Founding members get a 24-hour head start on every new listing in their area before it opens to all agents.</p>
+                </div>
+            </div>
+            <div class="benefit-card">
+                <div class="benefit-icon">🏅</div>
+                <div>
+                    <h3>Founding Realtor Badge</h3>
+                    <p>Your profile permanently shows you were among the first — a signal of credibility and early expertise on the platform.</p>
+                </div>
+            </div>
+        </div>
     </div>
-</div>
-
-<!-- Social proof -->
-<div class="proof-strip">
-    <div class="proof-label">Why realtors are joining</div>
-    <div class="proof-stats">
-        <div class="proof-stat">
-            <span class="proof-value">$0</span>
-            <div class="proof-desc">Cost for founding members<br>for 6 months</div>
-        </div>
-        <div class="proof-stat">
-            <span class="proof-value">100%</span>
-            <div class="proof-desc">Seller-initiated leads —<br>they want to hear from you</div>
-        </div>
-        <div class="proof-stat">
-            <span class="proof-value">24hr</span>
-            <div class="proof-desc">Head start on new listings<br>before other agents</div>
-        </div>
-    </div>
-</div>
+</section>
 
 <!-- How it works -->
-<div class="section">
-    <div class="section-label">How it works</div>
-    <h2 class="section-title">Win listings without cold calling</h2>
-    <p class="section-sub">Sellers post their home. You pitch directly. The best proposal wins.</p>
-    <div class="steps">
-        <div class="step">
-            <div class="step-num">1</div>
-            <h3>Seller posts their home</h3>
-            <p>A motivated homeowner creates a listing with their address, price, and timeline. They're ready to list — no convincing needed.</p>
+<section class="how-it-works">
+    <div class="hiw-container">
+        <div class="section-header">
+            <div class="section-tag">How it works</div>
+            <h2>Win Listings in Three Steps</h2>
+            <p>Sellers post their home. You pitch. The best proposal wins.</p>
         </div>
-        <div class="step">
-            <div class="step-num">2</div>
-            <h3>You submit a proposal</h3>
-            <p>Write your commission rate, marketing plan, and personal pitch. Show what makes you different. No bidding wars — quality wins.</p>
-        </div>
-        <div class="step">
-            <div class="step-num">3</div>
-            <h3>Seller chooses you</h3>
-            <p>The seller reviews proposals and picks their agent. If they choose you, you're connected directly to close the deal.</p>
+        <div class="steps-grid">
+            <div class="step">
+                <div class="step-num">1</div>
+                <h3>Seller Posts Their Home</h3>
+                <p>A motivated homeowner creates a free listing with their address, price, and timeline. They're ready — no convincing needed.</p>
+            </div>
+            <div class="step">
+                <div class="step-num">2</div>
+                <h3>You Submit a Proposal</h3>
+                <p>Set your commission, write your marketing plan, add a personal note. Your full pitch — not just a name in a list.</p>
+            </div>
+            <div class="step">
+                <div class="step-num">3</div>
+                <h3>Seller Chooses You</h3>
+                <p>The seller reviews all proposals and picks their agent. You connect directly — no platform in the middle of the deal.</p>
+            </div>
         </div>
     </div>
-</div>
+</section>
 
-<!-- Founding offer -->
-<div class="offer-section">
-    <div class="offer-box">
-        <div>
-            <h2>Everything in the Founding Realtor offer</h2>
-            <p>For the first 150 realtors who join — no credit card, no catch.</p>
-            <ul class="offer-list">
-                <li>6 months free on any plan (Professional or Firm)</li>
-                <li>Permanent "Founding Realtor" badge on your public profile</li>
-                <li>24-hour early access to new listings in your area</li>
-                <li>Direct line to the founding team — your feedback shapes the product</li>
-                <li>Guaranteed listing notifications in your county for life</li>
-            </ul>
+<!-- Offer CTA -->
+<section class="offer-section">
+    <div class="offer-inner">
+        <div class="section-tag" style="background:rgba(255,107,53,0.2);color:#ffb89a;">Founding Realtor Program</div>
+        <h2>Claim Your Spot Before<br>the Cohort Closes</h2>
+        <p>100 founding spots. Free for 2 months. Launching August 2026.</p>
+        <div class="offer-perks">
+            <div class="offer-perk">🎁 2 months free</div>
+            <div class="offer-perk">🏅 Founding badge</div>
+            <div class="offer-perk">⚡ 24hr listing head start</div>
+            <div class="offer-perk">📞 Direct line to founders</div>
         </div>
-        <a href="#join-form" class="offer-cta" onclick="document.getElementById('email').focus()">
-            Claim your spot →
+        <a href="#" class="offer-btn" onclick="window.scrollTo({top:0,behavior:'smooth'});document.getElementById('first-name').focus();return false;">
+            Claim My Founding Spot →
         </a>
     </div>
+</section>
+
+<!-- FAQ -->
+<section class="faq-section">
+    <div class="faq-container">
+        <div class="section-header" style="text-align:left;margin-bottom:2.5rem;">
+            <div class="section-tag" style="display:inline-block;">Common questions</div>
+            <h2 style="text-align:left;">Straight Answers</h2>
+        </div>
+        <div class="faq-item">
+            <div class="faq-q">I Already Pay for Zillow Premier Agent. Why Switch?</div>
+            <div class="faq-a">You don't have to switch — RealtorFinder is additive. On Zillow you compete with 10–20 agents for a lead who might not be ready. On RealtorFinder, the seller posted their own listing. Intent is higher and you pitch with a full proposal, not just a headshot.</div>
+        </div>
+        <div class="faq-item">
+            <div class="faq-q">Won't This Push Commissions Down?</div>
+            <div class="faq-a">No. Sellers pick based on the full proposal — your marketing plan, track record, and personal note matter as much as commission. The best agents consistently win, not the cheapest.</div>
+        </div>
+        <div class="faq-item">
+            <div class="faq-q">How Many Sellers Are on the Platform Right Now?</div>
+            <div class="faq-a">Seller listings go live in August 2026 — that's exactly why now is the right time to join. Founding members build their profile, lock in their market, and get 24-hour early access to every listing the moment it's posted. The realtors who join now will have a meaningful head start over anyone who waits.</div>
+        </div>
+        <div class="faq-item">
+            <div class="faq-q">What Does It Cost After 2 Months?</div>
+            <div class="faq-a">There are four plans to choose from: <strong>Pay Per Lead</strong> at $15/lead (no subscription), <strong>Basic</strong> at $99/month (10 proposals/month), <strong>Professional</strong> at $249/month (unlimited proposals + priority access), and <strong>Firm</strong> at $499/location/month for brokerages and teams. No long-term contracts — cancel any time.</div>
+        </div>
+    </div>
+</section>
+
+<!-- Sticky CTA (mobile only, appears on scroll) -->
+<div class="sticky-cta" id="sticky-cta" style="display:none;">
+    <p><strong>Founding Realtor Program</strong>2 months free · Limited spots</p>
+    <a href="#" onclick="hideStickyAndFocus();return false;">Claim My Spot →</a>
 </div>
 
-<!-- FAQ / objections -->
-<div class="faq-section">
-    <div class="section-label" style="text-align:left;margin-bottom:4px;">Common questions</div>
-    <h2 class="section-title" style="text-align:left;margin-bottom:32px;font-size:clamp(20px,3vw,26px);">Straight answers</h2>
-
-    <div class="faq-item">
-        <div class="faq-q">I already pay for Zillow Premier Agent. Why switch?</div>
-        <div class="faq-a">You don't have to switch — RealtorFinder is additive. The difference: on Zillow you compete with 10–20 agents for a lead who might not even be ready. On RealtorFinder, the seller posted their own listing. They're ready. And you pitch with a full proposal, not just a headshot.</div>
-    </div>
-    <div class="faq-item">
-        <div class="faq-q">Won't this just push commissions down?</div>
-        <div class="faq-a">No. Sellers pick based on the full proposal — your marketing plan, track record, and personal note carry as much weight as commission. The best agents consistently win, not the cheapest ones.</div>
-    </div>
-    <div class="faq-item">
-        <div class="faq-q">How many sellers are on the platform right now?</div>
-        <div class="faq-a">We're in our founding period — seller marketing launches in August 2026 alongside our founding cohort. You're joining early specifically so you have an established profile and head start when listings go live in your area.</div>
-    </div>
-    <div class="faq-item">
-        <div class="faq-q">What does it cost after 6 months?</div>
-        <div class="faq-a">Plans start at $29/month. If the platform doesn't deliver value after 6 months, you cancel — no long-term contract.</div>
-    </div>
-</div>
-
-<!-- Bottom CTA -->
-<div class="bottom-cta">
-    <h2>Ready to claim your founding spot?</h2>
-    <p>150 spots. <span id="remaining-text">Limited spots remaining.</span> Free for 6 months.</p>
-    <a href="#join-form" onclick="document.getElementById('first-name').focus()">
-        Join the founding cohort →
-    </a>
-</div>
-
-<!-- Footer -->
-<footer class="footer">
-    <a href="/privacy">Privacy Policy</a> &nbsp;·&nbsp;
-    <a href="/terms">Terms of Service</a> &nbsp;·&nbsp;
-    <a href="/">RealtorFinder.net</a>
-    <br><br>
-    © 2026 RealtorFinder. All rights reserved.
+<footer>
+    <p>
+        <a href="/privacy">Privacy Policy</a> &nbsp;·&nbsp;
+        <a href="/terms">Terms of Service</a> &nbsp;·&nbsp;
+        <a href="/">RealtorFinder.net</a>
+        &nbsp;·&nbsp; © 2026 RealtorFinder
+    </p>
 </footer>
 
 <script>
 (function () {
-    // ── City mapping (slug → display name) ──
     const cityNames = {
-        // MA
         'boston':'Boston','cambridge':'Cambridge','somerville':'Somerville',
         'worcester':'Worcester','springfield':'Springfield','lowell':'Lowell',
         'brockton':'Brockton','new-bedford':'New Bedford','fall-river':'Fall River',
@@ -861,9 +1063,7 @@
         'falmouth':'Falmouth','yarmouth':'Yarmouth','dennis':'Dennis',
         'harwich':'Harwich','chatham':'Chatham','northampton':'Northampton',
         'amherst':'Amherst','holyoke':'Holyoke','chicopee':'Chicopee',
-        'pittsfield':'Pittsfield','westfield':'Westfield',
-        'great-barrington':'Great Barrington',
-        // CT
+        'pittsfield':'Pittsfield','westfield':'Westfield','great-barrington':'Great Barrington','cape-cod':'Cape Cod',
         'hartford':'Hartford','new-haven':'New Haven','bridgeport':'Bridgeport',
         'stamford':'Stamford','waterbury':'Waterbury','norwalk':'Norwalk',
         'danbury':'Danbury','new-britain':'New Britain','west-hartford':'West Hartford',
@@ -877,7 +1077,6 @@
         'ansonia':'Ansonia','guilford':'Guilford','madison':'Madison',
         'groton':'Groton','new-london':'New London','mystic':'Mystic',
         'stonington':'Stonington','old-lyme':'Old Lyme',
-        // RI
         'providence':'Providence','cranston':'Cranston','warwick':'Warwick',
         'pawtucket':'Pawtucket','east-providence':'East Providence',
         'woonsocket':'Woonsocket','newport':'Newport',
@@ -889,7 +1088,6 @@
         'narragansett':'Narragansett','westerly':'Westerly','charlestown':'Charlestown'
     };
 
-    // ── Read city from URL param ──
     const params = new URLSearchParams(window.location.search);
     const citySlug = (params.get('city') || '').toLowerCase().replace(/[^a-z-]/g, '');
     const cityName = cityNames[citySlug] || null;
@@ -898,65 +1096,152 @@
         document.getElementById('city-display').textContent = cityName;
         document.getElementById('city-sub').textContent = cityName;
         document.title = `Join as a Founding Realtor in ${cityName} — RealtorFinder`;
-
-        // Pre-select the city in the dropdown
         const sel = document.getElementById('city-select');
         for (let i = 0; i < sel.options.length; i++) {
-            if (sel.options[i].value === citySlug) {
-                sel.selectedIndex = i;
-                break;
-            }
+            if (sel.options[i].value === citySlug) { sel.selectedIndex = i; break; }
         }
     }
 
-    // ── Live founding spots from API ──
-    const TOTAL_SPOTS = 150;
-    fetch('/api/realtors/founding-count')
+    // Live founding spots + social proof
+    const TOTAL = 100;
+    const countUrl = '/api/realtors/founding-count' + (cityName ? '?city=' + encodeURIComponent(cityName) : '');
+    fetch(countUrl)
         .then(r => r.json())
         .then(data => {
-            const claimed = Math.min(data.claimed || 0, TOTAL_SPOTS);
-            const remaining = Math.max(TOTAL_SPOTS - claimed, 0);
-            const pct = Math.max((claimed / TOTAL_SPOTS) * 100, 2).toFixed(1);
-            document.getElementById('spots-label').textContent =
-                `${claimed} of ${TOTAL_SPOTS} founding spots claimed`;
-            document.getElementById('remaining-text').textContent =
-                `${remaining} remaining.`;
-            setTimeout(() => {
-                document.getElementById('spots-fill').style.width = pct + '%';
-            }, 300);
+            const claimed = Math.min(data.claimed || 0, TOTAL);
+            const remaining = Math.max(TOTAL - claimed, 0);
+            const pct = Math.max((claimed / TOTAL) * 100, 2).toFixed(1);
+            document.getElementById('founding-tag-text').textContent =
+                `Founding Realtor Program — ${remaining} of ${TOTAL} spots left`;
+            document.getElementById('spots-text').textContent = `${claimed} of ${TOTAL} spots claimed`;
+            setTimeout(() => { document.getElementById('spots-fill').style.width = pct + '%'; }, 400);
+
+            // City-specific social proof takes priority
+            const cityClaimed = data.city_claimed || 0;
+            const socialCount = (cityName && cityClaimed > 0) ? cityClaimed : claimed;
+            const socialLabel = (cityName && cityClaimed > 0)
+                ? `${cityClaimed} realtor${cityClaimed !== 1 ? 's' : ''} from ${cityName} already in the founding cohort`
+                : `${claimed} realtor${claimed !== 1 ? 's' : ''} already in the founding cohort`;
+
+            if (socialCount > 0) {
+                const initials = ['JS','MR','AK','TL','RP','SE','DM','CB'];
+                const colors = ['#0A2540','#1a4a7a','#2d6a9f','#FF6B35','#e85d2e','#c44d25'];
+                const avatarEl = document.getElementById('social-proof-avatars');
+                const count = Math.min(socialCount, 5);
+                for (let i = 0; i < count; i++) {
+                    const d = document.createElement('div');
+                    d.className = 'social-proof-avatar';
+                    d.style.background = colors[i % colors.length];
+                    d.textContent = initials[i % initials.length];
+                    avatarEl.appendChild(d);
+                }
+                document.getElementById('social-proof-text').textContent = socialLabel;
+                document.getElementById('social-proof').style.display = 'flex';
+            }
         })
         .catch(() => {
-            document.getElementById('spots-label').textContent = 'Founding cohort — limited spots';
+            document.getElementById('spots-text').textContent = 'Limited spots remaining';
         });
 
-    // ── Form submission ──
-    document.getElementById('join-form').addEventListener('submit', function (e) {
-        e.preventDefault();
+    // ── Funnel tracking ──────────────────────────────────────────────────────
+    // Track first form interaction
+    let formStarted = false;
+    document.getElementById('join-form').addEventListener('focusin', function () {
+        if (formStarted) return;
+        formStarted = true;
+        if (typeof gtag !== 'undefined') gtag('event', 'founding_form_start', { city: citySlug || 'generic', source: 'founding_page' });
+    }, { once: true });
 
+    // Track scroll depth milestones
+    const scrollMilestones = { 25: false, 50: false, 75: false, 90: false };
+    window.addEventListener('scroll', function () {
+        const pctScrolled = Math.round((window.scrollY / (document.body.scrollHeight - window.innerHeight)) * 100);
+        [25, 50, 75, 90].forEach(m => {
+            if (!scrollMilestones[m] && pctScrolled >= m) {
+                scrollMilestones[m] = true;
+                if (typeof gtag !== 'undefined') gtag('event', 'scroll_depth', { depth: m, city: citySlug || 'generic' });
+            }
+        });
+    }, { passive: true });
+
+    // Track CTA visibility (did they see the form?)
+    if ('IntersectionObserver' in window) {
+        const formEl = document.getElementById('join-form');
+        if (formEl) {
+            new IntersectionObserver((entries) => {
+                if (entries[0].isIntersecting) {
+                    if (typeof gtag !== 'undefined') gtag('event', 'founding_form_seen', { city: citySlug || 'generic' });
+                }
+            }, { threshold: 0.5 }).observe(formEl);
+        }
+    }
+
+    // Sticky CTA on scroll (mobile)
+    let stickyShown = false;
+    window.addEventListener('scroll', function () {
+        if (stickyShown) return;
+        if (window.scrollY > window.innerHeight * 0.6) {
+            document.getElementById('sticky-cta').style.display = 'flex';
+            stickyShown = true;
+        }
+    }, { passive: true });
+
+    // Inline validation helpers
+    function setFieldError(id, errorId, condition) {
+        const group = document.getElementById(id).closest('.form-group');
+        if (condition) {
+            group.classList.add('has-error');
+            return true;
+        } else {
+            group.classList.remove('has-error');
+            return false;
+        }
+    }
+    // Clear errors on input
+    ['first-name','last-name','email'].forEach(id => {
+        document.getElementById(id).addEventListener('input', function () {
+            this.closest('.form-group').classList.remove('has-error');
+        });
+    });
+
+    // Form submit
+    document.getElementById('join-form').addEventListener('submit', async function (e) {
+        e.preventDefault();
         const firstName = document.getElementById('first-name').value.trim();
         const lastName  = document.getElementById('last-name').value.trim();
         const email     = document.getElementById('email').value.trim();
         const phone     = document.getElementById('phone').value.trim();
         const city      = document.getElementById('city-select').value;
 
-        if (!firstName || !lastName || !email) {
-            alert('Please fill in your name and email address.');
-            return;
-        }
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-            alert('Please enter a valid email address.');
+        let hasError = false;
+        hasError = setFieldError('first-name', 'error-first-name', !firstName) || hasError;
+        hasError = setFieldError('last-name',  'error-last-name',  !lastName)  || hasError;
+        hasError = setFieldError('email', 'error-email',
+            !email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) || hasError;
+        if (hasError) {
+            document.querySelector('.form-group.has-error input, .form-group.has-error select')?.focus();
             return;
         }
 
-        // Track conversion in GA4
         if (typeof gtag !== 'undefined') {
             gtag('event', 'founding_signup_click', {
                 city: citySlug || 'generic',
-                city_name: cityName || 'New England'
+                city_name: cityName || 'Your Area'
             });
         }
+        if (typeof fbq !== 'undefined') {
+            fbq('track', 'Lead', { content_name: 'founding_realtor', city: citySlug || 'generic' });
+        }
 
-        // Build signup URL with pre-filled params
+        // Save lead before redirect so abandons aren't lost
+        try {
+            await fetch('/api/founding-lead', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ first_name: firstName, last_name: lastName, email, phone, city })
+            });
+        } catch {}
+
         const dest = new URL('/login', window.location.origin);
         dest.searchParams.set('tab', 'signup');
         dest.searchParams.set('type', 'realtor');
@@ -970,11 +1255,55 @@
         const btn = document.getElementById('submit-btn');
         btn.textContent = 'One moment…';
         btn.disabled = true;
-
         window.location.href = dest.toString();
     });
+
+    window.hideStickyAndFocus = function() {
+        document.getElementById('sticky-cta').style.display = 'none';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        setTimeout(() => document.getElementById('first-name').focus(), 500);
+    };
 })();
 </script>
-
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "I already pay for Zillow Premier Agent. Why switch?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "You don't have to switch — RealtorFinder is additive. On Zillow you compete with 10–20 agents for a lead who might not be ready. On RealtorFinder, the seller posted their own listing. Intent is higher and you pitch with a full proposal, not just a headshot."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Won't this push commissions down?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "No. Sellers pick based on the full proposal — your marketing plan, track record, and personal note matter as much as commission. The best agents consistently win, not the cheapest."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How many sellers are on the platform right now?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Seller listings go live in August 2026 — that's exactly why now is the right time to join. Founding members build their profile, lock in their market, and get 24-hour early access to every listing the moment it's posted. The realtors who join now will have a meaningful head start over anyone who waits."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What does it cost after 2 months?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "There are four plans to choose from: Pay Per Lead at $15/lead (no subscription), Basic at $99/month (10 proposals/month), Professional at $249/month (unlimited proposals + priority access), and Firm at $499/location/month for brokerages and teams. No long-term contracts — cancel any time."
+      }
+    }
+  ]
+}
+</script>
 </body>
 </html>

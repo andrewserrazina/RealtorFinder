@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RealtorFinder.net - Find Your Perfect Real Estate Agent</title>
-    <meta name="description" content="List your home once and let qualified realtors compete to earn your business. Compare commission rates, marketing plans, and experience—all for free.">
+    <title>RealtorFinder | List Free &amp; Get Competing Real Estate Agent Proposals</title>
+    <meta name="description" content="Post your home for free and receive competing proposals from licensed realtors. Compare commission rates, marketing plans, and experience — then choose the best fit. No platform fee, ever.">
+    <link rel="canonical" href="https://www.realtorfinder.net/">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://www.realtorfinder.net/">
     <meta property="og:title" content="RealtorFinder — Let Agents Compete for Your Listing">
@@ -1348,20 +1349,7 @@
     </section>
 
     <script>
-    (function() {
-        var variant = document.cookie.split(';').map(function(c){return c.trim();}).find(function(c){return c.startsWith('ab_variant=');});
-        if (variant && variant.split('=')[1] === 'b') {
-            var h = document.getElementById('hero-headline');
-            var s = document.getElementById('hero-subhead');
-            var c = document.getElementById('hero-cta');
-            if (h) h.textContent = 'Find Your Dream Home Anywhere in the US';
-            if (s) s.textContent = 'Browse listings, compare realtors, and connect directly — all in one place.';
-            if (c) c.innerHTML = '<a href="/dashboard/buyer" class="btn btn-primary" style="display:inline-block;background:#FF6B35;color:#fff;padding:1rem 2.5rem;border-radius:50px;font-size:1.1rem;font-weight:600;text-decoration:none;cursor:pointer;" onclick="if(typeof gtag!==\'undefined\')gtag(\'event\',\'cta_click\',{variant:\'b\'})">Browse Listings</a><a href="/realtors/directory" style="display:inline-block;margin-left:1rem;background:transparent;color:#0A2540;border:2px solid #0A2540;padding:1rem 2.5rem;border-radius:50px;font-size:1.1rem;font-weight:600;text-decoration:none;">Find a Realtor</a>';
-            if (typeof gtag !== 'undefined') gtag('event', 'ab_variant_view', { variant: 'b' });
-        } else {
-            if (typeof gtag !== 'undefined') gtag('event', 'ab_variant_view', { variant: 'a' });
-        }
-    })();
+    if (typeof gtag !== 'undefined') gtag('event', 'page_view', { page_type: 'seller_landing' });
     </script>
 
     <section class="features" id="features">
@@ -1383,11 +1371,12 @@
                     <h3>Receive Agent Bids</h3>
                     <p>Qualified realtors submit competitive proposals with their commission rates, marketing strategies, and credentials.</p>
                 </div>
-                <div class="feature-card">
+                <a href="#comparison" class="feature-card" style="text-decoration:none;color:inherit;display:block;">
                     <div class="feature-icon">📊</div>
                     <h3>Compare Side-by-Side</h3>
                     <p>Review all proposals in one dashboard. Compare commission rates, experience, sales history, and marketing plans.</p>
-                </div>
+                    <span style="font-size:0.85rem;font-weight:600;color:#FF6B35;display:block;margin-top:0.75rem;">See the comparison →</span>
+                </a>
                 <div class="feature-card">
                     <div class="feature-icon">💰</div>
                     <h3>Negotiate Lower Fees</h3>
@@ -1861,5 +1850,36 @@
             setTimeout(closeExitIntent, 2500);
         });
     </script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "name": "RealtorFinder",
+  "url": "https://www.realtorfinder.net",
+  "logo": "https://www.realtorfinder.net/icon-192.png",
+  "description": "RealtorFinder lets home sellers post their listing for free and receive competing proposals from licensed real estate agents. Compare commissions and credentials, then choose the best fit.",
+  "sameAs": [
+    "https://www.facebook.com/realtorfinder",
+    "https://www.instagram.com/realtorfinder",
+    "https://www.linkedin.com/company/realtorfinder"
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "name": "RealtorFinder",
+  "url": "https://www.realtorfinder.net",
+  "potentialAction": {
+    "@type": "SearchAction",
+    "target": {
+      "@type": "EntryPoint",
+      "urlTemplate": "https://www.realtorfinder.net/search?q={search_term_string}"
+    },
+    "query-input": "required name=search_term_string"
+  }
+}
+</script>
 </body>
 </html>

@@ -31,7 +31,6 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
     <script src="https://js.stripe.com/v3/"></script>
     <style>
         :root {
@@ -629,6 +628,25 @@
         }
         .page-info { color: #666; font-size: 0.9rem; }
 
+        /* Quick-filter chips */
+        .qchip {
+            background: white;
+            border: 1.5px solid var(--border);
+            border-radius: 20px;
+            padding: 0.4rem 0.9rem;
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+            color: #444;
+            font-family: 'DM Sans', sans-serif;
+            white-space: nowrap;
+            transition: all 0.15s;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .qchip:hover { border-color: var(--accent); color: var(--accent); }
+        .qchip.active { background: var(--accent); border-color: var(--accent); color: white; }
+        #quickFilterChips::-webkit-scrollbar { display: none; }
+
         /* Verification banner */
         .verification-banner {
             background: #fffbeb;
@@ -700,81 +718,6 @@
             }
         }
 
-        @media (max-width: 640px) {
-            .header-container {
-                flex-wrap: wrap;
-                gap: 0.75rem;
-                padding: 0 1rem;
-            }
-
-            .header-actions {
-                width: 100%;
-                justify-content: flex-end;
-            }
-
-            .user-info {
-                gap: 0.5rem;
-                flex-wrap: wrap;
-            }
-
-            .tabs {
-                gap: 0;
-                overflow-x: auto;
-                padding: 0 1rem;
-                scrollbar-width: none;
-            }
-
-            .tabs::-webkit-scrollbar {
-                display: none;
-            }
-
-            .tab {
-                white-space: nowrap;
-                padding: 1rem 0.75rem;
-                font-size: 0.9rem;
-            }
-
-            .dashboard-container {
-                padding: 1.5rem 1rem;
-            }
-
-            .stats-row {
-                grid-template-columns: 1fr 1fr;
-            }
-
-            .form-row {
-                grid-template-columns: 1fr;
-            }
-
-            .modal-content {
-                padding: 1.5rem;
-                width: 95%;
-            }
-
-            #map-container {
-                height: 350px;
-            }
-
-            .map-status-bar {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 0.5rem;
-            }
-
-            .filter-bar {
-                flex-direction: column;
-            }
-
-            .filter-group {
-                width: 100%;
-            }
-            .filter-group input,
-            .filter-group select {
-                min-width: unset;
-                width: 100%;
-            }
-        }
-
         /* Messaging */
         .msg-layout {
             display: grid;
@@ -809,6 +752,31 @@
             .msg-layout { grid-template-columns: 1fr; }
             .msg-conv-list { border-right: none; border-bottom: 1px solid var(--border); max-height: 200px; }
             .msg-thread { height: 400px; }
+        }
+
+        @media (max-width: 640px) {
+            /* Messages: full-screen panel switching */
+            .msg-layout {
+                display: block;
+                border: none;
+                background: transparent;
+            }
+            .msg-conv-list {
+                max-height: none;
+                border: 1px solid var(--border);
+                border-radius: 12px;
+                background: white;
+            }
+            .msg-conv-list.mob-hidden { display: none; }
+            .msg-thread {
+                height: calc(100svh - 200px);
+                border: 1px solid var(--border);
+                border-radius: 12px;
+                background: white;
+                display: none;
+            }
+            .msg-thread.mob-visible { display: flex; }
+            #msgBackBtn { display: flex !important; }
         }
 
         /* ── Batch 10+11 additions ────────────────────────────────────────────── */
@@ -913,7 +881,7 @@
             margin-bottom: 0.5rem;
         }
 
-        /* Premium Profile Section */
+        /* Premium Profile Section — hidden, kept for future use */
         .premium-profile-card {
             background: white;
             border-radius: 12px;
@@ -935,6 +903,233 @@
         }
         @media (max-width: 480px) {
             .premium-upgrade-grid { grid-template-columns: 1fr; }
+        }
+
+        /* ── Listing Detail Drawer ── */
+        #listingDrawerOverlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.45);
+            z-index: 400;
+        }
+        #listingDrawerOverlay.open { display: block; }
+
+        #listingDrawer {
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 520px;
+            max-width: 100vw;
+            height: 100dvh;
+            background: white;
+            z-index: 401;
+            display: flex;
+            flex-direction: column;
+            transform: translateX(100%);
+            transition: transform 0.3s cubic-bezier(0.32,0.72,0,1);
+            box-shadow: -8px 0 40px rgba(0,0,0,0.15);
+        }
+        #listingDrawer.open { transform: translateX(0); }
+
+        .ldr-header-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+            background: white;
+        }
+        .ldr-back {
+            background: none;
+            border: none;
+            color: var(--accent);
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+            padding: 0;
+            font-family: inherit;
+        }
+        .ldr-bookmark-btn {
+            background: none;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.35rem 0.6rem;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: transform 0.15s;
+        }
+        .ldr-bookmark-btn:hover { transform: scale(1.15); }
+
+        .ldr-scroll {
+            flex: 1;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+        }
+
+        /* Photo strip */
+        .ldr-photo {
+            height: 260px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 5rem;
+            position: relative;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+        .ldr-photo img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            position: absolute;
+            inset: 0;
+        }
+        .ldr-photo-count {
+            position: absolute;
+            bottom: 0.75rem;
+            right: 0.75rem;
+            background: rgba(0,0,0,0.55);
+            color: white;
+            border-radius: 6px;
+            padding: 0.2rem 0.6rem;
+            font-size: 0.78rem;
+            font-weight: 600;
+        }
+
+        /* Drawer body */
+        .ldr-body { padding: 1.5rem 1.5rem 0; }
+
+        .ldr-price {
+            font-family: 'Crimson Pro', serif;
+            font-size: 2.4rem;
+            font-weight: 700;
+            color: var(--accent);
+            line-height: 1;
+            margin-bottom: 0.3rem;
+        }
+        .ldr-address {
+            font-size: 1.05rem;
+            font-weight: 600;
+            color: var(--ink);
+            margin-bottom: 0.5rem;
+        }
+        .ldr-meta {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 1.25rem;
+        }
+        .ldr-chip {
+            background: var(--paper);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 0.25rem 0.7rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #444;
+        }
+
+        .ldr-section { margin-bottom: 1.5rem; }
+        .ldr-section-title {
+            font-weight: 700;
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: #888;
+            margin-bottom: 0.6rem;
+        }
+
+        .ldr-specs {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+        }
+        .ldr-spec {
+            background: var(--paper);
+            border-radius: 10px;
+            padding: 0.65rem 0.9rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.1rem;
+        }
+        .ldr-spec-label { font-size: 0.72rem; color: #888; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+        .ldr-spec-value { font-size: 1rem; font-weight: 700; color: var(--ink); }
+
+        .ldr-description {
+            font-size: 0.95rem;
+            color: #444;
+            line-height: 1.7;
+            white-space: pre-wrap;
+        }
+
+        .ldr-competition {
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            border-radius: 10px;
+            padding: 0.9rem 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .ldr-competition-icon { font-size: 1.4rem; }
+        .ldr-competition-text { font-size: 0.875rem; color: #1e40af; font-weight: 600; }
+        .ldr-competition-sub { font-size: 0.78rem; color: #3b82f6; margin-top: 0.1rem; }
+
+        .ldr-mini-map {
+            height: 160px;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+
+        .ldr-zestimate {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+            color: #666;
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-radius: 8px;
+            padding: 0.5rem 0.85rem;
+            margin-top: 0.4rem;
+        }
+
+        /* Sticky CTA */
+        .ldr-cta {
+            border-top: 1px solid var(--border);
+            padding: 1rem 1.25rem calc(1rem + env(safe-area-inset-bottom, 0px));
+            background: white;
+            flex-shrink: 0;
+        }
+
+        /* Mobile: full-screen slide up */
+        @media (max-width: 640px) {
+            #listingDrawer {
+                top: auto;
+                bottom: 0;
+                right: 0;
+                left: 0;
+                width: 100%;
+                height: 93dvh;
+                border-radius: 20px 20px 0 0;
+                transform: translateY(100%);
+                box-shadow: 0 -8px 40px rgba(0,0,0,0.18);
+            }
+            #listingDrawer.open { transform: translateY(0); }
+            .ldr-photo { height: 200px; }
+            .ldr-price { font-size: 2rem; }
+        }
+
+        /* ── Narrow phones (≤380px): extra-tight tweaks ── */
+        @media (max-width: 380px) {
+            .stats-row { grid-template-columns: 1fr; }
+            .listing-specs { gap: 0.4rem; font-size: 0.78rem; }
+            .mob-nav-item { font-size: 0.56rem; }
+            .mob-nav-icon { font-size: 1.15rem; }
         }
         .premium-duration-btn {
             border: 2px solid var(--border);
@@ -1046,6 +1241,234 @@
             border: 2px solid #d1d5db;
             color: #d1d5db;
         }
+
+        /* ── Mobile Bottom Navigation ── */
+        #mobileBottomNav {
+            display: none;
+        }
+        @media (max-width: 640px) {
+            /* Hide the top tab bar — bottom nav takes over */
+            .tabs-container { display: none; }
+
+            /* Compact header: one row, just logo + bell + avatar */
+            header { padding: 0.75rem 0; }
+            .header-container { padding: 0 1rem; flex-wrap: nowrap; }
+            #userName { display: none; }
+            .btn.btn-secondary[onclick="logout()"] { display: none; }
+            .user-info { gap: 0.6rem; }
+            .user-avatar { width: 34px; height: 34px; font-size: 0.8rem; }
+
+            /* Push content up from bottom nav (safe-area aware) */
+            .dashboard-container {
+                padding: 1rem 0.9rem;
+                padding-bottom: calc(70px + env(safe-area-inset-bottom, 12px));
+            }
+
+            /* Bottom nav bar */
+            #mobileBottomNav {
+                display: flex;
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                background: white;
+                border-top: 1px solid var(--border);
+                z-index: 200;
+                padding-bottom: env(safe-area-inset-bottom, 0px);
+                box-shadow: 0 -4px 20px rgba(0,0,0,0.08);
+            }
+            .mob-nav-item {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                padding: 0.55rem 0.25rem 0.5rem;
+                cursor: pointer;
+                color: #888;
+                font-size: 0.62rem;
+                font-weight: 600;
+                letter-spacing: 0.01em;
+                border: none;
+                background: none;
+                font-family: 'DM Sans', sans-serif;
+                position: relative;
+                transition: color 0.15s;
+                -webkit-tap-highlight-color: transparent;
+            }
+            .mob-nav-item.active { color: var(--accent); }
+            .mob-nav-icon {
+                font-size: 1.3rem;
+                line-height: 1;
+                margin-bottom: 0.2rem;
+            }
+            .mob-nav-badge {
+                position: absolute;
+                top: 0.3rem;
+                right: calc(50% - 0.9rem);
+                background: var(--accent);
+                color: white;
+                border-radius: 50%;
+                width: 15px;
+                height: 15px;
+                font-size: 0.58rem;
+                font-weight: 700;
+                display: none;
+                align-items: center;
+                justify-content: center;
+                line-height: 1;
+            }
+            .mob-nav-badge.visible { display: flex; }
+
+            /* More bottom sheet */
+            #moreSheet {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                background: white;
+                border-radius: 20px 20px 0 0;
+                box-shadow: 0 -8px 40px rgba(0,0,0,0.18);
+                z-index: 300;
+                padding: 0 0 env(safe-area-inset-bottom, 16px);
+                transform: translateY(100%);
+                transition: transform 0.28s cubic-bezier(0.32,0.72,0,1);
+            }
+            #moreSheet.open { transform: translateY(0); }
+            #moreSheetOverlay {
+                display: none;
+                position: fixed;
+                inset: 0;
+                background: rgba(0,0,0,0.45);
+                z-index: 299;
+            }
+            #moreSheetOverlay.open { display: block; }
+            .more-sheet-handle {
+                width: 36px;
+                height: 4px;
+                background: #d1d5db;
+                border-radius: 2px;
+                margin: 12px auto 0;
+            }
+            .more-sheet-title {
+                font-weight: 700;
+                font-size: 1rem;
+                color: var(--ink);
+                padding: 1rem 1.5rem 0.75rem;
+                border-bottom: 1px solid var(--border);
+            }
+            .more-sheet-item {
+                display: flex;
+                align-items: center;
+                gap: 1rem;
+                padding: 1rem 1.5rem;
+                cursor: pointer;
+                border-bottom: 1px solid #f3f4f6;
+                font-weight: 600;
+                font-size: 0.95rem;
+                color: var(--ink);
+                -webkit-tap-highlight-color: transparent;
+            }
+            .more-sheet-item:last-child { border-bottom: none; }
+            .more-sheet-item:active { background: #f9fafb; }
+            .more-sheet-icon { font-size: 1.4rem; width: 28px; text-align: center; }
+            .more-sheet-badge {
+                margin-left: auto;
+                background: var(--accent);
+                color: white;
+                border-radius: 10px;
+                padding: 0.1rem 0.5rem;
+                font-size: 0.72rem;
+                font-weight: 700;
+                display: none;
+            }
+            .more-sheet-badge.visible { display: inline-block; }
+            .more-sheet-logout {
+                display: flex;
+                align-items: center;
+                gap: 1rem;
+                padding: 1rem 1.5rem;
+                cursor: pointer;
+                color: #dc2626;
+                font-weight: 600;
+                font-size: 0.95rem;
+                margin-top: 0.25rem;
+                -webkit-tap-highlight-color: transparent;
+            }
+
+            /* Listing cards: full width, compact */
+            .listings-grid { grid-template-columns: 1fr; gap: 1rem; }
+            .listing-image { height: 180px; }
+            .listing-content { padding: 1rem; }
+            .listing-price { font-size: 1.5rem; }
+            .listing-address { font-size: 0.95rem; }
+            .listing-specs { font-size: 0.82rem; gap: 0.75rem; }
+
+            /* Filter bar: stack vertically, condensed */
+            .filter-bar { flex-direction: column; padding: 1rem; gap: 0.75rem; }
+            .filter-group { width: 100%; }
+            .filter-group input, .filter-group select { width: 100%; min-width: unset; }
+
+            /* Stats: 2-column on mobile */
+            .stats-row { grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 1.5rem; }
+            .stat-card { padding: 1rem; }
+            .stat-value { font-size: 1.8rem; }
+
+            /* Modals: bottom-sheet style */
+            .modal { align-items: flex-end; }
+            .modal-content {
+                width: 100%;
+                border-radius: 20px 20px 0 0;
+                padding: 1.5rem 1.25rem calc(1.5rem + env(safe-area-inset-bottom, 0px));
+                max-height: 92vh;
+            }
+
+            /* Bid cards: stack */
+            .bid-card { grid-template-columns: 1fr; gap: 1rem; padding: 1.25rem; }
+
+            /* Form rows: single column */
+            .form-row { grid-template-columns: 1fr; }
+
+            /* Map height */
+            #map-container { height: 300px; }
+
+            /* Headers */
+            h2 { font-size: 1.5rem !important; }
+
+            /* Re-engagement banner */
+            #staleRealtorBanner { padding: 1rem; }
+
+            /* Touch targets: minimum 44px for iOS comfort */
+            .btn { min-height: 44px; }
+            .filter-group input,
+            .filter-group select,
+            .form-group input,
+            .form-group select,
+            .form-group textarea { min-height: 44px; font-size: 16px; /* prevent iOS zoom */ }
+            .hub-btn { min-height: 44px; padding: 0.7rem 1rem; }
+            .msg-thread-compose textarea { min-height: 44px; font-size: 16px; }
+            .msg-thread-compose .btn { min-height: 44px; }
+
+            /* Upgrade plan modal: stack cards vertically */
+            .upgrade-plan-grid { grid-template-columns: 1fr !important; }
+
+            /* Profile save: sticky footer while scrolling the form */
+            .profile-save-footer {
+                position: sticky;
+                bottom: calc(70px + env(safe-area-inset-bottom, 12px));
+                background: white;
+                border-top: 1px solid var(--border);
+                padding: 0.75rem 0 0;
+                margin-top: 1rem;
+                z-index: 10;
+            }
+
+            /* Prevent iOS scroll chaining on scrollable panels */
+            .modal-content,
+            .msg-thread-body,
+            .msg-conv-list,
+            .msg-thread { overscroll-behavior: contain; }
+        }
     </style>
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#0A2540">
@@ -1078,7 +1501,7 @@
                         <button class="notif-bell" id="notifBell" onclick="toggleNotifDropdown()" title="Notifications" style="background:none;border:1px solid var(--border);border-radius:8px;padding:0.45rem 0.65rem;cursor:pointer;font-size:1.1rem;position:relative;line-height:1;">🔔
                             <span id="notifBadge" style="display:none;position:absolute;top:-6px;right:-6px;background:var(--accent);color:white;border-radius:50%;font-size:0.65rem;font-weight:700;width:18px;height:18px;align-items:center;justify-content:center;display:none;">0</span>
                         </button>
-                        <div id="notifDropdown" style="display:none;position:absolute;top:calc(100% + 8px);right:0;background:white;border:1px solid var(--border);border-radius:12px;width:340px;max-height:420px;overflow-y:auto;box-shadow:0 8px 30px rgba(0,0,0,0.12);z-index:500;">
+                        <div id="notifDropdown" style="display:none;position:absolute;top:calc(100% + 8px);right:0;background:white;border:1px solid var(--border);border-radius:12px;width:340px;max-width:calc(100vw - 2rem);max-height:420px;overflow-y:auto;box-shadow:0 8px 30px rgba(0,0,0,0.12);z-index:500;">
                             <div style="display:flex;justify-content:space-between;align-items:center;padding:1rem 1.25rem 0.75rem;border-bottom:1px solid var(--border);font-weight:600;font-size:0.95rem;">
                                 <span>Notifications</span>
                                 <button onclick="markAllNotifRead()" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:0.8rem;font-family:inherit;">Mark all read</button>
@@ -1097,7 +1520,7 @@
         <div class="tabs">
             <div class="tab active" data-view="browse">Browse</div>
             <div class="tab" data-view="pipeline">Pipeline <span id="pipelineBadge" style="display:none;background:var(--accent);color:white;border-radius:50%;width:16px;height:16px;font-size:0.65rem;font-weight:700;text-align:center;line-height:16px;margin-left:4px;vertical-align:middle;"></span></div>
-            <div class="tab" data-view="buyer-requests">Buyer Requests <span id="buyerMatchBadge" style="display:none;background:var(--accent);color:white;border-radius:50%;width:16px;height:16px;font-size:0.65rem;font-weight:700;text-align:center;line-height:16px;margin-left:4px;vertical-align:middle;"></span></div>
+            <div class="tab" data-view="buyer-requests"><span class="tab-label-full">Buyer Requests</span><span class="tab-label-short" style="display:none">Buyers</span> <span id="buyerMatchBadge" style="display:none;background:var(--accent);color:white;border-radius:50%;width:16px;height:16px;font-size:0.65rem;font-weight:700;text-align:center;line-height:16px;margin-left:4px;vertical-align:middle;"></span></div>
             <div class="tab" data-view="messages" id="msgTab">Messages <span id="msgTabBadge" style="display:none;background:var(--accent);color:white;border-radius:50%;width:16px;height:16px;font-size:0.65rem;font-weight:700;text-align:center;line-height:16px;margin-left:4px;vertical-align:middle;"></span></div>
             <div class="tab" data-view="analytics">Analytics</div>
             <div class="tab" data-view="profile-hub">Profile</div>
@@ -1187,12 +1610,22 @@
                 </div>
             </div>
 
-            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem;">
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;margin-bottom:1rem;">
                 <h2 style="font-family: 'Crimson Pro', serif; font-size: 2rem;">Available Properties</h2>
                 <div style="display:flex;gap:0.4rem;">
                     <button id="browseGridBtn" onclick="setBrowseMode('grid')" style="background:var(--accent);color:white;border:none;border-radius:8px;padding:0.45rem 1rem;font-size:0.85rem;font-weight:600;cursor:pointer;font-family:inherit;">⊞ Grid</button>
                     <button id="browseMapBtn" onclick="setBrowseMode('map')" style="background:#f3f4f6;color:#374151;border:1px solid var(--border);border-radius:8px;padding:0.45rem 1rem;font-size:0.85rem;font-weight:600;cursor:pointer;font-family:inherit;">🗺 Map</button>
                 </div>
+            </div>
+            <!-- Quick-filter chips -->
+            <div id="quickFilterChips" style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1.5rem;overflow-x:auto;padding-bottom:2px;scrollbar-width:none;">
+                <button class="qchip" onclick="applyQuickFilter('beds','3')" data-qkey="beds" data-qval="3">🛏️ 3+ beds</button>
+                <button class="qchip" onclick="applyQuickFilter('beds','4')" data-qkey="beds" data-qval="4">🛏️ 4+ beds</button>
+                <button class="qchip" onclick="applyQuickFilter('price','under400')" data-qkey="price" data-qval="under400">Under $400K</button>
+                <button class="qchip" onclick="applyQuickFilter('price','400to700')" data-qkey="price" data-qval="400to700">$400K–$700K</button>
+                <button class="qchip" onclick="applyQuickFilter('price','over700')" data-qkey="price" data-qval="over700">Over $700K</button>
+                <button class="qchip" onclick="applyQuickFilter('sort','most_bids')" data-qkey="sort" data-qval="most_bids">🔥 Most bids</button>
+                <button class="qchip" onclick="applyQuickFilter('sort','newest')" data-qkey="sort" data-qval="newest">🆕 Newest</button>
             </div>
             <div id="browseGridContent">
                 <div class="listings-grid" id="availableListings"></div>
@@ -1222,7 +1655,6 @@
             <div class="hub-subnav">
                 <button class="hub-btn active" onclick="switchPipelineTab('proposals')">My Proposals</button>
                 <button class="hub-btn" onclick="switchPipelineTab('won')">Won Listings</button>
-                <button class="hub-btn" onclick="switchPipelineTab('showings')">Showings</button>
             </div>
 
             <!-- Proposals sub-section -->
@@ -1289,22 +1721,6 @@
                 </div>
             </div>
 
-            <!-- Showings sub-section -->
-            <div id="pipeline-showings" class="hub-section">
-                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem;">
-                    <div>
-                        <h2 style="font-family:'Crimson Pro',serif;font-size:2rem;margin-bottom:0.25rem;">Showings</h2>
-                        <p style="color:#666;font-size:0.95rem;">Buyer showing requests &amp; your realtor showing requests</p>
-                    </div>
-                    <button onclick="openRealtorShowingModal()" style="background:var(--accent);color:white;border:none;border-radius:8px;padding:0.65rem 1.25rem;font-weight:600;cursor:pointer;font-size:0.9rem;font-family:inherit;">+ Request Showing</button>
-                </div>
-                <div style="display:flex;gap:0.5rem;margin-bottom:1.5rem;">
-                    <button id="showingsTabBuyer" onclick="switchShowingsTab('buyer')" style="background:var(--primary);color:white;border:none;border-radius:6px;padding:0.4rem 1rem;cursor:pointer;font-weight:600;font-size:0.85rem;font-family:inherit;">Buyer Requests</button>
-                    <button id="showingsTabRealtor" onclick="switchShowingsTab('realtor')" style="background:#f3f4f6;color:#374151;border:none;border-radius:6px;padding:0.4rem 1rem;cursor:pointer;font-weight:600;font-size:0.85rem;font-family:inherit;">My Requests</button>
-                </div>
-                <div id="showingsList" class="bids-list"></div>
-                <div id="realtorShowingsList" class="bids-list" style="display:none;"></div>
-            </div>
         </section>
 
         <!-- Saved Listings View -->
@@ -1356,6 +1772,14 @@
                     <h3 style="font-size:1rem;font-weight:700;color:var(--ink);margin:0 0 1rem;">Win Rate Trend — Last 6 Months</h3>
                     <div id="winRateBars" style="display:flex;align-items:flex-end;gap:12px;height:80px;"></div>
                     <div id="winRateLabels" style="display:flex;gap:12px;margin-top:6px;font-size:0.72rem;color:#999;"></div>
+                </div>
+
+                <!-- Commission Intelligence -->
+                <div id="commissionIntel" style="display:none;background:#fff;border:1px solid var(--border);border-radius:12px;padding:1.25rem;margin-top:1.5rem;">
+                    <h3 style="font-size:1rem;font-weight:700;color:var(--ink);margin:0 0 0.25rem;">💡 Commission Intelligence</h3>
+                    <p style="font-size:0.82rem;color:#666;margin-bottom:1rem;">How your commission rates compare to accepted proposals on this platform.</p>
+                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.75rem;" id="commissionIntelGrid"></div>
+                    <div id="commissionIntelTip" style="margin-top:1rem;padding:0.75rem 1rem;border-radius:8px;font-size:0.875rem;font-weight:600;"></div>
                 </div>
             </div>
         </section>
@@ -1458,7 +1882,9 @@
                             <label>Bio</label>
                             <textarea name="bio" rows="4" style="width:100%;padding:0.875rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:1rem;resize:vertical;" placeholder="Tell sellers about yourself and your experience…"></textarea>
                         </div>
-                        <button type="submit" class="btn btn-primary" style="padding:1rem 2rem;">Save Profile</button>
+                        <div class="profile-save-footer">
+                            <button type="submit" class="btn btn-primary" style="padding:1rem 2rem;width:100%;">Save Profile</button>
+                        </div>
                     </form>
 
                     <!-- License Document -->
@@ -1593,6 +2019,74 @@
                     </div>
                 </div>
                 <div id="referralsWidget" style="margin-top:1.5rem;"></div>
+
+                <!-- Invite a Colleague -->
+                <div style="margin-top:2rem;background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:16px;padding:1.5rem 2rem;">
+                    <div style="font-weight:700;font-size:1rem;color:#15803d;margin-bottom:0.5rem;">✉️ Invite a Colleague</div>
+                    <p style="color:#166534;font-size:0.875rem;margin:0 0 1rem;">Know a great agent? Send them your referral link with a personal note — agents who hear from a peer convert far better than cold ads.</p>
+                    <div style="background:white;border:1px solid #bbf7d0;border-radius:10px;padding:1rem 1.25rem;font-size:0.85rem;color:#374151;line-height:1.6;white-space:pre-wrap;font-family:inherit;" id="inviteTemplate">Hey [name],
+
+I just joined RealtorFinder as a Founding Member and thought of you. It's a platform where sellers post their listings and agents submit proposals — kind of like a marketplace, but for listings instead of buyers.
+
+They're only taking 150 founding agents total and spots are filling up. You get 2 months free and a founding badge on your profile.
+
+Here's my link: [YOUR_LINK]
+
+Worth checking out.</div>
+                    <div style="display:flex;gap:0.75rem;margin-top:1rem;flex-wrap:wrap;">
+                        <button onclick="copyInviteTemplate()" style="background:#15803d;color:white;border:none;border-radius:8px;padding:10px 20px;cursor:pointer;font-weight:600;font-size:0.875rem;">Copy Message</button>
+                        <button onclick="copyReferralLink()" style="background:white;color:#15803d;border:1.5px solid #15803d;border-radius:8px;padding:10px 20px;cursor:pointer;font-weight:600;font-size:0.875rem;">Copy Link Only</button>
+                    </div>
+                </div>
+
+                <!-- Ambassador Program -->
+                <div style="margin-top:1.5rem;background:linear-gradient(135deg,#0A2540 0%,#0d3a5c 100%);border-radius:16px;padding:1.5rem 2rem;color:white;">
+                    <div style="display:flex;align-items:flex-start;gap:1rem;flex-wrap:wrap;">
+                        <div style="flex:1;min-width:220px;">
+                            <div style="font-size:1.25rem;font-weight:800;margin-bottom:0.4rem;">🌟 Ambassador Program</div>
+                            <p style="font-size:0.875rem;opacity:0.85;line-height:1.6;margin:0 0 1rem;">Have a social following? Post about RealtorFinder 2–3× a month and we'll give you <strong>1 full year of Professional free</strong> — a $249 value.</p>
+                            <div style="display:flex;flex-direction:column;gap:0.4rem;font-size:0.82rem;opacity:0.9;">
+                                <div>✅ 1 year Professional plan free ($249)</div>
+                                <div>✅ Founding Ambassador badge on your profile</div>
+                                <div>✅ Direct line to the founding team</div>
+                            </div>
+                        </div>
+                        <div id="ambassadorStatusBlock" style="flex-shrink:0;display:flex;align-items:center;justify-content:center;min-width:160px;">
+                            <div style="text-align:center;opacity:0.6;font-size:0.85rem;">Loading…</div>
+                        </div>
+                    </div>
+                    <!-- Application form (shown when status is null) -->
+                    <div id="ambassadorApplyForm" style="display:none;margin-top:1.5rem;border-top:1px solid rgba(255,255,255,0.15);padding-top:1.5rem;">
+                        <div style="font-weight:700;margin-bottom:1rem;">Apply in 60 seconds</div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+                            <div>
+                                <label style="font-size:0.8rem;opacity:0.75;display:block;margin-bottom:4px;">Instagram handle</label>
+                                <input id="amb-instagram" type="text" placeholder="@yourhandle" style="width:100%;box-sizing:border-box;padding:8px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.1);color:white;font-size:0.875rem;" />
+                            </div>
+                            <div>
+                                <label style="font-size:0.8rem;opacity:0.75;display:block;margin-bottom:4px;">LinkedIn URL</label>
+                                <input id="amb-linkedin" type="text" placeholder="linkedin.com/in/..." style="width:100%;box-sizing:border-box;padding:8px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.1);color:white;font-size:0.875rem;" />
+                            </div>
+                            <div>
+                                <label style="font-size:0.8rem;opacity:0.75;display:block;margin-bottom:4px;">Facebook page URL</label>
+                                <input id="amb-facebook" type="text" placeholder="facebook.com/..." style="width:100%;box-sizing:border-box;padding:8px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.1);color:white;font-size:0.875rem;" />
+                            </div>
+                            <div>
+                                <label style="font-size:0.8rem;opacity:0.75;display:block;margin-bottom:4px;">Total followers (across all platforms) *</label>
+                                <input id="amb-followers" type="number" placeholder="e.g. 2500" min="500" style="width:100%;box-sizing:border-box;padding:8px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.1);color:white;font-size:0.875rem;" />
+                            </div>
+                        </div>
+                        <div style="margin-top:0.75rem;">
+                            <label style="font-size:0.8rem;opacity:0.75;display:block;margin-bottom:4px;">Link to a recent post (optional)</label>
+                            <input id="amb-sample" type="text" placeholder="https://instagram.com/p/..." style="width:100%;box-sizing:border-box;padding:8px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.1);color:white;font-size:0.875rem;" />
+                        </div>
+                        <div style="margin-top:0.75rem;">
+                            <label style="font-size:0.8rem;opacity:0.75;display:block;margin-bottom:4px;">Anything else we should know?</label>
+                            <textarea id="amb-notes" rows="2" placeholder="Your market, content style, etc." style="width:100%;box-sizing:border-box;padding:8px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.1);color:white;font-size:0.875rem;resize:vertical;"></textarea>
+                        </div>
+                        <button onclick="submitAmbassadorApp()" style="margin-top:1rem;background:#FF6B35;color:white;border:none;border-radius:8px;padding:12px 28px;cursor:pointer;font-weight:700;font-size:0.9rem;">Submit Application →</button>
+                    </div>
+                </div>
             </div>
 
             <!-- Saved sub-section -->
@@ -1672,48 +2166,6 @@
                         <div id="settingsCompletenessBar" style="height:100%;width:0%;border-radius:6px;transition:width 0.5s,background 0.5s;background:var(--accent);"></div>
                     </div>
                     <div class="completeness-step-list" id="settingsCompletenessSteps"></div>
-                </div>
-
-                <!-- Premium Profile -->
-                <div class="premium-profile-card" id="premiumProfileCard">
-                    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;margin-bottom:0.25rem;">
-                        <h3>Premium Profile</h3>
-                        <span id="premiumStatusBadge" style="font-size:0.82rem;font-weight:600;padding:0.3rem 0.85rem;border-radius:20px;background:#f3f4f6;color:#374151;">Checking…</span>
-                    </div>
-                    <p style="font-size:0.875rem;color:#666;margin-bottom:1rem;">Premium profiles appear at the top of search results with a highlighted badge.</p>
-                    <div id="premiumUpgradeSection">
-                        <div class="premium-upgrade-grid">
-                            <button class="premium-duration-btn" onclick="premiumCheckout('monthly')">
-                                <div class="duration-name">1 Month</div>
-                                <div class="duration-price">$49</div>
-                            </button>
-                            <button class="premium-duration-btn" onclick="premiumCheckout('quarterly')">
-                                <div class="duration-name">3 Months</div>
-                                <div class="duration-price">$99</div>
-                                <div style="font-size:0.72rem;color:#10b981;font-weight:600;margin-top:2px;">Save 33%</div>
-                            </button>
-                        </div>
-                    </div>
-                    <!-- Banner image upload -->
-                    <div style="margin-top:1.25rem;padding-top:1.25rem;border-top:1px solid var(--border);">
-                        <div style="font-weight:600;font-size:0.9rem;color:var(--ink);margin-bottom:0.4rem;">Banner Image</div>
-                        <div style="font-size:0.82rem;color:#666;margin-bottom:0.65rem;">Shown at the top of your public profile. JPG/PNG, max 5MB.</div>
-                        <label style="cursor:pointer;display:inline-block;padding:0.45rem 1rem;border:1.5px solid var(--border);border-radius:8px;font-size:0.85rem;font-weight:600;color:var(--ink);">
-                            Upload Banner
-                            <input type="file" id="bannerInput" accept="image/*" style="display:none;" onchange="uploadBannerImage(this)">
-                        </label>
-                        <span id="bannerUploadStatus" style="font-size:0.8rem;color:#666;margin-left:0.75rem;"></span>
-                    </div>
-                    <!-- Video URL -->
-                    <div style="margin-top:1rem;">
-                        <div style="font-weight:600;font-size:0.9rem;color:var(--ink);margin-bottom:0.4rem;">Profile Video URL</div>
-                        <div style="font-size:0.82rem;color:#666;margin-bottom:0.65rem;">YouTube or Vimeo link shown on your profile page.</div>
-                        <div style="display:flex;gap:0.5rem;">
-                            <input type="url" id="profileVideoUrl" placeholder="https://youtube.com/watch?v=…" style="flex:1;padding:0.6rem 0.875rem;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.875rem;">
-                            <button onclick="saveVideoUrl()" style="background:var(--accent);color:white;border:none;padding:0.6rem 1.1rem;border-radius:8px;font-weight:600;cursor:pointer;font-size:0.875rem;font-family:inherit;white-space:nowrap;">Save</button>
-                        </div>
-                        <span id="videoSaveStatus" style="font-size:0.8rem;color:#059669;display:none;margin-top:0.35rem;">✓ Saved</span>
-                    </div>
                 </div>
 
                 <!-- Change Password -->
@@ -2003,8 +2455,10 @@
 
         <!-- Messages View -->
         <section id="messages-view" class="view-section">
-            <h2 style="font-family:'Crimson Pro',serif;font-size:2rem;margin-bottom:1.5rem;">Messages</h2>
-            <p style="color:#666;margin-bottom:2rem;">Conversations with sellers about their listings</p>
+            <h2 style="font-family:'Crimson Pro',serif;font-size:2rem;margin-bottom:0.5rem;" id="msgViewTitle">Messages</h2>
+            <p style="color:#666;margin-bottom:1.5rem;" id="msgViewSubtitle">Conversations with sellers about their listings</p>
+            <!-- Mobile back button — shown only when viewing a thread on small screens -->
+            <button id="msgBackBtn" onclick="mobMsgShowList()" style="display:none;align-items:center;gap:0.5rem;background:none;border:none;color:var(--accent);font-weight:600;font-size:0.95rem;cursor:pointer;padding:0;margin-bottom:1rem;font-family:inherit;">← Back to conversations</button>
             <div class="msg-layout" id="msgLayout">
                 <div class="msg-conv-list" id="msgConvList">
                     <div class="msg-conv-empty">Loading conversations…</div>
@@ -2029,7 +2483,7 @@
                 <h2 style="font-family:'Crimson Pro',serif;font-size:2rem;font-weight:900;color:#0A2540;margin-bottom:0.5rem;">Start winning listings today</h2>
                 <p style="color:#6B7280;font-size:0.95rem;">Pick a plan and get full access free for 30 days — no credit card required.</p>
             </div>
-            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.5rem;" id="upgradePlanGrid">
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.5rem;" id="upgradePlanGrid" class="upgrade-plan-grid">
                 <!-- plan cards injected by JS -->
             </div>
             <div style="text-align:center;">
@@ -2073,9 +2527,9 @@
                 <h2 style="font-family:'Crimson Pro',serif;font-size:1.6rem;font-weight:700;margin-bottom:0.5rem;">Your Professional Info</h2>
                 <p style="color:#555;margin-bottom:1.25rem;font-size:0.95rem;">Tell sellers why you're the right agent for them.</p>
                 <div style="display:flex;flex-direction:column;gap:0.75rem;margin-bottom:1.5rem;">
-                    <input id="wizardLicense" type="text" placeholder="License number" style="padding:0.75rem 1rem;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.95rem;">
-                    <input id="wizardYears" type="number" placeholder="Years of experience" min="0" max="60" style="padding:0.75rem 1rem;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.95rem;">
-                    <textarea id="wizardBio" rows="4" placeholder="Write a short bio (min 20 characters)…" style="padding:0.75rem 1rem;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.95rem;resize:vertical;"></textarea>
+                    <input id="wizardLicense" type="text" placeholder="License number" style="padding:0.75rem 1rem;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:max(16px,0.95rem);">
+                    <input id="wizardYears" type="number" placeholder="Years of experience" min="0" max="60" style="padding:0.75rem 1rem;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:max(16px,0.95rem);">
+                    <textarea id="wizardBio" rows="4" placeholder="Write a short bio (min 20 characters)…" style="padding:0.75rem 1rem;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:max(16px,0.95rem);resize:vertical;"></textarea>
                 </div>
                 <div style="display:flex;gap:0.75rem;">
                     <button onclick="wizardSaveStep3()" style="background:var(--accent);color:white;border:none;padding:0.75rem 1.5rem;border-radius:8px;font-weight:700;cursor:pointer;flex:1;font-family:inherit;">Save & Continue →</button>
@@ -2209,7 +2663,12 @@
             const toast = document.createElement('div');
             const bg = type === 'error' ? '#fee2e2' : '#d1fae5';
             const color = type === 'error' ? '#991b1b' : '#065f46';
-            toast.style.cssText = `position:fixed;top:20px;right:20px;background:${bg};color:${color};padding:1rem 1.5rem;border-radius:10px;font-weight:600;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,0.15);max-width:340px;`;
+            const isMobile = window.innerWidth <= 640;
+            if (isMobile) {
+                toast.style.cssText = `position:fixed;bottom:calc(80px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);background:${bg};color:${color};padding:0.75rem 1.25rem;border-radius:10px;font-weight:600;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,0.15);max-width:calc(100vw - 2rem);width:max-content;text-align:center;font-size:0.9rem;`;
+            } else {
+                toast.style.cssText = `position:fixed;top:20px;right:20px;background:${bg};color:${color};padding:1rem 1.5rem;border-radius:10px;font-weight:600;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,0.15);max-width:340px;`;
+            }
             toast.textContent = msg;
             document.body.appendChild(toast);
             setTimeout(() => toast.remove(), 4000);
@@ -2335,6 +2794,20 @@
             }
         }
 
+        // Live polling: refresh messages/pipeline every 30s when that tab is active
+        let _pollTimer = null;
+        function startPoll(view) {
+            stopPoll();
+            _pollTimer = setInterval(() => {
+                if (view === 'messages') {
+                    loadUnreadMsgCount();
+                    if (activeConvUserId) loadThread();
+                }
+                if (view === 'pipeline') loadMyProposals();
+            }, 30000);
+        }
+        function stopPoll() { if (_pollTimer) { clearInterval(_pollTimer); _pollTimer = null; } }
+
         // Tab Navigation
         document.querySelectorAll('.tab').forEach(tab => {
             tab.addEventListener('click', () => {
@@ -2350,8 +2823,9 @@
                 if (view === 'pipeline') {
                     loadDashboard();
                     loadMyProposals();
-                    loadShowings();
                 }
+                if (view === 'messages' || view === 'pipeline') startPoll(view);
+                else stopPoll();
                 if (view === 'profile-hub') {
                     loadEmailAlerts();
                     loadProfileCompleteness();
@@ -2365,7 +2839,6 @@
                     loadTemplates();
                     loadSavedSearches();
                     loadSubscriptionLimits();
-                    loadPremiumStatus();
                     loadSettingsCompleteness();
                     loadAvailability();
                     loadCompany();
@@ -2379,7 +2852,6 @@
             document.querySelectorAll('#pipeline-view .hub-section').forEach(s => s.classList.remove('active'));
             document.querySelector(`#pipeline-view .hub-btn[onclick*="${sub}"]`).classList.add('active');
             document.getElementById(`pipeline-${sub}`).classList.add('active');
-            if (sub === 'showings') loadShowings();
         }
 
         function switchProfileTab(sub) {
@@ -2388,7 +2860,7 @@
             document.querySelector(`#profile-hub-view .hub-btn[onclick*="${sub}"]`).classList.add('active');
             document.getElementById(`phub-${sub}`).classList.add('active');
             if (sub === 'reviews') loadReviews();
-            if (sub === 'referrals') loadReferrals();
+            if (sub === 'referrals') { loadReferrals(); loadAmbassadorStatus(); }
             if (sub === 'saved') loadSavedListings();
         }
 
@@ -2419,7 +2891,7 @@
                 mapBtn.style.color = 'white';
                 gridBtn.style.background = '#f3f4f6';
                 gridBtn.style.color = '#374151';
-                setTimeout(() => { if (!window._leafletMap) initMap(); else window._leafletMap.invalidateSize(); }, 50);
+                ensureLeaflet().then(() => { setTimeout(() => { if (!window._leafletMap) initMap(); else window._leafletMap.invalidateSize(); }, 50); });
             }
         }
 
@@ -2433,14 +2905,287 @@
                 const noPhoto = _profileItems && _profileItems.some(i => i.label === 'has_photo' && !i.done);
                 nudge.style.display = noPhoto ? 'flex' : 'none';
             }
+            // Restore draft if one exists for this listing
+            try {
+                const draft = JSON.parse(localStorage.getItem(`proposal_draft_${listingId}`) || 'null');
+                if (draft) {
+                    const form = document.getElementById('bidForm');
+                    ['realtorName','brokerage','realtorEmail','realtorPhone','commission','offerDetails'].forEach(n => {
+                        if (draft[n] !== undefined && form.elements[n]) form.elements[n].value = draft[n];
+                    });
+                }
+            } catch(e) {}
             document.getElementById('bidModal').classList.add('active');
         }
+
+        function saveBidDraft() {
+            if (!currentListingId) return;
+            const form = document.getElementById('bidForm');
+            if (!form) return;
+            const draft = {};
+            ['realtorName','brokerage','realtorEmail','realtorPhone','commission','offerDetails'].forEach(n => {
+                if (form.elements[n]) draft[n] = form.elements[n].value;
+            });
+            try { localStorage.setItem(`proposal_draft_${currentListingId}`, JSON.stringify(draft)); } catch(e) {}
+        }
+
+        function clearBidDraft(listingId) {
+            try { localStorage.removeItem(`proposal_draft_${listingId || currentListingId}`); } catch(e) {}
+        }
+
+        // Auto-save draft on input
+        document.getElementById('bidForm').addEventListener('input', saveBidDraft);
+
+        // ── Listing Detail Drawer ──────────────────────────────────────────────
+        let _drawerListingId = null;
+        let _drawerListing = null;
+        let _drawerMap = null;
+
+        function ensureLeaflet() {
+            return new Promise(resolve => {
+                if (window.L) return resolve();
+                const link = document.createElement('link');
+                link.rel = 'stylesheet';
+                link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+                document.head.appendChild(link);
+                const script = document.createElement('script');
+                script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+                script.onload = resolve;
+                document.head.appendChild(script);
+            });
+        }
+
+        async function openListingDrawer(listingId) {
+            await ensureLeaflet();
+            _drawerListingId = listingId;
+            const overlay = document.getElementById('listingDrawerOverlay');
+            const drawer = document.getElementById('listingDrawer');
+            const content = document.getElementById('listingDrawerContent');
+            const cta = document.getElementById('listingDrawerCta');
+
+            // Show skeleton while loading
+            content.innerHTML = `<div class="ldr-body" style="padding-top:2rem;">
+                <div style="height:2.4rem;background:#f3f4f6;border-radius:8px;width:55%;margin-bottom:0.75rem;"></div>
+                <div style="height:1rem;background:#f3f4f6;border-radius:6px;width:80%;margin-bottom:0.4rem;"></div>
+                <div style="height:1rem;background:#f3f4f6;border-radius:6px;width:60%;margin-bottom:2rem;"></div>
+                <div style="height:0.7rem;background:#f3f4f6;border-radius:6px;width:100%;margin-bottom:0.4rem;"></div>
+                <div style="height:0.7rem;background:#f3f4f6;border-radius:6px;width:90%;margin-bottom:0.4rem;"></div>
+                <div style="height:0.7rem;background:#f3f4f6;border-radius:6px;width:75%;"></div>
+            </div>`;
+            cta.innerHTML = '';
+            overlay.classList.add('open');
+            drawer.classList.add('open');
+            document.body.style.overflow = 'hidden';
+            const closeBtn = drawer.querySelector('.drawer-close-btn, button[onclick*="closeListingDrawer"], .ldr-back');
+            if (closeBtn) closeBtn.focus();
+
+            // Destroy old mini-map
+            if (_drawerMap) { try { _drawerMap.remove(); } catch(e) {} _drawerMap = null; }
+
+            try {
+                const cached = _listingPrefetchCache.get(listingId);
+                const l = cached || await fetch(`/api/listings/${listingId}`, { credentials: 'include' }).then(r => { if (!r.ok) throw new Error('not found'); return r.json(); });
+                if (!cached) _listingPrefetchCache.set(listingId, l);
+                _drawerListing = l;
+                renderDrawerContent(l);
+            } catch(e) {
+                content.innerHTML = `<div class="ldr-body"><p style="color:#9ca3af;padding:2rem 0;">Failed to load listing details.</p></div>`;
+            }
+        }
+
+        function renderDrawerContent(l) {
+            const content = document.getElementById('listingDrawerContent');
+            const cta = document.getElementById('listingDrawerCta');
+            const isSaved = savedListingIds.has(l.id);
+            const alreadyProposed = mySubmittedProposals.some(p => p.listing_id === l.id);
+            const hasPaidLead = purchasedListingLeadIds.has(l.id);
+            const userPlan = currentUser ? (currentUser.subscription_plan || 'free') : 'free';
+            const isFreePlan = userPlan === 'free';
+            const safeAddr = (l.address || '').replace(/'/g, "\\'");
+
+            // Bookmark button
+            const bkBtn = document.getElementById('drawerBookmarkBtn');
+            if (bkBtn) bkBtn.textContent = isSaved ? '🔖' : '🏷️';
+
+            // Photo
+            const imgs = l.image_urls && l.image_urls.length ? l.image_urls : [];
+            const photoHtml = imgs.length
+                ? `<div class="ldr-photo"><img src="${imgs[0]}" alt="Listing photo" loading="lazy">${imgs.length > 1 ? `<div class="ldr-photo-count">📷 ${imgs.length}</div>` : ''}</div>`
+                : `<div class="ldr-photo" style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);">🏡</div>`;
+
+            // Zestimate
+            const zestHtml = l.zestimate
+                ? `<div class="ldr-zestimate">🏠 Zestimate: <strong>${fmtPrice(l.zestimate)}</strong></div>`
+                : '';
+
+            // All specs
+            const specs = [
+                { label: 'Bedrooms', value: l.bedrooms, icon: '🛏️' },
+                { label: 'Bathrooms', value: l.bathrooms, icon: '🛁' },
+                { label: 'Square Feet', value: l.sqft ? l.sqft.toLocaleString() + ' sqft' : null, icon: '📏' },
+                { label: 'Property Type', value: l.property_type, icon: '🏠' },
+                { label: 'Year Built', value: l.year_built, icon: '🏗️' },
+                { label: 'Garage', value: l.garage_spaces != null ? (l.garage_spaces === 0 ? 'No garage' : l.garage_spaces + '-car garage') : null, icon: '🚗' },
+                { label: 'Lot Size', value: l.lot_size ? l.lot_size.toLocaleString() + ' sqft' : null, icon: '🌿' },
+                { label: 'HOA Fee', value: l.hoa_fee != null ? '$' + Number(l.hoa_fee).toLocaleString() + '/mo' : null, icon: '🏘️' },
+            ].filter(s => s.value != null);
+
+            const specsHtml = specs.map(s =>
+                `<div class="ldr-spec"><div class="ldr-spec-label">${s.icon} ${s.label}</div><div class="ldr-spec-value">${s.value}</div></div>`
+            ).join('');
+
+            // Competition
+            const bidCount = l.offer_count || l.offerCount || 0;
+            const competitionHtml = `<div class="ldr-competition">
+                <div class="ldr-competition-icon">${bidCount === 0 ? '🎯' : bidCount >= 5 ? '🔥' : '⚡'}</div>
+                <div>
+                    <div class="ldr-competition-text">${bidCount === 0 ? 'Be the first to submit a proposal' : bidCount + ' realtor' + (bidCount === 1 ? ' has' : 's have') + ' submitted proposals'}</div>
+                    <div class="ldr-competition-sub">${bidCount === 0 ? 'No competition yet — great opportunity.' : bidCount >= 5 ? 'High competition. Make your proposal stand out.' : 'Low competition. Good time to act.'}</div>
+                </div>
+            </div>`;
+
+            // Deadline
+            const deadlineHtml = l.proposal_deadline ? (() => {
+                const daysLeft = Math.ceil((new Date(l.proposal_deadline) - new Date()) / 86400000);
+                if (daysLeft < 0) return '';
+                const col = daysLeft <= 2 ? '#dc2626' : daysLeft <= 5 ? '#d97706' : '#059669';
+                const bg = daysLeft <= 2 ? '#fee2e2' : daysLeft <= 5 ? '#fef3c7' : '#d1fae5';
+                return `<div style="background:${bg};color:${col};font-size:0.85rem;font-weight:700;padding:0.6rem 1rem;border-radius:10px;margin-bottom:1rem;">⏰ Proposal deadline: ${new Date(l.proposal_deadline).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})} — ${daysLeft === 0 ? 'today' : daysLeft + ' day' + (daysLeft === 1 ? '' : 's') + ' left'}</div>`;
+            })() : '';
+
+            // Video
+            const videoHtml = l.video_url
+                ? `<div class="ldr-section"><div class="ldr-section-title">Video Tour</div><a href="${l.video_url}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:0.5rem;color:var(--accent);font-weight:600;font-size:0.9rem;text-decoration:none;">▶ Watch video tour →</a></div>`
+                : '';
+
+            // Map placeholder (rendered after DOM insert)
+            const hasMap = l.latitude && l.longitude;
+            const mapHtml = hasMap
+                ? `<div class="ldr-section"><div class="ldr-section-title">Location</div><div id="drawerMiniMap" class="ldr-mini-map"></div></div>`
+                : '';
+
+            // Posted date
+            const postedHtml = l.created_at
+                ? `<div style="font-size:0.78rem;color:#9ca3af;margin-bottom:1rem;">Listed ${timeAgo(l.created_at)}</div>`
+                : '';
+
+            content.innerHTML = `
+                ${photoHtml}
+                <div class="ldr-body">
+                    ${postedHtml}
+                    ${deadlineHtml}
+                    <div class="ldr-price">${fmtPrice(l.price)}</div>
+                    ${zestHtml}
+                    <div class="ldr-address">${l.address}${l.city ? ', ' + l.city : ''}${l.state ? ', ' + l.state : ''}${l.zip ? ' ' + l.zip : ''}</div>
+                    <div class="ldr-meta">
+                        <span class="ldr-chip">🛏️ ${l.bedrooms} bd</span>
+                        <span class="ldr-chip">🛁 ${l.bathrooms} ba</span>
+                        <span class="ldr-chip">📏 ${l.sqft ? l.sqft.toLocaleString() : '?'} sqft</span>
+                        ${l.property_type ? `<span class="ldr-chip">${l.property_type}</span>` : ''}
+                    </div>
+
+                    <div class="ldr-section">
+                        <div class="ldr-section-title">Details</div>
+                        <div class="ldr-specs">${specsHtml}</div>
+                    </div>
+
+                    <div class="ldr-section">
+                        <div class="ldr-section-title">Description</div>
+                        <div class="ldr-description">${esc(l.description || '')}</div>
+                    </div>
+
+                    <div class="ldr-section">
+                        <div class="ldr-section-title">Competition</div>
+                        ${competitionHtml}
+                    </div>
+
+                    ${videoHtml}
+                    ${mapHtml}
+
+                    <div class="ldr-section">
+                        <div class="ldr-section-title">About This Opportunity</div>
+                        <div style="font-size:0.875rem;color:#555;line-height:1.6;background:#f9fafb;border-radius:10px;padding:1rem;">
+                            The seller is looking for a realtor to represent this property.
+                            Submit a compelling proposal to introduce yourself — the seller will review all proposals and reach out to their preferred realtor.
+                            <br><br>
+                            <strong>Seller contact information is shared after your proposal is accepted.</strong>
+                        </div>
+                    </div>
+                    <div style="height:1rem;"></div>
+                </div>
+            `;
+
+            // Render mini map
+            if (hasMap) {
+                setTimeout(() => {
+                    const mapEl = document.getElementById('drawerMiniMap');
+                    if (!mapEl || !window.L) return;
+                    try {
+                        _drawerMap = L.map(mapEl, { zoomControl: false, attributionControl: false, dragging: false, scrollWheelZoom: false });
+                        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(_drawerMap);
+                        _drawerMap.setView([l.latitude, l.longitude], 14);
+                        L.marker([l.latitude, l.longitude]).addTo(_drawerMap);
+                    } catch(e) {}
+                }, 80);
+            }
+
+            // CTA
+            let ctaHtml;
+            if (alreadyProposed) {
+                ctaHtml = `<div style="display:flex;gap:0.75rem;">
+                    <button class="btn btn-secondary" style="flex:1;background:#e5e7eb;color:#374151;cursor:default;" disabled>✓ Proposal Submitted</button>
+                    <button class="btn btn-outline" onclick="closeListingDrawer();showProposalModal(${l.id},'${safeAddr}')" style="padding:0.875rem 1.25rem;">View</button>
+                </div>`;
+            } else if (isFreePlan && !hasPaidLead) {
+                ctaHtml = `<button class="btn btn-primary" style="width:100%;background:#16a34a;" onclick="closeListingDrawer();openListingLeadModal(${l.id},'${safeAddr}')">🔓 Unlock Lead — $15</button>
+                    <div style="text-align:center;font-size:0.78rem;color:#9ca3af;margin-top:0.5rem;">Or <a href="/pricing" style="color:var(--accent);">start a free trial</a> to submit unlimited proposals</div>`;
+            } else {
+                ctaHtml = `<button class="btn btn-primary" style="width:100%;font-size:1.05rem;padding:1rem;" onclick="closeListingDrawer();openBidModal(${l.id},'${safeAddr}')">Submit Proposal →</button>`;
+            }
+            cta.innerHTML = ctaHtml;
+        }
+
+        function closeListingDrawer() {
+            document.getElementById('listingDrawerOverlay').classList.remove('open');
+            document.getElementById('listingDrawer').classList.remove('open');
+            document.body.style.overflow = '';
+            _drawerListingId = null;
+            if (_drawerMap) { try { _drawerMap.remove(); } catch(e) {} _drawerMap = null; }
+        }
+
+        function toggleDrawerBookmark() {
+            if (!_drawerListingId) return;
+            const btn = document.getElementById('drawerBookmarkBtn');
+            toggleSave(_drawerListingId, { textContent: btn.textContent, classList: { contains: c => c === 'saved' ? savedListingIds.has(_drawerListingId) : false } });
+            // Optimistic UI
+            const nowSaved = savedListingIds.has(_drawerListingId);
+            btn.textContent = nowSaved ? '🏷️' : '🔖';
+            if (nowSaved) savedListingIds.delete(_drawerListingId);
+            else savedListingIds.add(_drawerListingId);
+            btn.textContent = savedListingIds.has(_drawerListingId) ? '🔖' : '🏷️';
+        }
+
+        // Close drawer on Escape
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') closeListingDrawer(); });
+
+        // Prefetch cache for listing drawer (desktop hover)
+        const _listingPrefetchCache = new Map();
+        function prefetchListing(id) {
+            if (_listingPrefetchCache.has(id)) return;
+            _listingPrefetchCache.set(id, null); // mark in-flight
+            fetch(`/api/listings/${id}`, { credentials: 'include' })
+                .then(r => r.ok ? r.json() : null)
+                .then(data => { if (data) _listingPrefetchCache.set(id, data); })
+                .catch(() => {});
+        }
+        // ──────────────────────────────────────────────────────────────────────
 
         function closeBidModal() {
             document.getElementById('bidModal').classList.remove('active');
             document.getElementById('bidForm').reset();
             document.getElementById('bidForm').style.display = '';
             document.getElementById('bidSuccessState').style.display = 'none';
+            // Don't clear draft on close — let them resume if they re-open
         }
 
         // Submit Bid
@@ -2468,6 +3213,7 @@
                     return;
                 }
 
+                clearBidDraft(currentListingId);
                 document.getElementById('bidForm').style.display = 'none';
                 const successEl = document.getElementById('bidSuccessState');
                 document.getElementById('bidSuccessAddress').textContent = document.getElementById('modalPropertyAddress').textContent;
@@ -2478,6 +3224,48 @@
                 alert('Failed to submit proposal. Please try again.');
             }
         });
+
+        let _activeQuickFilters = {};
+
+        function applyQuickFilter(key, val) {
+            // Toggle off if already active
+            if (_activeQuickFilters[key] === val) {
+                delete _activeQuickFilters[key];
+            } else {
+                _activeQuickFilters[key] = val;
+            }
+
+            // Update chip active states
+            document.querySelectorAll('.qchip').forEach(c => {
+                c.classList.toggle('active', c.dataset.qkey === key && _activeQuickFilters[key] === c.dataset.qval);
+            });
+
+            // Apply to filters
+            const priceVal = _activeQuickFilters.price;
+            if (priceVal === 'under400') {
+                document.getElementById('filterMinPrice').value = '';
+                document.getElementById('filterMaxPrice').value = '400000';
+            } else if (priceVal === '400to700') {
+                document.getElementById('filterMinPrice').value = '400000';
+                document.getElementById('filterMaxPrice').value = '700000';
+            } else if (priceVal === 'over700') {
+                document.getElementById('filterMinPrice').value = '700000';
+                document.getElementById('filterMaxPrice').value = '';
+            } else {
+                document.getElementById('filterMinPrice').value = '';
+                document.getElementById('filterMaxPrice').value = '';
+            }
+
+            const bedsVal = _activeQuickFilters.beds;
+            if (bedsVal) document.getElementById('filterMinBeds').value = bedsVal;
+            else document.getElementById('filterMinBeds').value = '';
+
+            const sortVal = _activeQuickFilters.sort;
+            if (sortVal) document.getElementById('filterSort').value = sortVal;
+
+            currentPage = 1;
+            applyFilters();
+        }
 
         // Filter functions
         function applyFilters() {
@@ -2612,7 +3400,7 @@
                 }
 
                 return `
-                <div class="listing-card" onclick="openBidModal(${listing.id}, '${safeAddr}')">
+                <div class="listing-card" onclick="openListingDrawer(${listing.id})" onmouseenter="prefetchListing(${listing.id})">
                     <div class="listing-image" style="${img ? `background-image:url('${img}');background-size:cover;background-position:center;` : ''}">
                         ${img ? '' : '🏡'}
                         <div class="listing-badge">${listing.offerCount || 0} Bids</div>
@@ -2711,10 +3499,10 @@
                             <span class="status-badge status-accepted" style="margin-top:0.75rem;display:inline-block;">🏆 You're the agent!</span>
                             ${bid.owner_name ? `<div style="margin-top:0.75rem;font-size:0.9rem;color:#444;"><strong>Seller:</strong> ${bid.owner_name} · <a href="mailto:${bid.owner_email}">${bid.owner_email}</a> · <a href="tel:${bid.owner_phone}">${bid.owner_phone}</a></div>` : ''}
                         </div>
-                        ${bid.owner_email ? `
-                        <div>
-                            <a href="mailto:${bid.owner_email}" class="btn btn-primary" style="text-align:center;">Contact Seller</a>
-                        </div>` : ''}
+                        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.75rem;">
+                            ${bid.owner_email ? `<a href="mailto:${bid.owner_email}" class="btn btn-primary" style="text-align:center;">Contact Seller</a>` : ''}
+                            <button onclick='showWonNextSteps(${JSON.stringify({address:(bid.address||"")+(bid.city?", "+bid.city:"")})})' style="background:var(--success);color:white;border:none;border-radius:6px;padding:0.4rem 0.875rem;font-size:0.82rem;font-weight:600;cursor:pointer;font-family:inherit;">🎯 Next Steps</button>
+                        </div>
                     </div>
                 `;
             }).join('');
@@ -2724,6 +3512,42 @@
                 const el = document.getElementById(`won-bid-${bid.id}`);
                 if (el) loadDealForWonListing(bid.id, el.querySelector('.bid-info'));
             });
+        }
+
+        function showWonNextSteps(listing) {
+            const existing = document.getElementById('wonNextStepsModal');
+            if (existing) existing.remove();
+            const overlay = document.createElement('div');
+            overlay.id = 'wonNextStepsModal';
+            overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1050;display:flex;align-items:center;justify-content:center;padding:1rem;';
+            overlay.innerHTML = `
+                <div role="dialog" aria-modal="true" aria-labelledby="wonNextStepsTitle" style="background:white;border-radius:16px;padding:2rem;max-width:480px;width:100%;position:relative;max-height:90vh;overflow-y:auto;">
+                    <button onclick="document.getElementById('wonNextStepsModal').remove()" style="position:absolute;top:1rem;right:1rem;background:none;border:none;font-size:1.4rem;cursor:pointer;color:#9ca3af;">&times;</button>
+                    <div style="text-align:center;margin-bottom:1.5rem;">
+                        <div style="font-size:3rem;margin-bottom:0.5rem;">🎉</div>
+                        <h2 id="wonNextStepsTitle" style="font-family:'Crimson Pro',serif;font-size:1.6rem;font-weight:700;color:var(--ink);margin-bottom:0.25rem;">You Won This Listing!</h2>
+                        <p style="color:#666;font-size:0.875rem;">${esc(listing.address || 'Property')}</p>
+                    </div>
+                    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:1.25rem;margin-bottom:1.5rem;">
+                        <div style="font-weight:700;color:#15803d;font-size:0.875rem;margin-bottom:0.75rem;">NEXT STEPS</div>
+                        <div style="display:flex;flex-direction:column;gap:0.75rem;">
+                            <div style="display:flex;align-items:flex-start;gap:0.75rem;"><span style="font-size:1.1rem;margin-top:1px;">✅</span><div><div style="font-weight:600;font-size:0.875rem;">Proposal accepted</div><div style="font-size:0.8rem;color:#6b7280;">The seller has chosen you to represent their property.</div></div></div>
+                            <div style="display:flex;align-items:flex-start;gap:0.75rem;"><span style="font-size:1.1rem;margin-top:1px;">📞</span><div><div style="font-weight:600;font-size:0.875rem;">Schedule intro call</div><div style="font-size:0.8rem;color:#6b7280;">Message the seller to introduce yourself and discuss their timeline.</div></div></div>
+                            <div style="display:flex;align-items:flex-start;gap:0.75rem;"><span style="font-size:1.1rem;margin-top:1px;">📝</span><div><div style="font-weight:600;font-size:0.875rem;">Sign listing agreement</div><div style="font-size:0.8rem;color:#6b7280;">Finalize terms and get the agreement signed before listing.</div></div></div>
+                            <div style="display:flex;align-items:flex-start;gap:0.75rem;"><span style="font-size:1.1rem;margin-top:1px;">🏷️</span><div><div style="font-weight:600;font-size:0.875rem;">List the property</div><div style="font-size:0.8rem;color:#6b7280;">Prepare the listing and launch on MLS and your channels.</div></div></div>
+                            <div style="display:flex;align-items:flex-start;gap:0.75rem;"><span style="font-size:1.1rem;margin-top:1px;">🤝</span><div><div style="font-weight:600;font-size:0.875rem;">Close the deal</div><div style="font-size:0.8rem;color:#6b7280;">Work with buyers' agents and guide the seller through closing.</div></div></div>
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:0.75rem;">
+                        <button onclick="document.querySelector('[data-view=messages]').click();document.getElementById('wonNextStepsModal').remove()" style="flex:1;background:var(--accent);color:white;border:none;border-radius:8px;padding:0.75rem;font-weight:700;cursor:pointer;font-family:inherit;">Message Seller →</button>
+                        <button onclick="document.getElementById('wonNextStepsModal').remove()" style="background:#f3f4f6;color:#374151;border:none;border-radius:8px;padding:0.75rem 1.25rem;font-weight:600;cursor:pointer;font-family:inherit;">Close</button>
+                    </div>
+                </div>
+            `;
+            overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+            document.body.appendChild(overlay);
+            const primaryBtn = overlay.querySelector('button[onclick*="messages"]');
+            if (primaryBtn) primaryBtn.focus();
         }
 
         // ===== MAP FUNCTIONS =====
@@ -2775,9 +3599,9 @@
                             🛏️ ${listing.bedrooms} bd &nbsp;·&nbsp; 🛁 ${listing.bathrooms} ba &nbsp;·&nbsp; ${Number(listing.sqft).toLocaleString()} sqft
                         </div>
                         <div style="color:#999;font-size:0.8rem;margin-bottom:10px;">${distMiles.toFixed(1)} mi away · ${listing.offerCount || 0} bid(s)</div>
-                        <button onclick="openBidModal(${listing.id}, '${escapedAddress}')"
+                        <button onclick="openListingDrawer(${listing.id})"
                             style="width:100%;padding:8px;background:var(--accent);color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:0.88rem;">
-                            Submit Proposal
+                            View Details
                         </button>
                     </div>`,
                     { maxWidth: 280 }
@@ -2994,7 +3818,7 @@
                 if (p.service_areas) document.getElementById('wizardAreas').value = p.service_areas;
                 if (p.profile_photo) {
                     document.getElementById('wizardPhotoPreview').innerHTML =
-                        `<img src="${p.profile_photo}" style="width:100%;height:100%;object-fit:cover;">`;
+                        `<img src="${p.profile_photo}" style="width:100%;height:100%;object-fit:cover;" loading="lazy">`;
                 }
             } catch {}
         }
@@ -3013,7 +3837,7 @@
             const reader = new FileReader();
             reader.onload = e => {
                 const preview = document.getElementById('wizardPhotoPreview');
-                preview.innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;">`;
+                preview.innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;" loading="lazy">`;
             };
             reader.readAsDataURL(file);
             document.getElementById('wizardPhotoBtn').textContent = 'Upload & Continue →';
@@ -3479,7 +4303,7 @@
                 document.getElementById('profilePhotoInitials').textContent = initials.toUpperCase();
                 if (p.profile_photo) {
                     const wrap = document.getElementById('profilePhotoWrap');
-                    wrap.innerHTML = `<img src="${p.profile_photo}" style="width:100%;height:100%;object-fit:cover;">`;
+                    wrap.innerHTML = `<img src="${p.profile_photo}" style="width:100%;height:100%;object-fit:cover;" loading="lazy">`;
                 }
                 // Public profile URL
                 const base = 'https://www.realtorfinder.net';
@@ -3534,7 +4358,7 @@
                 if (!res.ok) throw new Error();
                 const { url } = await res.json();
                 const wrap = document.getElementById('profilePhotoWrap');
-                wrap.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover;">`;
+                wrap.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover;" loading="lazy">`;
                 statusEl.textContent = '✓ Photo updated';
                 setTimeout(() => { statusEl.textContent = ''; }, 3000);
             } catch {
@@ -4588,7 +5412,7 @@
                 grid.innerHTML = listings.map(listing => {
                     const img = listing.image_urls && listing.image_urls.length > 0 ? listing.image_urls[0] : null;
                     return `
-                        <div class="listing-card" onclick="openBidModal(${listing.id}, '${listing.address.replace(/'/g, "\\'")}')">
+                        <div class="listing-card" onclick="openListingDrawer(${listing.id})">
                             <div class="listing-image" style="${img ? `background-image:url('${img}');background-size:cover;background-position:center;` : ''}">
                                 ${img ? '' : '🏡'}
                                 <div class="listing-badge">${listing.offer_count || 0} Bids</div>
@@ -4700,6 +5524,44 @@
                         }).join('');
                     }
                 }
+                // Commission intelligence
+                try {
+                    const ciRes = await fetch(`${API_BASE_URL}/analytics/realtor/commission-intel`, { credentials: 'include' });
+                    if (ciRes.ok) {
+                        const ci = await ciRes.json();
+                        if (ci && ci.myAvg !== null) {
+                            document.getElementById('commissionIntel').style.display = 'block';
+                            const diff = ci.myAvg !== null && ci.acceptedAvg !== null ? (ci.myAvg - ci.acceptedAvg).toFixed(2) : null;
+                            document.getElementById('commissionIntelGrid').innerHTML = `
+                                <div style="background:#f9fafb;border-radius:10px;padding:0.875rem;text-align:center;">
+                                    <div style="font-size:0.7rem;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:0.3rem;">Your Avg Commission</div>
+                                    <div style="font-size:1.6rem;font-weight:700;color:var(--ink);">${ci.myAvg !== null ? ci.myAvg + '%' : '—'}</div>
+                                </div>
+                                <div style="background:#f9fafb;border-radius:10px;padding:0.875rem;text-align:center;">
+                                    <div style="font-size:0.7rem;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:0.3rem;">Platform Accepted Avg</div>
+                                    <div style="font-size:1.6rem;font-weight:700;color:#059669;">${ci.acceptedAvg !== null ? ci.acceptedAvg + '%' : '—'}</div>
+                                </div>
+                                <div style="background:#f9fafb;border-radius:10px;padding:0.875rem;text-align:center;">
+                                    <div style="font-size:0.7rem;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:0.3rem;">vs. Market</div>
+                                    <div style="font-size:1.6rem;font-weight:700;color:${diff === null ? '#374151' : parseFloat(diff) > 0.1 ? '#dc2626' : parseFloat(diff) < -0.1 ? '#059669' : '#d97706'};">${diff !== null ? (parseFloat(diff) > 0 ? '+' : '') + diff + '%' : '—'}</div>
+                                </div>
+                            `;
+                            const tipEl = document.getElementById('commissionIntelTip');
+                            if (diff !== null) {
+                                if (parseFloat(diff) > 0.5) {
+                                    tipEl.style.background = '#fef2f2'; tipEl.style.color = '#991b1b';
+                                    tipEl.textContent = `⚠️ Your commissions average ${diff}% above accepted proposals. Lowering by just 0.25% could meaningfully improve your win rate.`;
+                                } else if (parseFloat(diff) < -0.1) {
+                                    tipEl.style.background = '#f0fdf4'; tipEl.style.color = '#15803d';
+                                    tipEl.textContent = `✅ Your commissions are below the accepted average — great for standing out to sellers.`;
+                                } else {
+                                    tipEl.style.background = '#fefce8'; tipEl.style.color = '#854d0e';
+                                    tipEl.textContent = `💡 Your commissions are right at the market average. A slight reduction could give you an edge on competitive listings.`;
+                                }
+                            }
+                        }
+                    }
+                } catch(e) {}
             } catch (err) { console.error('Analytics error:', err); }
         }
 
@@ -5041,12 +5903,26 @@
             }
         }
 
+        function mobMsgShowList() {
+            document.getElementById('msgConvList').classList.remove('mob-hidden');
+            document.getElementById('msgThread').classList.remove('mob-visible');
+            document.getElementById('msgBackBtn').style.display = 'none';
+        }
+        function mobMsgShowThread() {
+            if (window.innerWidth <= 640) {
+                document.getElementById('msgConvList').classList.add('mob-hidden');
+                document.getElementById('msgThread').classList.add('mob-visible');
+                document.getElementById('msgBackBtn').style.display = 'flex';
+            }
+        }
+
         async function openConv(userId, listingId, name) {
             activeConvUserId = userId;
             activeConvListingId = listingId;
             activeConvName = name;
             document.querySelectorAll('.msg-conv-item').forEach(el => el.classList.remove('active'));
             event.currentTarget.classList.add('active');
+            mobMsgShowThread();
             const thread = document.getElementById('msgThread');
             thread.innerHTML = `
                 <div class="msg-thread-header">${esc(name)}</div>
@@ -5435,24 +6311,134 @@
         }
 
         function showProposalModal(listingId, listingAddress) {
-            // Check if already submitted
             const existing = mySubmittedProposals.find(p => p.listing_id === listingId);
             if (existing) {
-                showToast(`Already submitted (${existing.status})`);
+                showSubmittedProposalModal(existing, listingAddress);
                 return;
             }
             const modal = document.getElementById('proposalModal');
             if (!modal) return;
             document.getElementById('proposalListingId').value = listingId;
             document.getElementById('proposalListingAddr').textContent = listingAddress;
-            // Reset comps panel
             const cp = document.getElementById('compsPanel'); if (cp) cp.style.display = 'none';
             const dp = document.getElementById('listingDocsPanel'); if (dp) dp.style.display = 'none';
             modal.style.display = 'flex';
-            // Load templates if not yet loaded
             if (!_templates.length) loadTemplates();
-            // Load docs for this listing
             loadListingDocs(listingId);
+            // Load proposal stats for quality signal
+            const sigEl = document.getElementById('commissionSignal');
+            if (sigEl) { sigEl.style.display = 'none'; }
+            document.getElementById('proposalCommission').value = '';
+            fetch(`/api/listings/${listingId}/proposal-stats`, { credentials: 'include' })
+                .then(r => r.ok ? r.json() : null)
+                .then(stats => {
+                    if (!stats || stats.count === 0) return;
+                    window._proposalStats = stats;
+                    if (sigEl && stats.avgCommission) {
+                        sigEl.style.display = 'block';
+                        sigEl.style.background = '#f0f9ff';
+                        sigEl.style.color = '#0369a1';
+                        sigEl.textContent = `${stats.count} proposal${stats.count===1?'':'s'} submitted · avg commission: ${stats.avgCommission}%${stats.minCommission ? ' · lowest: ' + stats.minCommission + '%' : ''}`;
+                    }
+                }).catch(() => {});
+        }
+
+        function updateCommissionSignal(val) {
+            const sigEl = document.getElementById('commissionSignal');
+            if (!sigEl || !window._proposalStats || !window._proposalStats.avgCommission) return;
+            const v = parseFloat(val);
+            if (isNaN(v)) { sigEl.style.display = 'none'; return; }
+            const avg = window._proposalStats.avgCommission;
+            sigEl.style.display = 'block';
+            if (v < avg - 0.25) {
+                sigEl.style.background = '#f0fdf4'; sigEl.style.color = '#15803d';
+                sigEl.textContent = `✅ Competitive! Your ${v}% is below the avg (${avg}%) — sellers prefer lower commissions.`;
+            } else if (v <= avg + 0.25) {
+                sigEl.style.background = '#fefce8'; sigEl.style.color = '#854d0e';
+                sigEl.textContent = `⚡ On par with the avg commission of ${avg}%. Consider going slightly lower to stand out.`;
+            } else {
+                sigEl.style.background = '#fef2f2'; sigEl.style.color = '#991b1b';
+                sigEl.textContent = `⚠️ Your ${v}% is above the avg (${avg}%). Sellers may prefer lower commissions.`;
+            }
+        }
+        window._proposalStats = null;
+
+        function showSubmittedProposalModal(p, listingAddress) {
+            const statusColors = { pending: '#d97706', accepted: '#059669', declined: '#dc2626', withdrawn: '#6b7280' };
+            const statusBg    = { pending: '#fef3c7', accepted: '#d1fae5', declined: '#fee2e2', withdrawn: '#f3f4f6' };
+            const col = statusColors[p.status] || '#6b7280';
+            const bg  = statusBg[p.status]    || '#f3f4f6';
+            const statusLabel = p.status ? p.status.charAt(0).toUpperCase() + p.status.slice(1) : 'Pending';
+
+            let counterHtml = '';
+            if (p.counter_status === 'pending') {
+                counterHtml = `<div style="background:#fef9c3;border:1px solid #fde047;border-radius:10px;padding:1rem;margin-top:1rem;">
+                    <div style="font-weight:700;color:#713f12;margin-bottom:0.4rem;">⚡ Counter-offer: ${p.counter_commission}% commission</div>
+                    ${p.counter_message ? `<div style="font-size:0.875rem;color:#78350f;margin-bottom:0.75rem;">"${esc(p.counter_message)}"</div>` : ''}
+                    <div style="display:flex;gap:0.5rem;">
+                        <button onclick="respondToCounter(${p.id},true);closeSubmittedProposalModal()" style="background:#10b981;color:white;border:none;padding:0.5rem 1rem;border-radius:6px;font-weight:600;cursor:pointer;font-size:0.875rem;">Accept Counter</button>
+                        <button onclick="respondToCounter(${p.id},false);closeSubmittedProposalModal()" style="background:#f3f4f6;color:#374151;border:none;padding:0.5rem 1rem;border-radius:6px;font-weight:600;cursor:pointer;font-size:0.875rem;">Decline</button>
+                    </div>
+                </div>`;
+            }
+
+            const attachHtml = (p.attachments || []).length
+                ? `<div style="margin-top:0.75rem;"><div style="font-size:0.75rem;font-weight:700;color:#9ca3af;margin-bottom:0.4rem;">ATTACHMENTS</div>` +
+                  (p.attachments || []).map(a => {
+                      const att = typeof a === 'string' ? (() => { try { return JSON.parse(a); } catch { return { url: a, name: 'file' }; } })() : a;
+                      return `<a href="${esc(att.url)}" target="_blank" style="font-size:0.82rem;color:#0284c7;background:#eff6ff;border-radius:4px;padding:3px 8px;text-decoration:none;display:inline-block;margin:2px;">📎 ${esc(att.name||'attachment')}</a>`;
+                  }).join('') + `</div>` : '';
+
+            const withdrawBtn = p.status === 'pending'
+                ? `<button onclick="deleteProposal(${p.id});closeSubmittedProposalModal()" style="background:white;border:1px solid #e5e7eb;color:#6b7280;border-radius:8px;padding:0.6rem 1.25rem;font-weight:600;cursor:pointer;font-family:inherit;font-size:0.875rem;">Withdraw Proposal</button>`
+                : '';
+
+            const overlay = document.createElement('div');
+            overlay.id = 'submittedProposalOverlay';
+            overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1050;display:flex;align-items:center;justify-content:center;padding:1rem;';
+            overlay.innerHTML = `
+                <div role="dialog" aria-modal="true" aria-labelledby="submittedProposalTitle" style="background:white;border-radius:16px;padding:2rem;max-width:480px;width:100%;max-height:90vh;overflow-y:auto;position:relative;">
+                    <button onclick="closeSubmittedProposalModal()" style="position:absolute;top:1rem;right:1rem;background:none;border:none;font-size:1.4rem;cursor:pointer;color:#9ca3af;">&times;</button>
+                    <div style="margin-bottom:1.25rem;">
+                        <span style="background:${bg};color:${col};padding:0.3rem 0.9rem;border-radius:20px;font-size:0.8rem;font-weight:700;">${statusLabel}</span>
+                    </div>
+                    <h2 id="submittedProposalTitle" style="font-family:'Crimson Pro',serif;font-size:1.6rem;font-weight:700;color:var(--ink);margin-bottom:0.25rem;">Your Proposal</h2>
+                    <p style="color:#666;font-size:0.875rem;margin-bottom:1.5rem;">${esc(listingAddress || (p.address ? p.address + (p.city ? ', '+p.city : '') : ''))}</p>
+
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1.25rem;">
+                        <div style="background:#f9fafb;border-radius:10px;padding:0.875rem;">
+                            <div style="font-size:0.72rem;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.3rem;">Commission</div>
+                            <div style="font-size:1.4rem;font-weight:700;color:var(--ink);">${p.commission_pct}%</div>
+                        </div>
+                        <div style="background:#f9fafb;border-radius:10px;padding:0.875rem;">
+                            <div style="font-size:0.72rem;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.3rem;">Timeline</div>
+                            <div style="font-size:0.95rem;font-weight:600;color:var(--ink);">${esc(p.timeline || '—')}</div>
+                        </div>
+                    </div>
+
+                    ${p.cover_note ? `<div style="margin-bottom:1.25rem;">
+                        <div style="font-size:0.72rem;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.4rem;">Cover Note</div>
+                        <div style="font-size:0.9rem;color:#374151;line-height:1.6;background:#f9fafb;border-radius:10px;padding:0.875rem;">${esc(p.cover_note)}</div>
+                    </div>` : ''}
+
+                    ${attachHtml}
+                    ${counterHtml}
+
+                    <div style="display:flex;gap:0.75rem;margin-top:1.5rem;flex-wrap:wrap;">
+                        <button onclick="openFollowUpModal(${p.id});closeSubmittedProposalModal()" style="flex:1;background:var(--accent);color:white;border:none;border-radius:8px;padding:0.75rem;font-weight:700;cursor:pointer;font-family:inherit;">Send Follow-up</button>
+                        ${withdrawBtn}
+                    </div>
+                </div>
+            `;
+            overlay.addEventListener('click', e => { if (e.target === overlay) closeSubmittedProposalModal(); });
+            document.body.appendChild(overlay);
+            const primaryBtn = overlay.querySelector('button[onclick*="openFollowUpModal"], button[onclick*="closeSubmittedProposalModal"]');
+            if (primaryBtn) primaryBtn.focus();
+        }
+
+        function closeSubmittedProposalModal() {
+            const el = document.getElementById('submittedProposalOverlay');
+            if (el) el.remove();
         }
 
         function closeProposalModal() {
@@ -5584,11 +6570,17 @@
                                 <span style="font-size:1rem;">⭐</span>
                                 <span style="font-weight:700;color:${tierCfg.color};font-size:0.9rem;">${esc(tierCfg.label)}</span>
                             </div>` : ''}
-                            <h3 style="margin-bottom:0.5rem;">Your Referral Link</h3>
-                            <p style="color:#666;font-size:0.875rem;margin-bottom:1.25rem;">Share with other realtors. Earn tiers as you grow: Rising Star (1) → Connector (3) → Top Referrer (5) → Ambassador (10).</p>
-                            <div style="display:flex;gap:0.75rem;margin-bottom:1.5rem;">
+                            <h3 style="margin-bottom:0.5rem;">Your Referral Links</h3>
+                            <p style="color:#666;font-size:0.875rem;margin-bottom:1.25rem;">Share with other realtors to earn credits. Send the seller link to anyone thinking of selling — when they post a listing, you're first to see it.</p>
+                            <div style="font-size:0.75rem;font-weight:600;color:var(--text-light);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">For Realtors</div>
+                            <div style="display:flex;gap:0.75rem;margin-bottom:1rem;">
                                 <input type="text" id="referralLinkInput" value="${esc(data.referral_url)}" readonly style="flex:1;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-size:0.85rem;color:#444;">
-                                <button onclick="copyReferralLink()" style="background:var(--accent);color:white;border:none;border-radius:8px;padding:10px 18px;cursor:pointer;font-weight:600;white-space:nowrap;">Copy Link</button>
+                                <button onclick="copyReferralLink()" style="background:var(--accent);color:white;border:none;border-radius:8px;padding:10px 18px;cursor:pointer;font-weight:600;white-space:nowrap;">Copy</button>
+                            </div>
+                            <div style="font-size:0.75rem;font-weight:600;color:var(--text-light);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">For Sellers</div>
+                            <div style="display:flex;gap:0.75rem;margin-bottom:1.5rem;">
+                                <input type="text" id="sellerReferralLinkInput" value="${esc(data.seller_referral_url || '')}" readonly style="flex:1;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-size:0.85rem;color:#444;">
+                                <button onclick="copySellerReferralLink()" style="background:var(--primary);color:white;border:none;border-radius:8px;padding:10px 18px;cursor:pointer;font-weight:600;white-space:nowrap;">Copy</button>
                             </div>
                             <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
                                 <div style="text-align:center;background:#f8f9fa;border-radius:12px;padding:1rem 1.5rem;flex-shrink:0;">
@@ -5699,7 +6691,71 @@
 
         function copyReferralLink() {
             const input = document.getElementById('referralLinkInput');
-            if (input) { input.select(); document.execCommand('copy'); showToast('Link copied to clipboard!'); }
+            if (input) { input.select(); document.execCommand('copy'); showToast('Realtor link copied!'); }
+        }
+
+        function copySellerReferralLink() {
+            const input = document.getElementById('sellerReferralLinkInput');
+            if (input) { input.select(); document.execCommand('copy'); showToast('Seller link copied — share with anyone thinking of selling!'); }
+        }
+
+        function copyInviteTemplate() {
+            const el = document.getElementById('inviteTemplate');
+            if (!el) return;
+            // Swap in the actual referral link if available
+            const linkInput = document.getElementById('referralLinkInput');
+            let text = el.innerText;
+            if (linkInput && linkInput.value) text = text.replace('[YOUR_LINK]', linkInput.value);
+            navigator.clipboard.writeText(text).then(() => showToast('Message copied — paste it anywhere!')).catch(() => {
+                const ta = document.createElement('textarea');
+                ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove();
+                showToast('Message copied — paste it anywhere!');
+            });
+        }
+
+        // ===== AMBASSADOR PROGRAM =====
+
+        async function loadAmbassadorStatus() {
+            try {
+                const res = await fetch('/api/ambassador/my-status', { credentials: 'include' });
+                if (!res.ok) return;
+                const data = await res.json();
+                const block = document.getElementById('ambassadorStatusBlock');
+                const form = document.getElementById('ambassadorApplyForm');
+                if (!block) return;
+                if (data.status === null) {
+                    block.innerHTML = `<button onclick="document.getElementById('ambassadorApplyForm').style.display='block';this.style.display='none';" style="background:#FF6B35;color:white;border:none;border-radius:8px;padding:12px 24px;cursor:pointer;font-weight:700;font-size:0.9rem;">Apply Now →</button>`;
+                } else if (data.status === 'pending') {
+                    block.innerHTML = `<div style="background:rgba(255,255,255,0.1);border-radius:10px;padding:14px 20px;text-align:center;"><div style="font-size:1.25rem;">⏳</div><div style="font-weight:700;font-size:0.9rem;margin-top:4px;">Under Review</div><div style="font-size:0.78rem;opacity:0.7;margin-top:2px;">2–3 business days</div></div>`;
+                } else if (data.status === 'approved') {
+                    block.innerHTML = `<div style="background:rgba(255,107,53,0.2);border:1px solid rgba(255,107,53,0.4);border-radius:10px;padding:14px 20px;text-align:center;"><div style="font-size:1.25rem;">🌟</div><div style="font-weight:700;font-size:0.9rem;margin-top:4px;color:#FF6B35;">Active Ambassador</div><div style="font-size:0.78rem;opacity:0.7;margin-top:2px;">Professional plan active</div></div>`;
+                } else if (data.status === 'rejected') {
+                    block.innerHTML = `<div style="text-align:center;font-size:0.85rem;opacity:0.7;"><div>Application not approved</div><button onclick="document.getElementById('ambassadorApplyForm').style.display='block';this.closest('div').style.display='none';" style="margin-top:8px;background:rgba(255,255,255,0.15);color:white;border:none;border-radius:6px;padding:6px 14px;cursor:pointer;font-size:0.8rem;">Reapply</button></div>`;
+                }
+            } catch(e) { console.error('loadAmbassadorStatus error:', e); }
+        }
+
+        async function submitAmbassadorApp() {
+            const instagram_handle = document.getElementById('amb-instagram').value.trim();
+            const linkedin_url = document.getElementById('amb-linkedin').value.trim();
+            const facebook_url = document.getElementById('amb-facebook').value.trim();
+            const follower_count = parseInt(document.getElementById('amb-followers').value) || 0;
+            const sample_post_url = document.getElementById('amb-sample').value.trim();
+            const notes = document.getElementById('amb-notes').value.trim();
+            if (!instagram_handle && !linkedin_url && !facebook_url) { showToast('Please enter at least one social handle or URL', 'error'); return; }
+            if (follower_count < 500) { showToast('Minimum 500 followers required', 'error'); return; }
+            try {
+                const res = await fetch('/api/ambassador/apply', {
+                    method: 'POST', credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ instagram_handle, linkedin_url, facebook_url, follower_count, sample_post_url, notes })
+                });
+                const data = await res.json();
+                if (!res.ok) { showToast(data.error || 'Failed to submit', 'error'); return; }
+                showToast('Application submitted! We\'ll be in touch within 2–3 business days 🌟');
+                document.getElementById('ambassadorApplyForm').style.display = 'none';
+                await loadAmbassadorStatus();
+            } catch(e) { showToast('Something went wrong. Please try again.', 'error'); }
         }
 
         // ===== SAVED SEARCHES (Feature 5) =====
@@ -6284,8 +7340,9 @@
                 <input type="hidden" id="proposalListingId">
                 <div style="margin-bottom:1rem;">
                     <label style="display:block;font-weight:600;margin-bottom:0.4rem;font-size:0.9rem;">Commission % <span style="color:#ef4444;">*</span></label>
-                    <input type="number" id="proposalCommission" step="0.1" min="0.1" max="10" placeholder="e.g. 2.5" required style="width:100%;padding:10px 14px;border:1px solid #e5e7eb;border-radius:8px;font-size:0.95rem;">
+                    <input type="number" id="proposalCommission" step="0.1" min="0.1" max="10" placeholder="e.g. 2.5" required style="width:100%;padding:10px 14px;border:1px solid #e5e7eb;border-radius:8px;font-size:0.95rem;" oninput="updateCommissionSignal(this.value)">
                     <p style="font-size:0.78rem;color:#666;margin-top:4px;">Between 0.1% and 10%. Lower commission = better for seller = highlighted in green.</p>
+                    <div id="commissionSignal" style="display:none;margin-top:6px;padding:6px 10px;border-radius:6px;font-size:0.8rem;font-weight:600;"></div>
                 </div>
                 <div style="margin-bottom:1rem;">
                     <label style="display:block;font-weight:600;margin-bottom:0.4rem;font-size:0.9rem;">Timeline</label>
@@ -6476,6 +7533,21 @@
         </div>
     </div>
 
+    <!-- Listing Detail Drawer -->
+    <div id="listingDrawerOverlay" onclick="closeListingDrawer()"></div>
+    <aside id="listingDrawer" aria-label="Listing details">
+        <div class="ldr-header-bar">
+            <button class="ldr-back" onclick="closeListingDrawer()">← Back</button>
+            <div style="display:flex;gap:0.5rem;align-items:center;">
+                <button class="ldr-bookmark-btn" id="drawerBookmarkBtn" onclick="toggleDrawerBookmark()" title="Save listing">🏷️</button>
+            </div>
+        </div>
+        <div class="ldr-scroll">
+            <div id="listingDrawerContent"></div>
+        </div>
+        <div class="ldr-cta" id="listingDrawerCta"></div>
+    </aside>
+
     <!-- Onboarding Status Modal -->
     <div class="onboarding-status-modal-overlay" id="onboardingStatusModal">
         <div class="onboarding-status-modal-box">
@@ -6489,10 +7561,184 @@
         </div>
     </div>
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Mobile Bottom Navigation -->
+    <nav id="mobileBottomNav" aria-label="Main navigation">
+        <button class="mob-nav-item active" data-mob-view="browse" onclick="mobNavGo('browse',this)" aria-label="Browse listings" aria-current="page">
+            <span class="mob-nav-icon">🏠</span>
+            <span>Browse</span>
+        </button>
+        <button class="mob-nav-item" data-mob-view="pipeline" onclick="mobNavGo('pipeline',this)" aria-label="Proposal pipeline">
+            <span class="mob-nav-icon">📋</span>
+            <span>Pipeline</span>
+            <span class="mob-nav-badge" id="mobPipelineBadge"></span>
+        </button>
+        <button class="mob-nav-item" data-mob-view="messages" onclick="mobNavGo('messages',this)" aria-label="Messages">
+            <span class="mob-nav-icon">💬</span>
+            <span>Messages</span>
+            <span class="mob-nav-badge" id="mobMsgBadge"></span>
+        </button>
+        <button class="mob-nav-item" data-mob-view="profile-hub" onclick="mobNavGo('profile-hub',this)" aria-label="Realtor profile">
+            <span class="mob-nav-icon">👤</span>
+            <span>Profile</span>
+        </button>
+        <button class="mob-nav-item" id="mobMoreBtn" onclick="openMoreSheet()" aria-label="More options">
+            <span class="mob-nav-icon">⋯</span>
+            <span>More</span>
+            <span class="mob-nav-badge" id="mobMoreBadge"></span>
+        </button>
+    </nav>
+
+    <!-- More Sheet Overlay -->
+    <div id="moreSheetOverlay" onclick="closeMoreSheet()"></div>
+
+    <!-- More Bottom Sheet -->
+    <div id="moreSheet" role="dialog" aria-modal="true" aria-label="More options">
+        <div class="more-sheet-handle"></div>
+        <div class="more-sheet-title">More</div>
+        <div class="more-sheet-item" onclick="mobNavGo('buyer-requests',null);closeMoreSheet()">
+            <span class="more-sheet-icon">🎯</span>
+            <span>Buyer Requests</span>
+            <span class="more-sheet-badge" id="mobBuyerBadge"></span>
+        </div>
+        <div class="more-sheet-item" onclick="mobNavGo('analytics',null);closeMoreSheet()">
+            <span class="more-sheet-icon">📊</span>
+            <span>Analytics</span>
+        </div>
+        <div class="more-sheet-item" onclick="mobNavGo('settings-hub',null);closeMoreSheet()">
+            <span class="more-sheet-icon">⚙️</span>
+            <span>Settings</span>
+        </div>
+        <div class="more-sheet-logout" onclick="logout()">
+            <span class="more-sheet-icon">🚪</span>
+            <span>Log Out</span>
+        </div>
+    </div>
+
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
+      }
+
+      // Mobile bottom nav helpers
+      const MOB_MORE_VIEWS = new Set(['buyer-requests','analytics','settings-hub']);
+
+      function mobNavGo(view, btn) {
+        const topTab = document.querySelector(`.tab[data-view="${view}"]`);
+        if (topTab) topTab.click();
+        document.querySelectorAll('.mob-nav-item').forEach(el => { el.classList.remove('active'); el.removeAttribute('aria-current'); });
+        if (btn) {
+          btn.classList.add('active');
+          btn.setAttribute('aria-current', 'page');
+        } else if (MOB_MORE_VIEWS.has(view)) {
+          const moreBtn = document.getElementById('mobMoreBtn');
+          moreBtn.classList.add('active');
+          moreBtn.setAttribute('aria-current', 'page');
+        }
+      }
+
+      function openMoreSheet() {
+        document.getElementById('moreSheet').classList.add('open');
+        document.getElementById('moreSheetOverlay').classList.add('open');
+        const firstItem = document.querySelector('#moreSheet .more-sheet-item');
+        if (firstItem) firstItem.focus();
+      }
+
+      function closeMoreSheet() {
+        document.getElementById('moreSheet').classList.remove('open');
+        document.getElementById('moreSheetOverlay').classList.remove('open');
+        document.querySelector('#mobileBottomNav .mob-nav-item[data-mob-view="more"], #mobileBottomNav .mob-nav-item:last-child').focus();
+      }
+
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && document.getElementById('moreSheet').classList.contains('open')) {
+          closeMoreSheet();
+        }
+      });
+
+      // Swipe-to-dismiss on the More sheet
+      (function() {
+        const sheet = document.getElementById('moreSheet');
+        let startY = 0, currentY = 0, dragging = false;
+        sheet.addEventListener('touchstart', e => {
+          startY = e.touches[0].clientY;
+          currentY = startY;
+          dragging = true;
+          sheet.style.transition = 'none';
+        }, { passive: true });
+        sheet.addEventListener('touchmove', e => {
+          if (!dragging) return;
+          currentY = e.touches[0].clientY;
+          const dy = Math.max(0, currentY - startY);
+          sheet.style.transform = `translateY(${dy}px)`;
+        }, { passive: true });
+        sheet.addEventListener('touchend', () => {
+          if (!dragging) return;
+          dragging = false;
+          sheet.style.transition = '';
+          const dy = currentY - startY;
+          if (dy > 80) {
+            sheet.style.transform = '';
+            closeMoreSheet();
+          } else {
+            sheet.style.transform = '';
+          }
+        });
+      })();
+
+      function syncMobBadges() {
+        const pipelineSrc = document.getElementById('pipelineBadge');
+        const mobPipeline = document.getElementById('mobPipelineBadge');
+        if (pipelineSrc && mobPipeline) {
+          const visible = pipelineSrc.style.display !== 'none' && pipelineSrc.textContent.trim();
+          mobPipeline.textContent = pipelineSrc.textContent;
+          mobPipeline.classList.toggle('visible', !!visible);
+        }
+
+        const msgSrc = document.getElementById('msgTabBadge');
+        const mobMsg = document.getElementById('mobMsgBadge');
+        if (msgSrc && mobMsg) {
+          const visible = msgSrc.style.display !== 'none' && msgSrc.textContent.trim();
+          mobMsg.textContent = msgSrc.textContent;
+          mobMsg.classList.toggle('visible', !!visible);
+        }
+
+        const buyerSrc = document.getElementById('buyerMatchBadge');
+        const mobBuyer = document.getElementById('mobBuyerBadge');
+        const mobMore = document.getElementById('mobMoreBadge');
+        if (buyerSrc && mobBuyer) {
+          const visible = buyerSrc.style.display !== 'none' && buyerSrc.textContent.trim();
+          mobBuyer.textContent = buyerSrc.textContent;
+          mobBuyer.classList.toggle('visible', !!visible);
+          if (mobMore) {
+            mobMore.textContent = buyerSrc.textContent;
+            mobMore.classList.toggle('visible', !!visible);
+          }
+        }
+      }
+
+      ['pipelineBadge','msgTabBadge','buyerMatchBadge'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+          new MutationObserver(syncMobBadges).observe(el, { attributes: true, childList: true, characterData: true, subtree: true });
+        }
+      });
+
+      window.addEventListener('load', syncMobBadges);
+      window.addEventListener('beforeunload', () => stopPoll());
+
+      // Keyboard-aware bottom nav: shrink out of the way when soft keyboard opens
+      if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', () => {
+          const nav = document.getElementById('mobileBottomNav');
+          if (!nav) return;
+          const keyboardHeight = window.innerHeight - window.visualViewport.height;
+          if (keyboardHeight > 100) {
+            // Keyboard is open — hide bottom nav so it doesn't block the compose area
+            nav.style.transform = `translateY(${keyboardHeight}px)`;
+          } else {
+            nav.style.transform = '';
+          }
+        });
       }
     </script>
 </body>

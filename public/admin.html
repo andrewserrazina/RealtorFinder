@@ -761,7 +761,7 @@
 
     <div class="tabs" style="flex-wrap:wrap;">
         <button class="tab-btn" onclick="switchTab('stats', this)">Stats</button>
-        <button class="tab-btn active" onclick="switchTab('users', this)">Users</button>
+        <button class="tab-btn active" onclick="switchTab('users', this)">Users <span id="pending-approval-badge" style="display:none;background:#ef4444;color:white;border-radius:10px;padding:1px 7px;font-size:0.72rem;font-weight:700;margin-left:4px;vertical-align:middle;"></span></button>
         <button class="tab-btn" onclick="switchTab('listings', this)">Listings</button>
         <button class="tab-btn" onclick="switchTab('leads', this)">City Leads</button>
         <button class="tab-btn" onclick="switchTab('reviews', this)">Reviews</button>
@@ -779,6 +779,7 @@
         <button class="tab-btn" onclick="switchTab('health', this)" style="color:#0ea5e9;font-weight:600;">Health 🩺</button>
         <button class="tab-btn" onclick="switchTab('coverage-map', this)" style="color:#FF6B35;font-weight:600;">Coverage Map 🗺</button>
         <button class="tab-btn" onclick="switchTab('blog', this)" style="color:#7c3aed;font-weight:600;">Blog ✍️</button>
+        <button class="tab-btn" onclick="switchTab('ambassadors', this)" style="color:#FF6B35;font-weight:600;">Ambassadors 🌟</button>
     </div>
 
     <!-- Stats tab -->
@@ -958,11 +959,12 @@
                             <th>Phone</th>
                             <th>City</th>
                             <th>State</th>
+                            <th>Converted</th>
                             <th>Date</th>
                         </tr>
                     </thead>
                     <tbody id="leads-tbody">
-                        <tr><td colspan="8" class="empty-state">Loading leads…</td></tr>
+                        <tr><td colspan="9" class="empty-state">Loading leads…</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -1583,6 +1585,17 @@
         </div>
     </div>
 
+    <!-- Ambassadors Tab -->
+    <div class="tab-panel" id="tab-ambassadors">
+        <div class="table-wrapper" style="padding:1.5rem 2rem;">
+            <div class="table-header" style="margin-bottom:1.5rem;">
+                <span class="table-title">Ambassador Applications</span>
+                <button onclick="loadAmbassadors()" class="btn-action btn-reactivate" style="margin-left:auto;">↻ Refresh</button>
+            </div>
+            <div id="ambassadors-list">Loading…</div>
+        </div>
+    </div>
+
     <!-- Blog Editor Modal -->
     <div id="blog-editor-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:990;" onclick="if(event.target===this)closeBlogEditor()"></div>
     <div id="blog-editor-modal" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;border-radius:16px;padding:2rem;box-shadow:0 24px 80px rgba(0,0,0,0.25);z-index:991;width:780px;max-width:96vw;max-height:92vh;overflow-y:auto;flex-direction:column;gap:1rem;">
@@ -1844,6 +1857,7 @@
             loadUsers();
             loadListings();
             loadLeads();
+            loadPendingApprovalCount();
         } catch (err) {
             window.location.href = '/login.html';
         }
@@ -1908,6 +1922,7 @@
         if (name === 'health') loadHealth();
         if (name === 'campaigns') onCampaignSegmentChange();
         if (name === 'coverage-map') initCoverageMap();
+        if (name === 'ambassadors') loadAmbassadors();
     }
 
     // ── Announce ──────────────────────────────────────────────────────────────
@@ -2118,6 +2133,21 @@
 
     let usersData = [];
 
+    async function loadPendingApprovalCount() {
+        try {
+            const res = await fetch('/api/admin/users?status=pending', { credentials: 'include' });
+            if (!res.ok) return;
+            const data = await res.json();
+            const raw = Array.isArray(data) ? data : (Array.isArray(data.users) ? data.users : []);
+            const count = raw.filter(u => !u.is_approved && u.user_type === 'realtor').length;
+            const badge = document.getElementById('pending-approval-badge');
+            if (badge) {
+                if (count > 0) { badge.textContent = count; badge.style.display = 'inline'; }
+                else { badge.style.display = 'none'; }
+            }
+        } catch(e) {}
+    }
+
     async function loadUsers() {
         try {
             const res = await fetch('/api/admin/users', { credentials: 'include' });
@@ -2299,6 +2329,7 @@
             const idx = usersData.findIndex(u => u.id === id);
             if (idx !== -1) usersData[idx].is_approved = true;
             renderUsers();
+            loadPendingApprovalCount();
             showToast('User approved — they can now access the dashboard.', 'success');
         } catch {
             showToast('Failed to approve user.', 'error');
@@ -2472,7 +2503,7 @@
             renderLeads();
         } catch (err) {
             document.getElementById('leads-tbody').innerHTML =
-                '<tr><td colspan="8" class="empty-state">Failed to load leads.</td></tr>';
+                '<tr><td colspan="9" class="empty-state">Failed to load leads.</td></tr>';
         }
     }
 
@@ -2481,12 +2512,15 @@
         document.getElementById('leads-count').textContent = leadsData.length + ' leads';
 
         if (!leadsData.length) {
-            tbody.innerHTML = '<tr><td colspan="8" class="empty-state">No leads yet. They\'ll appear here once someone submits the city page form.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="9" class="empty-state">No leads yet. They\'ll appear here once someone submits the city page form.</td></tr>';
             return;
         }
 
         tbody.innerHTML = leadsData.map(l => {
             const typeCls = l.type === 'seller' ? 'badge-seller' : 'badge-realtor';
+            const converted = l.converted_user_id
+                ? `<span style="color:#059669;font-weight:600;font-size:0.82rem;">✓ ${escHtml(l.converted_first || '')} ${escHtml(l.converted_last || '')}</span>`
+                : `<span style="color:#9ca3af;font-size:0.82rem;">—</span>`;
             return `<tr>
                 <td class="id-cell">#${l.id}</td>
                 <td><span class="badge ${typeCls}">${escHtml(l.type)}</span></td>
@@ -2495,6 +2529,7 @@
                 <td class="td-muted">${escHtml(l.phone || '—')}</td>
                 <td>${escHtml(l.city_name || '—')}</td>
                 <td class="td-muted">${escHtml(l.state_code || '—')}</td>
+                <td>${converted}</td>
                 <td class="td-muted">${fmtDate(l.created_at)}</td>
             </tr>`;
         }).join('');
@@ -3126,6 +3161,65 @@
     }
 
     // ── Revenue ───────────────────────────────────────────────────────────────
+
+    // ── Ambassadors ───────────────────────────────────────────────────────────
+
+    async function loadAmbassadors() {
+        const el = document.getElementById('ambassadors-list');
+        if (!el) return;
+        el.textContent = 'Loading…';
+        try {
+            const res = await fetch('/api/admin/ambassadors', { credentials: 'include' });
+            const rows = await res.json();
+            if (!rows.length) { el.innerHTML = '<p style="color:#6b7280;padding:1rem 0;">No applications yet.</p>'; return; }
+            const statusBadge = s => ({ pending: '<span style="background:#fef3c7;color:#92400e;border-radius:12px;padding:2px 10px;font-size:0.78rem;font-weight:600;">⏳ Pending</span>', approved: '<span style="background:#d1fae5;color:#065f46;border-radius:12px;padding:2px 10px;font-size:0.78rem;font-weight:600;">✅ Approved</span>', rejected: '<span style="background:#fee2e2;color:#991b1b;border-radius:12px;padding:2px 10px;font-size:0.78rem;font-weight:600;">✗ Rejected</span>' }[s] || s);
+            el.innerHTML = `<table style="width:100%;border-collapse:collapse;">
+                <thead><tr style="font-size:0.78rem;text-transform:uppercase;color:#6b7280;border-bottom:1px solid #e5e7eb;">
+                    <th style="padding:10px 12px;text-align:left;">Realtor</th>
+                    <th style="padding:10px 12px;text-align:left;">Socials</th>
+                    <th style="padding:10px 12px;text-align:right;">Followers</th>
+                    <th style="padding:10px 12px;text-align:left;">Status</th>
+                    <th style="padding:10px 12px;text-align:left;">Applied</th>
+                    <th style="padding:10px 12px;text-align:left;">Actions</th>
+                </tr></thead>
+                <tbody>${rows.map(a => `<tr style="border-bottom:1px solid #f3f4f6;" id="amb-row-${a.id}">
+                    <td style="padding:12px;"><strong>${escHtml(a.first_name)} ${escHtml(a.last_name)}</strong><br><span style="font-size:0.8rem;color:#6b7280;">${escHtml(a.email)}</span></td>
+                    <td style="padding:12px;font-size:0.82rem;">
+                        ${a.instagram_handle ? `<div>📷 ${escHtml(a.instagram_handle)}</div>` : ''}
+                        ${a.linkedin_url ? `<div>💼 <a href="${escHtml(a.linkedin_url)}" target="_blank" style="color:#0A2540;">LinkedIn</a></div>` : ''}
+                        ${a.facebook_url ? `<div>📘 <a href="${escHtml(a.facebook_url)}" target="_blank" style="color:#0A2540;">Facebook</a></div>` : ''}
+                        ${a.sample_post_url ? `<div><a href="${escHtml(a.sample_post_url)}" target="_blank" style="color:#FF6B35;font-size:0.78rem;">Sample post →</a></div>` : ''}
+                    </td>
+                    <td style="padding:12px;text-align:right;font-weight:700;">${(a.follower_count||0).toLocaleString()}</td>
+                    <td style="padding:12px;">${statusBadge(a.status)}</td>
+                    <td style="padding:12px;font-size:0.82rem;color:#6b7280;">${a.applied_at ? new Date(a.applied_at).toLocaleDateString() : '—'}</td>
+                    <td style="padding:12px;">
+                        ${a.status === 'pending' ? `
+                        <button onclick="reviewAmbassador(${a.id},'approve')" class="btn-action btn-approve" style="margin-right:4px;">Approve</button>
+                        <button onclick="reviewAmbassador(${a.id},'reject')" class="btn-action btn-delete">Reject</button>` : ''}
+                        ${a.status === 'rejected' ? `<button onclick="reviewAmbassador(${a.id},'approve')" class="btn-action btn-approve">Approve</button>` : ''}
+                    </td>
+                </tr>`).join('')}</tbody>
+            </table>`;
+        } catch(e) { el.innerHTML = '<p style="color:#ef4444;">Failed to load ambassadors.</p>'; }
+    }
+
+    async function reviewAmbassador(id, action) {
+        const note = action === 'reject' ? prompt('Optional note for your records:') : null;
+        if (action === 'reject' && note === null) return; // user hit cancel
+        try {
+            const res = await fetch(`/api/admin/ambassadors/${id}/status`, {
+                method: 'PUT', credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action, admin_note: note || null })
+            });
+            if (!res.ok) throw new Error();
+            showToast(action === 'approve' ? '✅ Approved — welcome email sent!' : 'Application rejected');
+            await loadAmbassadors();
+        } catch(e) { showToast('Action failed. Please try again.', 'error'); }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
 
     async function loadRevenue() {
         const planPrices = { basic: 29, professional: 49, firm: 99, free: 0 };

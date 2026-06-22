@@ -403,7 +403,7 @@ app.use('/api', apiLimiter);
 // Signup
 app.post('/api/auth/signup', async (req, res) => {
     try {
-        const { email, password, userType, firstName, lastName, zipCode, companyName, licenseNumber, recaptchaToken, termsAccepted, marketingConsent } = req.body;
+        const { email, password, userType, firstName, lastName, zipCode, companyName, licenseNumber, recaptchaToken, termsAccepted, marketingConsent, isFoundingSignup } = req.body;
 
         if (!email || !password || !userType || !firstName || !lastName || !zipCode) {
             return res.status(400).json({ error: 'All fields required' });
@@ -502,6 +502,18 @@ app.post('/api/auth/signup', async (req, res) => {
                         .catch(e => console.error('Referral notify query error:', e.message));
                 }
             } catch(e) { console.error('Referral attribution error:', e.message); }
+        }
+
+        // Mark any city_leads with this email as converted (non-blocking)
+        pool.query(
+            `UPDATE city_leads SET converted_user_id = $1 WHERE LOWER(email) = LOWER($2) AND converted_user_id IS NULL`,
+            [user.id, email]
+        ).catch(e => console.error('City lead conversion mark error:', e.message));
+
+        // Send founding welcome email for founding member signups (non-blocking)
+        if (isFoundingSignup && userType === 'realtor') {
+            emailService.sendFoundingWelcome(email, firstName)
+                .catch(e => console.error('Founding welcome email failed:', e.message));
         }
 
         // Handle company invite token (non-blocking — bad token must not break signup)
@@ -995,6 +1007,38 @@ app.post('/api/buyer-requests/:id/select-realtor', auth.requireAuth, async (req,
     }
 });
 
+// Buyer quick-register (used by find-agent flow — no ZIP or reCAPTCHA required)
+app.post('/api/auth/register', async (req, res) => {
+    try {
+        const { email, password, firstName, lastName } = req.body;
+        if (!email || !password || !firstName || !lastName) {
+            return res.status(400).json({ error: 'All fields required' });
+        }
+        if (password.length < 8) {
+            return res.status(400).json({ error: 'Password must be at least 8 characters' });
+        }
+        const existing = await pool.query(`SELECT id FROM users WHERE email = $1`, [email.toLowerCase().trim()]);
+        if (existing.rows.length > 0) {
+            return res.status(409).json({ error: 'An account with this email already exists' });
+        }
+        const bcrypt = require('bcrypt');
+        const passwordHash = await bcrypt.hash(password, 12);
+        const { rows: [user] } = await pool.query(
+            `INSERT INTO users (email, password_hash, user_type, first_name, last_name, is_approved, is_active, created_at)
+             VALUES ($1, $2, 'buyer', $3, $4, TRUE, TRUE, NOW())
+             RETURNING id, email, first_name, user_type`,
+            [email.toLowerCase().trim(), passwordHash, firstName.trim(), lastName.trim()]
+        );
+        req.session.userId = user.id;
+        req.session.userType = 'buyer';
+        req.session.isApproved = true;
+        res.json({ ok: true, userId: user.id, userType: 'buyer' });
+    } catch (err) {
+        console.error('Register error:', err.message);
+        res.status(500).json({ error: 'Registration failed. Please try again.' });
+    }
+});
+
 // Login
 app.post('/api/auth/login', async (req, res) => {
     try {
@@ -1376,6 +1420,8 @@ app.get('/api/listings', async (req, res) => {
         if (swLat && swLng && neLat && neLng) { filters.swLat = swLat; filters.swLng = swLng; filters.neLat = neLat; filters.neLng = neLng; }
         if (['newest', 'price_asc', 'price_desc', 'most_bids'].includes(sort)) filters.sort = sort;
 
+        const isDemoUser = req.user && req.user.email === 'demo@realtorfinder.net';
+        if (!isDemoUser) filters.excludeDemoListings = true;
         const result = await db.getFilteredListings(filters, parseInt(page), Math.min(parseInt(limit), 50));
         res.json({
             listings: result.listings.map(formatListing),
@@ -1420,6 +1466,9 @@ app.get('/api/listings/search', async (req, res) => {
         const { city, state, type, minPrice, maxPrice, minBedrooms } = req.query;
 
         const conditions = [`l.status = 'active'`, `l.deleted_at IS NULL`];
+        if (!(req.user && req.user.email === 'demo@realtorfinder.net')) {
+            conditions.push(`l.user_id NOT IN (SELECT id FROM users WHERE email = 'demo-seller@realtorfinder.net')`);
+        }
         const params = [];
 
         if (city) {
@@ -2120,6 +2169,31 @@ app.get('/api/analytics/realtor', auth.requireAuth, async (req, res) => {
     } catch (err) {
         console.error('Realtor analytics error:', err);
         res.status(500).json({ error: 'Failed to fetch analytics' });
+    }
+});
+
+// ===== COMMISSION INTEL =====
+
+app.get('/api/analytics/realtor/commission-intel', auth.requireAuth, async (req, res) => {
+    if (req.user.user_type !== 'realtor') return res.status(403).json({ error: 'Realtors only' });
+    try {
+        const realtorId = req.session.userId;
+        const [myRes, marketRes] = await Promise.all([
+            pool.query(
+                `SELECT ROUND(AVG(commission_pct)::numeric, 2) AS avg FROM proposals WHERE realtor_id = $1`,
+                [realtorId]
+            ),
+            pool.query(
+                `SELECT ROUND(AVG(commission_pct)::numeric, 2) AS avg FROM proposals WHERE status = 'accepted'`
+            )
+        ]);
+        res.json({
+            myAvg: myRes.rows[0].avg ? parseFloat(myRes.rows[0].avg) : null,
+            acceptedAvg: marketRes.rows[0].avg ? parseFloat(marketRes.rows[0].avg) : null
+        });
+    } catch (e) {
+        console.error('GET /api/analytics/realtor/commission-intel error:', e);
+        res.status(500).json({ error: 'Failed to fetch commission intel' });
     }
 });
 
@@ -2974,9 +3048,12 @@ app.get('/api/admin/analytics/signups', requireAdmin, async (req, res) => {
 app.get('/api/admin/leads', requireAdmin, async (req, res) => {
     try {
         const { rows } = await pool.query(
-            `SELECT id, type, name, email, phone, city_name, state_code, created_at
-             FROM city_leads
-             ORDER BY created_at DESC
+            `SELECT cl.id, cl.type, cl.name, cl.email, cl.phone, cl.city_name, cl.state_code, cl.created_at,
+                    cl.converted_user_id,
+                    u.first_name AS converted_first, u.last_name AS converted_last, u.user_type AS converted_user_type
+             FROM city_leads cl
+             LEFT JOIN users u ON u.id = cl.converted_user_id
+             ORDER BY cl.created_at DESC
              LIMIT 1000`
         );
         res.json(rows);
@@ -3558,10 +3635,16 @@ app.post('/api/stripe/checkout', auth.requireAuth, async (req, res) => {
         );
         const existingCustomer = custRows[0]?.stripe_customer_id;
 
+        const { rows: [userRow] } = await pool.query(
+            `SELECT is_founding_member, founding_credit_applied FROM users WHERE id = $1`, [req.session.userId]
+        );
+        const trialDays = (userRow?.is_founding_member && !userRow?.founding_credit_applied) ? 60 : 30;
+
         const sessionParams = {
             mode: 'subscription',
             payment_method_types: ['card'],
             line_items: [{ price: priceId, quantity: 1 }],
+            subscription_data: { trial_period_days: trialDays },
             success_url: `${base}/dashboard/realtor?upgraded=1`,
             cancel_url: `${base}/pricing`,
             metadata: { userId: String(req.session.userId), plan },
@@ -3730,25 +3813,13 @@ app.post('/api/webhook/stripe', express.raw({ type: 'application/json' }), async
                 await client.query('COMMIT');
                 console.log(`✅ Stripe: upgraded user ${userId} to ${plan}`);
 
-                // Apply founding member 2-month Professional credit (outside transaction — non-critical)
+                // Mark founding credit as applied — trial was already set at checkout session creation
                 if (sess.subscription) {
-                    const { rows: foundingRows } = await pool.query(
-                        `SELECT is_founding_member, founding_credit_applied FROM users WHERE id = $1`, [userId]
-                    );
-                    if (foundingRows[0]?.is_founding_member && !foundingRows[0]?.founding_credit_applied) {
-                        try {
-                            await stripe.subscriptions.update(sess.subscription, {
-                                trial_end: Math.floor(Date.now() / 1000) + (60 * 24 * 60 * 60), // 60 days
-                                proration_behavior: 'none',
-                            });
-                            await pool.query(
-                                `UPDATE users SET founding_credit_applied = TRUE WHERE id = $1`, [userId]
-                            );
-                            console.log(`🏅 Stripe: applied 60-day founding credit to user ${userId}`);
-                        } catch (e) {
-                            console.error('Founding credit Stripe error:', e.message);
-                        }
-                    }
+                    pool.query(
+                        `UPDATE users SET founding_credit_applied = TRUE
+                         WHERE id = $1 AND is_founding_member = TRUE AND founding_credit_applied = FALSE`,
+                        [userId]
+                    ).catch(e => console.error('founding_credit_applied update error:', e.message));
                 }
 
                 // Credit referrer $25 on first subscription — guard with referral_credit_paid to survive webhook retries
@@ -4097,6 +4168,30 @@ app.get('/api/listings/compare', async (req, res) => {
 });
 
 // ===== BATCH 8: NEARBY STATS =====
+
+// Proposal stats for a listing — anonymized aggregate shown to realtors
+app.get('/api/listings/:id/proposal-stats', auth.requireAuth, async (req, res) => {
+    if (req.user.user_type !== 'realtor') return res.status(403).json({ error: 'Realtors only' });
+    try {
+        const listingId = parseInt(req.params.id);
+        if (isNaN(listingId)) return res.status(400).json({ error: 'Invalid listing id' });
+        const { rows } = await pool.query(
+            `SELECT COUNT(*) AS count,
+                    ROUND(AVG(commission_pct)::numeric, 2) AS avg_commission,
+                    MIN(commission_pct) AS min_commission
+             FROM proposals
+             WHERE listing_id = $1 AND status != 'withdrawn'`,
+            [listingId]
+        );
+        res.json({
+            count: parseInt(rows[0].count) || 0,
+            avgCommission: rows[0].avg_commission ? parseFloat(rows[0].avg_commission) : null,
+            minCommission: rows[0].min_commission ? parseFloat(rows[0].min_commission) : null
+        });
+    } catch (e) {
+        res.status(500).json({ error: 'Failed to fetch proposal stats' });
+    }
+});
 
 app.get('/api/listings/:id/nearby-stats', async (req, res) => {
     try {
@@ -4724,6 +4819,58 @@ app.get('/robots.txt', (req, res) => {
     ].join('\n'));
 });
 
+app.get('/llms.txt', (req, res) => {
+    const base = (process.env.FRONTEND_URL || 'https://www.realtorfinder.net').replace(/\/$/, '');
+    res.type('text/plain');
+    res.send(`# RealtorFinder
+
+> RealtorFinder is a marketplace where home sellers post their property and receive competing proposals from licensed realtors — then choose the agent they want to work with based on commission rate, marketing plan, and experience.
+
+RealtorFinder flips the traditional model: instead of sellers calling agents, agents compete for listings. Sellers list for free and review multiple proposals before committing to anyone. The platform is in a founding-member pre-launch phase (sellers go live August 2026); realtors can sign up now to claim their market and get guaranteed access to every new listing in their area.
+
+## Public Pages
+
+- [Home](${base}/): Seller-facing landing page explaining the value proposition, how the process works, and an email capture for early access
+- [For Sellers](${base}/sellers): Detailed seller guide — step-by-step process, what realtor proposals include, FAQs
+- [For Realtors](${base}/realtors): Realtor landing page with founding-member offer, pricing plans, and signup CTA
+- [Pricing](${base}/pricing): Three subscription tiers — Basic ($99/mo), Professional ($249/mo), Firm ($499/location/mo) — with annual billing option (save 20%)
+- [About](${base}/about): Company mission, founding story, team background
+- [Blog](${base}/blog): Real estate advice for sellers and realtors; articles on pricing, staging, choosing an agent, market trends
+- [Contact](${base}/contact): Contact form and support email
+- [For Buyers](${base}/buyers): Buyer-focused landing page with find-an-agent flow
+- [Find an Agent](${base}/find-agent): Buyers enter their criteria and get matched with local realtors
+- [FAQ](${base}/faq): Frequently asked questions for both sellers and realtors
+- [Realtor Directory](${base}/realtor-directory): Browse licensed realtors by market
+- [Fair Housing](${base}/fair-housing): Fair Housing Act compliance statement
+- [Privacy Policy](${base}/privacy): Data collection and usage policy
+- [Terms of Service](${base}/terms): Platform terms and conditions
+- [Cookie Policy](${base}/cookies): Cookie usage and preferences
+
+## Authenticated Pages (login required)
+
+- [Seller Dashboard](${base}/dashboard/seller): Sellers manage their listings, view incoming proposals, compare agents, and accept/decline offers
+- [Realtor Dashboard](${base}/dashboard/realtor): Realtors browse active listings, submit proposals, track proposal status, and manage their profile
+- [Inbox](${base}/inbox): Messaging between sellers and realtors after a proposal is submitted
+- [Login / Signup](${base}/login): Unified login and registration page for sellers and realtors
+
+## API (JSON, authentication required for most endpoints)
+
+- \`GET /api/listings\` — Active listings (realtors/public); seller's own listings when authenticated as seller
+- \`POST /api/listings\` — Create a new listing (seller only)
+- \`POST /api/offers\` — Submit a proposal on a listing (realtor only)
+- \`GET /api/offers/:listingId\` — Get proposals for a listing (seller who owns it)
+- \`POST /api/auth/login\` — Authenticate and start session
+- \`POST /api/auth/signup\` — Register new seller or realtor account
+- \`GET /api/realtors/founding-count\` — Returns \`{ claimed, total, remaining, city_claimed }\` for social proof display
+- \`GET /api/reviews/:realtorId\` — Public reviews for a realtor profile
+
+## Optional
+
+- [Sitemap](${base}/sitemap-index.xml)
+- [Robots.txt](${base}/robots.txt)
+`);
+});
+
 // Sitemap index — points to per-state sitemaps
 app.get('/sitemap-index.xml', async (req, res) => {
     const base = (process.env.FRONTEND_URL || 'https://www.realtorfinder.net').replace(/\/$/, '');
@@ -4873,9 +5020,46 @@ app.get('/api/realtors/founding-count', async (req, res) => {
             `SELECT COUNT(*) AS count FROM users WHERE user_type = 'realtor' AND is_active IS NOT FALSE`
         );
         const claimed = Math.min(parseInt(rows[0].count) || 0, 100);
-        res.json({ claimed, total: 100, remaining: Math.max(100 - claimed, 0) });
+
+        // City-specific count from founding prospects
+        let city_claimed = 0;
+        const cityParam = req.query.city;
+        if (cityParam) {
+            const { rows: cityRows } = await pool.query(
+                `SELECT COUNT(*) AS count FROM realtor_prospects WHERE source = 'founding' AND city = $1`,
+                [cityParam]
+            );
+            city_claimed = parseInt(cityRows[0].count) || 0;
+        }
+
+        res.json({ claimed, total: 100, remaining: Math.max(100 - claimed, 0), city_claimed });
     } catch {
-        res.json({ claimed: 0, total: 100, remaining: 100 });
+        res.json({ claimed: 0, total: 100, remaining: 100, city_claimed: 0 });
+    }
+});
+
+// Save founding form lead before signup redirect (public)
+app.post('/api/founding-lead', async (req, res) => {
+    try {
+        const { first_name, last_name, email, phone, city } = req.body;
+        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            return res.status(400).json({ error: 'Valid email required' });
+        }
+        const normalizedEmail = email.toLowerCase().trim();
+        // Skip if this email is already a prospect or a registered user
+        const { rows: existing } = await pool.query(
+            `SELECT id FROM realtor_prospects WHERE email = $1 LIMIT 1`, [normalizedEmail]
+        );
+        if (!existing.length) {
+            await pool.query(
+                `INSERT INTO realtor_prospects (first_name, last_name, email, phone, city, source, outreach_status)
+                 VALUES ($1, $2, $3, $4, $5, 'founding', 'not_contacted')`,
+                [first_name || null, last_name || null, normalizedEmail, phone || null, city || null]
+            );
+        }
+        res.json({ ok: true });
+    } catch {
+        res.json({ ok: true }); // never block the redirect
     }
 });
 
@@ -4963,7 +5147,7 @@ app.get('/api/realtors/:id/public', async (req, res) => {
             pool.query(
                 `SELECT u.id, u.first_name, u.last_name, u.bio, u.years_experience,
                         u.license_number, u.service_areas, u.subscription_plan, u.zip_code,
-                        u.profile_photo, u.license_verified, u.brokerage,
+                        u.profile_photo, u.license_verified, u.brokerage, u.is_founding_member,
                         c.name AS company_name, c.plan AS company_plan
                  FROM users u
                  LEFT JOIN companies c ON u.company_id = c.id
@@ -5341,6 +5525,9 @@ app.put('/api/proposals/:id/accept', auth.requireAuth, async (req, res) => {
         if (!pRows.length) return res.status(404).json({ error: 'Proposal not found' });
         const proposal = pRows[0];
         if (proposal.listing_owner_id !== req.session.userId) return res.status(403).json({ error: 'Forbidden' });
+        if (['declined', 'withdrawn', 'accepted', 'expired'].includes(proposal.status)) {
+            return res.status(409).json({ error: `Cannot accept a proposal with status '${proposal.status}'` });
+        }
         const client = await pool.connect();
         try {
             await client.query('BEGIN');
@@ -5460,8 +5647,9 @@ app.get('/api/referrals/my', auth.requireAuth, async (req, res) => {
         const referral_count = parseInt(countRes.rows[0].cnt);
         const tier = referral_count >= 10 ? 'ambassador' : referral_count >= 5 ? 'top-referrer' : referral_count >= 3 ? 'connector' : referral_count >= 1 ? 'rising-star' : null;
         const referral_url = `${req.protocol}://${req.get('host')}/join?ref=${code}`;
+        const seller_referral_url = `${req.protocol}://${req.get('host')}/sell?ref=${code}`;
         const credits_cents = parseInt(creditsRes.rows[0]?.referral_credits_cents) || 0;
-        res.json({ referral_code: code, referral_url, referral_count, tier, referred_users: referredRes.rows, credits_cents });
+        res.json({ referral_code: code, referral_url, seller_referral_url, referral_count, tier, referred_users: referredRes.rows, credits_cents });
     } catch (error) {
         console.error('GET /api/referrals/my error:', error);
         res.status(500).json({ error: 'Failed to fetch referral info' });
@@ -5486,6 +5674,143 @@ app.get('/api/referrals/leaderboard', async (req, res) => {
         console.error('Leaderboard error:', err);
         res.status(500).json({ error: 'Failed to load leaderboard' });
     }
+});
+
+// ===== AMBASSADOR PROGRAM =====
+
+// GET /api/ambassador/my-status
+app.get('/api/ambassador/my-status', auth.requireAuth, async (req, res) => {
+    try {
+        const { rows } = await pool.query(
+            `SELECT status, applied_at, reviewed_at FROM ambassadors WHERE user_id = $1`,
+            [req.session.userId]
+        );
+        if (!rows.length) return res.json({ status: null });
+        const row = rows[0];
+        res.json({ status: row.status, applied_at: row.applied_at, reviewed_at: row.reviewed_at });
+    } catch (err) {
+        console.error('GET /api/ambassador/my-status error:', err);
+        res.status(500).json({ error: 'Failed to fetch ambassador status' });
+    }
+});
+
+// POST /api/ambassador/apply
+app.post('/api/ambassador/apply', auth.requireAuth, async (req, res) => {
+    try {
+        if (req.user.user_type !== 'realtor') {
+            return res.status(403).json({ error: 'Only realtors can apply to the ambassador program' });
+        }
+        const { instagram_handle, linkedin_url, facebook_url, follower_count, sample_post_url, notes } = req.body;
+        if (!instagram_handle && !linkedin_url && !facebook_url) {
+            return res.status(400).json({ error: 'At least one social handle or URL is required' });
+        }
+        if (!follower_count || parseInt(follower_count) < 500) {
+            return res.status(400).json({ error: 'Minimum 500 followers required' });
+        }
+        await pool.query(
+            `INSERT INTO ambassadors (user_id, instagram_handle, linkedin_url, facebook_url, follower_count, sample_post_url, notes, status, applied_at, reviewed_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending', NOW(), NULL)
+             ON CONFLICT (user_id) DO UPDATE SET
+               status = 'pending',
+               instagram_handle = EXCLUDED.instagram_handle,
+               linkedin_url = EXCLUDED.linkedin_url,
+               facebook_url = EXCLUDED.facebook_url,
+               follower_count = EXCLUDED.follower_count,
+               sample_post_url = EXCLUDED.sample_post_url,
+               notes = EXCLUDED.notes,
+               applied_at = NOW(),
+               reviewed_at = NULL`,
+            [req.session.userId, instagram_handle || null, linkedin_url || null, facebook_url || null,
+             parseInt(follower_count), sample_post_url || null, notes || null]
+        );
+        emailService.sendAmbassadorApplicationReceived(req.user.email, req.user.first_name)
+            .catch(e => console.error('Ambassador application email failed:', e.message));
+        res.json({ ok: true });
+    } catch (err) {
+        console.error('POST /api/ambassador/apply error:', err);
+        res.status(500).json({ error: 'Failed to submit ambassador application' });
+    }
+});
+
+// GET /api/admin/ambassadors
+app.get('/api/admin/ambassadors', requireAdmin, async (req, res) => {
+    try {
+        const { rows } = await pool.query(`
+            SELECT a.*, u.first_name, u.last_name, u.email, u.profile_photo, u.service_areas
+            FROM ambassadors a
+            JOIN users u ON u.id = a.user_id
+            ORDER BY a.applied_at DESC
+        `);
+        res.json(rows);
+    } catch (err) {
+        console.error('GET /api/admin/ambassadors error:', err);
+        res.status(500).json({ error: 'Failed to fetch ambassador applications' });
+    }
+});
+
+// PUT /api/admin/ambassadors/:id/status
+app.put('/api/admin/ambassadors/:id/status', requireAdmin, async (req, res) => {
+    try {
+        const { action, admin_note } = req.body;
+        if (action !== 'approve' && action !== 'reject') {
+            return res.status(400).json({ error: 'Invalid action — must be approve or reject' });
+        }
+        const ambassadorId = parseInt(req.params.id);
+        const { rows } = await pool.query(
+            `SELECT a.*, u.email, u.first_name, u.id as user_id
+             FROM ambassadors a
+             JOIN users u ON u.id = a.user_id
+             WHERE a.id = $1`,
+            [ambassadorId]
+        );
+        if (!rows.length) return res.status(404).json({ error: 'Ambassador application not found' });
+        const row = rows[0];
+        const userId = row.user_id;
+        const user = { email: row.email, first_name: row.first_name };
+
+        if (action === 'approve') {
+            await pool.query(
+                `UPDATE ambassadors SET status = 'approved', reviewed_at = NOW(), notes = $1 WHERE id = $2`,
+                [admin_note || null, ambassadorId]
+            );
+            await pool.query(
+                `UPDATE users SET subscription_plan = 'professional', ambassador_expires_at = NOW() + INTERVAL '1 year' WHERE id = $1`,
+                [userId]
+            );
+            emailService.sendAmbassadorWelcome(user.email, user.first_name)
+                .catch(e => console.error('Ambassador welcome email failed:', e.message));
+            return res.json({ ok: true, status: 'approved' });
+        }
+
+        if (action === 'reject') {
+            await pool.query(
+                `UPDATE ambassadors SET status = 'rejected', reviewed_at = NOW(), notes = $1 WHERE id = $2`,
+                [admin_note || null, ambassadorId]
+            );
+            return res.json({ ok: true, status: 'rejected' });
+        }
+    } catch (err) {
+        console.error('PUT /api/admin/ambassadors/:id/status error:', err);
+        res.status(500).json({ error: 'Failed to update ambassador status' });
+    }
+});
+
+// Sell page — stores realtor's ref code in cookie, redirects to sell.html with referrer name
+app.get('/sell', async (req, res) => {
+    const ref = req.query.ref;
+    if (ref && !req.query.referrer) {
+        res.cookie('ref_code', ref, { path: '/', maxAge: 7 * 24 * 3600 * 1000, sameSite: 'lax', httpOnly: false });
+        try {
+            const { rows } = await pool.query(
+                `SELECT first_name FROM users WHERE referral_code = $1 AND user_type = 'realtor'`, [ref]
+            );
+            if (rows.length) {
+                const name = encodeURIComponent(rows[0].first_name);
+                return res.redirect(`/sell?referrer=${name}`);
+            }
+        } catch (e) { /* non-fatal */ }
+    }
+    res.sendFile(path.join(__dirname, 'public', 'sell.html'));
 });
 
 // Join page — stores ref code in cookie then redirects to signup
@@ -8441,7 +8766,7 @@ nav{background:var(--primary);padding:0 2rem;display:flex;align-items:center;jus
 footer{background:var(--primary);color:rgba(255,255,255,0.5);text-align:center;padding:2rem;font-size:0.875rem;}
 footer a{color:rgba(255,255,255,0.6);text-decoration:none;margin:0 0.75rem;}
 footer a:hover{color:white;}
-@media(max-width:640px){.agent-card{grid-template-columns:48px 1fr;}.agent-cta{display:none;}.nav-links{display:none;}}
+@media(max-width:640px){.agent-card{grid-template-columns:48px 1fr;row-gap:0.25rem;}.agent-cta{font-size:0.8rem;padding-left:0;grid-column:2;}.nav-links{display:none;}}
 </style>
 </head>
 <body>
@@ -8455,10 +8780,11 @@ footer a:hover{color:white;}
   </div>
 </nav>
 <div class="hero">
-  <div class="breadcrumb"><a href="/">Home</a> › <a href="/locations">Markets</a> › ${cityName}, ${stateCode}</div>
+  <div class="breadcrumb"><a href="/">Home</a> › <a href="/realtors">All Markets</a> › ${cityName}, ${stateCode}</div>
   <div class="hero-label">Local Agents</div>
   <h1>Top Realtors in ${cityName}, ${stateCode}</h1>
   <p>Verified agents serving ${cityName} and surrounding areas. List your home free and let them compete for your listing.</p>
+  <a href="/login?tab=signup" style="display:inline-block;background:var(--accent);color:white;padding:12px 28px;border-radius:8px;font-weight:700;text-decoration:none;font-size:0.95rem;margin-bottom:1.5rem;">List My Home Free →</a>
   ${realtors.length > 0 || activeListings > 0 ? `
   <div class="hero-stats">
     ${realtors.length > 0 ? `<div class="hero-stat"><div class="hero-stat-val">${realtors.length}</div><div class="hero-stat-label">Active agents</div></div>` : ''}
@@ -8496,6 +8822,10 @@ app.get('/realtors', (req, res) => {
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.sendFile(path.join(__dirname, 'public', 'realtors.html'));
 });
+
+// Founding realtor ad landing page
+app.get('/founding', (req, res) => res.sendFile(path.join(__dirname, 'public', 'join.html')));
+app.get('/founding/linkedin', (req, res) => res.sendFile(path.join(__dirname, 'public', 'founding-linkedin.html')));
 
 // Seller Dashboard (PROTECTED)
 app.get('/dashboard/seller', (req, res) => {
@@ -8555,6 +8885,9 @@ app.get('/about', (req, res) => {
 app.get('/about-sellers', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'about-sellers.html'));
 });
+app.get('/press', (req, res) => res.sendFile(path.join(__dirname, 'public', 'press.html')));
+app.get('/calculator', (req, res) => res.sendFile(path.join(__dirname, 'public', 'calculator.html')));
+app.get('/research', (req, res) => res.sendFile(path.join(__dirname, 'public', 'research.html')));
 
 // ── Blog Seed ─────────────────────────────────────────────────────────────────
 
@@ -8763,27 +9096,27 @@ async function seedBlogPosts() {
 const BLOG_CATEGORIES = ['How It Works', 'Seller Guides', 'Market Reports', 'Realtor Tips'];
 
 function blogNav(activePath) {
-    return `<nav style="position:sticky;top:0;z-index:100;background:#0A2540;padding:0 2rem;display:flex;align-items:center;justify-content:space-between;height:64px;">
-        <a href="/" style="font-family:'Crimson Pro',serif;font-size:1.6rem;font-weight:900;color:white;text-decoration:none;">Realtor<span style="color:#FF6B35;">Finder</span></a>
+    return `<nav style="position:sticky;top:0;z-index:100;background:white;border-bottom:1px solid #E5E1DB;padding:0 2rem;display:flex;align-items:center;justify-content:space-between;height:64px;">
+        <a href="/" style="font-family:'Fraunces',serif;font-size:1.6rem;font-weight:900;color:#0A2540;text-decoration:none;">Realtor<span style="color:#FF6B35;">Finder</span></a>
         <div id="blogNavLinks" style="display:flex;align-items:center;gap:1.75rem;">
-            <a href="/sellers" style="color:rgba(255,255,255,0.8);text-decoration:none;font-weight:500;font-size:0.95rem;">For Sellers</a>
-            <a href="/realtors" style="color:rgba(255,255,255,0.8);text-decoration:none;font-weight:500;font-size:0.95rem;">For Realtors</a>
-            <a href="/find-agent" style="color:rgba(255,255,255,0.8);text-decoration:none;font-weight:500;font-size:0.95rem;">Find an Agent</a>
-            <a href="/blog" style="color:rgba(255,255,255,0.8);text-decoration:none;font-weight:500;font-size:0.95rem;">Blog</a>
-            <a href="/login" style="background:#FF6B35;color:white;padding:0.5rem 1.25rem;border-radius:8px;font-weight:600;text-decoration:none;font-size:0.9rem;">Get Started</a>
+            <a href="/sellers" style="color:rgba(10,37,64,0.75);text-decoration:none;font-weight:500;font-size:0.95rem;">For Sellers</a>
+            <a href="/realtors" style="color:rgba(10,37,64,0.75);text-decoration:none;font-weight:500;font-size:0.95rem;">For Realtors</a>
+            <a href="/find-agent" style="color:rgba(10,37,64,0.75);text-decoration:none;font-weight:500;font-size:0.95rem;">Find an Agent</a>
+            <a href="/blog" style="color:rgba(10,37,64,0.75);text-decoration:none;font-weight:500;font-size:0.95rem;">Blog</a>
+            <a href="/login" style="background:#0A2540;color:white;padding:0.5rem 1.25rem;border-radius:8px;font-weight:600;text-decoration:none;font-size:0.9rem;">Get Started</a>
         </div>
         <button id="blogHamburger" aria-label="Open menu" aria-expanded="false" style="display:none;background:none;border:none;cursor:pointer;padding:8px;">
-            <span style="display:block;width:22px;height:2px;background:white;margin:4px 0;border-radius:2px;"></span>
-            <span style="display:block;width:22px;height:2px;background:white;margin:4px 0;border-radius:2px;"></span>
-            <span style="display:block;width:22px;height:2px;background:white;margin:4px 0;border-radius:2px;"></span>
+            <span style="display:block;width:22px;height:2px;background:#0A2540;margin:4px 0;border-radius:2px;"></span>
+            <span style="display:block;width:22px;height:2px;background:#0A2540;margin:4px 0;border-radius:2px;"></span>
+            <span style="display:block;width:22px;height:2px;background:#0A2540;margin:4px 0;border-radius:2px;"></span>
         </button>
     </nav>
-    <div id="blogMobileMenu" style="display:none;position:fixed;top:64px;left:0;right:0;background:#0A2540;padding:1.5rem 2rem;z-index:99;flex-direction:column;gap:1rem;border-top:1px solid rgba(255,255,255,0.1);">
-        <a href="/sellers" style="color:rgba(255,255,255,0.85);text-decoration:none;font-size:1rem;font-weight:500;">For Sellers</a>
-        <a href="/realtors" style="color:rgba(255,255,255,0.85);text-decoration:none;font-size:1rem;font-weight:500;">For Realtors</a>
-        <a href="/find-agent" style="color:rgba(255,255,255,0.85);text-decoration:none;font-size:1rem;font-weight:500;">Find an Agent</a>
-        <a href="/blog" style="color:rgba(255,255,255,0.85);text-decoration:none;font-size:1rem;font-weight:500;">Blog</a>
-        <a href="/login" style="color:rgba(255,255,255,0.85);text-decoration:none;font-size:1rem;font-weight:500;">Get Started →</a>
+    <div id="blogMobileMenu" style="display:none;position:fixed;top:64px;left:0;right:0;background:white;border-bottom:1px solid #E5E1DB;padding:1.5rem 2rem;z-index:99;flex-direction:column;gap:1rem;">
+        <a href="/sellers" style="color:#0A2540;text-decoration:none;font-size:1rem;font-weight:500;">For Sellers</a>
+        <a href="/realtors" style="color:#0A2540;text-decoration:none;font-size:1rem;font-weight:500;">For Realtors</a>
+        <a href="/find-agent" style="color:#0A2540;text-decoration:none;font-size:1rem;font-weight:500;">Find an Agent</a>
+        <a href="/blog" style="color:#0A2540;text-decoration:none;font-size:1rem;font-weight:500;">Blog</a>
+        <a href="/login" style="color:#FF6B35;text-decoration:none;font-size:1rem;font-weight:600;">Get Started →</a>
     </div>
     <script>
     (function(){
@@ -9031,21 +9364,12 @@ app.use(express.static('public', {
 
 // ===== ERROR HANDLING =====
 
-// 404 — no route matched
-app.use((req, res) => {
-    if (req.path.startsWith('/api/')) {
-        return res.status(404).json({ error: 'Not found' });
-    }
-    res.status(404).sendFile(require('path').join(__dirname, 'public', 'landing.html'));
-});
-
-// Unhandled errors
 // 404 catch-all — must be before the error handler
 app.use((req, res) => {
-    if (req.accepts('html')) {
-        return res.status(404).sendFile(path.join(__dirname, 'public', '404.html'));
+    if (req.path.startsWith('/api/') || !req.accepts('html')) {
+        return res.status(404).json({ error: 'Not found' });
     }
-    res.status(404).json({ error: 'Not found' });
+    res.status(404).sendFile(path.join(__dirname, 'public', '404.html'));
 });
 
 app.use((err, req, res, next) => {
@@ -9150,7 +9474,10 @@ _schemaMigrations.push(
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS re_engagement_sent_at TIMESTAMPTZ`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMPTZ`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_slug TEXT UNIQUE`,
-    `ALTER TABLE waitlist ADD COLUMN IF NOT EXISTS nurture_sent BOOLEAN DEFAULT FALSE`
+    `ALTER TABLE waitlist ADD COLUMN IF NOT EXISTS nurture_sent BOOLEAN DEFAULT FALSE`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS brokerage VARCHAR(255)`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS years_experience INTEGER`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS service_areas TEXT`
 );
 
 // Drip email onboarding job — sends 3-step sequences to sellers, realtors, and buyers
@@ -9523,7 +9850,11 @@ _schemaMigrations.push(
     )`
 );
 
-// Review request job — emails sellers to review their accepted realtor 3 days after acceptance
+_schemaMigrations.push(
+    `ALTER TABLE city_leads ADD COLUMN IF NOT EXISTS converted_user_id INTEGER REFERENCES users(id)`
+);
+
+// emails sellers to review their accepted realtor 3 days after acceptance
 async function runReviewRequestJob() {
     try {
         const { rows } = await pool.query(
@@ -9984,9 +10315,6 @@ app.get('/api/company/leaderboard', auth.requireAuth, async (req, res) => {
 // Serve firms.html for /firms/:slug
 app.get('/firms/:slug', (req, res) => res.sendFile(path.join(__dirname, 'public/firms.html')));
 
-// Founding realtor ad landing page
-app.get('/founding', (req, res) => res.sendFile(path.join(__dirname, 'public', 'join.html')));
-
 // GET /api/firms/:slug — public JSON firm profile
 app.get('/api/firms/:slug', async (req, res) => {
     try {
@@ -10087,6 +10415,18 @@ _schemaMigrations.push(
 _schemaMigrations.push(
     `ALTER TABLE city_leads ADD COLUMN IF NOT EXISTS address TEXT`
 );
+
+_schemaMigrations.push(`
+    ALTER TABLE city_leads
+      ADD COLUMN IF NOT EXISTS drip1_sent_at TIMESTAMPTZ,
+      ADD COLUMN IF NOT EXISTS drip2_sent_at TIMESTAMPTZ,
+      ADD COLUMN IF NOT EXISTS drip3_sent_at TIMESTAMPTZ
+`);
+
+_schemaMigrations.push(`
+    ALTER TABLE city_leads
+      ADD COLUMN IF NOT EXISTS email_unsubscribed BOOLEAN DEFAULT FALSE
+`);
 
 _schemaMigrations.push(
     `CREATE TABLE IF NOT EXISTS admin_crm_notes (
@@ -10217,6 +10557,549 @@ _schemaMigrations.push(`ALTER TABLE listings ADD COLUMN IF NOT EXISTS year_built
 _schemaMigrations.push(`ALTER TABLE listings ADD COLUMN IF NOT EXISTS garage_spaces INTEGER`);
 _schemaMigrations.push(`ALTER TABLE listings ADD COLUMN IF NOT EXISTS hoa_fee NUMERIC(8,2)`);
 _schemaMigrations.push(`ALTER TABLE listings ADD COLUMN IF NOT EXISTS lot_size INTEGER`);
+_schemaMigrations.push(`
+    CREATE TABLE IF NOT EXISTS ambassadors (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        instagram_handle TEXT,
+        linkedin_url TEXT,
+        facebook_url TEXT,
+        follower_count INTEGER,
+        sample_post_url TEXT,
+        notes TEXT,
+        status TEXT NOT NULL DEFAULT 'pending',
+        applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        reviewed_at TIMESTAMPTZ,
+        UNIQUE(user_id)
+    )
+`);
+_schemaMigrations.push(
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS ambassador_expires_at TIMESTAMPTZ`
+);
+
+_schemaMigrations.push(`
+INSERT INTO blog_posts (slug, title, excerpt, author, category, read_time_minutes, content, is_published, published_at)
+VALUES (
+    'why-new-england-realtors-are-joining-realtorfinder-before-launch',
+    'Why New England Realtors Are Joining RealtorFinder Before the Public Launch',
+    'The first 100 agents to join get founding benefits that never go away. Here''s what''s driving early adoption — and why the timing matters.',
+    'RealtorFinder Editorial Team',
+    'Realtor Resources',
+    6,
+    $blog1$<p>When a new real estate platform opens its doors, most agents take a wait-and-see approach. Reasonable — there have been enough overpromised proptech plays to justify skepticism. So why are experienced New England realtors signing up for RealtorFinder months before sellers even go live?</p>
+
+<p>We asked a few of our founding members. The answers were more practical than we expected.</p>
+
+<h2>The Model Makes Sense</h2>
+
+<p>RealtorFinder flips the traditional listing acquisition process. Instead of agents cold-calling homeowners or farming neighborhoods hoping someone is thinking of selling, sellers post their home on the platform and agents submit proposals to represent them. Commission rate, marketing strategy, experience, reviews — all presented side by side so the seller can make a real comparison.</p>
+
+<p>For agents, that means pitching motivated sellers who have already decided to list. No more chasing people who aren't ready. No more competing with whoever called first. You compete on the quality of your proposal — and the best agents win more consistently.</p>
+
+<p>"I spend a huge amount of time prospecting for listings that may or may not materialize," one Boston-based agent told us. "The idea of submitting proposals to sellers who are already committed to listing — that's a much better use of my time."</p>
+
+<h2>First-Mover Advantage Is Real in Local Markets</h2>
+
+<p>New England real estate markets are dense and relationship-driven. In Boston, Worcester, Hartford, or Providence, being known as the agent who was first on a new platform — and who helped shape how it works in your market — carries weight. Sellers trust agents who are ahead of the curve.</p>
+
+<p>Founding members get a 24-hour head start on every new listing before it opens to the broader agent pool. In a competitive market, that window matters. By the time most agents see a listing, founding members have already submitted their proposal.</p>
+
+<h2>The Founding Benefits Are Locked In Permanently</h2>
+
+<p>The founding program runs through July 31, 2026 or until all 100 spots are filled. What founding members get:</p>
+
+<ul>
+<li><strong>Two months free</strong> on the Professional plan when listings launch in August 2026</li>
+<li><strong>Permanent rate lock</strong> — your subscription price never increases, even as rates rise for new members</li>
+<li><strong>Founding Realtor badge</strong> on your public profile — visible to every seller who views you</li>
+<li><strong>24-hour listing head start</strong> — new listings open to founding members a full day before everyone else</li>
+<li><strong>Direct line to the founding team</strong> — product decisions made with your input during the early period</li>
+</ul>
+
+<p>These aren't introductory offers that expire. They're permanent benefits tied to founding member status.</p>
+
+<h2>Why August 2026?</h2>
+
+<p>RealtorFinder is launching seller listings in August 2026. Between now and then, founding agents complete their profiles, set their service areas, and position themselves to be first in front of motivated sellers the moment they go live.</p>
+
+<p>The agents joining now aren't betting on hype. They're buying time — time to build their profile, establish their presence on the platform, and be ready to move the moment listings open.</p>
+
+<h2>Is It Worth Signing Up Now?</h2>
+
+<p>That depends on your market and your appetite for early adoption. If you work the Greater Boston area, the Hartford metro, Providence, the Cape, or any of the other New England markets we're launching in, and you consistently compete for listings — the founding math is straightforward. Two months free on Professional is worth $249. A permanent rate lock is worth considerably more over the life of your subscription. And a 24-hour head start on every listing in your market is the kind of structural advantage that compounds.</p>
+
+<p>If you're skeptical of new platforms generally, that's fair. Take a look at how the platform works, talk to agents who've joined, and decide for yourself.</p>
+
+<p>Founding spots are capped at 100. Once they're gone, they're gone — new members join at standard pricing with no head start and no founding badge.</p>
+
+<p><a href="/founding" style="color:#FF6B35;font-weight:700;">See if your market has spots available →</a></p>$blog1$,
+    TRUE,
+    NOW()
+)
+ON CONFLICT (slug) DO NOTHING
+`);
+
+_schemaMigrations.push(`
+INSERT INTO blog_posts (slug, title, excerpt, author, category, read_time_minutes, content, is_published, published_at)
+VALUES (
+    'end-of-cold-calling-motivated-sellers-new-england-realtors',
+    'The End of Cold Calling: How Motivated Sellers Are Changing Real Estate in New England',
+    'Cold calling is dying. Zillow leads are expensive and non-exclusive. A new model is emerging — and the agents adapting early are winning more listings on merit.',
+    'RealtorFinder Editorial Team',
+    'Realtor Resources',
+    7,
+    $blog2$<p>Ask any experienced New England realtor what the hardest part of their business is and most won't say negotiation, or contracts, or even difficult clients. They'll say finding listings.</p>
+
+<p>The listing side of the business has always been the hard side. You can be an extraordinary agent — skilled negotiator, deep market knowledge, real track record — and still spend a disproportionate amount of time on prospecting activities that have nothing to do with those skills. Cold calls. Door knocking. Farming mailers. Expired listings. The grind of trying to find sellers before your competition does.</p>
+
+<p>That model is under pressure. Here's why — and what's replacing it.</p>
+
+<h2>Cold Calling Is Losing Its Effectiveness</h2>
+
+<p>It was never pleasant. Now it's increasingly ineffective. Voicemail screens unknown numbers. Spam filters catch most ringless voicemail drops. The TCPA has tightened restrictions on automated dialing. And homeowners who are genuinely thinking about selling have Google, Zillow, and dozens of other resources to research the process before they talk to anyone.</p>
+
+<p>The cold call worked when it created information asymmetry — when homeowners needed agents to understand market value, process, and pricing. That asymmetry is largely gone. Homeowners come to the conversation informed. The cold call now interrupts their process rather than starting it.</p>
+
+<h2>Paid Lead Platforms Have a Structural Problem</h2>
+
+<p>Zillow Premier Agent, Realtor.com, and similar platforms sell leads — but they sell the same lead to multiple agents. You pay for a contact who is simultaneously being called by three of your competitors. The conversion rates are low, the cost per acquisition is high, and there's no relationship foundation to build on.</p>
+
+<p>For the buyer side, this model is awkward but functional. For listings, it's worse — sellers don't want to be contacted by four agents at once. The experience is off-putting and it doesn't help the agent who actually deserves the listing.</p>
+
+<h2>The Seller Behavior Shift</h2>
+
+<p>Here's what's actually happening: motivated sellers are increasingly self-directing their search for a listing agent. They research agents online before reaching out. They read reviews. They compare commission rates. They look at recent sales. By the time they contact an agent, they've often made a shortlist.</p>
+
+<p>That behavior shift creates an opportunity. If sellers are going to research and compare agents anyway, a platform that formalizes that process — where sellers post their home and agents submit structured proposals — aligns with how sellers already want to operate. It puts the comparison in one place and lets the best proposal win.</p>
+
+<h2>Proposal-Based Listing Acquisition</h2>
+
+<p>RealtorFinder is built on this model. Sellers post their listing — address, price range, timeline — and licensed agents in their area submit proposals. Each proposal includes the agent's commission rate, marketing plan, relevant experience, and a personal note. Sellers compare them side by side and choose.</p>
+
+<p>For agents, this is a fundamentally different kind of competition. You're not racing to be first to call. You're not paying per contact regardless of outcome. You're competing on the substance of your pitch — which is exactly the kind of competition that rewards agents who are genuinely good at what they do.</p>
+
+<p>"I've been in this business for eleven years," one Worcester-based agent told us. "I know how to win a listing when I'm in the room. The problem has always been getting in the room. This changes that equation."</p>
+
+<h2>What This Means for New England Agents</h2>
+
+<p>New England markets — Boston, Worcester, Hartford, Providence, the Cape — are mature, competitive markets where relationships and reputation matter. They're also markets where sellers have real choices and do real research. The proposal model fits these markets well.</p>
+
+<p>The agents who will do best on a platform like this are the ones with strong track records, clear marketing strategies, and the ability to articulate what makes them different. That's not every agent — but for agents who have those things, it's a significant advantage over a cold-calling model that treats every agent as interchangeable.</p>
+
+<h2>The Transition</h2>
+
+<p>Cold calling won't disappear overnight. Neither will paid lead platforms. But the direction of travel is clear: sellers have more information, more leverage, and more options than they did ten years ago. The acquisition model that serves agents best in that environment is one that leads with quality rather than speed.</p>
+
+<p>If you're a New England realtor evaluating how you generate listings over the next three to five years, proposal-based platforms are worth understanding now — before they're crowded.</p>
+
+<p><a href="/founding" style="color:#FF6B35;font-weight:700;">See how RealtorFinder''s founding program works →</a></p>$blog2$,
+    TRUE,
+    NOW()
+)
+ON CONFLICT (slug) DO NOTHING
+`);
+
+_schemaMigrations.push(`
+INSERT INTO blog_posts (slug, title, excerpt, author, category, read_time_minutes, content, is_published, published_at)
+VALUES (
+    'how-to-choose-a-real-estate-agent',
+    'How to Choose a Real Estate Agent: A Seller''s Complete Guide',
+    'Choosing the right listing agent is one of the most consequential decisions you''ll make when selling your home. Here''s how to evaluate agents fairly — and avoid the most common mistakes.',
+    'RealtorFinder Editorial Team',
+    'Seller Guides',
+    7,
+    $blog3$<h1>How to Choose a Real Estate Agent: A Seller's Complete Guide</h1>
+
+<p>Selling a home is likely the largest financial transaction of your life. The agent you choose to represent you will negotiate your sale price, market your property, coordinate showings, and guide you through closing. Getting that choice right is worth more time than most sellers give it.</p>
+
+<p>Here's a straightforward framework for evaluating listing agents — including the questions most sellers forget to ask.</p>
+
+<h2>Start With Local Track Record, Not Name Recognition</h2>
+
+<p>A nationally recognized brokerage name does not mean the individual agent assigned to your listing is the right fit. What matters is the specific agent's performance in your market and price range over the past 12–24 months.</p>
+
+<p>Ask every agent you interview:</p>
+<ul>
+  <li>How many homes have you listed in this ZIP code in the past year?</li>
+  <li>What was your average list-to-sale price ratio?</li>
+  <li>What was the average days on market for your listings?</li>
+  <li>Can you show me three homes you've sold that are comparable to mine?</li>
+</ul>
+
+<p>An agent who has closed 15 homes in your neighborhood in the past year is almost always a better choice than a high-volume agent who works 40 miles away and is expanding their territory.</p>
+
+<h2>Understand What You're Paying For</h2>
+
+<p>Most sellers accept the commission rate an agent quotes without asking what's included. That's a mistake. Before you sign a listing agreement, get clarity on:</p>
+
+<ul>
+  <li>What percentage goes to the buyer's agent versus the listing agent?</li>
+  <li>What marketing is included — professional photography, floor plans, video tour, paid social ads, MLS syndication?</li>
+  <li>Who covers staging consultation, open house costs, or pre-listing repairs?</li>
+  <li>What is the listing agreement term, and what are the exit terms if the home doesn't sell?</li>
+</ul>
+
+<p>Commission rates are negotiable. The typical listing agent commission runs 2.5–3% of the sale price on the listing side, but there's meaningful variation — especially for homes priced above $500,000. Getting competing proposals makes that variation visible.</p>
+
+<h2>Look for Communication Style Fit</h2>
+
+<p>Selling a home takes 30 to 90 days on average, and during that time you'll be in regular contact with your agent. Pay attention during your initial conversations to how quickly they respond, how clearly they explain the process, and whether they listen to your priorities or push a standard pitch.</p>
+
+<p>Ask: "How will you communicate with me during the listing period — weekly calls, email updates, or as-needed?" There's no right answer, but their answer should match your expectations.</p>
+
+<h2>Interview at Least Three Agents</h2>
+
+<p>Most sellers choose the first agent they meet — often someone referred by a friend or a yard sign they've seen. Interviewing at least three agents costs you a few hours and can save you tens of thousands of dollars. You'll hear different opinions on pricing strategy, commission structures, and marketing approaches. That range of perspectives helps you make a much better decision.</p>
+
+<p>Platforms like <a href="/" style="color:#FF6B35;font-weight:700;">RealtorFinder</a> make this easier by letting you post your property and receive structured proposals from multiple licensed agents in your area — each one including their commission rate, marketing plan, and experience. Instead of scheduling separate interviews, you compare everything side by side.</p>
+
+<h2>Check Reviews and References</h2>
+
+<p>Online reviews on Google, Zillow, and Realtor.com give you a starting point, but they skew toward happy clients. Ask the agent directly for two or three seller references — not buyer references — from homes they've closed in the past six months. Call them. Ask how the process went, what surprised them, and whether they'd use the agent again.</p>
+
+<h2>Be Careful With Overpricing</h2>
+
+<p>Some agents win listings by suggesting an aggressive list price that flatters the seller's expectations. This often leads to price reductions, extended days on market, and ultimately a lower sale price than a realistic initial price would have achieved. Ask each agent to walk you through their pricing methodology and what data supports their recommended list price.</p>
+
+<h2>Conclusion</h2>
+
+<p>The right listing agent is someone with a verifiable track record in your market, a clear marketing plan, a commission structure that makes sense for your situation, and a communication style that works for you. The only way to find that combination is to compare multiple agents — not just accept whoever calls you first.</p>
+
+<p><a href="/" style="color:#FF6B35;font-weight:700;">Post your home on RealtorFinder and receive competing proposals from licensed agents in your area →</a></p>$blog3$,
+    TRUE,
+    NOW() - INTERVAL '3 days'
+)
+ON CONFLICT (slug) DO NOTHING
+`);
+
+_schemaMigrations.push(`
+INSERT INTO blog_posts (slug, title, excerpt, author, category, read_time_minutes, content, is_published, published_at)
+VALUES (
+    'what-is-a-good-real-estate-commission-rate',
+    'What Is a Good Real Estate Commission Rate? What Sellers Need to Know in 2025',
+    'The typical agent commission is 2.5–3% on the listing side — but what you actually pay depends on your home price, market, and how you shop for an agent. Here''s how it works and how to negotiate.',
+    'RealtorFinder Editorial Team',
+    'Seller Guides',
+    6,
+    $blog4$<h1>What Is a Good Real Estate Commission Rate? What Sellers Need to Know in 2025</h1>
+
+<p>If you're selling a home, commission is one of your largest transaction costs — and one of the least transparent. Most sellers don't know what rate is typical, what's negotiable, or how to evaluate whether they're getting a fair deal. This guide breaks it down.</p>
+
+<h2>What Is the Standard Real Estate Commission?</h2>
+
+<p>The traditional total real estate commission in the United States has been around 5–6% of the sale price, split between the listing agent (who represents the seller) and the buyer's agent. That means on a $500,000 home, total commissions could run $25,000–$30,000.</p>
+
+<p>Since the National Association of Realtors settlement that took effect in August 2024, the rules around buyer's agent compensation have changed. Sellers are no longer required to offer a specific buyer's agent commission through the MLS. This has introduced more variation in how commissions are structured — but in practice, most transactions still involve compensating a buyer's agent in some form, either directly or through the sale price.</p>
+
+<p>For the listing side specifically, a typical commission rate today is <strong>2.5–3% of the sale price</strong>. Some agents charge less for higher-priced homes. Some charge more for properties that require extra marketing effort.</p>
+
+<h2>What Factors Affect Commission Rates?</h2>
+
+<p>Commission rates vary based on several factors:</p>
+
+<ul>
+  <li><strong>Home price:</strong> Agents are often more willing to negotiate rates on higher-priced homes because the absolute dollar amount is larger even at a lower percentage.</li>
+  <li><strong>Market conditions:</strong> In a hot seller's market where homes move quickly, there's more room to negotiate. In slower markets, agents may resist discounts.</li>
+  <li><strong>Agent experience and demand:</strong> Top-performing agents in competitive markets often hold firm on rates because they have more listings than they need. Newer or less-busy agents may be more flexible.</li>
+  <li><strong>Services included:</strong> A lower commission rate isn't always better if it means reduced marketing, no professional photography, or limited availability for showings and negotiations.</li>
+</ul>
+
+<h2>Is Commission Negotiable?</h2>
+
+<p>Yes — commission is always negotiable. Legally, there is no fixed rate. The challenge is that most sellers don't know this, or they feel uncomfortable bringing it up after an agent has already built rapport during a listing presentation.</p>
+
+<p>The most effective way to negotiate commission is to create competition. When an agent knows you're evaluating multiple agents and their proposals will be compared side by side, they have an incentive to put their best rate forward upfront rather than after you've already selected them.</p>
+
+<p>This is exactly why platforms like <a href="/" style="color:#FF6B35;font-weight:700;">RealtorFinder</a> exist. Sellers post their property, agents submit proposals that include their commission rate and marketing plan, and sellers compare everything at once. The result is transparent pricing without an awkward negotiation conversation.</p>
+
+<h2>What Should You Be Getting for Your Commission?</h2>
+
+<p>Whatever rate you pay, make sure it includes:</p>
+
+<ul>
+  <li>Professional photography (and ideally video or 3D tour for homes over $400K)</li>
+  <li>MLS listing with full syndication to Zillow, Realtor.com, Redfin, and other portals</li>
+  <li>A written marketing plan, not just a promise to "market aggressively"</li>
+  <li>Active communication throughout the listing period</li>
+  <li>Skilled negotiation on your behalf when offers come in</li>
+</ul>
+
+<p>An agent charging 2.5% who delivers all of that is a better deal than an agent charging 2% who posts a few photos and waits for inquiries.</p>
+
+<h2>What About Discount Brokers and Flat-Fee Services?</h2>
+
+<p>Discount brokerages (like certain online-first options) offer lower commissions, sometimes as low as 1–1.5% on the listing side, often by reducing service levels. Flat-fee MLS services charge a fixed amount to list your home on the MLS but leave everything else — negotiations, paperwork, showings — to you.</p>
+
+<p>These options can work well for experienced sellers in strong seller's markets. For most people, especially first-time sellers or those dealing with a complex property, a full-service agent who earns their commission typically delivers more value than the savings suggest.</p>
+
+<h2>Conclusion</h2>
+
+<p>A good real estate commission rate on the listing side is 2.5–3%, with room to negotiate depending on your home price and market. The most important thing isn't paying the lowest rate — it's making sure you understand what you're getting for what you're paying, and that you've compared more than one option before signing a listing agreement.</p>
+
+<p><a href="/" style="color:#FF6B35;font-weight:700;">See what agents in your area propose for your home — compare commission rates and marketing plans on RealtorFinder →</a></p>$blog4$,
+    TRUE,
+    NOW() - INTERVAL '6 days'
+)
+ON CONFLICT (slug) DO NOTHING
+`);
+
+_schemaMigrations.push(`
+INSERT INTO blog_posts (slug, title, excerpt, author, category, read_time_minutes, content, is_published, published_at)
+VALUES (
+    'how-to-sell-your-home-without-overpaying-agent-fees',
+    'How to Sell Your Home Without Overpaying Agent Fees',
+    'Sellers who accept the first commission rate they''re quoted pay more than they have to. Here''s a practical approach to getting full-service representation at a rate you actually negotiated.',
+    'RealtorFinder Editorial Team',
+    'Seller Guides',
+    7,
+    $blog5$<h1>How to Sell Your Home Without Overpaying Agent Fees</h1>
+
+<p>On a $600,000 home sale, a 3% listing commission is $18,000. Most sellers pay it without question because that's what the agent quoted and there wasn't an obvious moment to push back. The result is that sellers routinely overpay for representation — not because full-service agents aren't worth it, but because there was never any competition to establish a fair price.</p>
+
+<p>Here's how to fix that.</p>
+
+<h2>Understand What You're Actually Paying For</h2>
+
+<p>The first step is separating the listing agent's commission from the buyer's agent's commission. Traditionally, the seller paid both — typically 2.5–3% to each side, for a total of 5–6%. Following the 2024 NAR settlement, seller-paid buyer's agent commissions are no longer mandated through the MLS, which gives you more flexibility on the buyer's side of the equation.</p>
+
+<p>On the listing side, you're paying your agent to:</p>
+<ul>
+  <li>Price your home accurately based on comparable sales data</li>
+  <li>Prepare, photograph, and market the property</li>
+  <li>Manage showings and buyer inquiries</li>
+  <li>Negotiate offers on your behalf</li>
+  <li>Coordinate inspection, appraisal, and closing logistics</li>
+</ul>
+
+<p>That's real work with real value. The question isn't whether to pay for it — it's whether you're paying a fair price given who you're hiring and what they're offering.</p>
+
+<h2>The Problem With the Standard Process</h2>
+
+<p>The way most sellers hire a listing agent works against them. You get a referral from a friend, or you call the agent whose name is on a yard sign in the neighborhood, or you fill out a form on Zillow and get called by whoever bought your contact information. You meet with one or two agents, you feel some rapport, and you sign.</p>
+
+<p>At no point in that process did you see competing offers. You don't know whether the commission rate is typical or high. You don't know whether another equally qualified agent in your ZIP code would have done more marketing for less. You made a major financial decision without the information you'd need to make it well.</p>
+
+<h2>Create Competition Before You Sign Anything</h2>
+
+<p>The single most effective thing you can do to avoid overpaying is to get proposals from at least three agents before you commit to one. Not just casual conversations — structured proposals where each agent states their commission rate, their marketing plan, and their relevant experience in writing.</p>
+
+<p>When agents know they're competing, a few things happen:</p>
+<ul>
+  <li>They put their best rate forward rather than anchoring high and hoping you don't push back</li>
+  <li>They're more specific about what marketing they'll actually do, not just promise</li>
+  <li>You have a real basis for comparison, including agents you might never have contacted on your own</li>
+</ul>
+
+<p>This is the model behind <a href="/" style="color:#FF6B35;font-weight:700;">RealtorFinder</a>. Sellers post their property on the platform, and licensed agents in their area submit proposals that include their commission rate, marketing strategy, recent sales, and a personal pitch. You compare them side by side and choose the one that makes the most sense for your situation — without a single awkward commission negotiation.</p>
+
+<h2>Don't Default to the Lowest Rate</h2>
+
+<p>Overpaying is a real problem, but so is under-representing your property. An agent who charges 1.5% and takes their own photos with an iPhone, skips the MLS syndication setup, and is hard to reach during offer negotiations can cost you far more in final sale price than the commission savings are worth.</p>
+
+<p>When evaluating proposals, look at the total picture: commission rate, marketing plan, track record in your price range and area, and responsiveness during the proposal process itself. How an agent treats you when they're trying to win your business is often a preview of how they'll treat you when they have it.</p>
+
+<h2>Know Your Leverage Points</h2>
+
+<p>A few situations give you more negotiating leverage:</p>
+<ul>
+  <li><strong>Higher-priced homes:</strong> Agents are often more flexible on percentage when the absolute dollar amount is larger.</li>
+  <li><strong>Strong seller's markets:</strong> When homes are selling quickly with multiple offers, agents do less work per transaction — there's a reasonable case for a lower rate.</li>
+  <li><strong>Repeat business or referrals:</strong> If you're selling and buying, or if you'll refer others, mention it. Agents value long-term relationships.</li>
+  <li><strong>Simple properties:</strong> A turnkey home in a strong location requires less marketing effort than a unique or difficult property.</li>
+</ul>
+
+<h2>Conclusion</h2>
+
+<p>You don't have to choose between full service and fair pricing. The key is getting competing proposals before you sign with anyone — so you know what the market actually looks like rather than accepting the first number you heard.</p>
+
+<p><a href="/" style="color:#FF6B35;font-weight:700;">Post your home on RealtorFinder and receive competing proposals from licensed agents — compare rates and marketing plans before you commit →</a></p>$blog5$,
+    TRUE,
+    NOW() - INTERVAL '10 days'
+)
+ON CONFLICT (slug) DO NOTHING
+`);
+
+_schemaMigrations.push(`
+INSERT INTO blog_posts (slug, title, excerpt, author, category, read_time_minutes, content, is_published, published_at)
+VALUES (
+    'how-to-find-a-realtor-near-me',
+    'How to Find a Realtor Near Me: What Actually Works (and What Doesn''t)',
+    'Searching "realtor near me" returns ads and directories, not answers. Here''s how to find a listing agent who actually knows your local market — across more than 1,000 markets nationwide.',
+    'RealtorFinder Editorial Team',
+    'Seller Guides',
+    6,
+    $blog6$<h1>How to Find a Realtor Near Me: What Actually Works (and What Doesn't)</h1>
+
+<p>If you've searched "realtor near me" hoping for a clear answer, you've probably found a wall of ads, agent directories, and platforms that want your contact information before they tell you anything useful. The search intent is simple — find a good local agent — but the results rarely deliver on it.</p>
+
+<p>Here's a more useful framework for finding a listing agent who actually knows your market.</p>
+
+<h2>Why "Near Me" Matters More Than You Think</h2>
+
+<p>Real estate is intensely local. An agent who is excellent in one part of a metro area may have almost no presence in a neighborhood 10 miles away. Local expertise means knowing which streets have noise issues, which school district boundaries affect buyer demand, how quickly homes in your specific price range have been moving, and which buyers' agents are most active in the area.</p>
+
+<p>An agent who has closed 20 transactions in your ZIP code in the past two years brings knowledge that no amount of general real estate experience can replicate. When you're evaluating agents, always ask how many listings they've handled in your specific area — not just their city or region.</p>
+
+<h2>Where Most Sellers Look (and the Limitations)</h2>
+
+<p><strong>Referrals from friends and family</strong> are the most common way people find agents — and they're a reasonable starting point. The limitation is that your friend's great experience may have been in a different part of town, at a different price point, or years ago when market conditions were different. Always verify that the referred agent is still active and relevant in your specific market.</p>
+
+<p><strong>Yard signs and neighborhood presence</strong> tell you an agent is active in your area, but they don't tell you whether that agent's listings are selling at good prices or lingering on the market. Visibility isn't the same as performance.</p>
+
+<p><strong>Online directories</strong> like Zillow's agent finder and Realtor.com's agent search rank agents partly based on advertising spend, not just performance. The agent at the top of the list paid to be there.</p>
+
+<p><strong>Brokerage websites</strong> will direct you to agents affiliated with that brokerage, which narrows your options artificially. Some of the best agents in any market work at smaller local brokerages.</p>
+
+<h2>A Better Approach: Let Agents Come to You</h2>
+
+<p>Instead of filtering through directories and hoping you land on the right agent, consider reversing the process. Post your property and let qualified local agents submit proposals to represent you.</p>
+
+<p>This is how <a href="/" style="color:#FF6B35;font-weight:700;">RealtorFinder</a> works. Sellers post their home — address, estimated price range, timeline — and licensed agents in the area submit structured proposals. Each proposal includes the agent's commission rate, marketing strategy, relevant local sales, and a personal pitch. You see multiple qualified agents who are actively competing for your listing, all in one place.</p>
+
+<p>RealtorFinder covers more than 1,077 markets across the United States, with licensed agents in each one. Whether you're selling in Boston, Phoenix, Charlotte, or a smaller metro, the platform surfaces agents who have specifically chosen to serve your area.</p>
+
+<h2>What to Look for When Evaluating Local Agents</h2>
+
+<p>Once you have a shortlist — whether from referrals, a platform like RealtorFinder, or your own research — evaluate each agent on:</p>
+
+<ul>
+  <li><strong>Recent local sales:</strong> Ask for a list of homes they've sold in your area in the past 12 months, including list price, sale price, and days on market.</li>
+  <li><strong>List-to-sale ratio:</strong> A consistently high ratio (98–102% of list price) suggests accurate pricing and good negotiation. A low ratio may mean they tend to overprice listings and then reduce.</li>
+  <li><strong>Marketing plan specifics:</strong> What exactly will they do to market your home? Professional photography, MLS syndication, video tour, paid advertising? Get it in writing.</li>
+  <li><strong>Availability and communication:</strong> Will you have direct access to the agent, or will you mostly work with a team member? How quickly do they respond to your initial inquiry?</li>
+</ul>
+
+<h2>Don't Hire Without Interviewing at Least Three Agents</h2>
+
+<p>Most sellers hire the first or second agent they meet. That's understandable — the interview process can feel uncomfortable, and once you like someone it's tempting to stop looking. But interviewing at least three agents gives you a real baseline: for pricing strategy, commission rates, marketing approaches, and local knowledge. The differences are often significant.</p>
+
+<h2>Conclusion</h2>
+
+<p>Finding a great realtor near you isn't about searching harder — it's about building in comparison from the start. The agents who know your neighborhood best aren't always the ones who show up first in a generic search. Get multiple proposals, verify local track records, and choose based on substance rather than whoever happened to call you first.</p>
+
+<p><a href="/" style="color:#FF6B35;font-weight:700;">Find licensed realtors in your market on RealtorFinder — post your home and compare proposals across 1,077+ markets →</a></p>$blog6$,
+    TRUE,
+    NOW() - INTERVAL '14 days'
+)
+ON CONFLICT (slug) DO NOTHING
+`);
+
+_schemaMigrations.push(`
+INSERT INTO blog_posts (slug, title, excerpt, author, category, read_time_minutes, content, is_published, published_at)
+VALUES (
+    '2026-new-england-home-sales-report',
+    'The 2026 New England Home Sales Report',
+    'The Northeast housing market continues to outperform the rest of the country. We analyzed NAR data, FRED economic indicators, and Realtor.com market rankings to surface what''s driving demand across New England.',
+    'RealtorFinder Research',
+    'Research',
+    4,
+    $blog_ne2026$<p class="report-meta" style="font-size:0.9rem;color:#6B7280;margin-bottom:1.5rem;">Published June 20, 2026 &middot; RealtorFinder Research &middot; 4 min read</p>
+
+<div style="background:rgba(10,37,64,0.04);border:1px solid #E5E1DB;border-left:4px solid #FF6B35;border-radius:0 10px 10px 0;padding:1.5rem 1.75rem;margin-bottom:2rem;">
+<strong style="display:block;font-size:0.82rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#FF6B35;margin-bottom:0.75rem;">Key Findings</strong>
+<ul style="margin:0;padding-left:1.25rem;">
+<li style="margin-bottom:0.5rem;">Approximately <strong>1,260 existing homes</strong> are sold each day across the Northeast region</li>
+<li style="margin-bottom:0.5rem;">Existing-home sales increased to a <strong>4.17 million annualized pace</strong> nationally in May 2026 (+3.2% month-over-month)</li>
+<li style="margin-bottom:0.5rem;">The Northeast experienced an <strong>8.7% increase in pending home sales</strong> activity during May 2026 &mdash; the strongest regional increase in the US</li>
+<li style="margin-bottom:0.5rem;"><strong>Hartford, Connecticut</strong> was ranked Realtor.com&apos;s #1 housing market in America for 2026</li>
+<li style="margin-bottom:0.5rem;"><strong>Worcester, Massachusetts</strong> ranked #3</li>
+<li><strong>Six of Realtor.com&apos;s Top 10</strong> housing markets for 2026 were located in the Northeast</li>
+</ul>
+</div>
+
+<h2>Northeast Home Sales Activity</h2>
+
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:2rem;">
+<div style="background:#F8F6F3;border:1px solid #E5E1DB;border-radius:10px;padding:1.25rem;text-align:center;">
+<div style="font-size:2rem;font-weight:700;color:#FF6B35;line-height:1;margin-bottom:0.3rem;">460,000</div>
+<div style="font-size:0.82rem;color:#6B7280;">Annualized existing-home sales pace in the Northeast</div>
+</div>
+<div style="background:#F8F6F3;border:1px solid #E5E1DB;border-radius:10px;padding:1.25rem;text-align:center;">
+<div style="font-size:2rem;font-weight:700;color:#FF6B35;line-height:1;margin-bottom:0.3rem;">38,333</div>
+<div style="font-size:0.82rem;color:#6B7280;">Estimated monthly existing-home sales in the Northeast</div>
+</div>
+<div style="background:#F8F6F3;border:1px solid #E5E1DB;border-radius:10px;padding:1.25rem;text-align:center;">
+<div style="font-size:2rem;font-weight:700;color:#FF6B35;line-height:1;margin-bottom:0.3rem;">1,260</div>
+<div style="font-size:0.82rem;color:#6B7280;">Homes sold per day across the Northeast region</div>
+</div>
+</div>
+
+<p>The Northeast housing market entered 2026 with sustained momentum. According to the National Association of Realtors, existing-home sales in the Northeast Census Region are running at an annualized pace of approximately 460,000 units &mdash; translating to roughly 38,333 homes changing hands each month, or approximately 1,260 per day. Nationally, existing-home sales reached a 4.17 million annualized pace in May 2026, a 3.2% increase month-over-month, according to NAR&apos;s June 2026 report. The Federal Reserve Bank of St. Louis (FRED) tracks the Northeast regional series separately, confirming the regional pace is consistent with these national trends.</p>
+
+<h2>Pending Sales Signal Growth</h2>
+
+<p>Pending home sales &mdash; contracts signed but not yet closed &mdash; are a leading indicator of where closed sales are headed. In May 2026, the Northeast posted an <strong>8.7% increase in pending home sales activity</strong>, the strongest regional gain in the country, according to data reported by Reuters on June 17, 2026. This figure suggests that closed-sale volumes in the Northeast are likely to remain elevated through late summer and into fall 2026, as these contracts convert to closings over the following 30 to 60 days.</p>
+
+<p>The Northeast outperformed all other Census regions &mdash; South, Midwest, and West &mdash; in pending sales growth during May, reinforcing the region&apos;s position as one of the most active housing markets in the country entering the second half of 2026.</p>
+
+<h2>Top Housing Markets in the Northeast</h2>
+
+<table style="width:100%;border-collapse:collapse;font-size:0.9rem;margin-bottom:2rem;border:1px solid #E5E1DB;border-radius:10px;overflow:hidden;">
+<thead>
+<tr style="background:#F8F6F3;">
+<th style="padding:0.75rem 1rem;text-align:left;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.05em;color:#0A2540;border-bottom:1px solid #E5E1DB;">National Rank</th>
+<th style="padding:0.75rem 1rem;text-align:left;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.05em;color:#0A2540;border-bottom:1px solid #E5E1DB;">Market</th>
+<th style="padding:0.75rem 1rem;text-align:left;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.05em;color:#0A2540;border-bottom:1px solid #E5E1DB;">State</th>
+<th style="padding:0.75rem 1rem;text-align:left;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.05em;color:#0A2540;border-bottom:1px solid #E5E1DB;">Source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="padding:0.75rem 1rem;border-bottom:1px solid #E5E1DB;"><span style="background:#FF6B35;color:white;font-size:0.75rem;font-weight:700;padding:0.15rem 0.5rem;border-radius:100px;">#1</span></td>
+<td style="padding:0.75rem 1rem;border-bottom:1px solid #E5E1DB;font-weight:600;">Hartford</td>
+<td style="padding:0.75rem 1rem;border-bottom:1px solid #E5E1DB;">Connecticut</td>
+<td style="padding:0.75rem 1rem;border-bottom:1px solid #E5E1DB;">Realtor.com, 2026</td>
+</tr>
+<tr>
+<td style="padding:0.75rem 1rem;border-bottom:1px solid #E5E1DB;"><span style="background:#FF6B35;color:white;font-size:0.75rem;font-weight:700;padding:0.15rem 0.5rem;border-radius:100px;">#3</span></td>
+<td style="padding:0.75rem 1rem;border-bottom:1px solid #E5E1DB;font-weight:600;">Worcester</td>
+<td style="padding:0.75rem 1rem;border-bottom:1px solid #E5E1DB;">Massachusetts</td>
+<td style="padding:0.75rem 1rem;border-bottom:1px solid #E5E1DB;">Realtor.com, 2026</td>
+</tr>
+<tr>
+<td style="padding:0.75rem 1rem;border-bottom:1px solid #E5E1DB;">Top 10</td>
+<td style="padding:0.75rem 1rem;border-bottom:1px solid #E5E1DB;font-weight:600;">Springfield</td>
+<td style="padding:0.75rem 1rem;border-bottom:1px solid #E5E1DB;">Massachusetts</td>
+<td style="padding:0.75rem 1rem;border-bottom:1px solid #E5E1DB;">Realtor.com Hottest Markets, 2026</td>
+</tr>
+<tr>
+<td colspan="2" style="padding:0.75rem 1rem;font-style:italic;">Three additional Northeast markets in Realtor.com Top 10</td>
+<td colspan="2" style="padding:0.75rem 1rem;">Northeast (6 of 10 total)</td>
+</tr>
+</tbody>
+</table>
+
+<p>Realtor.com&apos;s annual housing market rankings for 2026 placed Hartford, Connecticut at the top of the list nationally &mdash; ranking it the #1 housing market in the United States. Worcester, Massachusetts came in at #3. Springfield, Massachusetts also appeared on Realtor.com&apos;s hottest markets list. In total, six of the ten top-ranked housing markets in the United States for 2026 were located in the Northeast, a concentration that reflects the region&apos;s structural housing dynamics: high demand, constrained supply, and strong buyer fundamentals.</p>
+
+<h2>Why New England Remains Competitive</h2>
+
+<ul>
+<li style="margin-bottom:0.75rem;"><strong>Limited inventory:</strong> New England&apos;s housing stock is older and denser, with fewer large-scale new-construction developments than Sun Belt metros. Supply constraints put sustained upward pressure on prices and reduce days-on-market.</li>
+<li style="margin-bottom:0.75rem;"><strong>Strong employment centers:</strong> Boston, Hartford, and Providence anchor major employment clusters in biotech, finance, healthcare, and higher education, sustaining buyer demand across the region.</li>
+<li style="margin-bottom:0.75rem;"><strong>High household incomes:</strong> The Northeast consistently posts above-average household incomes relative to national benchmarks, supporting purchase activity even as rates remain elevated.</li>
+<li style="margin-bottom:0.75rem;"><strong>Limited new construction:</strong> Zoning constraints, environmental regulation, and land scarcity limit new residential construction, meaning existing-home sales remain the dominant transaction channel.</li>
+<li><strong>Strong quality-of-life metrics:</strong> School quality, walkability, and access to urban amenities continue to drive in-migration to select New England markets from higher-cost coastal cities.</li>
+</ul>
+
+<h2>Outlook</h2>
+
+<p>The Northeast will continue to be one of the most active housing regions in the United States through the remainder of 2026. The combination of improving inventory conditions and the strongest pending sales growth in the country suggests that transaction volumes in H2 2026 are likely to be supported, if not modestly higher than H1. Markets like Hartford and Worcester, already ranked at the top of national housing indices, are positioned to maintain that momentum as buyer demand remains stable and supply adjusts only gradually.</p>
+
+<p>For sellers in New England markets, the data points to continued favorable conditions: high demand relative to available inventory, competitive buyer pools, and a regional market that is outperforming national trends on multiple indicators simultaneously.</p>
+
+<div style="background:#f4f2ef;border-left:3px solid #FF6B35;border-radius:0 8px 8px 0;padding:1.25rem 1.5rem;margin-top:2rem;font-size:0.875rem;color:#555;line-height:1.7;">
+<strong style="color:#0A2540;">Sources</strong><br>
+National Association of Realtors. <em>Existing-Home Sales Report</em>, June 2026.<br>
+Federal Reserve Bank of St. Louis (FRED). <em>Existing Home Sales in Northeast Census Region (EXHOSLUSNEM495S)</em>, retrieved June 2026.<br>
+Reuters. &ldquo;US pending home sales increase to a six-month high in May.&rdquo; June 17, 2026.<br>
+Realtor.com. <em>Existing-Home Sales Housing Snapshot</em>, June 2026.<br>
+Kiplinger. &ldquo;Top Housing Markets in the US 2026.&rdquo; May 2026.
+</div>$blog_ne2026$,
+    TRUE,
+    '2026-06-20'
+)
+ON CONFLICT (slug) DO NOTHING
+`);
 
 // Auto-expire proposals whose expires_at has passed
 async function runProposalExpiryJob() {
@@ -10261,6 +11144,288 @@ async function runProposalExpiryReminder() {
     }
 }
 
+// Founding prospect follow-up — runs every hour, emails prospects 20-28h after form submit
+async function runFoundingProspectFollowUpJob() {
+    try {
+        const { rows } = await pool.query(
+            `SELECT id, first_name, last_name, email, city
+             FROM realtor_prospects
+             WHERE source = 'founding'
+               AND outreach_status = 'not_contacted'
+               AND converted_user_id IS NULL
+               AND email IS NOT NULL
+               AND created_at BETWEEN NOW() - INTERVAL '28 hours' AND NOW() - INTERVAL '20 hours'`
+        );
+        for (const p of rows) {
+            await emailService.sendFoundingProspectFollowUp(p.email, p.first_name, p.city)
+                .catch(e => console.error(`Founding follow-up failed for ${p.email}:`, e.message));
+            await pool.query(
+                `UPDATE realtor_prospects SET outreach_status = 'followed_up', last_contact_date = NOW() WHERE id = $1`,
+                [p.id]
+            );
+        }
+        if (rows.length > 0) console.log(`📬 Founding follow-up sent to ${rows.length} prospects`);
+    } catch (err) {
+        console.error('runFoundingProspectFollowUpJob error:', err.message);
+    }
+}
+
+async function runCityLeadDripJob() {
+    const passes = [
+        { num: 1, sentCol: 'drip1_sent_at', prevCol: null,             interval: '1 day',  sellerFn: 'sendCityLeadSellerDrip1', realtorFn: 'sendCityLeadRealtorDrip1' },
+        { num: 2, sentCol: 'drip2_sent_at', prevCol: 'drip1_sent_at',  interval: '3 days', sellerFn: 'sendCityLeadSellerDrip3', realtorFn: 'sendCityLeadRealtorDrip3' },
+        { num: 3, sentCol: 'drip3_sent_at', prevCol: 'drip2_sent_at',  interval: '7 days', sellerFn: 'sendCityLeadSellerDrip7', realtorFn: 'sendCityLeadRealtorDrip7' },
+    ];
+    for (const pass of passes) {
+        try {
+            const prevCheck = pass.prevCol ? `AND ${pass.prevCol} IS NOT NULL` : '';
+            const { rows } = await pool.query(`
+                SELECT id, email, type, city_name FROM city_leads
+                WHERE converted_user_id IS NULL
+                  ${prevCheck}
+                  AND ${pass.sentCol} IS NULL
+                  AND created_at < NOW() - INTERVAL '${pass.interval}'
+                  AND email_unsubscribed IS NOT TRUE
+                LIMIT 50
+            `);
+            for (const lead of rows) {
+                try {
+                    const cityName = lead.city_name || null;
+                    if (lead.type === 'seller') await emailService[pass.sellerFn](lead.email, cityName);
+                    else if (lead.type === 'realtor') await emailService[pass.realtorFn](lead.email, cityName);
+                    await pool.query(`UPDATE city_leads SET ${pass.sentCol} = NOW() WHERE id = $1`, [lead.id]);
+                } catch(e) { console.error(`City lead drip${pass.num} error:`, e.message); }
+                await sleep(300);
+            }
+            if (rows.length) console.log(`📬 City lead drip${pass.num}: sent ${rows.length} emails`);
+        } catch(e) { console.error(`City lead drip${pass.num} job error:`, e.message); }
+    }
+}
+
+async function seedDemoData() {
+    const upsertUser = async (email, insertSql, params) => {
+        const base = insertSql.replace(/\s*RETURNING\s+id\s*$/i, '');
+        const { rows } = await pool.query(base + ` ON CONFLICT (email) DO NOTHING RETURNING id`, params);
+        if (rows[0]) return rows[0];
+        const { rows: existing } = await pool.query(`SELECT id FROM users WHERE email = $1`, [email]);
+        return existing[0];
+    };
+
+    try {
+        const bcrypt = require('bcrypt');
+        const demoHash = await bcrypt.hash('Demo1234!', 10);
+
+        console.log('🌱 seedDemoData: creating users...');
+        // Demo seller
+        const seller = await upsertUser('demo-seller@realtorfinder.net',
+            `INSERT INTO users (email, password_hash, user_type, first_name, last_name, zip_code, is_approved, is_active, email_verified, created_at)
+             VALUES ($1, $2, 'seller', 'Sarah', 'Mitchell', '02461', TRUE, TRUE, TRUE, NOW() - INTERVAL '14 days')
+             RETURNING id`,
+            ['demo-seller@realtorfinder.net', demoHash]
+        );
+
+        // Demo realtor (main account)
+        const realtor = await upsertUser('demo@realtorfinder.net',
+            `INSERT INTO users (email, password_hash, user_type, first_name, last_name, zip_code, is_approved, is_active,
+              email_verified, license_number, license_verified, brokerage, years_experience, service_areas, bio,
+              profile_photo, subscription_plan, is_founding_member, onboarding_completed, created_at)
+             VALUES ($1, $2, 'realtor', 'James', 'Rodriguez', '02116', TRUE, TRUE,
+               TRUE, 'MA9045123', TRUE, 'Meridian Real Estate Partners', 12,
+               'Boston, Newton, Brookline, Cambridge, Somerville, Plymouth, Portsmouth NH',
+               'I''ve spent 12 years helping New England families navigate one of the most competitive real estate markets in the country. Before joining Meridian Real Estate Partners, I was a top producer at a national firm where I closed over $40M in volume. My approach is straightforward: I listen first, then I build a marketing strategy around your specific home — not a template.\n\nI specialize in the Boston metro area and South Shore, with deep relationships across Newton, Brookline, and Cambridge. Most of my business comes from referrals, which I take as the highest compliment. When you work with me, you get direct access — not a team of assistants.',
+               'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&auto=format&fit=crop&q=80',
+               'professional', TRUE, TRUE, NOW() - INTERVAL '30 days')
+             RETURNING id`,
+            ['demo@realtorfinder.net', demoHash]
+        );
+
+        // Ghost realtors for competing proposals
+        const ghost1 = await upsertUser('emma.chen.demo@realtorfinder.net',
+            `INSERT INTO users (email, password_hash, user_type, first_name, last_name, zip_code, is_approved, is_active,
+              email_verified, brokerage, years_experience, service_areas, subscription_plan, created_at)
+             VALUES ($1, $2, 'realtor', 'Emma', 'Chen', '02134', TRUE, TRUE, TRUE,
+               'Coldwell Banker Realty', 8, 'Boston, Cambridge, Somerville, Newton', 'basic', NOW() - INTERVAL '20 days')
+             RETURNING id`,
+            ['emma.chen.demo@realtorfinder.net', demoHash]
+        );
+        const ghost2 = await upsertUser('marcus.webb.demo@realtorfinder.net',
+            `INSERT INTO users (email, password_hash, user_type, first_name, last_name, zip_code, is_approved, is_active,
+              email_verified, brokerage, years_experience, service_areas, subscription_plan, created_at)
+             VALUES ($1, $2, 'realtor', 'Marcus', 'Webb', '02301', TRUE, TRUE, TRUE,
+               'RE/MAX Advantage', 15, 'Plymouth, Brockton, Taunton, Cape Cod', 'basic', NOW() - INTERVAL '25 days')
+             RETURNING id`,
+            ['marcus.webb.demo@realtorfinder.net', demoHash]
+        );
+        console.log('🌱 seedDemoData: users done — seller.id=%s realtor.id=%s ghost1.id=%s ghost2.id=%s', seller?.id, realtor?.id, ghost1?.id, ghost2?.id);
+
+        const photos = {
+            newton:    [
+                'https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=1200&h=800&auto=format&fit=crop&q=80',
+                'https://images.unsplash.com/photo-1583608205776-bfd35f0d9f83?w=1200&h=800&auto=format&fit=crop&q=80',
+                'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=1200&h=800&auto=format&fit=crop&q=80',
+                'https://images.unsplash.com/photo-1600566753086-00f18fb6b3ea?w=1200&h=800&auto=format&fit=crop&q=80',
+            ],
+            plymouth:  [
+                'https://images.unsplash.com/photo-1570129477492-1f1f5745e4de?w=1200&h=800&auto=format&fit=crop&q=80',
+                'https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?w=1200&h=800&auto=format&fit=crop&q=80',
+                'https://images.unsplash.com/photo-1560448075-bb485b067938?w=1200&h=800&auto=format&fit=crop&q=80',
+            ],
+            brookline: [
+                'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=1200&h=800&auto=format&fit=crop&q=80',
+                'https://images.unsplash.com/photo-1586023492125-27264fee0dc4?w=1200&h=800&auto=format&fit=crop&q=80',
+                'https://images.unsplash.com/photo-1484154218962-a197022b5858?w=1200&h=800&auto=format&fit=crop&q=80',
+                'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=1200&h=800&auto=format&fit=crop&q=80',
+            ],
+            portsmouth: [
+                'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=1200&h=800&auto=format&fit=crop&q=80',
+                'https://images.unsplash.com/photo-1600596405974-c3a33d9c6f7b?w=1200&h=800&auto=format&fit=crop&q=80',
+                'https://images.unsplash.com/photo-1575517111839-3a3843ee7f5d?w=1200&h=800&auto=format&fit=crop&q=80',
+            ],
+        };
+
+        const listingData = [
+            {
+                address: '47 Maple Street', city: 'Newton', state: 'MA', zip: '02461',
+                price: 875000, property_type: 'Single Family', bedrooms: 4, bathrooms: 3.0, sqft: 2200,
+                year_built: 1998, garage_spaces: 2, lot_size: 7200,
+                description: `Beautifully updated colonial in Newton Centre's most sought-after pocket. This 4-bedroom, 3-bathroom home was fully renovated in 2021 — new kitchen with quartz countertops and SubZero appliances, spa-inspired primary bath, and wide-plank white oak floors throughout.\n\nThe open-concept main level flows from a chef's kitchen to a sunlit family room with gas fireplace. Upstairs: a generous primary suite with walk-in closet, three additional bedrooms, and a hall bath. The finished lower level adds another 600 sqft of flexible living space.\n\nOutside: a professionally landscaped half-acre yard with bluestone patio, mature trees, and two-car garage. Walk to Newton Centre T stop, top-rated Bigelow Elementary, and shops on Langley Road.`,
+                owner_name: 'Sarah Mitchell', owner_email: 'demo-seller@realtorfinder.net',
+                photos: photos.newton,
+            },
+            {
+                address: '128 Harbor View Road', city: 'Plymouth', state: 'MA', zip: '02360',
+                price: 649000, property_type: 'Single Family', bedrooms: 3, bathrooms: 2.5, sqft: 1850,
+                year_built: 2004, garage_spaces: 1, lot_size: 9800,
+                description: `Classic Cape Cod with sweeping harbor views from every room on the back of the house. Set on a quiet road just minutes from Plymouth Center, this 3-bedroom home was renovated in 2022 with a new primary suite addition, updated kitchen, and composite deck off the dining room.\n\nThe light-filled living room has hardwood floors and a wood-burning fireplace. The renovated kitchen features shaker cabinets, granite counters, and stainless appliances. Upstairs, the primary suite addition includes a vaulted ceiling, walk-in closet, and tiled bath.\n\nThe backyard is fully fenced with raised garden beds and perennial plantings. One-car attached garage plus extra parking. Ten minutes to Plymouth Beach.`,
+                owner_name: 'Sarah Mitchell', owner_email: 'demo-seller@realtorfinder.net',
+                photos: photos.plymouth,
+            },
+            {
+                address: '215 Chestnut Hill Avenue', city: 'Brookline', state: 'MA', zip: '02467',
+                price: 1250000, property_type: 'Single Family', bedrooms: 5, bathrooms: 3.5, sqft: 3100,
+                year_built: 1912, garage_spaces: 2, lot_size: 8400, hoa_fee: null,
+                description: `Stately Victorian in Chestnut Hill — one of Brookline's most coveted addresses. Built in 1912 and meticulously maintained, this 5-bedroom, 3.5-bath home retains its original character: 10-foot ceilings, mahogany crown molding, three decorative fireplaces, and original pine floors — while offering fully updated systems, kitchen, and baths.\n\nThe first floor offers a gracious entry hall, formal living room, dining room with coffered ceiling, and a completely redesigned eat-in kitchen with marble island, Wolf range, and Miele dishwasher. French doors open to a bluestone terrace and private garden.\n\nUpstairs: a sun-filled primary suite with sitting room, dual closets, and marble bath; three additional bedrooms; and a hall bath. Third floor has the 5th bedroom and bonus room. Detached two-car carriage house garage.\n\nWalking distance to Chestnut Hill T stop, The Street shops, and The Country Club.`,
+                owner_name: 'Sarah Mitchell', owner_email: 'demo-seller@realtorfinder.net',
+                photos: photos.brookline,
+            },
+            {
+                address: '89 Elm Avenue', city: 'Portsmouth', state: 'NH', zip: '03801',
+                price: 529000, property_type: 'Single Family', bedrooms: 4, bathrooms: 2.0, sqft: 1650,
+                year_built: 1987, garage_spaces: 1, lot_size: 6600,
+                description: `Move-in ready craftsman in one of Portsmouth's most walkable neighborhoods. Four bedrooms, two full baths, and a flexible floor plan that works for families and remote workers alike.\n\nThe renovated kitchen (2020) features butcher block counters, tile backsplash, and a breakfast bar that opens to the dining area. The living room has original hardwood floors, a gas fireplace, and large windows facing the private backyard. First-floor bedroom and full bath make it accessible and guest-friendly.\n\nUpstairs: primary bedroom with double closets, two additional bedrooms, and an updated hall bath with subway tile. Walk-out basement with laundry and storage. One-car garage with overhead storage.\n\nThree blocks to Portsmouth's historic downtown, Market Square, and the waterfront. No HOA. City water and sewer.`,
+                owner_name: 'Sarah Mitchell', owner_email: 'demo-seller@realtorfinder.net',
+                photos: photos.portsmouth,
+            },
+        ];
+
+        console.log('🌱 seedDemoData: creating listings...');
+        const listingIds = [];
+        for (const l of listingData) {
+            // Check if listing already exists for this seller+address
+            const { rows: existing } = await pool.query(
+                `SELECT id FROM listings WHERE user_id = $1 AND address = $2 AND deleted_at IS NULL LIMIT 1`,
+                [seller.id, l.address]
+            );
+            if (existing[0]) {
+                listingIds.push(existing[0].id);
+                continue;
+            }
+            const { rows: [listing] } = await pool.query(
+                `INSERT INTO listings (user_id, address, city, state, zip, price, property_type, bedrooms, bathrooms,
+                  sqft, description, owner_name, owner_email, owner_phone, status, image_urls, year_built, garage_spaces,
+                  lot_size, hoa_fee, owner_attested, created_at, updated_at)
+                 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,'active',$15,$16,$17,$18,$19,TRUE,
+                         NOW() - INTERVAL '7 days', NOW() - INTERVAL '7 days')
+                 RETURNING id`,
+                [seller.id, l.address, l.city, l.state, l.zip, l.price, l.property_type,
+                 l.bedrooms, l.bathrooms, l.sqft, l.description, l.owner_name, l.owner_email, '555-000-0000',
+                 l.photos, l.year_built, l.garage_spaces, l.lot_size, l.hoa_fee || null]
+            );
+            listingIds.push(listing.id);
+        }
+        console.log('🌱 seedDemoData: listings done — ids=%j', listingIds);
+
+        // Proposals — James (demo realtor) on all 4
+        const jamesNotes = [
+            `Hi Sarah — 47 Maple Street caught my attention immediately. I've sold four homes on this street in the past three years and have a deep understanding of what buyers in Newton Centre will pay for. My most recent comp closed at $412/sqft in March.\n\nFor your marketing plan: professional staging consultation, HDR photography, 3D Matterport tour, and a broker open before the public open. I'd target the Boston Globe Real Estate section and my database of 340+ Newton-area buyer leads. I'm confident we can exceed asking if we time the launch to a Thursday open weekend.`,
+            `Hi Sarah — Plymouth harbor views are in high demand right now and I've had three buyer clients specifically searching on Harbor View Road this spring. I know exactly who to call.\n\nMy plan: launch mid-April before competing inventory hits, lead with the harbor view angle in all marketing, and pre-market to my Plymouth/South Shore buyer database before hitting MLS. I can have you under contract in under 21 days.`,
+            `Hi Sarah — the Chestnut Hill Avenue Victorian is exactly the type of home I specialize in. I've closed seven transactions over $1M in Brookline in the past 18 months and understand the buyer pool at this price point deeply.\n\nFor a home of this caliber, presentation is everything. I partner with a Brookline-based stager who knows exactly how to position period homes for today's buyers. We'll invest in editorial-quality photography, feature in Dwell and Boston Magazine's real estate section, and hold private showings before the first public open.`,
+            `Hi Sarah — I grew up in Portsmouth and still have strong relationships with buyers relocating from Boston and the South Shore looking for value. Elm Avenue is a fantastic location and I think we can generate real competition.\n\nMy plan: pre-market to my relocation buyer database, professional photography on a Tuesday (best light for that side of the street), launch Thursday, offer review Sunday evening. In this market I expect 3–6 offers.`,
+        ];
+
+        for (let i = 0; i < listingIds.length; i++) {
+            await pool.query(
+                `INSERT INTO proposals (listing_id, realtor_id, commission_pct, cover_note, timeline, status, created_at)
+                 VALUES ($1, $2, $3, $4, $5, 'pending', NOW() - INTERVAL '4 days')
+                 ON CONFLICT (listing_id, realtor_id) DO NOTHING`,
+                [listingIds[i], realtor.id, 2.5, jamesNotes[i], '3–4 weeks from listing']
+            );
+        }
+
+        // Ghost proposals — Emma Chen
+        const emmaNotes = [
+            `I have 8 years of Newton experience and a strong buyer network in the metro west corridor. Commission is negotiable based on final sale price.`,
+            `Plymouth is a market I know well. Happy to discuss my recent comps and marketing approach in more detail.`,
+            `Chestnut Hill is my core market. I'd love to discuss my specific strategy for homes at this price point.`,
+            `Portsmouth NH is seeing strong demand from Boston relocators. I can move quickly on this one.`,
+        ];
+        for (let i = 0; i < listingIds.length; i++) {
+            await pool.query(
+                `INSERT INTO proposals (listing_id, realtor_id, commission_pct, cover_note, timeline, status, created_at)
+                 VALUES ($1, $2, $3, $4, $5, 'pending', NOW() - INTERVAL '3 days')
+                 ON CONFLICT (listing_id, realtor_id) DO NOTHING`,
+                [listingIds[i], ghost1.id, 2.75, emmaNotes[i], '4–5 weeks from listing']
+            );
+        }
+
+        // Ghost proposals — Marcus Webb (only on listings 2 and 4 — his market)
+        await pool.query(
+            `INSERT INTO proposals (listing_id, realtor_id, commission_pct, cover_note, timeline, status, created_at)
+             VALUES ($1, $2, 2.5, $3, '2–3 weeks from listing', 'pending', NOW() - INTERVAL '5 days')
+             ON CONFLICT (listing_id, realtor_id) DO NOTHING`,
+            [listingIds[1], ghost2.id, `Plymouth is my primary market — I've closed 14 transactions here in the past two years. I can show you comps that support strong pricing and have buyers ready.`]
+        );
+        await pool.query(
+            `INSERT INTO proposals (listing_id, realtor_id, commission_pct, cover_note, timeline, status, created_at)
+             VALUES ($1, $2, 2.75, $3, '3–4 weeks from listing', 'pending', NOW() - INTERVAL '2 days')
+             ON CONFLICT (listing_id, realtor_id) DO NOTHING`,
+            [listingIds[3], ghost2.id, `Portsmouth is a market I know deeply having lived here for 10 years. Elm Avenue is a wonderful street and I think the $529K ask is right on target.`]
+        );
+
+        // Reviews for demo realtor
+        const reviewSellers = [
+            { first: 'Linda', last: 'K.', rating: 5, comment: `James sold our Newton home in 9 days over asking. His market knowledge is exceptional — he predicted the exact price range before we even listed. The photography and staging consultation he arranged made a real difference. I've already referred him to two neighbors.` },
+            { first: 'Tom', last: 'B.', rating: 5, comment: `We were nervous about listing our Brookline Victorian but James made the process seamless. He handled every detail from staging to negotiation and kept us informed throughout. Closed above asking with no contingencies. Couldn't be happier.` },
+            { first: 'Rachel', last: 'M.', rating: 5, comment: `Professional, responsive, and genuinely knowledgeable. James had buyers lined up before we hit the MLS and we had multiple offers by Sunday. His negotiating made us an extra $18K over our original ask. Highly recommend.` },
+        ];
+        for (const rv of reviewSellers) {
+            const { rows: [rev_user] } = await pool.query(
+                `INSERT INTO users (email, password_hash, user_type, first_name, last_name, zip_code, is_approved, is_active, email_verified, created_at)
+                 VALUES ($1, $2, 'seller', $3, $4, '02461', TRUE, TRUE, TRUE, NOW() - INTERVAL '60 days')
+                 ON CONFLICT (email) DO NOTHING RETURNING id`,
+                [`${rv.first.toLowerCase()}.${rv.last.toLowerCase().replace('.','')}.review@realtorfinder.net`, demoHash, rv.first, rv.last]
+            );
+            if (rev_user) {
+                const { rows: existingReview } = await pool.query(
+                    `SELECT id FROM realtor_reviews WHERE realtor_id = $1 AND seller_id = $2 LIMIT 1`,
+                    [realtor.id, rev_user.id]
+                );
+                if (!existingReview[0]) {
+                    await pool.query(
+                        `INSERT INTO realtor_reviews (realtor_id, seller_id, rating, body, created_at)
+                         VALUES ($1, $2, $3, $4, NOW() - INTERVAL '${Math.floor(Math.random()*30)+10} days')`,
+                        [realtor.id, rev_user.id, rv.rating, rv.comment]
+                    );
+                }
+            }
+        }
+
+        console.log('✅ Demo data seeded — demo@realtorfinder.net / Demo1234!');
+    } catch (err) {
+        console.error('seedDemoData error:', err.message, err.stack);
+    }
+}
+
 // Run all schema migrations then start listening
 async function startServer() {
     for (const sql of _schemaMigrations) {
@@ -10275,6 +11440,7 @@ async function startServer() {
     }
     await backfillProfileSlugs();
     await seedBlogPosts();
+    await seedDemoData();
     app.listen(PORT, () => {
         console.log(`🏠 RealtorFinder server running on port ${PORT}`);
         console.log(`📍 http://localhost:${PORT}`);
@@ -10309,6 +11475,10 @@ async function startServer() {
         setInterval(runProposalExpiryJob, 24 * 60 * 60 * 1000).unref();
         runProposalExpiryReminder();
         setInterval(() => runProposalExpiryReminder(), 24 * 60 * 60 * 1000).unref();
+        runFoundingProspectFollowUpJob();
+        setInterval(runFoundingProspectFollowUpJob, 60 * 60 * 1000).unref();
+        runCityLeadDripJob();
+        setInterval(runCityLeadDripJob, 6 * 60 * 60 * 1000).unref();
     });
 }
 startServer().catch(err => {
