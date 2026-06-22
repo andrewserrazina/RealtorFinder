@@ -9069,13 +9069,13 @@ async function seedBlogPosts() {
 const BLOG_CATEGORIES = ['How It Works', 'Seller Guides', 'Market Reports', 'Realtor Tips'];
 
 function blogNav(activePath) {
-    return `<nav style="position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(248,249,250,0.97);backdrop-filter:blur(10px);border-bottom:1px solid #e5e7eb;height:68px;display:flex;align-items:center;justify-content:space-between;padding:0 5%;">
+    return `<nav style="position:fixed;top:0;left:0;right:0;z-index:100;background:white;border-bottom:1px solid #E5E1DB;height:68px;display:flex;align-items:center;justify-content:space-between;padding:0 5%;">
         <a href="/" style="font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:900;color:#0A2540;text-decoration:none;">Realtor<span style="color:#FF6B35;">Finder</span></a>
         <div style="display:flex;align-items:center;gap:2rem;">
-            <a href="/blog" style="color:#0A2540;text-decoration:none;font-weight:500;font-size:0.95rem;">Blog</a>
-            <a href="/sellers" style="color:#0A2540;text-decoration:none;font-weight:500;font-size:0.95rem;">For Sellers</a>
-            <a href="/realtors" style="color:#0A2540;text-decoration:none;font-weight:500;font-size:0.95rem;">For Realtors</a>
-            <a href="/login?tab=signup&type=seller" style="background:#FF6B35;color:#fff;padding:10px 22px;border-radius:50px;font-weight:600;text-decoration:none;font-size:0.9rem;">List Free</a>
+            <a href="/blog" style="color:rgba(10,37,64,0.75);text-decoration:none;font-weight:500;font-size:0.95rem;">Blog</a>
+            <a href="/sellers" style="color:rgba(10,37,64,0.75);text-decoration:none;font-weight:500;font-size:0.95rem;">For Sellers</a>
+            <a href="/realtors" style="color:rgba(10,37,64,0.75);text-decoration:none;font-weight:500;font-size:0.95rem;">For Realtors</a>
+            <a href="/login?tab=signup&type=seller" style="background:#0A2540;color:white;padding:10px 22px;border-radius:50px;font-weight:600;text-decoration:none;font-size:0.9rem;">List Free</a>
         </div>
     </nav>`;
 }
