@@ -8763,43 +8763,71 @@ async function seedBlogPosts() {
 const BLOG_CATEGORIES = ['How It Works', 'Seller Guides', 'Market Reports', 'Realtor Tips'];
 
 function blogNav(activePath) {
-    return `<nav style="position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(248,249,250,0.97);backdrop-filter:blur(10px);border-bottom:1px solid #e5e7eb;height:68px;display:flex;align-items:center;justify-content:space-between;padding:0 5%;">
-        <a href="/" style="font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:900;color:#0A2540;text-decoration:none;">Realtor<span style="color:#FF6B35;">Finder</span></a>
-        <div style="display:flex;align-items:center;gap:2rem;">
-            <a href="/blog" style="color:#0A2540;text-decoration:none;font-weight:500;font-size:0.95rem;">Blog</a>
-            <a href="/sellers" style="color:#0A2540;text-decoration:none;font-weight:500;font-size:0.95rem;">For Sellers</a>
-            <a href="/realtors" style="color:#0A2540;text-decoration:none;font-weight:500;font-size:0.95rem;">For Realtors</a>
-            <a href="/login?tab=signup&type=seller" style="background:#FF6B35;color:#fff;padding:10px 22px;border-radius:50px;font-weight:600;text-decoration:none;font-size:0.9rem;">List Free</a>
+    return `<nav style="position:sticky;top:0;z-index:100;background:#0A2540;padding:0 2rem;display:flex;align-items:center;justify-content:space-between;height:64px;">
+        <a href="/" style="font-family:'Crimson Pro',serif;font-size:1.6rem;font-weight:900;color:white;text-decoration:none;">Realtor<span style="color:#FF6B35;">Finder</span></a>
+        <div id="blogNavLinks" style="display:flex;align-items:center;gap:1.75rem;">
+            <a href="/sellers" style="color:rgba(255,255,255,0.8);text-decoration:none;font-weight:500;font-size:0.95rem;">For Sellers</a>
+            <a href="/realtors" style="color:rgba(255,255,255,0.8);text-decoration:none;font-weight:500;font-size:0.95rem;">For Realtors</a>
+            <a href="/find-agent" style="color:rgba(255,255,255,0.8);text-decoration:none;font-weight:500;font-size:0.95rem;">Find an Agent</a>
+            <a href="/blog" style="color:rgba(255,255,255,0.8);text-decoration:none;font-weight:500;font-size:0.95rem;">Blog</a>
+            <a href="/login" style="background:#FF6B35;color:white;padding:0.5rem 1.25rem;border-radius:8px;font-weight:600;text-decoration:none;font-size:0.9rem;">Get Started</a>
         </div>
-    </nav>`;
+        <button id="blogHamburger" aria-label="Open menu" aria-expanded="false" style="display:none;background:none;border:none;cursor:pointer;padding:8px;">
+            <span style="display:block;width:22px;height:2px;background:white;margin:4px 0;border-radius:2px;"></span>
+            <span style="display:block;width:22px;height:2px;background:white;margin:4px 0;border-radius:2px;"></span>
+            <span style="display:block;width:22px;height:2px;background:white;margin:4px 0;border-radius:2px;"></span>
+        </button>
+    </nav>
+    <div id="blogMobileMenu" style="display:none;position:fixed;top:64px;left:0;right:0;background:#0A2540;padding:1.5rem 2rem;z-index:99;flex-direction:column;gap:1rem;border-top:1px solid rgba(255,255,255,0.1);">
+        <a href="/sellers" style="color:rgba(255,255,255,0.85);text-decoration:none;font-size:1rem;font-weight:500;">For Sellers</a>
+        <a href="/realtors" style="color:rgba(255,255,255,0.85);text-decoration:none;font-size:1rem;font-weight:500;">For Realtors</a>
+        <a href="/find-agent" style="color:rgba(255,255,255,0.85);text-decoration:none;font-size:1rem;font-weight:500;">Find an Agent</a>
+        <a href="/blog" style="color:rgba(255,255,255,0.85);text-decoration:none;font-size:1rem;font-weight:500;">Blog</a>
+        <a href="/login" style="color:rgba(255,255,255,0.85);text-decoration:none;font-size:1rem;font-weight:500;">Get Started →</a>
+    </div>
+    <script>
+    (function(){
+        var h=document.getElementById('blogHamburger'),m=document.getElementById('blogMobileMenu');
+        if(!h||!m)return;
+        h.addEventListener('click',function(){var o=m.style.display==='flex';m.style.display=o?'none':'flex';h.setAttribute('aria-expanded',!o);});
+        function toggleMq(){var mobile=window.innerWidth<=768;h.style.display=mobile?'block':'none';document.getElementById('blogNavLinks').style.display=mobile?'none':'flex';}
+        toggleMq();window.addEventListener('resize',toggleMq);
+    })();
+    </script>`;
 }
 
-function blogHead({ title, desc, canonical, type = 'article' }) {
+function blogHead({ title, desc, canonical, type = 'article', ogImage = '' }) {
     const base = (process.env.FRONTEND_URL || 'https://www.realtorfinder.net').replace(/\/$/, '');
+    const img = ogImage || `${base}/og-default.png`;
     return `<head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>${title} | RealtorFinder</title>
     <meta name="description" content="${desc}">
     <link rel="canonical" href="${canonical}">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+    <link rel="apple-touch-icon" href="/icon-192.png">
     <meta property="og:title" content="${title}">
     <meta property="og:description" content="${desc}">
     <meta property="og:url" content="${canonical}">
     <meta property="og:type" content="${type}">
     <meta property="og:site_name" content="RealtorFinder">
-    <meta property="og:image" content="${base}/og-default.png">
+    <meta property="og:image" content="${img}">
     <meta name="twitter:card" content="summary_large_image">
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700;900&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-BRGVVNKT65"></script>
     <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-BRGVVNKT65');</script>
+    <script type="text/javascript">(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);})(window,document,"clarity","script","wxvaz0g7tq");</script>
     <style>
-        :root{--primary:#0A2540;--accent:#FF6B35;--border:#e5e7eb;--soft-bg:#f8f9fa;}
+        :root{--primary:#0A2540;--accent:#FF6B35;--soft-bg:#F8F6F3;--text:#1A1A1A;--border:#E5E1DB;--muted:#6B7280;}
         *{margin:0;padding:0;box-sizing:border-box;}
-        body{font-family:'Work Sans',sans-serif;color:var(--primary);background:#fff;}
-        a{color:var(--accent);}
-        footer{background:var(--primary);color:rgba(255,255,255,0.6);padding:32px 5%;text-align:center;font-size:0.84rem;}
-        footer a{color:rgba(255,255,255,0.6);margin:0 8px;text-decoration:none;}
-        @media(max-width:768px){nav div{gap:1rem;} nav div a:not(:last-child){display:none;}}
+        body{font-family:'DM Sans',sans-serif;color:var(--text);background:var(--soft-bg);line-height:1.7;}
+        footer{background:var(--primary);color:rgba(255,255,255,0.5);text-align:center;padding:2.5rem 2rem;font-size:0.875rem;}
+        footer a{color:rgba(255,255,255,0.6);text-decoration:none;margin:0 0.75rem;}
+        footer a:hover{color:white;}
+        footer p+p{margin-top:0.75rem;}
     </style>
 </head>`;
 }
@@ -8814,37 +8842,39 @@ app.get('/blog', async (req, res) => {
     const categoryTabs = ['All', ...BLOG_CATEGORIES].map(c => {
         const active = (!category && c === 'All') || category === c;
         const href = c === 'All' ? '/blog' : `/blog?category=${encodeURIComponent(c)}`;
-        return `<a href="${href}" style="padding:8px 18px;border-radius:50px;font-size:0.88rem;font-weight:600;text-decoration:none;background:${active ? 'var(--accent)' : '#f3f4f6'};color:${active ? '#fff' : 'var(--primary)'};">${c}</a>`;
+        return `<a href="${href}" style="padding:7px 18px;border-radius:50px;font-size:0.85rem;font-weight:600;text-decoration:none;background:${active ? 'var(--accent)' : 'white'};color:${active ? '#fff' : 'var(--primary)'};border:1px solid ${active ? 'var(--accent)' : 'var(--border)'};">${c}</a>`;
     }).join('');
 
     const cards = posts.map(p => {
         const date = new Date(p.published_at).toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
-        return `<a href="/blog/${p.slug}" style="display:block;background:#fff;border:1px solid var(--border);border-radius:16px;padding:28px;text-decoration:none;color:inherit;transition:box-shadow 0.2s,transform 0.2s;" onmouseover="this.style.boxShadow='0 8px 24px rgba(0,0,0,0.1)';this.style.transform='translateY(-3px)'" onmouseout="this.style.boxShadow='';this.style.transform=''">
-            ${p.category ? `<div style="display:inline-block;background:#fff3ee;color:var(--accent);font-size:0.75rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;padding:4px 12px;border-radius:50px;margin-bottom:14px;">${p.category}</div>` : ''}
-            <h2 style="font-family:'Playfair Display',serif;font-size:1.25rem;font-weight:700;line-height:1.4;margin-bottom:10px;">${p.title}</h2>
-            <p style="color:#6b7280;font-size:0.92rem;line-height:1.6;margin-bottom:16px;">${p.excerpt || ''}</p>
-            <div style="font-size:0.82rem;color:#9ca3af;">${date} &nbsp;·&nbsp; ${p.read_time_minutes} min read</div>
+        return `<a href="/blog/${p.slug}" style="display:block;background:white;border:1px solid var(--border);border-radius:14px;padding:1.75rem;text-decoration:none;color:inherit;transition:box-shadow 0.2s,transform 0.2s;" onmouseover="this.style.boxShadow='0 8px 24px rgba(10,37,64,0.1)';this.style.transform='translateY(-2px)'" onmouseout="this.style.boxShadow='';this.style.transform=''">
+            ${p.category ? `<div style="display:inline-block;background:#fff3ee;color:var(--accent);font-size:0.72rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;padding:3px 10px;border-radius:20px;margin-bottom:0.75rem;">${p.category}</div>` : ''}
+            <h2 style="font-family:'Crimson Pro',serif;font-size:1.3rem;font-weight:700;line-height:1.35;margin-bottom:0.6rem;color:var(--primary);">${p.title}</h2>
+            <p style="color:var(--muted);font-size:0.92rem;line-height:1.6;margin-bottom:1rem;">${p.excerpt || ''}</p>
+            <div style="font-size:0.8rem;color:#9ca3af;">${date} &nbsp;·&nbsp; ${p.read_time_minutes} min read</div>
         </a>`;
     }).join('');
 
-    const empty = posts.length === 0 ? '<p style="color:#6b7280;text-align:center;padding:60px 0;">No articles yet — check back soon.</p>' : '';
+    const empty = posts.length === 0 ? '<p style="color:var(--muted);text-align:center;padding:60px 0;">No articles yet — check back soon.</p>' : '';
 
     res.send(`<!DOCTYPE html><html lang="en">
 ${blogHead({ title: 'Real Estate Market Insights & Guides', desc: 'Expert guides, market reports, and insights for home sellers and real estate agents. RealtorFinder helps you make smarter decisions.', canonical: `${base}/blog`, type: 'website' })}
 <body>
 ${blogNav('/blog')}
-<div style="padding-top:68px;">
-    <div style="background:linear-gradient(135deg,var(--primary) 0%,#0d3a5c 100%);color:#fff;padding:80px 5% 60px;text-align:center;">
-        <p style="font-size:0.8rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--accent);margin-bottom:12px;">RealtorFinder Blog</p>
-        <h1 style="font-family:'Playfair Display',serif;font-size:clamp(2rem,4vw,3rem);font-weight:900;margin-bottom:16px;">Market Insights &amp; Seller Guides</h1>
-        <p style="font-size:1.1rem;opacity:0.8;max-width:560px;margin:0 auto;">Real estate advice, market reports, and guides to help you sell smarter and find the right agent.</p>
-    </div>
-    <div style="max-width:1100px;margin:0 auto;padding:48px 5%;">
-        <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:40px;">${categoryTabs}</div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:24px;">${cards}${empty}</div>
-    </div>
+<div style="background:var(--primary);color:white;padding:4rem 2rem 3.5rem;text-align:center;position:relative;">
+    <div style="position:absolute;bottom:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--accent),#ff9a70,var(--accent));"></div>
+    <div style="display:inline-block;background:rgba(255,107,53,0.18);color:#ff9a70;font-size:0.78rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;padding:0.3rem 0.9rem;border-radius:20px;margin-bottom:1rem;">RealtorFinder Blog</div>
+    <h1 style="font-family:'Crimson Pro',serif;font-size:clamp(2rem,4vw,2.9rem);font-weight:900;margin-bottom:0.9rem;">Market Insights &amp; Seller Guides</h1>
+    <p style="font-size:1.05rem;color:rgba(255,255,255,0.75);max-width:520px;margin:0 auto;">Real estate advice, market reports, and guides to help you sell smarter and find the right agent.</p>
 </div>
-<footer><p>© ${new Date().getFullYear()} RealtorFinder &nbsp;·&nbsp; <a href="/">Home</a><a href="/sellers">For Sellers</a><a href="/realtors">For Realtors</a><a href="/blog">Blog</a><a href="/contact">Contact</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a></p></footer>
+<div style="max-width:1100px;margin:0 auto;padding:3rem 1.5rem;">
+    <div style="display:flex;flex-wrap:wrap;gap:0.6rem;margin-bottom:2.5rem;">${categoryTabs}</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:1.5rem;">${cards}${empty}</div>
+</div>
+<footer>
+    <p><a href="/">Home</a><a href="/sellers">For Sellers</a><a href="/realtors">For Realtors</a><a href="/find-agent">Find an Agent</a><a href="/pricing">Pricing</a><a href="/blog">Blog</a><a href="/about">About</a><a href="/faq">FAQ</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a></p>
+    <p>&copy; ${new Date().getFullYear()} RealtorFinder.net — The marketplace where sellers post and realtors compete.</p>
+</footer>
 </body></html>`);
 });
 
@@ -8863,49 +8893,113 @@ app.get('/blog/:slug', async (req, res) => {
     const schemaOrg = JSON.stringify({ '@context': 'https://schema.org', '@type': 'Article', headline: post.title, description: post.excerpt, datePublished: post.published_at, author: { '@type': 'Organization', name: 'RealtorFinder' }, publisher: { '@type': 'Organization', name: 'RealtorFinder', url: base } });
 
     const relatedCards = related.map(p => `
-        <a href="/blog/${p.slug}" style="display:block;background:#f8f9fa;border-radius:12px;padding:20px;text-decoration:none;color:inherit;">
-            ${p.category ? `<div style="font-size:0.72rem;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">${p.category}</div>` : ''}
-            <div style="font-family:'Playfair Display',serif;font-size:1rem;font-weight:700;line-height:1.4;">${p.title}</div>
-            <div style="font-size:0.8rem;color:#9ca3af;margin-top:8px;">${p.read_time_minutes} min read</div>
+        <a href="/blog/${p.slug}" style="display:block;background:var(--soft-bg);border:1px solid var(--border);border-radius:12px;padding:1.25rem;text-decoration:none;color:inherit;transition:box-shadow 0.2s;" onmouseover="this.style.boxShadow='0 4px 16px rgba(10,37,64,0.08)'" onmouseout="this.style.boxShadow=''">
+            ${p.category ? `<div style="font-size:0.7rem;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.5rem;">${p.category}</div>` : ''}
+            <div style="font-family:'Crimson Pro',serif;font-size:1.05rem;font-weight:700;line-height:1.4;color:var(--primary);">${p.title}</div>
+            <div style="font-size:0.78rem;color:var(--muted);margin-top:0.5rem;">${p.read_time_minutes} min read</div>
         </a>`).join('');
 
     res.send(`<!DOCTYPE html><html lang="en">
-${blogHead({ title: post.title, desc: post.excerpt || post.title, canonical: `${base}/blog/${post.slug}` })}
-<head><script type="application/ld+json">${schemaOrg}</script></head>
+${blogHead({ title: post.title, desc: post.excerpt || post.title, canonical: `${base}/blog/${post.slug}`, ogImage: post.og_image || '' })}
+<script type="application/ld+json">${schemaOrg}</script>
+<style>
+    .article-hero{background:var(--primary);color:white;padding:3.5rem 2rem 3rem;text-align:center;position:relative;}
+    .article-hero::after{content:'';position:absolute;bottom:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--accent),#ff9a70,var(--accent));}
+    .article-wrap{max-width:1080px;margin:2.5rem auto;padding:0 1.5rem;display:grid;grid-template-columns:1fr 280px;gap:2.5rem;align-items:start;}
+    @media(max-width:860px){.article-wrap{grid-template-columns:1fr;}.sidebar{display:none;}}
+    @media(max-width:600px){.article-body{padding:1.5rem 1.25rem;}}
+    .article-body{background:white;border-radius:16px;border:1px solid var(--border);padding:2.5rem 2.75rem;}
+    .article-body img{width:100%;border-radius:10px;margin:1.5rem 0;display:block;}
+    .article-body img:first-child{margin-top:0;}
+    .blog-content p{font-size:1.05rem;color:#374151;margin-bottom:1.2em;}
+    .blog-content h2{font-family:'Crimson Pro',serif;font-size:1.65rem;font-weight:900;color:var(--primary);margin:2.5rem 0 0.75rem;padding-bottom:0.4rem;border-bottom:2px solid var(--border);}
+    .blog-content h3{font-family:'Crimson Pro',serif;font-size:1.25rem;font-weight:700;color:var(--primary);margin:1.75rem 0 0.5rem;}
+    .blog-content h4{font-family:'Crimson Pro',serif;font-size:1.05rem;font-weight:700;color:var(--primary);margin:1.25rem 0 0.4rem;}
+    .blog-content ul,.blog-content ol{padding-left:1.5rem;margin-bottom:1.2em;color:#374151;font-size:1.05rem;}
+    .blog-content li{margin-bottom:0.5em;}
+    .blog-content strong{color:var(--primary);}
+    .blog-content a{color:var(--accent);text-decoration:none;font-weight:500;}
+    .blog-content a:hover{text-decoration:underline;}
+    .blog-content blockquote{border-left:4px solid var(--accent);margin:1.5rem 0;padding:0.75rem 1.25rem;background:#fff8f5;border-radius:0 8px 8px 0;color:#555;font-style:italic;font-size:1.05rem;}
+    .blog-content table{width:100%;border-collapse:collapse;margin:1.5rem 0;font-size:0.95rem;}
+    .blog-content th{background:var(--primary);color:white;padding:0.65rem 0.9rem;text-align:left;font-weight:600;}
+    .blog-content td{padding:0.6rem 0.9rem;border-bottom:1px solid var(--border);color:#374151;}
+    .blog-content tr:nth-child(even) td{background:#fafaf9;}
+    .blog-content tr:last-child td{font-weight:600;color:var(--primary);}
+    .blog-content .pro-tip{background:linear-gradient(135deg,#fff8f5,#fff3ee);border:1px solid #ffd4c2;border-left:4px solid var(--accent);border-radius:0 10px 10px 0;padding:1rem 1.25rem;margin:1.5rem 0;font-size:0.97rem;color:#374151;}
+    .blog-content .pro-tip strong{color:var(--accent);}
+    .blog-content em{font-style:italic;}
+    .sidebar{position:sticky;top:84px;}
+    .sidebar-card{background:white;border:1px solid var(--border);border-radius:14px;padding:1.5rem;margin-bottom:1.25rem;}
+    .sidebar-card h4{font-family:'Crimson Pro',serif;font-size:1.05rem;font-weight:700;color:var(--primary);margin-bottom:0.9rem;}
+    .toc-list{list-style:none;padding:0;}
+    .toc-list li{margin-bottom:0.5rem;}
+    .toc-list a{color:var(--muted);text-decoration:none;font-size:0.87rem;display:block;padding:0.2rem 0.5rem;border-radius:6px;transition:background 0.15s,color 0.15s;}
+    .toc-list a:hover,.toc-list a.active{background:var(--soft-bg);color:var(--primary);}
+    .sidebar-cta{background:var(--primary);border-radius:14px;padding:1.5rem;text-align:center;color:white;}
+    .sidebar-cta p{font-size:0.88rem;color:rgba(255,255,255,0.8);margin-bottom:1rem;}
+    .btn-accent{display:inline-block;background:var(--accent);color:white;padding:0.65rem 1.5rem;border-radius:8px;font-weight:700;font-size:0.9rem;text-decoration:none;transition:background 0.15s;}
+    .btn-accent:hover{background:#e55a2b;color:white;text-decoration:none;}
+    .post-cta{background:var(--primary);color:white;border-radius:14px;padding:2rem 2.25rem;margin-top:2.5rem;text-align:center;}
+    .post-cta h3{font-family:'Crimson Pro',serif;font-size:1.45rem;font-weight:900;margin-bottom:0.65rem;color:white;}
+    .post-cta p{color:rgba(255,255,255,0.8);margin-bottom:1.25rem;font-size:1rem;}
+    .related-section{background:white;border:1px solid var(--border);border-radius:14px;padding:2rem 2.5rem;margin-top:1.5rem;}
+    .related-section h3{font-family:'Crimson Pro',serif;font-size:1.25rem;font-weight:700;color:var(--primary);margin-bottom:1rem;}
+</style>
 <body>
 ${blogNav(`/blog/${post.slug}`)}
-<div style="padding-top:68px;">
-    <div style="max-width:780px;margin:0 auto;padding:56px 5% 80px;">
-        <div style="margin-bottom:32px;">
-            <a href="/blog" style="color:#6b7280;font-size:0.88rem;text-decoration:none;">← All articles</a>
-        </div>
-        ${post.category ? `<div style="display:inline-block;background:#fff3ee;color:var(--accent);font-size:0.75rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;padding:4px 12px;border-radius:50px;margin-bottom:20px;">${post.category}</div>` : ''}
-        <h1 style="font-family:'Playfair Display',serif;font-size:clamp(1.8rem,3.5vw,2.6rem);font-weight:900;line-height:1.25;margin-bottom:20px;">${post.title}</h1>
-        <div style="display:flex;align-items:center;gap:16px;color:#9ca3af;font-size:0.87rem;margin-bottom:40px;padding-bottom:32px;border-bottom:1px solid var(--border);">
-            <span>${post.author}</span>
-            <span>·</span>
-            <span>${date}</span>
-            <span>·</span>
-            <span>${post.read_time_minutes} min read</span>
-        </div>
-        <div style="font-size:1.05rem;line-height:1.8;color:#1f2937;" class="blog-content">${post.content}</div>
-        <div style="margin-top:56px;padding:32px;background:#f8f9fa;border-radius:16px;text-align:center;">
-            <p style="font-family:'Playfair Display',serif;font-size:1.4rem;font-weight:700;margin-bottom:12px;">Ready to sell smarter?</p>
-            <p style="color:#6b7280;margin-bottom:24px;">List your home free and let licensed realtors compete for your listing.</p>
-            <a href="/login?tab=signup&type=seller" style="display:inline-block;background:var(--accent);color:#fff;padding:14px 32px;border-radius:50px;font-weight:600;text-decoration:none;font-size:1rem;">List Your Home Free</a>
-        </div>
-        ${related.length ? `<div style="margin-top:56px;"><h3 style="font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:700;margin-bottom:20px;">More articles</h3><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;">${relatedCards}</div></div>` : ''}
-    </div>
+<div class="article-hero">
+    ${post.category ? `<div style="display:inline-block;background:rgba(255,107,53,0.18);color:#ff9a70;font-size:0.78rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;padding:0.3rem 0.9rem;border-radius:20px;margin-bottom:1.1rem;">${post.category}</div>` : ''}
+    <h1 style="font-family:'Crimson Pro',serif;font-size:clamp(1.85rem,4vw,2.8rem);font-weight:900;line-height:1.2;max-width:760px;margin:0 auto 0.9rem;">${post.title}</h1>
+    <p style="font-size:0.875rem;color:rgba(255,255,255,0.55);">${post.author} &nbsp;·&nbsp; ${date} &nbsp;·&nbsp; ${post.read_time_minutes} min read</p>
 </div>
-<style>
-    .blog-content h2{font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:700;margin:2em 0 0.8em;}
-    .blog-content h3{font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:700;margin:1.6em 0 0.6em;}
-    .blog-content p{margin-bottom:1.2em;}
-    .blog-content ul,ol{margin:0 0 1.2em 1.5em;}
-    .blog-content li{margin-bottom:0.4em;}
-    .blog-content a{color:var(--accent);}
-</style>
-<footer><p>© ${new Date().getFullYear()} RealtorFinder &nbsp;·&nbsp; <a href="/">Home</a><a href="/sellers">For Sellers</a><a href="/realtors">For Realtors</a><a href="/blog">Blog</a><a href="/contact">Contact</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a></p></footer>
+<div class="article-wrap">
+    <main>
+        <article class="article-body">
+            <div style="margin-bottom:1.5rem;"><a href="/blog" style="color:var(--muted);font-size:0.875rem;text-decoration:none;">← All articles</a></div>
+            <div class="blog-content">${post.content}</div>
+            <div class="post-cta">
+                <h3>Ready to sell smarter?</h3>
+                <p>List your home free and let licensed realtors compete for your listing.</p>
+                <a href="/login?tab=signup&type=seller" class="btn-accent">List Your Home Free</a>
+            </div>
+        </article>
+        ${related.length ? `<div class="related-section"><h3>More articles</h3><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:1rem;">${relatedCards}</div></div>` : ''}
+    </main>
+    <aside class="sidebar">
+        <div class="sidebar-card">
+            <h4>In this article</h4>
+            <ul class="toc-list" id="blogToc"><li style="color:var(--muted);font-size:0.85rem;">Loading…</li></ul>
+        </div>
+        <div class="sidebar-cta">
+            <p>Let realtors compete for your listing. Free for sellers.</p>
+            <a href="/sellers" class="btn-accent">Post Your Home Free</a>
+        </div>
+    </aside>
+</div>
+<script>
+(function(){
+    var toc=document.getElementById('blogToc');
+    if(!toc)return;
+    var headings=document.querySelectorAll('.blog-content h2');
+    if(!headings.length){toc.innerHTML='<li style="color:var(--muted);font-size:0.85rem;">—</li>';return;}
+    toc.innerHTML=Array.from(headings).map(function(h){
+        if(!h.id){h.id=h.textContent.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');}
+        return '<li><a href="#'+h.id+'">'+h.textContent+'</a></li>';
+    }).join('');
+    var links=toc.querySelectorAll('a');
+    window.addEventListener('scroll',function(){
+        var pos=window.scrollY+120;
+        var active=null;
+        headings.forEach(function(h){if(h.offsetTop<=pos)active=h.id;});
+        links.forEach(function(a){a.classList.toggle('active',a.getAttribute('href')==='#'+active);});
+    },{passive:true});
+})();
+</script>
+<footer>
+    <p><a href="/">Home</a><a href="/sellers">For Sellers</a><a href="/realtors">For Realtors</a><a href="/find-agent">Find an Agent</a><a href="/pricing">Pricing</a><a href="/blog">Blog</a><a href="/about">About</a><a href="/faq">FAQ</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a></p>
+    <p>&copy; ${new Date().getFullYear()} RealtorFinder.net — The marketplace where sellers post and realtors compete.</p>
+</footer>
 </body></html>`);
 });
 
