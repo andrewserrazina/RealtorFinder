@@ -9171,9 +9171,13 @@ async function runListingAlertJob() {
     } catch(e) { console.error('Listing alert job error:', e.message); }
 }
 
+let _weeklyDigestLastSentDate = null;
 async function runWeeklyDigestJob() {
     const now = new Date();
     if (now.getDay() !== 0) return; // Sunday only
+    const today = now.toISOString().split('T')[0];
+    if (_weeklyDigestLastSentDate === today) return; // already sent today
+    _weeklyDigestLastSentDate = today;
     try {
         const { rows: realtors } = await pool.query(
             `SELECT id, email, first_name, service_areas, unsubscribe_token
@@ -9471,10 +9475,14 @@ async function runReEngagementJob() {
 }
 
 // Seller performance digest job — weekly summary for sellers with active listings
+let _sellerDigestLastSentDate = null;
 async function runSellerDigestJob() {
     const now = new Date();
     // Only run on Mondays
     if (now.getDay() !== 1) return;
+    const today = now.toISOString().split('T')[0];
+    if (_sellerDigestLastSentDate === today) return; // already sent today
+    _sellerDigestLastSentDate = today;
     try {
         const { rows } = await pool.query(
             `SELECT u.id, u.email, u.first_name,
