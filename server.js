@@ -5056,6 +5056,17 @@ app.post('/api/proposals', auth.requireAuth, async (req, res) => {
         if (!listing_id || commission_pct === undefined) return res.status(400).json({ error: 'listing_id and commission_pct are required' });
         const pct = parseFloat(commission_pct);
         if (isNaN(pct) || pct < 0.1 || pct > 10) return res.status(400).json({ error: 'commission_pct must be between 0.1 and 10' });
+        // Verify listing exists and deadline hasn't passed
+        const listingCheck = await pool.query(
+            `SELECT status, proposal_deadline FROM listings WHERE id = $1 AND deleted_at IS NULL`,
+            [listing_id]
+        );
+        if (!listingCheck.rows.length) return res.status(404).json({ error: 'Listing not found' });
+        const listing = listingCheck.rows[0];
+        if (!['active', 'reviewing'].includes(listing.status)) return res.status(422).json({ error: 'This listing is no longer accepting proposals' });
+        if (listing.proposal_deadline && new Date(listing.proposal_deadline) < new Date()) {
+            return res.status(422).json({ error: 'The proposal deadline for this listing has passed' });
+        }
         // Free-plan realtors must purchase a lead before submitting a proposal
         const planRow = await pool.query(
             `SELECT COALESCE(c.plan, u.subscription_plan, 'free') AS plan
@@ -8905,8 +8916,8 @@ app.get('/faq', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'faq.html'));
 });
 
-// Admin panel
-app.get('/admin', (req, res) => {
+// Admin panel — only serve the HTML shell to authenticated admins
+app.get('/admin', auth.requireAuth, requireAdmin, (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'admin.html'));
 });
 
@@ -10136,7 +10147,7 @@ async function runProposalExpiryReminder() {
             SELECT DISTINCT l.user_id, l.address, l.id as listing_id,
                    COUNT(o.id) as pending_count,
                    u.email, u.first_name
-            FROM offers o
+            FROM proposals o
             JOIN listings l ON o.listing_id = l.id
             JOIN users u ON l.user_id = u.id
             WHERE o.status = 'pending'
