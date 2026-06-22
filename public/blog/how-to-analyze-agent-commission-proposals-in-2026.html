@@ -34,7 +34,7 @@
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700;900&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,700;9..144,900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 
     <script type="application/ld+json">
     {
@@ -121,11 +121,12 @@
             --muted: #6B7280;
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'DM Sans', sans-serif; background: var(--soft-bg); color: var(--text); line-height: 1.7; }
+        body { font-family: 'Inter', sans-serif; background: var(--soft-bg); color: var(--text); line-height: 1.7; }
 
         /* ── Nav ── */
         nav {
-            background: var(--primary);
+            background: white;
+            border-bottom: 1px solid var(--border);
             padding: 0 2rem;
             display: flex;
             align-items: center;
@@ -135,22 +136,22 @@
             top: 0;
             z-index: 100;
         }
-        .nav-logo { font-family: 'Crimson Pro', serif; font-size: 1.6rem; font-weight: 900; color: white; text-decoration: none; }
+        .nav-logo { font-family: 'Fraunces', serif; font-size: 1.6rem; font-weight: 900; color: var(--primary); text-decoration: none; }
         .nav-logo span { color: var(--accent); }
         .nav-links { display: flex; gap: 1.75rem; align-items: center; }
-        .nav-links a { color: rgba(255,255,255,0.8); text-decoration: none; font-size: 0.95rem; font-weight: 500; transition: color 0.15s; }
-        .nav-links a:hover { color: white; }
-        .nav-cta { background: var(--accent); color: white !important; padding: 0.5rem 1.25rem; border-radius: 8px; font-weight: 600 !important; }
-        .nav-cta:hover { background: #e55a2b !important; }
+        .nav-links a { color: rgba(10,37,64,0.75); text-decoration: none; font-size: 0.95rem; font-weight: 500; transition: color 0.15s; }
+        .nav-links a:hover { color: var(--primary); }
+        .nav-cta { background: var(--primary); color: white !important; padding: 0.5rem 1.25rem; border-radius: 8px; font-weight: 600 !important; }
+        .nav-cta:hover { background: #1a3a5c !important; }
         .hamburger { display: none; background: none; border: none; cursor: pointer; padding: 8px; }
-        .hamburger span { display: block; width: 22px; height: 2px; background: white; margin: 4px 0; border-radius: 2px; }
+        .hamburger span { display: block; width: 22px; height: 2px; background: var(--primary); margin: 4px 0; border-radius: 2px; }
         .mobile-menu {
             display: none; position: fixed; top: 64px; left: 0; right: 0;
-            background: var(--primary); padding: 1.5rem 2rem; z-index: 99;
-            flex-direction: column; gap: 1rem; border-top: 1px solid rgba(255,255,255,0.1);
+            background: white; border-bottom: 1px solid var(--border); padding: 1.5rem 2rem; z-index: 99;
+            flex-direction: column; gap: 1rem;
         }
         .mobile-menu.open { display: flex; }
-        .mobile-menu a { color: rgba(255,255,255,0.85); text-decoration: none; font-size: 1rem; font-weight: 500; }
+        .mobile-menu a { color: var(--primary); text-decoration: none; font-size: 1rem; font-weight: 500; }
 
         /* ── Article hero ── */
         .article-hero {
@@ -180,7 +181,7 @@
             margin-bottom: 1.25rem;
         }
         .article-hero h1 {
-            font-family: 'Crimson Pro', serif;
+            font-family: 'Fraunces', serif;
             font-size: clamp(1.9rem, 4vw, 2.9rem);
             font-weight: 900;
             line-height: 1.2;
@@ -234,7 +235,7 @@
         }
 
         .article-body h2 {
-            font-family: 'Crimson Pro', serif;
+            font-family: 'Fraunces', serif;
             font-size: 1.7rem;
             font-weight: 900;
             color: var(--primary);
@@ -245,7 +246,7 @@
         }
 
         .article-body h3 {
-            font-family: 'Crimson Pro', serif;
+            font-family: 'Fraunces', serif;
             font-size: 1.25rem;
             font-weight: 700;
             color: var(--primary);
@@ -330,7 +331,7 @@
             text-align: center;
         }
         .cta-box h3 {
-            font-family: 'Crimson Pro', serif;
+            font-family: 'Fraunces', serif;
             font-size: 1.5rem;
             font-weight: 900;
             margin-bottom: 0.75rem;
@@ -373,7 +374,7 @@
             margin-bottom: 1.25rem;
         }
         .sidebar-card h4 {
-            font-family: 'Crimson Pro', serif;
+            font-family: 'Fraunces', serif;
             font-size: 1.1rem;
             font-weight: 700;
             color: var(--primary);
@@ -410,7 +411,7 @@
             margin-top: 2rem;
         }
         .recommended h3 {
-            font-family: 'Crimson Pro', serif;
+            font-family: 'Fraunces', serif;
             font-size: 1.3rem;
             font-weight: 700;
             color: var(--primary);
