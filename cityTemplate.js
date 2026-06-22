@@ -803,13 +803,14 @@ ${neContent}
             document.getElementById('noListingsMsg').style.display = 'block';
             return;
         }
+        function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
         grid.innerHTML = listings.map(l => {
             const img = l.image_urls && l.image_urls.length ? l.image_urls[0] : '';
             return '<a href="/listing/' + l.id + '" style="display:block;background:white;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;text-decoration:none;color:inherit;transition:box-shadow 0.2s;" onmouseover="this.style.boxShadow=\'0 8px 24px rgba(0,0,0,0.1)\'" onmouseout="this.style.boxShadow=\'none\'">'
                 + (img ? '<div style="height:160px;background:center/cover url(' + JSON.stringify(img) + ')"></div>' : '<div style="height:160px;background:#e8ded8;display:flex;align-items:center;justify-content:center;font-size:2rem;">🏠</div>')
                 + '<div style="padding:1rem;">'
                 + '<div style="font-family:\'Playfair Display\',serif;font-size:1.3rem;font-weight:900;color:#0A2540;margin-bottom:0.25rem;">$' + Number(l.price).toLocaleString() + '</div>'
-                + '<div style="font-size:0.85rem;color:#6b7280;margin-bottom:0.5rem;">' + (l.address || '') + '</div>'
+                + '<div style="font-size:0.85rem;color:#6b7280;margin-bottom:0.5rem;">' + escHtml(l.address || '') + '</div>'
                 + '<div style="font-size:0.82rem;color:#9ca3af;">' + [l.bedrooms ? l.bedrooms + ' bd' : '', l.bathrooms ? l.bathrooms + ' ba' : '', l.sqft ? Number(l.sqft).toLocaleString() + ' sqft' : ''].filter(Boolean).join(' · ') + '</div>'
                 + '</div></a>';
         }).join('');

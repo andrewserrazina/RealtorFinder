@@ -1752,37 +1752,29 @@ app.post('/api/listings/:id/offers', auth.requireAuth, async (req, res) => {
 
 // Accept or decline an offer (listing owner only)
 app.put('/api/offers/:id/status', auth.requireAuth, async (req, res) => {
-    const client = await pool.connect();
     try {
         const offerId = parseInt(req.params.id);
         const { action } = req.body; // 'accept' or 'decline'
         if (!['accept', 'decline'].includes(action)) {
-            client.release();
             return res.status(400).json({ error: 'action must be accept or decline' });
         }
 
-        await client.query('BEGIN');
-
-        // Lock the offer row and verify ownership atomically
-        const offerRows = await client.query(
+        // Plain SELECT — no FOR UPDATE, ownership check only
+        const offerRows = await pool.query(
             `SELECT o.*, l.user_id as listing_owner_id, l.address, l.city, l.state, l.zip, l.price,
                     l.owner_name, l.owner_email, l.owner_phone
-             FROM offers o JOIN listings l ON o.listing_id = l.id WHERE o.id = $1 FOR UPDATE`,
+             FROM offers o JOIN listings l ON o.listing_id = l.id WHERE o.id = $1`,
             [offerId]
         );
-        if (!offerRows.rows.length) {
-            await client.query('ROLLBACK');
-            return res.status(404).json({ error: 'Offer not found' });
-        }
+        if (!offerRows.rows.length) return res.status(404).json({ error: 'Offer not found' });
         const offerRow = offerRows.rows[0];
         if (offerRow.listing_owner_id !== req.session.userId) {
-            await client.query('ROLLBACK');
             return res.status(403).json({ error: 'Forbidden' });
         }
 
         if (action === 'accept') {
+            // db.acceptOffer manages its own transaction — no outer transaction needed
             const declinedOffers = await db.acceptOffer(offerId, offerRow.listing_id);
-            await client.query('COMMIT');
             // Post-transaction notifications (fire and forget)
             emailService.sendOfferAcceptedEmail(offerRow, offerRow).catch(err =>
                 console.error('Offer accepted email failed:', err.message)
@@ -1805,8 +1797,7 @@ app.put('/api/offers/:id/status', auth.requireAuth, async (req, res) => {
         }
 
         // decline single offer
-        await client.query(`UPDATE offers SET status = 'declined' WHERE id = $1`, [offerId]);
-        await client.query('COMMIT');
+        await pool.query(`UPDATE offers SET status = 'declined' WHERE id = $1`, [offerId]);
         emailService.sendOfferDeclinedEmail(offerRow, offerRow).catch(err =>
             console.error('Offer declined email failed:', err.message)
         );
@@ -1816,11 +1807,8 @@ app.put('/api/offers/:id/status', auth.requireAuth, async (req, res) => {
         }
         res.json({ success: true, status: 'declined' });
     } catch (error) {
-        await client.query('ROLLBACK').catch(() => {});
         console.error('Error updating offer status:', error);
         res.status(500).json({ error: 'Failed to update offer status' });
-    } finally {
-        client.release();
     }
 });
 
@@ -3719,12 +3707,16 @@ app.post('/api/webhook/stripe', express.raw({ type: 'application/json' }), async
         if (sess.metadata?.type === 'listing_boost') {
             try {
                 const listingId = parseInt(sess.metadata.listing_id);
-                const days = parseInt(sess.metadata.days) || 7;
-                await pool.query(
-                    `UPDATE listings SET boosted_until = NOW() + ($1 || ' days')::INTERVAL WHERE id = $2`,
-                    [days, listingId]
-                );
-                console.log(`✅ Stripe: listing ${listingId} boosted for ${days} days`);
+                if (!listingId || isNaN(listingId)) {
+                    console.error('Stripe webhook: missing or invalid listing_id in listing_boost metadata');
+                } else {
+                    const days = parseInt(sess.metadata.days) || 7;
+                    await pool.query(
+                        `UPDATE listings SET boosted_until = NOW() + ($1 || ' days')::INTERVAL WHERE id = $2`,
+                        [days, listingId]
+                    );
+                    console.log(`✅ Stripe: listing ${listingId} boosted for ${days} days`);
+                }
             } catch (err) {
                 console.error('Stripe boost webhook DB error:', err);
             }
