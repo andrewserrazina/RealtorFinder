@@ -7561,19 +7561,37 @@ app.post('/api/admin/send-listing-alerts', requireAdmin, async (req, res) => {
 
 app.post('/api/admin/announce', requireAdmin, async (req, res) => {
     try {
-        const { subject, message, userType } = req.body;
+        const { subject, message, userType, includeWaitlist } = req.body;
         if (!subject || !message || !userType) return res.status(400).json({ error: 'subject, message, userType required' });
-        const typeFilter = userType === 'all' ? '' : `AND user_type = '${['seller','realtor','buyer'].includes(userType) ? userType : 'seller'}'`;
-        const { rows } = await pool.query(
+        const safeType = ['seller','realtor','buyer'].includes(userType) ? userType : null;
+        const typeFilter = safeType ? `AND user_type = '${safeType}'` : '';
+
+        const { rows: users } = await pool.query(
             `SELECT email, first_name FROM users WHERE is_active IS NOT FALSE ${typeFilter}`
         );
-        let sent = 0;
-        for (const u of rows) {
+
+        let waitlistRows = [];
+        if (includeWaitlist) {
+            const wlFilter = safeType ? `WHERE user_type = '${safeType}'` : '';
+            const { rows } = await pool.query(`SELECT email FROM waitlist ${wlFilter}`);
+            const activeEmails = new Set(users.map(u => u.email.toLowerCase()));
+            waitlistRows = rows.filter(w => !activeEmails.has(w.email.toLowerCase()));
+        }
+
+        let sentUsers = 0;
+        let sentWaitlist = 0;
+        for (const u of users) {
             await emailService.sendAnnouncement(u.email, u.first_name, subject, message)
                 .catch(err => console.error('Announcement email failed:', err.message));
-            sent++;
+            sentUsers++;
         }
-        res.json({ sent });
+        for (const w of waitlistRows) {
+            await emailService.sendAnnouncement(w.email, 'there', subject, message)
+                .catch(err => console.error('Waitlist announcement email failed:', err.message));
+            sentWaitlist++;
+        }
+
+        res.json({ sent: sentUsers + sentWaitlist, sentUsers, sentWaitlist });
     } catch (err) {
         console.error('Announce error:', err);
         res.status(500).json({ error: 'Failed to send announcement' });
