@@ -4599,6 +4599,16 @@ app.get('/locations/:stateCode', async (req, res, next) => {
     <title>${stateName} Real Estate Markets | RealtorFinder</title>
     <meta name="description" content="${sd.tagline}. RealtorFinder covers every major city and town in ${stateName}. Sellers list free, realtors compete for listings.">
     <link rel="canonical" href="https://www.realtorfinder.net/locations/${stateCode.toLowerCase()}">
+    <meta property="og:title" content="${stateName} Real Estate Markets | RealtorFinder">
+    <meta property="og:description" content="${sd.tagline}. RealtorFinder covers every major city and town in ${stateName}. Sellers list free, realtors compete for listings.">
+    <meta property="og:url" content="https://www.realtorfinder.net/locations/${stateCode.toLowerCase()}">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="RealtorFinder">
+    <meta property="og:image" content="https://www.realtorfinder.net/og-default.png">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="${stateName} Real Estate Markets | RealtorFinder">
+    <meta name="twitter:description" content="${sd.tagline}. RealtorFinder covers every major city and town in ${stateName}. Sellers list free, realtors compete for listings.">
+    <meta name="twitter:image" content="https://www.realtorfinder.net/og-default.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-BRGVVNKT65"></script>
@@ -8391,26 +8401,26 @@ app.get('/s/:token', async (req, res) => {
 <meta property="og:url" content="${he(shareUrl)}">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700;900&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700;0,9..144,900;1,9..144,400&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'DM Sans',sans-serif;background:#f8fafc;color:#0A2540;min-height:100vh}
+body{font-family:'Inter',sans-serif;background:#f8fafc;color:#0A2540;min-height:100vh}
 .nav{background:#0A2540;padding:1rem 2rem;display:flex;align-items:center;justify-content:space-between}
-.nav-logo{color:white;font-family:'Crimson Pro',serif;font-size:1.5rem;font-weight:700;text-decoration:none}
+.nav-logo{color:white;font-family:'Fraunces',serif;font-size:1.5rem;font-weight:700;text-decoration:none}
 .nav-cta{background:#FF6B35;color:white;padding:0.5rem 1.25rem;border-radius:8px;font-weight:600;text-decoration:none;font-size:0.9rem}
 .hero-img{width:100%;max-height:480px;object-fit:cover;display:block}
 .hero-img-placeholder{width:100%;height:300px;background:linear-gradient(135deg,#0A2540,#1a3a6b);display:flex;align-items:center;justify-content:center;font-size:4rem}
 .container{max-width:760px;margin:0 auto;padding:2rem 1.5rem}
-.address{font-family:'Crimson Pro',serif;font-size:2rem;font-weight:700;margin-bottom:0.5rem;line-height:1.2}
+.address{font-family:'Fraunces',serif;font-size:2rem;font-weight:700;margin-bottom:0.5rem;line-height:1.2}
 .location{color:#6b7280;font-size:1rem;margin-bottom:1.5rem}
-.price{font-size:1.75rem;font-weight:700;color:#FF6B35;margin-bottom:1.5rem;font-family:'Crimson Pro',serif}
+.price{font-size:1.75rem;font-weight:700;color:#FF6B35;margin-bottom:1.5rem;font-family:'Fraunces',serif}
 .details{display:flex;gap:1.5rem;flex-wrap:wrap;margin-bottom:1.5rem}
 .detail{background:white;border:1px solid #e5e7eb;border-radius:10px;padding:0.75rem 1.25rem;text-align:center}
 .detail-val{font-size:1.25rem;font-weight:700;color:#0A2540;display:block}
 .detail-lbl{font-size:0.8rem;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em}
 .desc{color:#374151;line-height:1.75;margin-bottom:2rem;font-size:0.975rem}
 .cta-card{background:#0A2540;border-radius:16px;padding:2rem;text-align:center;margin-bottom:2rem}
-.cta-card h2{font-family:'Crimson Pro',serif;font-size:1.75rem;font-weight:700;color:white;margin-bottom:0.75rem}
+.cta-card h2{font-family:'Fraunces',serif;font-size:1.75rem;font-weight:700;color:white;margin-bottom:0.75rem}
 .cta-card p{color:#93c5fd;margin-bottom:1.5rem;font-size:0.95rem}
 .cta-btn{display:inline-block;background:#FF6B35;color:white;padding:0.9rem 2rem;border-radius:10px;font-weight:700;font-size:1rem;text-decoration:none;margin-bottom:0.75rem}
 .cta-sub{color:#93c5fd;font-size:0.85rem}
@@ -8754,16 +8764,27 @@ app.get('/realtors/:citystate', async (req, res, next) => {
 <title>Top Realtors in ${cityName}, ${stateCode} | RealtorFinder</title>
 <meta name="description" content="Find and compare top real estate agents in ${cityName}, ${stateCode}. Sellers list free, realtors compete for your listing on RealtorFinder.">
 <link rel="canonical" href="https://www.realtorfinder.net/realtors/${slug}">
+<meta property="og:title" content="Top Realtors in ${cityName}, ${stateCode} | RealtorFinder">
+<meta property="og:description" content="Find and compare top real estate agents in ${cityName}, ${stateCode}. Sellers list free, realtors compete for your listing on RealtorFinder.">
+<meta property="og:url" content="https://www.realtorfinder.net/realtors/${slug}">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="RealtorFinder">
+<meta property="og:image" content="https://www.realtorfinder.net/og-default.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Top Realtors in ${cityName}, ${stateCode} | RealtorFinder">
+<meta name="twitter:description" content="Find and compare top real estate agents in ${cityName}, ${stateCode}. Sellers list free, realtors compete for your listing on RealtorFinder.">
+<meta name="twitter:image" content="https://www.realtorfinder.net/og-default.png">
+<script type="application/ld+json">${JSON.stringify({'@context':'https://schema.org','@type':'CollectionPage','name':`Top Realtors in ${cityName}, ${stateCode}`,'description':`Find and compare top real estate agents in ${cityName}, ${stateCode}.`,'url':`https://www.realtorfinder.net/realtors/${slug}`,'isPartOf':{'@type':'WebSite','name':'RealtorFinder','url':'https://www.realtorfinder.net'}})}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@600;700;900&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,700;0,9..144,900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-BRGVVNKT65"></script>
 <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-BRGVVNKT65');</script>
 <style>
 :root{--primary:#0A2540;--accent:#FF6B35;--soft-bg:#F8F6F3;--border:#E5E1DB;--muted:#6B7280;}
 *{margin:0;padding:0;box-sizing:border-box;}
-body{font-family:'DM Sans',sans-serif;background:var(--soft-bg);color:var(--primary);}
+body{font-family:'Inter',sans-serif;background:var(--soft-bg);color:var(--primary);}
 nav{background:var(--primary);padding:0 2rem;display:flex;align-items:center;justify-content:space-between;height:64px;position:sticky;top:0;z-index:100;}
-.nav-logo{font-family:'Crimson Pro',serif;font-size:1.6rem;font-weight:900;color:white;text-decoration:none;}
+.nav-logo{font-family:'Fraunces',serif;font-size:1.6rem;font-weight:900;color:white;text-decoration:none;}
 .nav-logo span{color:var(--accent);}
 .nav-links{display:flex;gap:1.5rem;align-items:center;}
 .nav-links a{color:rgba(255,255,255,0.8);text-decoration:none;font-size:0.9rem;}
@@ -8771,18 +8792,18 @@ nav{background:var(--primary);padding:0 2rem;display:flex;align-items:center;jus
 .nav-cta{background:var(--accent);color:white!important;padding:8px 18px;border-radius:8px;font-weight:600!important;}
 .hero{background:var(--primary);color:white;padding:4rem 2rem 3rem;text-align:center;}
 .hero-label{font-size:0.8rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--accent);margin-bottom:0.75rem;}
-.hero h1{font-family:'Crimson Pro',serif;font-size:clamp(2rem,4vw,3rem);font-weight:900;margin-bottom:1rem;line-height:1.1;}
+.hero h1{font-family:'Fraunces',serif;font-size:clamp(2rem,4vw,3rem);font-weight:900;margin-bottom:1rem;line-height:1.1;}
 .hero p{color:rgba(255,255,255,0.7);font-size:1.05rem;max-width:520px;margin:0 auto 1.75rem;}
 .hero-stats{display:flex;gap:2rem;justify-content:center;flex-wrap:wrap;margin-top:1.5rem;}
 .hero-stat{text-align:center;}
-.hero-stat-val{font-family:'Crimson Pro',serif;font-size:2rem;font-weight:900;color:white;}
+.hero-stat-val{font-family:'Fraunces',serif;font-size:2rem;font-weight:900;color:white;}
 .hero-stat-label{font-size:0.8rem;color:rgba(255,255,255,0.55);margin-top:0.1rem;}
 .content{max-width:900px;margin:0 auto;padding:3rem 2rem 5rem;}
 .section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:1rem;}
-.section-header h2{font-family:'Crimson Pro',serif;font-size:1.75rem;font-weight:900;}
+.section-header h2{font-family:'Fraunces',serif;font-size:1.75rem;font-weight:900;}
 .agent-card{display:grid;grid-template-columns:56px 1fr auto;gap:1.25rem;align-items:center;background:white;border:1px solid var(--border);border-radius:16px;padding:1.25rem 1.5rem;margin-bottom:1rem;text-decoration:none;color:var(--primary);transition:box-shadow 0.2s,transform 0.2s;}
 .agent-card:hover{box-shadow:0 4px 24px rgba(0,0,0,0.08);transform:translateY(-1px);}
-.agent-avatar{width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,var(--primary),#1a4a7a);display:flex;align-items:center;justify-content:center;font-family:'Crimson Pro',serif;font-size:1.3rem;font-weight:900;color:white;flex-shrink:0;overflow:hidden;}
+.agent-avatar{width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,var(--primary),#1a4a7a);display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-size:1.3rem;font-weight:900;color:white;flex-shrink:0;overflow:hidden;}
 .agent-name{font-weight:700;font-size:1rem;margin-bottom:0.15rem;}
 .featured-badge{background:#FFF0EB;color:var(--accent);font-size:0.72rem;padding:2px 8px;border-radius:20px;font-weight:600;margin-left:6px;}
 .agent-co{font-size:0.85rem;color:var(--muted);}
@@ -8791,7 +8812,7 @@ nav{background:var(--primary);padding:0 2rem;display:flex;align-items:center;jus
 .agent-bio{font-size:0.85rem;color:#555;margin-top:0.3rem;line-height:1.5;}
 .agent-cta{font-size:0.85rem;font-weight:600;color:var(--accent);white-space:nowrap;padding-left:0.5rem;}
 .cta-box{background:var(--accent);color:white;border-radius:16px;padding:2.5rem;text-align:center;margin-top:3rem;}
-.cta-box h2{font-family:'Crimson Pro',serif;font-size:1.75rem;font-weight:900;margin-bottom:0.75rem;}
+.cta-box h2{font-family:'Fraunces',serif;font-size:1.75rem;font-weight:900;margin-bottom:0.75rem;}
 .cta-box p{opacity:0.9;margin-bottom:1.5rem;}
 .cta-btn{background:white;color:var(--accent);padding:12px 28px;border-radius:8px;font-weight:700;text-decoration:none;display:inline-block;font-size:0.95rem;}
 .breadcrumb{font-size:0.85rem;color:rgba(255,255,255,0.55);margin-bottom:1.25rem;}
@@ -9228,9 +9249,11 @@ app.get('/blog', async (req, res) => {
 
     const empty = posts.length === 0 ? '<p style="color:var(--muted);text-align:center;padding:60px 0;">No articles yet — check back soon.</p>' : '';
 
+    const blogSchema = JSON.stringify({'@context':'https://schema.org','@type':'Blog','name':'RealtorFinder Blog','description':'Expert guides, market reports, and insights for home sellers and real estate agents.','url':`${base}/blog`,'publisher':{'@type':'Organization','name':'RealtorFinder','url':base},'blogPost':posts.slice(0,10).map(p=>({'@type':'BlogPosting','headline':p.title,'description':p.excerpt||'','url':`${base}/blog/${p.slug}`,'datePublished':p.published_at}))});
     res.send(`<!DOCTYPE html><html lang="en">
 ${blogHead({ title: 'Real Estate Market Insights & Guides', desc: 'Expert guides, market reports, and insights for home sellers and real estate agents. RealtorFinder helps you make smarter decisions.', canonical: `${base}/blog`, type: 'website' })}
 <body>
+<script type="application/ld+json">${blogSchema}</script>
 ${blogNav('/blog')}
 <div style="background:white;border-bottom:1px solid var(--border);padding:4rem 2rem 3.5rem;text-align:center;position:relative;">
     <div style="display:inline-block;background:#fff3ee;color:var(--accent);font-size:0.78rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;padding:0.3rem 0.9rem;border-radius:20px;margin-bottom:1rem;">RealtorFinder Blog</div>
