@@ -6473,6 +6473,15 @@ Worth checking out.</div>
                     if (res.status === 402 && d.error === 'free_plan_lead_required') {
                         closeProposalModal();
                         openListingLeadModal(listingId, document.getElementById('proposalListingAddr').textContent);
+                    } else if (res.status === 403 && (d.error || '').toLowerCase().includes('verify your email')) {
+                        closeProposalModal();
+                        const banner = document.getElementById('verificationBanner');
+                        if (banner) {
+                            banner.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            banner.style.outline = '2px solid #f59e0b';
+                            banner.style.transition = 'outline 0.3s';
+                            setTimeout(() => { banner.style.outline = ''; }, 3000);
+                        }
                     } else {
                         errEl.textContent = d.error || d.message || 'Failed to submit';
                         errEl.style.display = 'block';

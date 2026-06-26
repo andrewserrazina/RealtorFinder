@@ -1022,6 +1022,10 @@
                         <option value="realtor">Realtors</option>
                         <option value="buyer">Buyers</option>
                     </select>
+                    <label style="display:flex;align-items:center;gap:0.5rem;margin-top:0.6rem;font-size:0.85rem;color:#6b7280;cursor:pointer;">
+                        <input type="checkbox" id="announceIncludeWaitlist" style="width:15px;height:15px;cursor:pointer;">
+                        Also include waitlisted users of this type
+                    </label>
                 </div>
                 <div>
                     <label style="display:block;font-size:0.875rem;font-weight:600;color:var(--primary);margin-bottom:0.4rem;">Message</label>
@@ -1931,6 +1935,7 @@
         const subject = document.getElementById('announceSubject').value.trim();
         const userType = document.getElementById('announceAudience').value;
         const message = document.getElementById('announceMessage').value.trim();
+        const includeWaitlist = document.getElementById('announceIncludeWaitlist').checked;
         const resultEl = document.getElementById('announceResult');
 
         if (!subject || !message) {
@@ -1947,13 +1952,16 @@
                 method: 'POST',
                 credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ subject, message, userType })
+                body: JSON.stringify({ subject, message, userType, includeWaitlist })
             });
             const d = await res.json();
             if (!res.ok) throw new Error(d.error || 'Failed to send');
-            resultEl.textContent = `✓ Sent to ${d.sent} user${d.sent !== 1 ? 's' : ''}.`;
+            let summary = `✓ Sent to ${d.sent} recipient${d.sent !== 1 ? 's' : ''}`;
+            if (includeWaitlist) summary += ` (${d.sentUsers} users + ${d.sentWaitlist} waitlisted)`;
+            summary += '.';
+            resultEl.textContent = summary;
             resultEl.style.cssText = 'display:block;background:#d1fae5;color:#065f46;';
-            showToast(`Announcement sent to ${d.sent} users`, 'success');
+            showToast(`Announcement sent to ${d.sent} recipients`, 'success');
         } catch (err) {
             resultEl.textContent = `Error: ${err.message}`;
             resultEl.style.cssText = 'display:block;background:#fee2e2;color:#991b1b;';

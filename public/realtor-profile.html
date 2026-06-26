@@ -536,7 +536,10 @@
                 ${statsHtml ? `<div class="stats-row">${statsHtml}</div>` : ''}
 
                 ${hasBio ? `<div class="section-title">About</div><p class="bio-text">${esc(r.bio)}</p>` : ''}
-                ${rt && rt.label ? `<div style="display:inline-block;background:#f0fdf4;border:1px solid #bbf7d0;color:#15803d;border-radius:20px;padding:4px 12px;font-size:0.85rem;font-weight:600;margin-top:0.5rem;">⚡ ${esc(rt.label)}</div>` : ''}
+                ${rt && rt.label
+                    ? `<div style="display:inline-block;background:#f0fdf4;border:1px solid #bbf7d0;color:#15803d;border-radius:20px;padding:4px 12px;font-size:0.85rem;font-weight:600;margin-top:0.5rem;">⚡ ${esc(rt.label)}</div>`
+                    : `<div style="display:inline-block;background:#f9fafb;border:1px solid #e5e7eb;color:#9ca3af;border-radius:20px;padding:4px 12px;font-size:0.85rem;margin-top:0.5rem;">⏱ Response time not yet available</div>`
+                }
             </div>
 
             ${earnedBadgesHtml ? `

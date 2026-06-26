@@ -532,6 +532,8 @@
         .status-pending   { background: #fef3c7; color: #92400e; }
         .status-accepted  { background: #d1fae5; color: #065f46; }
         .status-declined  { background: #fee2e2; color: #991b1b; }
+        .status-expired   { background: #f3f4f6; color: #6b7280; }
+        .status-withdrawn { background: #f3f4f6; color: #6b7280; }
 
         /* Verification banner */
         .verification-banner {
@@ -909,9 +911,11 @@
         .bo-btn-accept { background: #22c55e; color: white; }
         .bo-btn-decline { background: #ef4444; color: white; }
         .bo-status-badge { display: inline-block; padding: 0.1rem 0.5rem; border-radius: 12px; font-size: 0.7rem; font-weight: 700; }
-        .bo-status-pending { background: #fef3c7; color: #92400e; }
-        .bo-status-accepted { background: #d1fae5; color: #065f46; }
-        .bo-status-declined { background: #fee2e2; color: #991b1b; }
+        .bo-status-pending   { background: #fef3c7; color: #92400e; }
+        .bo-status-accepted  { background: #d1fae5; color: #065f46; }
+        .bo-status-declined  { background: #fee2e2; color: #991b1b; }
+        .bo-status-expired   { background: #f3f4f6; color: #6b7280; }
+        .bo-status-withdrawn { background: #f3f4f6; color: #6b7280; }
 
         /* Boost modal */
         .boost-option-card {
@@ -2453,20 +2457,6 @@
             } catch { alert('Failed to update listing. Please try again.'); }
         }
 
-        // Mark listing as sold
-        async function markListingSold(listingId) {
-            if (!confirm('Mark this listing as Sold? It will be removed from active listings.')) return;
-            try {
-                const res = await fetch(`${API_BASE_URL}/listings/${listingId}/status`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify({ status: 'sold' })
-                });
-                if (!res.ok) throw new Error('Failed');
-                loadDashboard();
-            } catch { alert('Failed to update listing. Please try again.'); }
-        }
 
         // Delete listing
         async function deleteListing(listingId) {
@@ -3186,9 +3176,16 @@
                             const matchScore = computeMatchScore(p);
                             const scoreBadge = matchScoreBadge(matchScore);
                             const verifiedBadge = p.license_verified ? '<span style="background:#ecfdf5;color:#059669;font-size:0.72rem;font-weight:700;padding:2px 7px;border-radius:20px;margin-left:4px;">✓ Verified</span>' : '';
-                            const status = p.status === 'accepted' ? '<span style="background:#d1fae5;color:#065f46;font-size:0.75rem;padding:2px 8px;border-radius:20px;font-weight:600;">Accepted</span>'
-                                         : p.status === 'declined' ? '<span style="background:#fee2e2;color:#991b1b;font-size:0.75rem;padding:2px 8px;border-radius:20px;font-weight:600;">Declined</span>'
-                                         : '';
+                            const statusStyles = {
+                                accepted:  'background:#d1fae5;color:#065f46',
+                                declined:  'background:#fee2e2;color:#991b1b',
+                                expired:   'background:#f3f4f6;color:#6b7280',
+                                withdrawn: 'background:#f3f4f6;color:#6b7280',
+                            };
+                            const statusLabels = { accepted: 'Accepted', declined: 'Declined', expired: 'Expired', withdrawn: 'Withdrawn' };
+                            const status = statusStyles[p.status]
+                                ? `<span style="${statusStyles[p.status]};font-size:0.75rem;padding:2px 8px;border-radius:20px;font-weight:600;">${statusLabels[p.status]}</span>`
+                                : '';
                             let counterBadge = '';
                             if (p.counter_status === 'pending') {
                                 counterBadge = '<span style="background:#FEF3C7;color:#92400E;padding:2px 8px;border-radius:10px;font-size:0.78rem;font-weight:600;">Counter Sent</span>';
@@ -3604,6 +3601,20 @@
                     body: JSON.stringify({ status: newStatus })
                 });
                 if (!res.ok) throw new Error('Failed');
+                if (newStatus === 'sold') {
+                    showToast('🎉 Congratulations on your sale! A review request has been sent to your email.');
+                    try {
+                        const pRes = await fetch(`/api/proposals/listing/${listingId}`, { credentials: 'include' });
+                        if (pRes.ok) {
+                            const proposals = await pRes.json();
+                            const accepted = proposals.find(p => p.status === 'accepted');
+                            if (accepted) {
+                                const rname = `${accepted.first_name || ''} ${accepted.last_name || ''}`.trim() || 'your realtor';
+                                setTimeout(() => showReviewPrompt(accepted.realtor_id, rname, listingId), 4000);
+                            }
+                        }
+                    } catch {}
+                }
                 loadDashboard();
             } catch { alert('Failed to update status.'); }
         }
