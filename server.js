@@ -70,6 +70,14 @@ const PORT = process.env.PORT || 3000;
 // Trust proxy - important for Render
 app.set('trust proxy', 1);
 
+// Redirect non-www to www
+app.use((req, res, next) => {
+    if (req.hostname === 'realtorfinder.net') {
+        return res.redirect(301, `https://www.realtorfinder.net${req.originalUrl}`);
+    }
+    next();
+});
+
 // Security headers
 app.use(helmet({
     contentSecurityPolicy: false, // Disabled — we use inline scripts and external CDNs
