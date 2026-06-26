@@ -4807,6 +4807,7 @@ app.get('/robots.txt', (req, res) => {
         'Disallow: /subscription-success',
         'Disallow: /company-dashboard',
         '',
+        `Sitemap: ${base}/sitemap.xml`,
         `Sitemap: ${base}/sitemap-index.xml`,
     ].join('\n'));
 });
@@ -4980,8 +4981,23 @@ app.get('/sitemap-firms.xml', async (req, res) => {
     }
 });
 
-// Legacy sitemap.xml redirect
-app.get('/sitemap.xml', (req, res) => res.redirect(301, '/sitemap-index.xml'));
+// Standard sitemap.xml — serve same content as sitemap-index.xml (some crawlers don't follow redirects)
+app.get('/sitemap.xml', async (req, res) => {
+    const base = (process.env.FRONTEND_URL || 'https://www.realtorfinder.net').replace(/\/$/, '');
+    const today = new Date().toISOString().split('T')[0];
+    let states = [];
+    try { states = await db.getPublishedStates(); } catch (e) {}
+    const staticEntry   = `  <sitemap><loc>${base}/sitemap-static.xml</loc><lastmod>${today}</lastmod></sitemap>`;
+    const blogEntry     = `  <sitemap><loc>${base}/sitemap-blog.xml</loc><lastmod>${today}</lastmod></sitemap>`;
+    const agentsEntry   = `  <sitemap><loc>${base}/sitemap-agents.xml</loc><lastmod>${today}</lastmod></sitemap>`;
+    const firmsEntry    = `  <sitemap><loc>${base}/sitemap-firms.xml</loc><lastmod>${today}</lastmod></sitemap>`;
+    const listingsEntry = `  <sitemap><loc>${base}/sitemap-listings.xml</loc><lastmod>${today}</lastmod></sitemap>`;
+    const stateEntries = states.map(s =>
+        `  <sitemap><loc>${base}/sitemap-${s.state_code.toLowerCase()}.xml</loc><lastmod>${today}</lastmod></sitemap>`
+    ).join('\n');
+    res.type('application/xml');
+    res.send(`<?xml version="1.0" encoding="UTF-8"?>\n<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${staticEntry}\n${blogEntry}\n${agentsEntry}\n${firmsEntry}\n${listingsEntry}\n${stateEntries}\n</sitemapindex>`);
+});
 
 // Public listing detail (no auth required)
 app.get('/api/listings/:id/public', async (req, res) => {
@@ -9157,16 +9173,20 @@ function blogHead({ title, desc, canonical, type = 'article', ogImage = '' }) {
     <meta property="og:site_name" content="RealtorFinder">
     <meta property="og:image" content="${img}">
     <meta name="twitter:card" content="summary_large_image">
+    <link rel="icon" type="image/png" href="/favicon-96x96.png" sizes="96x96">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="shortcut icon" href="/favicon.ico">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700;900&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700;0,9..144,900;1,9..144,400&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-BRGVVNKT65"></script>
     <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-BRGVVNKT65');</script>
     <script type="text/javascript">(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);})(window,document,"clarity","script","wxvaz0g7tq");</script>
     <style>
-        :root{--primary:#0A2540;--accent:#FF6B35;--soft-bg:#F8F6F3;--text:#1A1A1A;--border:#E5E1DB;--muted:#6B7280;}
+        :root{--primary:#0A2540;--accent:#FF6B35;--soft-bg:#FAF8F4;--text:#1A1A1A;--border:#E5E1DB;--muted:#6B7280;}
         *{margin:0;padding:0;box-sizing:border-box;}
-        body{font-family:'DM Sans',sans-serif;color:var(--text);background:var(--soft-bg);line-height:1.7;}
+        body{font-family:'Inter',sans-serif;color:var(--text);background:var(--soft-bg);line-height:1.7;}
         footer{background:var(--primary);color:rgba(255,255,255,0.5);text-align:center;padding:2.5rem 2rem;font-size:0.875rem;}
         footer a{color:rgba(255,255,255,0.6);text-decoration:none;margin:0 0.75rem;}
         footer a:hover{color:white;}
@@ -9192,7 +9212,7 @@ app.get('/blog', async (req, res) => {
         const date = new Date(p.published_at).toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
         return `<a href="/blog/${p.slug}" style="display:block;background:white;border:1px solid var(--border);border-radius:14px;padding:1.75rem;text-decoration:none;color:inherit;transition:box-shadow 0.2s,transform 0.2s;" onmouseover="this.style.boxShadow='0 8px 24px rgba(10,37,64,0.1)';this.style.transform='translateY(-2px)'" onmouseout="this.style.boxShadow='';this.style.transform=''">
             ${p.category ? `<div style="display:inline-block;background:#fff3ee;color:var(--accent);font-size:0.72rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;padding:3px 10px;border-radius:20px;margin-bottom:0.75rem;">${p.category}</div>` : ''}
-            <h2 style="font-family:'Crimson Pro',serif;font-size:1.3rem;font-weight:700;line-height:1.35;margin-bottom:0.6rem;color:var(--primary);">${p.title}</h2>
+            <h2 style="font-family:'Fraunces',serif;font-size:1.3rem;font-weight:700;line-height:1.35;margin-bottom:0.6rem;color:var(--primary);">${p.title}</h2>
             <p style="color:var(--muted);font-size:0.92rem;line-height:1.6;margin-bottom:1rem;">${p.excerpt || ''}</p>
             <div style="font-size:0.8rem;color:#9ca3af;">${date} &nbsp;·&nbsp; ${p.read_time_minutes} min read</div>
         </a>`;
@@ -9204,11 +9224,10 @@ app.get('/blog', async (req, res) => {
 ${blogHead({ title: 'Real Estate Market Insights & Guides', desc: 'Expert guides, market reports, and insights for home sellers and real estate agents. RealtorFinder helps you make smarter decisions.', canonical: `${base}/blog`, type: 'website' })}
 <body>
 ${blogNav('/blog')}
-<div style="background:var(--primary);color:white;padding:4rem 2rem 3.5rem;text-align:center;position:relative;">
-    <div style="position:absolute;bottom:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--accent),#ff9a70,var(--accent));"></div>
-    <div style="display:inline-block;background:rgba(255,107,53,0.18);color:#ff9a70;font-size:0.78rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;padding:0.3rem 0.9rem;border-radius:20px;margin-bottom:1rem;">RealtorFinder Blog</div>
-    <h1 style="font-family:'Crimson Pro',serif;font-size:clamp(2rem,4vw,2.9rem);font-weight:900;margin-bottom:0.9rem;">Market Insights &amp; Seller Guides</h1>
-    <p style="font-size:1.05rem;color:rgba(255,255,255,0.75);max-width:520px;margin:0 auto;">Real estate advice, market reports, and guides to help you sell smarter and find the right agent.</p>
+<div style="background:white;border-bottom:1px solid var(--border);padding:4rem 2rem 3.5rem;text-align:center;position:relative;">
+    <div style="display:inline-block;background:#fff3ee;color:var(--accent);font-size:0.78rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;padding:0.3rem 0.9rem;border-radius:20px;margin-bottom:1rem;">RealtorFinder Blog</div>
+    <h1 style="font-family:'Fraunces',serif;font-size:clamp(2rem,4vw,2.9rem);font-weight:900;color:var(--primary);margin-bottom:0.9rem;">Market Insights &amp; Seller Guides</h1>
+    <p style="font-size:1.05rem;color:var(--muted);max-width:520px;margin:0 auto;">Real estate advice, market reports, and guides to help you sell smarter and find the right agent.</p>
 </div>
 <div style="max-width:1100px;margin:0 auto;padding:3rem 1.5rem;">
     <div style="display:flex;flex-wrap:wrap;gap:0.6rem;margin-bottom:2.5rem;">${categoryTabs}</div>
@@ -9238,7 +9257,7 @@ app.get('/blog/:slug', async (req, res) => {
     const relatedCards = related.map(p => `
         <a href="/blog/${p.slug}" style="display:block;background:var(--soft-bg);border:1px solid var(--border);border-radius:12px;padding:1.25rem;text-decoration:none;color:inherit;transition:box-shadow 0.2s;" onmouseover="this.style.boxShadow='0 4px 16px rgba(10,37,64,0.08)'" onmouseout="this.style.boxShadow=''">
             ${p.category ? `<div style="font-size:0.7rem;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.5rem;">${p.category}</div>` : ''}
-            <div style="font-family:'Crimson Pro',serif;font-size:1.05rem;font-weight:700;line-height:1.4;color:var(--primary);">${p.title}</div>
+            <div style="font-family:'Fraunces',serif;font-size:1.05rem;font-weight:700;line-height:1.4;color:var(--primary);">${p.title}</div>
             <div style="font-size:0.78rem;color:var(--muted);margin-top:0.5rem;">${p.read_time_minutes} min read</div>
         </a>`).join('');
 
@@ -9246,8 +9265,7 @@ app.get('/blog/:slug', async (req, res) => {
 ${blogHead({ title: post.title, desc: post.excerpt || post.title, canonical: `${base}/blog/${post.slug}`, ogImage: post.og_image || '' })}
 <script type="application/ld+json">${schemaOrg}</script>
 <style>
-    .article-hero{background:var(--primary);color:white;padding:3.5rem 2rem 3rem;text-align:center;position:relative;}
-    .article-hero::after{content:'';position:absolute;bottom:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--accent),#ff9a70,var(--accent));}
+    .article-hero{background:white;border-bottom:1px solid var(--border);padding:3.5rem 2rem 3rem;text-align:center;position:relative;}
     .article-wrap{max-width:1080px;margin:2.5rem auto;padding:0 1.5rem;display:grid;grid-template-columns:1fr 280px;gap:2.5rem;align-items:start;}
     @media(max-width:860px){.article-wrap{grid-template-columns:1fr;}.sidebar{display:none;}}
     @media(max-width:600px){.article-body{padding:1.5rem 1.25rem;}}
@@ -9255,9 +9273,9 @@ ${blogHead({ title: post.title, desc: post.excerpt || post.title, canonical: `${
     .article-body img{width:100%;border-radius:10px;margin:1.5rem 0;display:block;}
     .article-body img:first-child{margin-top:0;}
     .blog-content p{font-size:1.05rem;color:#374151;margin-bottom:1.2em;}
-    .blog-content h2{font-family:'Crimson Pro',serif;font-size:1.65rem;font-weight:900;color:var(--primary);margin:2.5rem 0 0.75rem;padding-bottom:0.4rem;border-bottom:2px solid var(--border);}
-    .blog-content h3{font-family:'Crimson Pro',serif;font-size:1.25rem;font-weight:700;color:var(--primary);margin:1.75rem 0 0.5rem;}
-    .blog-content h4{font-family:'Crimson Pro',serif;font-size:1.05rem;font-weight:700;color:var(--primary);margin:1.25rem 0 0.4rem;}
+    .blog-content h2{font-family:'Fraunces',serif;font-size:1.65rem;font-weight:900;color:var(--primary);margin:2.5rem 0 0.75rem;padding-bottom:0.4rem;border-bottom:2px solid var(--border);}
+    .blog-content h3{font-family:'Fraunces',serif;font-size:1.25rem;font-weight:700;color:var(--primary);margin:1.75rem 0 0.5rem;}
+    .blog-content h4{font-family:'Fraunces',serif;font-size:1.05rem;font-weight:700;color:var(--primary);margin:1.25rem 0 0.4rem;}
     .blog-content ul,.blog-content ol{padding-left:1.5rem;margin-bottom:1.2em;color:#374151;font-size:1.05rem;}
     .blog-content li{margin-bottom:0.5em;}
     .blog-content strong{color:var(--primary);}
@@ -9274,7 +9292,7 @@ ${blogHead({ title: post.title, desc: post.excerpt || post.title, canonical: `${
     .blog-content em{font-style:italic;}
     .sidebar{position:sticky;top:84px;}
     .sidebar-card{background:white;border:1px solid var(--border);border-radius:14px;padding:1.5rem;margin-bottom:1.25rem;}
-    .sidebar-card h4{font-family:'Crimson Pro',serif;font-size:1.05rem;font-weight:700;color:var(--primary);margin-bottom:0.9rem;}
+    .sidebar-card h4{font-family:'Fraunces',serif;font-size:1.05rem;font-weight:700;color:var(--primary);margin-bottom:0.9rem;}
     .toc-list{list-style:none;padding:0;}
     .toc-list li{margin-bottom:0.5rem;}
     .toc-list a{color:var(--muted);text-decoration:none;font-size:0.87rem;display:block;padding:0.2rem 0.5rem;border-radius:6px;transition:background 0.15s,color 0.15s;}
@@ -9284,17 +9302,17 @@ ${blogHead({ title: post.title, desc: post.excerpt || post.title, canonical: `${
     .btn-accent{display:inline-block;background:var(--accent);color:white;padding:0.65rem 1.5rem;border-radius:8px;font-weight:700;font-size:0.9rem;text-decoration:none;transition:background 0.15s;}
     .btn-accent:hover{background:#e55a2b;color:white;text-decoration:none;}
     .post-cta{background:var(--primary);color:white;border-radius:14px;padding:2rem 2.25rem;margin-top:2.5rem;text-align:center;}
-    .post-cta h3{font-family:'Crimson Pro',serif;font-size:1.45rem;font-weight:900;margin-bottom:0.65rem;color:white;}
+    .post-cta h3{font-family:'Fraunces',serif;font-size:1.45rem;font-weight:900;margin-bottom:0.65rem;color:white;}
     .post-cta p{color:rgba(255,255,255,0.8);margin-bottom:1.25rem;font-size:1rem;}
     .related-section{background:white;border:1px solid var(--border);border-radius:14px;padding:2rem 2.5rem;margin-top:1.5rem;}
-    .related-section h3{font-family:'Crimson Pro',serif;font-size:1.25rem;font-weight:700;color:var(--primary);margin-bottom:1rem;}
+    .related-section h3{font-family:'Fraunces',serif;font-size:1.25rem;font-weight:700;color:var(--primary);margin-bottom:1rem;}
 </style>
 <body>
 ${blogNav(`/blog/${post.slug}`)}
 <div class="article-hero">
-    ${post.category ? `<div style="display:inline-block;background:rgba(255,107,53,0.18);color:#ff9a70;font-size:0.78rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;padding:0.3rem 0.9rem;border-radius:20px;margin-bottom:1.1rem;">${post.category}</div>` : ''}
-    <h1 style="font-family:'Crimson Pro',serif;font-size:clamp(1.85rem,4vw,2.8rem);font-weight:900;line-height:1.2;max-width:760px;margin:0 auto 0.9rem;">${post.title}</h1>
-    <p style="font-size:0.875rem;color:rgba(255,255,255,0.55);">${post.author} &nbsp;·&nbsp; ${date} &nbsp;·&nbsp; ${post.read_time_minutes} min read</p>
+    ${post.category ? `<div style="display:inline-block;background:#fff3ee;color:var(--accent);font-size:0.78rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;padding:0.3rem 0.9rem;border-radius:20px;margin-bottom:1.1rem;">${post.category}</div>` : ''}
+    <h1 style="font-family:'Fraunces',serif;font-size:clamp(1.85rem,4vw,2.8rem);font-weight:900;line-height:1.2;max-width:760px;margin:0 auto 0.9rem;color:var(--primary);">${post.title}</h1>
+    <p style="font-size:0.875rem;color:var(--muted);">${post.author} &nbsp;·&nbsp; ${date} &nbsp;·&nbsp; ${post.read_time_minutes} min read</p>
 </div>
 <div class="article-wrap">
     <main>
