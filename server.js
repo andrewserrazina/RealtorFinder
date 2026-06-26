@@ -4892,21 +4892,6 @@ app.get('/sitemap-static.xml', (req, res) => {
     res.send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${entries}\n</urlset>`);
 });
 
-// Per-state city sitemap — /sitemap-ma.xml
-app.get('/sitemap-:stateCode\\.xml', async (req, res) => {
-    const stateCode = req.params.stateCode.toUpperCase();
-    const base = (process.env.FRONTEND_URL || 'https://www.realtorfinder.net').replace(/\/$/, '');
-    const today = new Date().toISOString().split('T')[0];
-    let cities = [];
-    try { cities = await db.getCitiesByState(stateCode); } catch (e) {}
-    const stateEntry = `  <url><loc>${base}/locations/${stateCode.toLowerCase()}</loc><lastmod>${today}</lastmod><priority>0.8</priority></url>`;
-    const cityEntries = cities.map(c =>
-        `  <url><loc>${base}/locations/${stateCode.toLowerCase()}/${c.slug}</loc><lastmod>${today}</lastmod><priority>0.8</priority></url>\n  <url><loc>${base}/find-agent/${stateCode.toLowerCase()}/${c.slug}</loc><lastmod>${today}</lastmod><priority>0.7</priority></url>`
-    ).join('\n');
-    res.type('application/xml');
-    res.send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${stateEntry}\n${cityEntries}\n</urlset>`);
-});
-
 // Blog sitemap
 app.get('/sitemap-blog.xml', async (req, res) => {
     const base = (process.env.FRONTEND_URL || 'https://www.realtorfinder.net').replace(/\/$/, '');
@@ -4979,6 +4964,21 @@ app.get('/sitemap-firms.xml', async (req, res) => {
         res.type('application/xml');
         res.send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>`);
     }
+});
+
+// Per-state city sitemap — /sitemap-ma.xml (wildcard — must come AFTER all specific sitemap routes)
+app.get('/sitemap-:stateCode\\.xml', async (req, res) => {
+    const stateCode = req.params.stateCode.toUpperCase();
+    const base = (process.env.FRONTEND_URL || 'https://www.realtorfinder.net').replace(/\/$/, '');
+    const today = new Date().toISOString().split('T')[0];
+    let cities = [];
+    try { cities = await db.getCitiesByState(stateCode); } catch (e) {}
+    const stateEntry = `  <url><loc>${base}/locations/${stateCode.toLowerCase()}</loc><lastmod>${today}</lastmod><priority>0.8</priority></url>`;
+    const cityEntries = cities.map(c =>
+        `  <url><loc>${base}/locations/${stateCode.toLowerCase()}/${c.slug}</loc><lastmod>${today}</lastmod><priority>0.8</priority></url>\n  <url><loc>${base}/find-agent/${stateCode.toLowerCase()}/${c.slug}</loc><lastmod>${today}</lastmod><priority>0.7</priority></url>`
+    ).join('\n');
+    res.type('application/xml');
+    res.send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${stateEntry}\n${cityEntries}\n</urlset>`);
 });
 
 // Standard sitemap.xml — serve same content as sitemap-index.xml (some crawlers don't follow redirects)
