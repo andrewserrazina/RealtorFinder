@@ -32,7 +32,7 @@
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@600;700;900&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700;0,9..144,900;1,9..144,400&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
             --primary: #0A2540;
@@ -43,7 +43,7 @@
             --muted: #6B7280;
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'DM Sans', sans-serif; background: var(--soft-bg); color: var(--text); }
+        body { font-family: 'Inter', sans-serif; background: var(--soft-bg); color: var(--text); }
 
         nav {
             background: var(--primary);
@@ -53,7 +53,7 @@
             justify-content: space-between;
             height: 64px;
         }
-        .nav-logo { font-family: 'Crimson Pro', serif; font-size: 1.6rem; font-weight: 900; color: white; text-decoration: none; }
+        .nav-logo { font-family: 'Fraunces', serif; font-size: 1.6rem; font-weight: 900; color: white; text-decoration: none; }
         .nav-logo span { color: var(--accent); }
         .nav-back { color: rgba(255,255,255,0.7); font-size: 0.9rem; text-decoration: none; display: flex; align-items: center; gap: 0.4rem; }
         .nav-back:hover { color: white; }
@@ -88,7 +88,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-family: 'Crimson Pro', serif;
+            font-family: 'Fraunces', serif;
             font-size: 2rem;
             font-weight: 900;
             color: white;
@@ -96,7 +96,7 @@
         }
 
         .profile-name-block h1 {
-            font-family: 'Crimson Pro', serif;
+            font-family: 'Fraunces', serif;
             font-size: 2rem;
             font-weight: 900;
             color: var(--primary);
@@ -139,7 +139,7 @@
             flex-wrap: wrap;
         }
         .stat { text-align: center; }
-        .stat-value { font-family: 'Crimson Pro', serif; font-size: 1.8rem; font-weight: 900; color: var(--primary); line-height: 1; }
+        .stat-value { font-family: 'Fraunces', serif; font-size: 1.8rem; font-weight: 900; color: var(--primary); line-height: 1; }
         .stat-label { font-size: 0.8rem; color: var(--muted); margin-top: 0.25rem; }
 
         .section-title {
@@ -171,7 +171,7 @@
             padding: 5rem 2rem;
             color: var(--muted);
         }
-        .not-found h2 { font-family: 'Crimson Pro', serif; font-size: 2rem; color: var(--primary); margin-bottom: 1rem; }
+        .not-found h2 { font-family: 'Fraunces', serif; font-size: 2rem; color: var(--primary); margin-bottom: 1rem; }
 
         .skeleton {
             background: linear-gradient(90deg, #f0ede9 25%, #e8e4df 50%, #f0ede9 75%);
@@ -424,7 +424,7 @@
         const avgNum = parseFloat(avg) || 0;
         const summaryHtml = `
             <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.25rem;">
-                <span style="font-family:'Crimson Pro',serif;font-size:2rem;font-weight:900;color:var(--primary);">${avgNum.toFixed(1)}</span>
+                <span style="font-family:'Fraunces',serif;font-size:2rem;font-weight:900;color:var(--primary);">${avgNum.toFixed(1)}</span>
                 <span class="review-stars" style="font-size:1.2rem;">${renderStars(avgNum)}</span>
                 <span style="color:var(--muted);font-size:0.85rem;">${count} review${count !== 1 ? 's' : ''}</span>
             </div>`;
@@ -591,7 +591,7 @@
             </div>` : `
             <div class="profile-card" id="contactCard" style="background:linear-gradient(135deg,#0A2540 0%,#0d3659 100%);border:none;">
                 <div class="section-title" style="color:rgba(255,255,255,0.55);">Work With This Agent</div>
-                <h3 style="font-family:'Crimson Pro',serif;font-size:1.6rem;color:white;margin-bottom:0.75rem;">Want ${esc(r.first_name)} competing for your listing?</h3>
+                <h3 style="font-family:'Fraunces',serif;font-size:1.6rem;color:white;margin-bottom:0.75rem;">Want ${esc(r.first_name)} competing for your listing?</h3>
                 <p style="color:rgba(255,255,255,0.8);font-size:0.95rem;line-height:1.6;margin-bottom:1.5rem;">List your home free on RealtorFinder. Verified agents submit proposals — you choose the best fit, no obligation.</p>
                 <div class="cta-row">
                     <a href="/login?tab=signup&type=seller" style="background:#FF6B35;color:white;padding:0.75rem 1.5rem;border-radius:8px;font-weight:700;text-decoration:none;font-size:0.95rem;">🏡 List My Home Free</a>
@@ -620,7 +620,7 @@
             const stars = n => '★'.repeat(Math.round(n)) + '☆'.repeat(5 - Math.round(n));
             const reviewsHtml = count ? `
                 <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.25rem;">
-                    <span style="font-family:'Crimson Pro',serif;font-size:2rem;font-weight:900;color:var(--primary);">${avg}</span>
+                    <span style="font-family:'Fraunces',serif;font-size:2rem;font-weight:900;color:var(--primary);">${avg}</span>
                     <span style="color:#f59e0b;font-size:1.2rem;">${stars(parseFloat(avg))}</span>
                     <span style="color:var(--muted);font-size:0.85rem;">${count} review${count !== 1 ? 's' : ''}</span>
                 </div>
@@ -753,7 +753,7 @@
 
 <section id="pageBottomCta" style="background:#0A2540;color:white;padding:4rem 2rem;text-align:center;">
     <div style="max-width:640px;margin:0 auto;">
-        <h2 style="font-family:'Crimson Pro',serif;font-size:2.2rem;font-weight:900;margin-bottom:0.75rem;line-height:1.15;">Sell smarter. Let agents compete.</h2>
+        <h2 style="font-family:'Fraunces',serif;font-size:2.2rem;font-weight:900;margin-bottom:0.75rem;line-height:1.15;">Sell smarter. Let agents compete.</h2>
         <p style="font-size:1.05rem;opacity:0.85;margin-bottom:2rem;line-height:1.6;">List your home free on RealtorFinder. Receive proposals from verified agents, compare them side by side, and choose the best fit — no pressure, no commission splits.</p>
         <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;">
             <a href="/login?tab=signup&type=seller" style="background:#FF6B35;color:white;padding:0.9rem 2rem;border-radius:10px;font-weight:700;text-decoration:none;font-size:1rem;">List My Home Free</a>
