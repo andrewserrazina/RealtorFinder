@@ -939,7 +939,7 @@ const db = {
 
     async getAllBlogSlugs() {
         const result = await pool.query(
-            `SELECT slug, updated_at FROM blog_posts WHERE is_published = TRUE ORDER BY published_at DESC`
+            `SELECT slug, COALESCE(updated_at, published_at) AS updated_at FROM blog_posts WHERE is_published = TRUE ORDER BY published_at DESC`
         );
         return result.rows;
     }

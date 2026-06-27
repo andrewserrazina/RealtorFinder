@@ -106,8 +106,8 @@ function generateCityPage(city, liveData = {}) {
     const stateName = city.state_name || 'Massachusetts';
     const neStates = ['MA', 'CT', 'RI', 'VT', 'NH', 'ME'];
     const neContent = neStates.includes(stateCode) ? generateNESection(city, stateCode) : '';
-    const title = `Sell Your Home in ${city.name}, ${stateCode} | RealtorFinder`;
-    const metaDesc = `List your ${city.name}, ${stateCode} home on RealtorFinder and let local realtors compete for your listing. Free for sellers. Realtors: bid on ${city.name} listings before they hit Zillow.`;
+    const title = `Find a Realtor in ${city.name}, ${stateCode} — Compare Rates Free | RealtorFinder`;
+    const metaDesc = `Find a low-commission realtor in ${city.name}, ${stateCode}. List your home free and let local agents compete for your listing. Compare commission rates and marketing plans side-by-side.`;
     const canonicalUrl = `https://www.realtorfinder.net/locations/${stateCode.toLowerCase()}/${city.slug}`;
     const schemaOrg = JSON.stringify({
         '@context': 'https://schema.org',
@@ -139,13 +139,13 @@ function generateCityPage(city, liveData = {}) {
     <meta property="og:url" content="${canonicalUrl}">
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="RealtorFinder">
-    <meta property="og:image" content="https://realtorfinder.net/og-default.png">
+    <meta property="og:image" content="https://www.realtorfinder.net/og-default.png">
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="${title}">
     <meta name="twitter:description" content="${metaDesc}">
-    <meta name="twitter:image" content="https://realtorfinder.net/og-default.png">
+    <meta name="twitter:image" content="https://www.realtorfinder.net/og-default.png">
 
     <!-- Schema.org -->
     <script type="application/ld+json">${schemaOrg}</script>
@@ -563,6 +563,29 @@ function generateCityPage(city, liveData = {}) {
 
 ${neContent}
 
+<!-- SEO CONTENT -->
+<section class="section">
+    <div style="max-width:780px;margin:0 auto;">
+        <h2 style="font-family:'Playfair Display',serif;font-size:clamp(1.6rem,3vw,2.2rem);font-weight:900;color:var(--primary);margin-bottom:1rem;">Finding the Right Realtor in ${city.name}, ${stateCode}</h2>
+        <p style="color:#374151;font-size:1.05rem;line-height:1.75;margin-bottom:1.5rem;">Choosing the right real estate agent in ${city.name} can mean the difference between a fast sale at full price and months on the market. RealtorFinder makes it easy to compare local realtors side-by-side — including their commission rates, marketing plans, and experience — before you commit to anyone.</p>
+
+        <h3 style="font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:700;color:var(--primary);margin:1.75rem 0 0.6rem;">What Commission Rate Should You Pay in ${city.name}?</h3>
+        <p style="color:#374151;font-size:1.05rem;line-height:1.75;margin-bottom:1.5rem;">Traditional real estate commissions in ${stateName} typically range from 5–6% of the sale price. But many experienced ${city.name} realtors are willing to compete for your listing at lower rates — especially on a platform like RealtorFinder where agents bid for your business. A low-commission realtor in ${city.name} doesn't mean lower service; it means they've chosen to compete on value.</p>
+
+        <h3 style="font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:700;color:var(--primary);margin:1.75rem 0 0.6rem;">How to Sell Your ${city.name} Home Without Overpaying in Agent Fees</h3>
+        <p style="color:#374151;font-size:1.05rem;line-height:1.75;margin-bottom:1.5rem;">The key to selling your home in ${city.name} without overpaying is comparison. When realtors know they're competing, they bring their best offer — both in commission rate and marketing strategy. List your ${city.name} home free on RealtorFinder and see what local agents are willing to offer. No obligation until you choose.</p>
+
+        <h3 style="font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:700;color:var(--primary);margin:1.75rem 0 0.6rem;">Why ${city.name} Sellers Choose RealtorFinder</h3>
+        <ul style="color:#374151;font-size:1.05rem;line-height:1.75;padding-left:1.5rem;margin-bottom:1.5rem;">
+            <li style="margin-bottom:0.5rem;">Find a low-commission realtor in ${city.name} without sacrificing service quality</li>
+            <li style="margin-bottom:0.5rem;">Compare multiple agents before you commit — no obligation</li>
+            <li style="margin-bottom:0.5rem;">Realtors come to you, so you always negotiate from strength</li>
+            <li style="margin-bottom:0.5rem;">Free to list — no hidden fees, no credit card required</li>
+            <li style="margin-bottom:0.5rem;">Serving ${city.name} and surrounding ${stateName} communities</li>
+        </ul>
+    </div>
+</section>
+
 <!-- NEARBY CITIES -->
 <section class="section section-alt section-center">
     <div class="eyebrow">Also Serving</div>
@@ -852,10 +875,11 @@ function generateFindAgentCityPage(city, liveData = {}) {
     <meta property="og:url" content="${canonicalUrl}">
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="RealtorFinder">
-    <meta property="og:image" content="https://realtorfinder.net/og-default.png">
+    <meta property="og:image" content="https://www.realtorfinder.net/og-default.png">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="${title}">
     <meta name="twitter:description" content="${metaDesc}">
+    <meta name="twitter:image" content="https://www.realtorfinder.net/og-default.png">
     <script type="application/ld+json">${schemaOrg}</script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
