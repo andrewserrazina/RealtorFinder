@@ -4929,7 +4929,7 @@ app.get('/sitemap-blog.xml', async (req, res) => {
     const base = (process.env.FRONTEND_URL || 'https://www.realtorfinder.net').replace(/\/$/, '');
     const today = new Date().toISOString().split('T')[0];
     let posts = [];
-    try { posts = await db.getAllBlogSlugs(); } catch (e) {}
+    try { posts = await db.getAllBlogSlugs(); } catch (e) { console.error('sitemap-blog: failed to fetch posts:', e.message); }
     const indexEntry = `  <url><loc>${base}/blog</loc><lastmod>${today}</lastmod><priority>0.8</priority></url>`;
     const postEntries = posts.map(p => {
         const date = p.updated_at ? new Date(p.updated_at).toISOString().split('T')[0] : today;
