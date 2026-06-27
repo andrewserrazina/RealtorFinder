@@ -4453,28 +4453,28 @@ app.get('/locations', async (req, res) => {
     <meta name="description" content="Find your city on RealtorFinder. Sellers list free, realtors compete for listings. Serving buyers and sellers nationwide.">
     <link rel="canonical" href="https://www.realtorfinder.net/locations">
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700;0,9..144,900;1,9..144,400&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-BRGVVNKT65"></script>
     <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-BRGVVNKT65');</script>
     <style>
         :root{--primary:#0A2540;--accent:#FF6B35;--border:#e5e7eb;--soft-bg:#f8f9fa;}
         *{margin:0;padding:0;box-sizing:border-box;}
-        body{font-family:'Work Sans',sans-serif;color:var(--primary);}
+        body{font-family:'Inter',sans-serif;color:var(--primary);}
         nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(255,255,255,0.97);backdrop-filter:blur(10px);border-bottom:1px solid var(--border);padding:0 5%;display:flex;align-items:center;justify-content:space-between;height:68px;}
-        .nav-logo{font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:900;color:var(--primary);text-decoration:none;}
+        .nav-logo{font-family:'Fraunces',serif;font-size:1.5rem;font-weight:900;color:var(--primary);text-decoration:none;}
         .nav-logo span{color:var(--accent);}
         .nav-cta{background:var(--accent);color:#fff;padding:10px 22px;border-radius:8px;font-weight:600;text-decoration:none;font-size:0.95rem;}
         .hero{background:linear-gradient(135deg,var(--primary) 0%,#0d3a5c 100%);color:#fff;padding:130px 5% 70px;text-align:center;}
-        .hero h1{font-family:'Playfair Display',serif;font-size:clamp(2rem,4vw,3.2rem);font-weight:900;margin-bottom:14px;}
+        .hero h1{font-family:'Fraunces',serif;font-size:clamp(2rem,4vw,3.2rem);font-weight:900;margin-bottom:14px;}
         .hero h1 em{color:var(--accent);font-style:normal;}
         .hero p{font-size:1.1rem;opacity:0.85;max-width:560px;margin:0 auto;}
         .content{max-width:1100px;margin:0 auto;padding:60px 5%;}
-        h2{font-family:'Playfair Display',serif;font-size:1.6rem;font-weight:900;margin-bottom:24px;color:var(--primary);}
+        h2{font-family:'Fraunces',serif;font-size:1.6rem;font-weight:900;margin-bottom:24px;color:var(--primary);}
         .section-label{font-size:0.78rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--accent);margin-bottom:8px;}
         .states-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px;margin-bottom:52px;}
         .state-card{background:#fff;border:1px solid var(--border);border-radius:12px;padding:20px;text-decoration:none;color:var(--primary);transition:all 0.2s;text-align:center;display:block;}
         .state-card:hover{border-color:var(--accent);box-shadow:0 6px 20px rgba(255,107,53,0.12);transform:translateY(-2px);}
-        .state-code{font-family:'Playfair Display',serif;font-size:1.8rem;font-weight:900;color:var(--primary);}
+        .state-code{font-family:'Fraunces',serif;font-size:1.8rem;font-weight:900;color:var(--primary);}
         .state-name{font-size:0.85rem;color:#6b7280;margin:4px 0;}
         .state-count{font-size:0.78rem;color:var(--accent);font-weight:600;}
         footer{background:var(--primary);color:rgba(255,255,255,0.6);padding:32px 5%;text-align:center;font-size:0.84rem;}
@@ -4610,18 +4610,18 @@ app.get('/locations/:stateCode', async (req, res, next) => {
     <meta name="twitter:description" content="${sd.tagline}. RealtorFinder covers every major city and town in ${stateName}. Sellers list free, realtors compete for listings.">
     <meta name="twitter:image" content="https://www.realtorfinder.net/og-default.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700;0,9..144,900;1,9..144,400&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-BRGVVNKT65"></script>
     <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-BRGVVNKT65');</script>
     <script type="application/ld+json">${stateLd}</script>
     <style>
         :root{--primary:#0A2540;--accent:#FF6B35;--border:#e5e7eb;--soft-bg:#f8f9fa;}
         *{margin:0;padding:0;box-sizing:border-box;}
-        body{font-family:'Work Sans',sans-serif;color:var(--primary);}
+        body{font-family:'Inter',sans-serif;color:var(--primary);}
 
         /* Nav */
         nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(255,255,255,0.97);backdrop-filter:blur(10px);border-bottom:1px solid var(--border);padding:0 5%;display:flex;align-items:center;justify-content:space-between;height:68px;}
-        .nav-logo{font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:900;color:var(--primary);text-decoration:none;}
+        .nav-logo{font-family:'Fraunces',serif;font-size:1.5rem;font-weight:900;color:var(--primary);text-decoration:none;}
         .nav-logo span{color:var(--accent);}
         .nav-links{display:flex;align-items:center;gap:1.5rem;}
         .nav-links a{color:var(--primary);text-decoration:none;font-size:0.9rem;font-weight:500;opacity:0.75;transition:opacity 0.2s;}
@@ -4630,7 +4630,7 @@ app.get('/locations/:stateCode', async (req, res, next) => {
 
         /* Hero */
         .hero{background:linear-gradient(135deg,${sd.color} 0%,#0d3a5c 100%);color:#fff;padding:140px 5% 80px;text-align:center;}
-        .hero h1{font-family:'Playfair Display',serif;font-size:clamp(2.2rem,5vw,3.6rem);font-weight:900;margin-bottom:12px;line-height:1.15;}
+        .hero h1{font-family:'Fraunces',serif;font-size:clamp(2.2rem,5vw,3.6rem);font-weight:900;margin-bottom:12px;line-height:1.15;}
         .hero h1 em{color:var(--accent);font-style:normal;}
         .hero-tagline{font-size:1.15rem;opacity:0.85;max-width:620px;margin:0 auto 24px;line-height:1.6;}
         .breadcrumb{font-size:0.85rem;text-align:center;margin-bottom:28px;opacity:0.7;}
@@ -4644,13 +4644,13 @@ app.get('/locations/:stateCode', async (req, res, next) => {
         /* Stats strip */
         .stats-strip{background:#fff;border-bottom:1px solid var(--border);padding:24px 5%;display:flex;justify-content:center;gap:3rem;flex-wrap:wrap;}
         .strip-stat{text-align:center;}
-        .strip-val{font-family:'Playfair Display',serif;font-size:2rem;font-weight:900;color:var(--primary);}
+        .strip-val{font-family:'Fraunces',serif;font-size:2rem;font-weight:900;color:var(--primary);}
         .strip-label{font-size:0.8rem;color:#6b7280;margin-top:2px;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;}
 
         /* Overview section */
         .section{max-width:1100px;margin:0 auto;padding:64px 5%;}
         .section-label{font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--accent);margin-bottom:10px;}
-        .section h2{font-family:'Playfair Display',serif;font-size:clamp(1.6rem,3vw,2.4rem);font-weight:900;margin-bottom:20px;line-height:1.25;}
+        .section h2{font-family:'Fraunces',serif;font-size:clamp(1.6rem,3vw,2.4rem);font-weight:900;margin-bottom:20px;line-height:1.25;}
         .overview-grid{display:grid;grid-template-columns:1.2fr 1fr;gap:4rem;align-items:start;}
         .overview-desc{font-size:1.05rem;line-height:1.8;color:#374151;}
         .highlights-list{list-style:none;padding:0;margin-top:0;}
@@ -4664,7 +4664,7 @@ app.get('/locations/:stateCode', async (req, res, next) => {
         .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:18px;margin-top:32px;}
         .city-card{background:#fff;border:1px solid var(--border);border-radius:14px;padding:24px;text-decoration:none;color:var(--primary);transition:all 0.2s;display:block;}
         .city-card:hover{border-color:var(--accent);box-shadow:0 8px 24px rgba(255,107,53,0.12);transform:translateY(-2px);}
-        .city-name{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:700;margin-bottom:6px;}
+        .city-name{font-family:'Fraunces',serif;font-size:1.3rem;font-weight:700;margin-bottom:6px;}
         .city-meta{font-size:0.85rem;color:#6b7280;margin-bottom:4px;}
         .city-trend{font-size:0.82rem;color:#16a34a;font-weight:600;}
 
@@ -4677,7 +4677,7 @@ app.get('/locations/:stateCode', async (req, res, next) => {
 
         /* CTA band */
         .cta-band{background:linear-gradient(135deg,#FF6B35 0%,#e85a25 100%);color:#fff;text-align:center;padding:72px 5%;}
-        .cta-band h2{font-family:'Playfair Display',serif;font-size:clamp(1.8rem,4vw,2.8rem);font-weight:900;margin-bottom:12px;}
+        .cta-band h2{font-family:'Fraunces',serif;font-size:clamp(1.8rem,4vw,2.8rem);font-weight:900;margin-bottom:12px;}
         .cta-band p{font-size:1.1rem;opacity:0.9;margin-bottom:32px;max-width:500px;margin-left:auto;margin-right:auto;}
         .cta-band .hero-btns .btn-primary{background:#fff;color:var(--accent);}
         .cta-band .hero-btns .btn-outline{border-color:rgba(255,255,255,0.6);color:#fff;}
@@ -4748,7 +4748,7 @@ app.get('/locations/:stateCode', async (req, res, next) => {
 <div class="city-grid-section">
     <div class="city-grid-inner">
         <div class="section-label">Browse by City</div>
-        <h2 style="font-family:'Playfair Display',serif;font-size:clamp(1.6rem,3vw,2.4rem);font-weight:900;line-height:1.25;">Browse ${stateName} Markets</h2>
+        <h2 style="font-family:'Fraunces',serif;font-size:clamp(1.6rem,3vw,2.4rem);font-weight:900;line-height:1.25;">Browse ${stateName} Markets</h2>
         <div class="grid">${cards}</div>
     </div>
 </div>
@@ -4756,10 +4756,24 @@ app.get('/locations/:stateCode', async (req, res, next) => {
 <div class="insight-section">
     <div class="insight-inner">
         <div class="section-label">For Sellers</div>
-        <h2 style="font-family:'Playfair Display',serif;font-size:clamp(1.6rem,3vw,2.4rem);font-weight:900;line-height:1.25;margin-bottom:28px;">Why sell in ${stateName} now?</h2>
+        <h2 style="font-family:'Fraunces',serif;font-size:clamp(1.6rem,3vw,2.4rem);font-weight:900;line-height:1.25;margin-bottom:28px;">Why sell in ${stateName} now?</h2>
         <div class="insight-box">
             <p>${stateName} sellers who list on RealtorFinder put themselves in the driver's seat. Instead of cold-calling agents or taking the first offer, you post your home once — for free — and licensed local realtors compete for your business. You compare commission rates, track records, and proposals side by side, then choose the agent who earns it.</p>
             <p>In a competitive market like ${stateName}, the difference between a 2% and 3% commission on a $500,000 home is $5,000 in your pocket. RealtorFinder gives you the leverage to negotiate from a position of strength. It's always free for sellers, with no obligation to accept any proposal.</p>
+        </div>
+    </div>
+</div>
+
+<div style="background:white;padding:3rem 5%;border-top:1px solid var(--border);">
+    <div style="max-width:1200px;margin:0 auto;">
+        <div style="display:inline-block;background:rgba(255,107,53,0.1);color:var(--accent);font-size:0.78rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;padding:0.3rem 0.9rem;border-radius:20px;margin-bottom:1rem;">Seller Guides</div>
+        <h2 style="font-family:'Fraunces',serif;font-size:clamp(1.4rem,2.5vw,2rem);font-weight:900;color:var(--primary);margin-bottom:0.5rem;">Real Estate Tips &amp; Market Guides</h2>
+        <p style="color:#6b7280;margin-bottom:1.5rem;font-size:0.95rem;">Learn how to sell smarter, compare commission rates, and navigate the ${stateName} market.</p>
+        <div style="display:flex;flex-wrap:wrap;gap:0.6rem;">
+            <a href="/blog" style="display:inline-block;background:var(--accent);color:white;border-radius:8px;padding:10px 20px;font-size:0.9rem;text-decoration:none;font-weight:600;">Browse All Guides →</a>
+            <a href="/blog?category=Market+Reports" style="display:inline-block;background:white;border:1px solid var(--border);border-radius:8px;padding:10px 20px;font-size:0.9rem;text-decoration:none;color:var(--primary);font-weight:500;">Market Reports</a>
+            <a href="/blog?category=Seller+Tips" style="display:inline-block;background:white;border:1px solid var(--border);border-radius:8px;padding:10px 20px;font-size:0.9rem;text-decoration:none;color:var(--primary);font-weight:500;">Seller Tips</a>
+            <a href="/faq" style="display:inline-block;background:white;border:1px solid var(--border);border-radius:8px;padding:10px 20px;font-size:0.9rem;text-decoration:none;color:var(--primary);font-weight:500;">FAQ</a>
         </div>
     </div>
 </div>
@@ -4774,7 +4788,7 @@ app.get('/locations/:stateCode', async (req, res, next) => {
 </div>
 
 <footer>
-    <p>© ${new Date().getFullYear()} RealtorFinder &nbsp;·&nbsp; <a href="/">Home</a><a href="/locations">All Markets</a><a href="/realtors">For Realtors</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a></p>
+    <p>© ${new Date().getFullYear()} RealtorFinder &nbsp;·&nbsp; <a href="/">Home</a><a href="/locations">All Markets</a><a href="/blog">Blog</a><a href="/realtors">For Realtors</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a></p>
 </footer>
 </body>
 </html>`);
@@ -8835,7 +8849,7 @@ footer a:hover{color:white;}
   </div>
 </nav>
 <div class="hero">
-  <div class="breadcrumb"><a href="/">Home</a> › <a href="/realtors">All Markets</a> › ${cityName}, ${stateCode}</div>
+  <div class="breadcrumb"><a href="/">Home</a> › <a href="/realtors">All Markets</a> › <a href="/locations/${stateCode.toLowerCase()}">${stateCode}</a> › ${cityName}, ${stateCode}</div>
   <div class="hero-label">Local Agents</div>
   <h1>Top Realtors in ${cityName}, ${stateCode}</h1>
   <p>Verified agents serving ${cityName} and surrounding areas. List your home free and let them compete for your listing.</p>
@@ -8858,10 +8872,18 @@ footer a:hover{color:white;}
     <p>Post your listing free and receive competing proposals from local agents. Compare commissions and credentials before you choose.</p>
     <a href="/login?tab=signup" class="cta-btn">List My Home Free →</a>
   </div>
+  <div style="margin-top:2.5rem;padding-top:2rem;border-top:1px solid var(--border);">
+    <p style="font-size:0.85rem;color:var(--muted);margin-bottom:0.75rem;">Browse more markets</p>
+    <div style="display:flex;flex-wrap:wrap;gap:0.5rem;">
+      <a href="/locations/${stateCode.toLowerCase()}" style="display:inline-block;background:white;border:1px solid var(--border);border-radius:8px;padding:6px 14px;font-size:0.85rem;color:var(--primary);text-decoration:none;font-weight:500;">All ${stateCode} Markets →</a>
+      <a href="/blog" style="display:inline-block;background:white;border:1px solid var(--border);border-radius:8px;padding:6px 14px;font-size:0.85rem;color:var(--primary);text-decoration:none;font-weight:500;">Seller Guides &amp; Tips →</a>
+      <a href="/find-agent/${stateCode.toLowerCase()}/${citySlug}" style="display:inline-block;background:white;border:1px solid var(--border);border-radius:8px;padding:6px 14px;font-size:0.85rem;color:var(--primary);text-decoration:none;font-weight:500;">Find an Agent in ${cityName} →</a>
+    </div>
+  </div>
 </div>
 <footer>
   <p>&copy; 2026 RealtorFinder.net &nbsp;·&nbsp;
-    <a href="/">Home</a><a href="/sellers">For Sellers</a><a href="/realtors">For Realtors</a><a href="/pricing">Pricing</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a>
+    <a href="/">Home</a><a href="/sellers">For Sellers</a><a href="/realtors">For Realtors</a><a href="/locations/${stateCode.toLowerCase()}">${stateCode} Markets</a><a href="/blog">Blog</a><a href="/pricing">Pricing</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a>
   </p>
 </footer>
 </body>
@@ -9264,6 +9286,16 @@ ${blogNav('/blog')}
     <div style="display:flex;flex-wrap:wrap;gap:0.6rem;margin-bottom:2.5rem;">${categoryTabs}</div>
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:1.5rem;">${cards}${empty}</div>
 </div>
+<div style="background:white;border-top:1px solid var(--border);padding:3rem 1.5rem;">
+  <div style="max-width:1100px;margin:0 auto;">
+    <h2 style="font-family:'Fraunces',serif;font-size:1.5rem;font-weight:900;color:var(--primary);margin-bottom:0.5rem;">Browse Realtors by Market</h2>
+    <p style="color:var(--muted);font-size:0.9rem;margin-bottom:1.5rem;">Find and compare licensed agents in your city — free for sellers.</p>
+    <div style="display:flex;flex-wrap:wrap;gap:0.6rem;">
+      ${[['Austin, TX','/realtors/austin-tx'],['Dallas, TX','/realtors/dallas-tx'],['Houston, TX','/realtors/houston-tx'],['Phoenix, AZ','/realtors/phoenix-az'],['Miami, FL','/realtors/miami-fl'],['Tampa, FL','/realtors/tampa-fl'],['Atlanta, GA','/realtors/atlanta-ga'],['Charlotte, NC','/realtors/charlotte-nc'],['Nashville, TN','/realtors/nashville-tn'],['Denver, CO','/realtors/denver-co'],['Seattle, WA','/realtors/seattle-wa'],['Portland, OR','/realtors/portland-or'],['Chicago, IL','/realtors/chicago-il'],['Minneapolis, MN','/realtors/minneapolis-mn'],['Boston, MA','/realtors/boston-ma'],['Philadelphia, PA','/realtors/philadelphia-pa'],['Raleigh, NC','/realtors/raleigh-nc'],['Las Vegas, NV','/realtors/las-vegas-nv'],['San Antonio, TX','/realtors/san-antonio-tx'],['Jacksonville, FL','/realtors/jacksonville-fl']].map(([city,href])=>`<a href="${href}" style="display:inline-block;background:var(--soft-bg);border:1px solid var(--border);border-radius:50px;padding:6px 16px;font-size:0.85rem;color:var(--primary);text-decoration:none;font-weight:500;transition:all 0.15s;" onmouseover="this.style.background='var(--accent)';this.style.color='white';this.style.borderColor='var(--accent)'" onmouseout="this.style.background='var(--soft-bg)';this.style.color='var(--primary)';this.style.borderColor='var(--border)'">${city}</a>`).join('')}
+      <a href="/realtors" style="display:inline-block;background:var(--primary);color:white;border-radius:50px;padding:6px 16px;font-size:0.85rem;text-decoration:none;font-weight:600;">All Markets →</a>
+    </div>
+  </div>
+</div>
 <footer>
     <p><a href="/">Home</a><a href="/sellers">For Sellers</a><a href="/realtors">For Realtors</a><a href="/find-agent">Find an Agent</a><a href="/pricing">Pricing</a><a href="/blog">Blog</a><a href="/about">About</a><a href="/faq">FAQ</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a></p>
     <p>&copy; ${new Date().getFullYear()} RealtorFinder.net — The marketplace where sellers post and realtors compete.</p>
@@ -9366,6 +9398,13 @@ ${blogNav(`/blog/${post.slug}`)}
         <div class="sidebar-cta">
             <p>Let realtors compete for your listing. Free for sellers.</p>
             <a href="/sellers" class="btn-accent">Post Your Home Free</a>
+        </div>
+        <div class="sidebar-card" style="margin-top:1.25rem;">
+            <h4 style="margin-bottom:0.75rem;">Popular Markets</h4>
+            <ul style="list-style:none;padding:0;display:flex;flex-direction:column;gap:0.35rem;">
+                ${[['Austin, TX','/realtors/austin-tx'],['Dallas, TX','/realtors/dallas-tx'],['Houston, TX','/realtors/houston-tx'],['Phoenix, AZ','/realtors/phoenix-az'],['Miami, FL','/realtors/miami-fl'],['Atlanta, GA','/realtors/atlanta-ga'],['Nashville, TN','/realtors/nashville-tn'],['Denver, CO','/realtors/denver-co'],['Charlotte, NC','/realtors/charlotte-nc'],['Seattle, WA','/realtors/seattle-wa'],['Chicago, IL','/realtors/chicago-il'],['Boston, MA','/realtors/boston-ma']].map(([city,href])=>`<li><a href="${href}" style="color:var(--primary);text-decoration:none;font-size:0.875rem;opacity:0.8;transition:opacity 0.15s;" onmouseover="this.style.opacity=1;this.style.color='var(--accent)'" onmouseout="this.style.opacity=0.8;this.style.color='var(--primary)'">${city}</a></li>`).join('')}
+            </ul>
+            <a href="/realtors" style="display:inline-block;margin-top:0.75rem;font-size:0.8rem;color:var(--accent);text-decoration:none;font-weight:600;">All markets →</a>
         </div>
     </aside>
 </div>
