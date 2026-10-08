@@ -180,7 +180,7 @@ app.use('/api', (req, res, next) => {
     if (req.user.is_active === false) {
         return res.status(403).json({ error: 'account_deactivated', message: 'Your account has been deactivated. Please contact support.' });
     }
-    if (!req.user.is_admin && req.user.is_approved === false) {
+    if (!req.user.is_admin && req.user.is_approved !== true) {
         return res.status(403).json({ error: 'account_pending', message: 'Your account is pending approval. You will be notified by email once it is activated.' });
     }
     next();
@@ -592,25 +592,7 @@ app.get('/api/company', auth.requireAuth, async (req, res) => {
     }
 });
 
-// Update company plan (owner only)
-app.put('/api/company/plan', auth.requireAuth, async (req, res) => {
-    try {
-        if (req.user.user_type !== 'realtor') return res.status(403).json({ error: 'Realtors only' });
-        const { plan } = req.body;
-        if (!['basic', 'professional', 'firm'].includes(plan)) {
-            return res.status(400).json({ error: 'Invalid plan' });
-        }
-        const user = await db.getProfile(req.user.id);
-        if (!user.company_id || user.company_role !== 'owner') {
-            return res.status(403).json({ error: 'Only the company owner can change the plan' });
-        }
-        await db.updateCompanyPlan(user.company_id, plan);
-        res.json({ success: true });
-    } catch (err) {
-        console.error('PUT /api/company/plan error:', err);
-        res.status(500).json({ error: 'Failed to update plan' });
-    }
-});
+// PUT /api/company/plan has been removed — plan changes must flow through Stripe webhooks only.
 
 // Add an agent to the company (owner or admin) — by email lookup
 app.post('/api/company/agents', auth.requireAuth, async (req, res) => {
@@ -760,6 +742,9 @@ app.get('/api/buyer-requests', auth.requireAuth, async (req, res) => {
             const request = await db.getBuyerRequestByUser(req.session.userId);
             return res.json(request || null);
         }
+        if (req.user.user_type !== 'realtor') {
+            return res.status(403).json({ error: 'Realtors only' });
+        }
         // Realtor: browse active requests with filters
         const { area, state, city, type, property_type, budgetMin, budget_min, budgetMax, budget_max, page = 1, limit = 20 } = req.query;
         const filters = {};
@@ -781,6 +766,7 @@ app.get('/api/buyer-requests', auth.requireAuth, async (req, res) => {
 // Get responses for the logged-in buyer
 app.get('/api/buyer-requests/responses', auth.requireAuth, async (req, res) => {
     try {
+        if (req.user.user_type !== 'buyer') return res.status(403).json({ error: 'Buyers only' });
         const responses = await db.getResponsesForBuyer(req.session.userId);
         res.json(responses);
     } catch (error) {
@@ -1513,10 +1499,8 @@ app.get('/api/listings/search', async (req, res) => {
         const { rows } = await pool.query(
             `SELECT l.id, l.address, l.city, l.state, l.zip, l.price,
                     l.property_type AS type, l.bedrooms, l.bathrooms, l.sqft,
-                    l.image_urls, l.share_token, l.created_at,
-                    u.first_name AS owner_first, u.last_name AS owner_last
+                    l.image_urls, l.share_token, l.created_at
              FROM listings l
-             JOIN users u ON u.id = l.user_id
              WHERE ${where}
              ORDER BY l.created_at DESC
              LIMIT $${params.length - 1} OFFSET $${params.length}`,
@@ -3691,6 +3675,21 @@ app.post('/api/webhook/stripe', express.raw({ type: 'application/json' }), async
     } catch (err) {
         console.error('Stripe webhook signature error:', err.message);
         return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
+
+    // Idempotency guard — Stripe can retry events; deduplicate by event ID
+    try {
+        const inserted = await pool.query(
+            `INSERT INTO processed_stripe_events(event_id) VALUES($1) ON CONFLICT DO NOTHING`,
+            [event.id]
+        );
+        if (inserted.rowCount === 0) {
+            // Already processed — return 200 so Stripe stops retrying
+            return res.json({ received: true, duplicate: true });
+        }
+    } catch (err) {
+        // If the table doesn't exist yet, proceed without idempotency guard rather than rejecting valid events
+        console.error('Stripe idempotency check error (table may not exist):', err.message);
     }
 
     // Helper: apply plan to both users and companies rows

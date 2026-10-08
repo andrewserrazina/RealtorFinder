@@ -70,27 +70,16 @@ const auth = {
 
     // Get user by ID
     async getUserById(userId) {
-        try {
-            const result = await pool.query(
-                `SELECT id, email, user_type, first_name, last_name, zip_code,
-                        email_verified, is_admin, is_active, is_approved,
-                        phone, license_number, bio, years_experience, service_areas,
-                        subscription_plan, is_founding_member,
-                        created_at
-                 FROM users WHERE id = $1`,
-                [userId]
-            );
-            return result.rows[0];
-        } catch {
-            // Fallback for environments where migration-launch.sql hasn't run yet
-            const result = await pool.query(
-                `SELECT id, email, user_type, first_name, last_name, zip_code,
-                        email_verified, created_at
-                 FROM users WHERE id = $1`,
-                [userId]
-            );
-            return result.rows[0];
-        }
+        const result = await pool.query(
+            `SELECT id, email, user_type, first_name, last_name, zip_code,
+                    email_verified, is_admin, is_active, is_approved,
+                    phone, license_number, bio, years_experience, service_areas,
+                    subscription_plan, is_founding_member,
+                    created_at
+             FROM users WHERE id = $1`,
+            [userId]
+        );
+        return result.rows[0];
     },
 
     // Middleware to require authentication
@@ -104,10 +93,10 @@ const auth = {
     // Middleware to require specific user type
     requireUserType(userType) {
         return (req, res, next) => {
-            if (!req.session || !req.session.userId) {
+            if (!req.user || !req.user.id) {
                 return res.status(401).json({ error: 'Authentication required' });
             }
-            const type = req.user ? req.user.user_type : req.session.userType;
+            const type = req.user.user_type;
             if (type !== userType) {
                 return res.status(403).json({ error: 'Unauthorized user type' });
             }
@@ -120,27 +109,20 @@ const auth = {
         if (req.session && req.session.userId) {
             try {
                 const user = await auth.getUserById(req.session.userId);
-                // Fall back to session data if DB lookup fails or returns nothing
-                req.user = user || {
-                    id: req.session.userId,
-                    user_type: req.session.userType,
-                    first_name: req.session.firstName,
-                    last_name: req.session.lastName,
-                    zip_code: req.session.zipCode,
-                    email_verified: req.session.emailVerified || false,
-                    is_admin: req.session.isAdmin || false
-                };
+                if (!user) {
+                    // User row no longer exists — invalidate the session and deny
+                    req.user = null;
+                    return next();
+                }
+                if (user.is_active === false) {
+                    req.user = null;
+                    return next();
+                }
+                req.user = user;
             } catch (error) {
                 console.error('Error attaching user:', error);
-                req.user = {
-                    id: req.session.userId,
-                    user_type: req.session.userType,
-                    first_name: req.session.firstName,
-                    last_name: req.session.lastName,
-                    zip_code: req.session.zipCode,
-                    email_verified: req.session.emailVerified || false,
-                    is_admin: req.session.isAdmin || false
-                };
+                req.user = null;
+                return next(error);
             }
         }
         next();
