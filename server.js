@@ -17,9 +17,18 @@ if (_missingEnv.length) {
     console.error(`FATAL: Missing required environment variables: ${_missingEnv.join(', ')}`);
     process.exit(1);
 }
-if (!process.env.STRIPE_WEBHOOK_SECRET) {
-    console.warn('WARNING: STRIPE_WEBHOOK_SECRET not set — Stripe webhooks will fail signature verification');
+// SESSION_SECRET entropy guard (ENV-002)
+const _sessionSecret = process.env.SESSION_SECRET || '';
+if (_sessionSecret.length < 32) {
+    console.error('FATAL: SESSION_SECRET must be at least 32 characters — use a cryptographically random value');
+    process.exit(1);
 }
+const _weakSecrets = new Set(['secret', 'changeme', 'password', 'dev', 'development', 'test', 'letmein']);
+if (_weakSecrets.has(_sessionSecret.toLowerCase())) {
+    console.error('FATAL: SESSION_SECRET is a known weak value — replace with a random string');
+    process.exit(1);
+}
+
 if (process.env.NODE_ENV === 'production') {
     if (!process.env.STRIPE_SECRET_KEY?.startsWith('sk_live_')) {
         console.error('FATAL: STRIPE_SECRET_KEY must be a live key (sk_live_...) in production');
@@ -28,6 +37,22 @@ if (process.env.NODE_ENV === 'production') {
     if (!process.env.FRONTEND_URL) {
         console.error('FATAL: FRONTEND_URL is required in production');
         process.exit(1);
+    }
+    // ENV-001: webhook secret is mandatory in production; warn-only in dev
+    if (!process.env.STRIPE_WEBHOOK_SECRET) {
+        console.error('FATAL: STRIPE_WEBHOOK_SECRET is required in production — webhooks cannot be verified without it');
+        process.exit(1);
+    }
+    // ENV-004: Stripe price IDs required when billing is active
+    const _missingPrices = ['STRIPE_PRICE_BASIC', 'STRIPE_PRICE_PROFESSIONAL', 'STRIPE_PRICE_FIRM']
+        .filter(k => !process.env[k]);
+    if (_missingPrices.length) {
+        console.error(`FATAL: Missing Stripe price ID env vars in production: ${_missingPrices.join(', ')}`);
+        process.exit(1);
+    }
+} else {
+    if (!process.env.STRIPE_WEBHOOK_SECRET) {
+        console.warn('WARNING: STRIPE_WEBHOOK_SECRET not set — Stripe webhooks will fail signature verification');
     }
 }
 
@@ -43,7 +68,7 @@ let _webpushReady = false;
 try {
     if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
         webpush.setVapidDetails(
-            'mailto:noreply@realtorfinder.net',
+            process.env.VAPID_EMAIL || 'mailto:noreply@realtorfinder.net',
             process.env.VAPID_PUBLIC_KEY,
             process.env.VAPID_PRIVATE_KEY
         );
@@ -80,7 +105,37 @@ app.use((req, res, next) => {
 
 // Security headers
 app.use(helmet({
-    contentSecurityPolicy: false, // Disabled — we use inline scripts and external CDNs
+    contentSecurityPolicy: {
+        useDefaults: false,
+        reportOnly: true, // Report-only: violations are logged but not blocked
+        directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: [
+                "'self'", "'unsafe-inline'", "'unsafe-eval'",
+                'https://js.stripe.com', 'https://cdn.jsdelivr.net',
+                'https://cdnjs.cloudflare.com', 'https://unpkg.com',
+                'https://maps.googleapis.com', 'https://api.mapbox.com',
+                'https://cdn.tailwindcss.com', 'https://www.googletagmanager.com',
+                'https://www.google.com', 'https://www.gstatic.com'
+            ],
+            styleSrc: [
+                "'self'", "'unsafe-inline'",
+                'https://fonts.googleapis.com', 'https://cdn.jsdelivr.net',
+                'https://cdnjs.cloudflare.com'
+            ],
+            fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
+            imgSrc: ["'self'", 'data:', 'blob:', 'https:', 'http:'],
+            connectSrc: [
+                "'self'",
+                'https://api.stripe.com', 'https://api.mapbox.com',
+                'https://events.mapbox.com', 'https://www.google-analytics.com'
+            ],
+            frameSrc: ["'self'", 'https://js.stripe.com', 'https://hooks.stripe.com', 'https://www.google.com'],
+            objectSrc: ["'none'"],
+            baseUri: ["'self'"],
+            reportUri: '/api/csp-report'
+        }
+    },
     crossOriginEmbedderPolicy: false
 }));
 
@@ -2403,6 +2458,8 @@ app.delete('/api/proposal-templates/:id', auth.requireAuth, async (req, res) => 
 function requireAdmin(req, res, next) {
     if (!req.user) return res.status(401).json({ error: 'Authentication required' });
     if (!req.user.is_admin) return res.status(403).json({ error: 'Admin access required' });
+    // APPROVAL-002: deactivated admin accounts must not reach admin APIs
+    if (req.user.is_active === false) return res.status(403).json({ error: 'account_deactivated' });
     next();
 }
 
@@ -3677,19 +3734,21 @@ app.post('/api/webhook/stripe', express.raw({ type: 'application/json' }), async
         return res.status(400).send(`Webhook Error: ${err.message}`);
     }
 
-    // Idempotency guard — Stripe can retry events; deduplicate by event ID
+    // Idempotency guard — check for duplicate before running business logic.
+    // SELECT (not INSERT) here so that if business logic fails below the event
+    // is NOT marked processed and Stripe can retry it successfully.
     try {
-        const inserted = await pool.query(
-            `INSERT INTO processed_stripe_events(event_id) VALUES($1) ON CONFLICT DO NOTHING`,
+        const seen = await pool.query(
+            `SELECT 1 FROM processed_stripe_events WHERE event_id=$1`,
             [event.id]
         );
-        if (inserted.rowCount === 0) {
-            // Already processed — return 200 so Stripe stops retrying
+        if (seen.rowCount > 0) {
             return res.json({ received: true, duplicate: true });
         }
     } catch (err) {
-        // If the table doesn't exist yet, proceed without idempotency guard rather than rejecting valid events
-        console.error('Stripe idempotency check error (table may not exist):', err.message);
+        // Table doesn't exist → migration hasn't run → return 503 so Stripe retries later
+        console.error('Stripe idempotency table missing — apply add-stripe-idempotency.sql migration:', err.message);
+        return res.status(503).send('Service temporarily unavailable — pending migration');
     }
 
     // Helper: apply plan to both users and companies rows
@@ -3707,12 +3766,16 @@ app.post('/api/webhook/stripe', express.raw({ type: 'application/json' }), async
         );
     }
 
-    if (event.type === 'checkout.session.completed') {
-        const sess = event.data.object;
+    // All business logic is wrapped in a single try/catch.
+    // Any unhandled error returns 503 so Stripe retries the delivery.
+    // Individual catch-and-swallow patterns have been removed so that
+    // transient DB failures bubble here and are not silently dropped.
+    try {
+        if (event.type === 'checkout.session.completed') {
+            const sess = event.data.object;
 
-        // Listing boost checkout
-        if (sess.metadata?.type === 'listing_boost') {
-            try {
+            // Listing boost checkout
+            if (sess.metadata?.type === 'listing_boost') {
                 const listingId = parseInt(sess.metadata.listing_id);
                 if (!listingId || isNaN(listingId)) {
                     console.error('Stripe webhook: missing or invalid listing_id in listing_boost metadata');
@@ -3724,14 +3787,10 @@ app.post('/api/webhook/stripe', express.raw({ type: 'application/json' }), async
                     );
                     console.log(`✅ Stripe: listing ${listingId} boosted for ${days} days`);
                 }
-            } catch (err) {
-                console.error('Stripe boost webhook DB error:', err);
             }
-        }
 
-        // Credit pack checkout
-        if (sess.metadata?.type === 'credit_pack') {
-            try {
+            // Credit pack checkout
+            if (sess.metadata?.type === 'credit_pack') {
                 const realtorId = parseInt(sess.metadata.realtor_id);
                 const credits = parseInt(sess.metadata.credits) || 0;
                 if (realtorId && credits > 0) {
@@ -3741,14 +3800,10 @@ app.post('/api/webhook/stripe', express.raw({ type: 'application/json' }), async
                     );
                     console.log(`✅ Stripe: added ${credits} lead credits to user ${realtorId}`);
                 }
-            } catch (err) {
-                console.error('Stripe credit pack webhook DB error:', err);
             }
-        }
 
-        // Premium profile checkout
-        if (sess.metadata?.type === 'premium_profile') {
-            try {
+            // Premium profile checkout
+            if (sess.metadata?.type === 'premium_profile') {
                 const userId = parseInt(sess.metadata.user_id);
                 const days = parseInt(sess.metadata.days) || 30;
                 if (userId && days > 0) {
@@ -3760,122 +3815,110 @@ app.post('/api/webhook/stripe', express.raw({ type: 'application/json' }), async
                     );
                     console.log(`✅ Stripe: premium profile activated for user ${userId} (${days} days)`);
                 }
-            } catch (err) {
-                console.error('Stripe premium profile webhook DB error:', err);
             }
-        }
 
-        // Lead purchase checkout
-        if (sess.metadata?.type === 'listing_lead') {
-            const client = await pool.connect();
-            try {
-                const realtorId = parseInt(sess.metadata.realtor_id);
-                const listingId = parseInt(sess.metadata.listing_id);
-                // Validate both records exist before updating
-                const { rows: realtorCheck } = await client.query(
-                    `SELECT id FROM users WHERE id = $1 AND user_type = 'realtor'`, [realtorId]
-                );
-                const { rows: listingCheck } = await client.query(
-                    `SELECT id FROM listings WHERE id = $1`, [listingId]
-                );
-                if (!realtorCheck.length || !listingCheck.length) {
-                    console.error(`Stripe webhook: invalid metadata — realtor ${realtorId}, listing ${listingId}`);
-                } else {
-                    await client.query(
-                        `UPDATE lead_purchases SET paid = TRUE WHERE realtor_id = $1 AND listing_id = $2`,
-                        [realtorId, listingId]
+            // Lead purchase checkout
+            if (sess.metadata?.type === 'listing_lead') {
+                const client = await pool.connect();
+                try {
+                    const realtorId = parseInt(sess.metadata.realtor_id);
+                    const listingId = parseInt(sess.metadata.listing_id);
+                    const { rows: realtorCheck } = await client.query(
+                        `SELECT id FROM users WHERE id = $1 AND user_type = 'realtor'`, [realtorId]
                     );
-                    console.log(`✅ Stripe: lead purchase confirmed — realtor ${realtorId}, listing ${listingId}`);
-                }
-            } catch (err) {
-                console.error('Stripe lead purchase webhook DB error:', err);
-            } finally {
-                client.release();
-            }
-        }
-
-        // Subscription checkout
-        const userId = parseInt(sess.metadata?.userId);
-        const plan   = sess.metadata?.plan;
-        if (userId && plan) {
-            const client = await pool.connect();
-            try {
-                await client.query('BEGIN');
-                await client.query(
-                    `UPDATE users SET subscription_plan=$1, stripe_customer_id=$2 WHERE id=$3`,
-                    [plan, sess.customer, userId]
-                );
-                await client.query(
-                    `UPDATE companies SET plan=$1, stripe_customer_id=$2, stripe_subscription_id=$3, updated_at=NOW() WHERE owner_user_id=$4`,
-                    [plan, sess.customer, sess.subscription, userId]
-                );
-                await client.query('COMMIT');
-                console.log(`✅ Stripe: upgraded user ${userId} to ${plan}`);
-
-                // Mark founding credit as applied — trial was already set at checkout session creation
-                if (sess.subscription) {
-                    pool.query(
-                        `UPDATE users SET founding_credit_applied = TRUE
-                         WHERE id = $1 AND is_founding_member = TRUE AND founding_credit_applied = FALSE`,
-                        [userId]
-                    ).catch(e => console.error('founding_credit_applied update error:', e.message));
-                }
-
-                // Credit referrer $25 on first subscription — guard with referral_credit_paid to survive webhook retries
-                const refRow = await pool.query(
-                    `SELECT referred_by FROM users WHERE id=$1 AND referred_by IS NOT NULL AND referral_credit_paid IS NOT TRUE`,
-                    [userId]
-                );
-                if (refRow.rows.length) {
-                    const referrerId = refRow.rows[0].referred_by;
-                    // Mark paid first so concurrent retries see it immediately
-                    await pool.query(`UPDATE users SET referral_credit_paid = TRUE WHERE id=$1`, [userId]);
-                    await pool.query(
-                        `UPDATE users SET referral_credits_cents = referral_credits_cents + 2500 WHERE id=$1`,
-                        [referrerId]
+                    const { rows: listingCheck } = await client.query(
+                        `SELECT id FROM listings WHERE id = $1`, [listingId]
                     );
-                    if (stripe) {
-                        const custRow = await pool.query(
-                            `SELECT stripe_customer_id FROM users WHERE id=$1 AND stripe_customer_id IS NOT NULL`, [referrerId]
+                    if (!realtorCheck.length || !listingCheck.length) {
+                        console.error(`Stripe webhook: invalid metadata — realtor ${realtorId}, listing ${listingId}`);
+                    } else {
+                        await client.query(
+                            `UPDATE lead_purchases SET paid = TRUE WHERE realtor_id = $1 AND listing_id = $2`,
+                            [realtorId, listingId]
                         );
-                        if (custRow.rows.length) {
-                            await stripe.customers.createBalanceTransaction(custRow.rows[0].stripe_customer_id, {
-                                amount: -2500, currency: 'usd',
-                                description: 'Referral bonus — referred realtor subscribed'
-                            }).catch(e => console.error('Referral stripe credit error:', e.message));
-                        }
+                        console.log(`✅ Stripe: lead purchase confirmed — realtor ${realtorId}, listing ${listingId}`);
                     }
-                    console.log(`✅ Stripe: credited $25 referral bonus to user ${referrerId}`);
+                } finally {
+                    client.release();
                 }
-            } catch (err) {
-                await client.query('ROLLBACK').catch(() => {});
-                console.error('Stripe webhook DB error:', err);
-            } finally {
-                client.release();
+            }
+
+            // Subscription checkout — plan update + referral credit in one transaction (STRIPE-004)
+            const userId = parseInt(sess.metadata?.userId);
+            const plan   = sess.metadata?.plan;
+            if (userId && plan) {
+                const client = await pool.connect();
+                try {
+                    await client.query('BEGIN');
+                    await client.query(
+                        `UPDATE users SET subscription_plan=$1, stripe_customer_id=$2 WHERE id=$3`,
+                        [plan, sess.customer, userId]
+                    );
+                    await client.query(
+                        `UPDATE companies SET plan=$1, stripe_customer_id=$2, stripe_subscription_id=$3, updated_at=NOW() WHERE owner_user_id=$4`,
+                        [plan, sess.customer, sess.subscription, userId]
+                    );
+
+                    // Credit referrer $25 — both writes in the same transaction so they succeed/fail together
+                    const refRow = await client.query(
+                        `SELECT referred_by FROM users WHERE id=$1 AND referred_by IS NOT NULL AND referral_credit_paid IS NOT TRUE`,
+                        [userId]
+                    );
+                    let referrerId = null;
+                    if (refRow.rows.length) {
+                        referrerId = refRow.rows[0].referred_by;
+                        await client.query(`UPDATE users SET referral_credit_paid = TRUE WHERE id=$1`, [userId]);
+                        await client.query(
+                            `UPDATE users SET referral_credits_cents = referral_credits_cents + 2500 WHERE id=$1`,
+                            [referrerId]
+                        );
+                    }
+                    await client.query('COMMIT');
+                    console.log(`✅ Stripe: upgraded user ${userId} to ${plan}`);
+
+                    // Post-commit side-effects (fire-and-forget — failures are logged, not retried via Stripe)
+                    if (sess.subscription) {
+                        pool.query(
+                            `UPDATE users SET founding_credit_applied = TRUE
+                             WHERE id = $1 AND is_founding_member = TRUE AND founding_credit_applied = FALSE`,
+                            [userId]
+                        ).catch(e => console.error('founding_credit_applied update error:', e.message));
+                    }
+                    if (referrerId && stripe) {
+                        pool.query(
+                            `SELECT stripe_customer_id FROM users WHERE id=$1 AND stripe_customer_id IS NOT NULL`, [referrerId]
+                        ).then(custRow => {
+                            if (custRow.rows.length) {
+                                return stripe.customers.createBalanceTransaction(custRow.rows[0].stripe_customer_id, {
+                                    amount: -2500, currency: 'usd',
+                                    description: 'Referral bonus — referred realtor subscribed'
+                                });
+                            }
+                        }).catch(e => console.error('Referral stripe credit error:', e.message));
+                        console.log(`✅ Stripe: credited $25 referral bonus to user ${referrerId}`);
+                    }
+                } catch (err) {
+                    await client.query('ROLLBACK').catch(() => {});
+                    throw err; // re-throw so outer handler returns 503
+                } finally {
+                    client.release();
+                }
             }
         }
-    }
 
-    if (event.type === 'customer.subscription.updated') {
-        const sub = event.data.object;
-        // Map Stripe price ID back to our plan name
-        const priceId = sub.items?.data?.[0]?.price?.id;
-        const planName = Object.entries(STRIPE_PRICE_IDS).find(([, v]) => v === priceId)?.[0];
-        if (planName) {
-            try {
+        if (event.type === 'customer.subscription.updated') {
+            const sub = event.data.object;
+            const priceId = sub.items?.data?.[0]?.price?.id;
+            const planName = Object.entries(STRIPE_PRICE_IDS).find(([, v]) => v === priceId)?.[0];
+            if (planName) {
                 await applyPlan(sub.customer, planName, sub.id);
                 console.log(`✅ Stripe: subscription updated → ${planName} for ${sub.customer}`);
-            } catch (err) {
-                console.error('Stripe subscription.updated DB error:', err);
             }
         }
-    }
 
-    if (event.type === 'customer.subscription.deleted') {
-        const sub = event.data.object;
-        try {
+        if (event.type === 'customer.subscription.deleted') {
+            const sub = event.data.object;
             await applyPlan(sub.customer, null, null);
-            // Notify user their subscription ended
             const { rows } = await pool.query(
                 `SELECT email, first_name FROM users WHERE stripe_customer_id=$1`, [sub.customer]
             );
@@ -3884,14 +3927,10 @@ app.post('/api/webhook/stripe', express.raw({ type: 'application/json' }), async
                     .catch(e => console.error('Cancellation email error:', e.message));
             }
             console.log(`⚠️ Stripe: subscription cancelled for ${sub.customer}`);
-        } catch (err) {
-            console.error('Stripe cancellation DB error:', err);
         }
-    }
 
-    if (event.type === 'invoice.payment_failed') {
-        const invoice = event.data.object;
-        try {
+        if (event.type === 'invoice.payment_failed') {
+            const invoice = event.data.object;
             const { rows } = await pool.query(
                 `SELECT email, first_name FROM users WHERE stripe_customer_id=$1`, [invoice.customer]
             );
@@ -3900,29 +3939,34 @@ app.post('/api/webhook/stripe', express.raw({ type: 'application/json' }), async
                     .catch(e => console.error('Payment failed email error:', e.message));
             }
             console.log(`⚠️ Stripe: payment failed for ${invoice.customer}`);
-            // After 3rd failure: mark subscription as past_due and set is_active = false as grace period enforcement
             const attempt = invoice.attempt_count || 1;
             if (attempt >= 3) {
                 await pool.query(`UPDATE users SET is_active = false WHERE stripe_customer_id = $1`, [invoice.customer]);
                 console.log(`⚠️ Stripe: deactivated account after ${attempt} failed payments for ${invoice.customer}`);
             }
-        } catch (err) {
-            console.error('Stripe payment_failed DB error:', err);
         }
-    }
 
-    if (event.type === 'invoice.payment_succeeded') {
-        const invoice = event.data.object;
-        try {
-            // Re-activate if previously suspended
+        if (event.type === 'invoice.payment_succeeded') {
+            const invoice = event.data.object;
             await pool.query(`UPDATE users SET is_active = true WHERE stripe_customer_id = $1 AND is_active = false`, [invoice.customer]);
             console.log(`✅ Stripe: payment succeeded, re-activated account for ${invoice.customer}`);
-        } catch (err) {
-            console.error('Stripe payment_succeeded DB error:', err);
         }
-    }
 
-    res.json({ received: true });
+        // Mark event as processed ONLY after all business logic commits successfully.
+        // INSERT here (not at the top) so that if any business logic throws above,
+        // the event_id stays absent from the table and Stripe can retry it.
+        await pool.query(
+            `INSERT INTO processed_stripe_events(event_id, event_type) VALUES($1, $2) ON CONFLICT DO NOTHING`,
+            [event.id, event.type]
+        );
+
+        res.json({ received: true });
+    } catch (err) {
+        // Unhandled error in business logic — return 503 so Stripe retries.
+        // The event_id was NOT inserted, so retry will re-run the full handler.
+        console.error(`Stripe webhook processing error for ${event.id} (${event.type}):`, err.message);
+        return res.status(503).send('Event processing failed — will retry');
+    }
 });
 
 // Health check
@@ -3932,6 +3976,18 @@ app.get('/api/health', (req, res) => {
         timestamp: new Date(),
         environment: process.env.NODE_ENV || 'development'
     });
+});
+
+// CSP violation reports — receives browser reports when reportOnly CSP catches a violation
+app.post('/api/csp-report', express.json({ type: ['application/json', 'application/csp-report'] }), (req, res) => {
+    const report = req.body?.['csp-report'] || req.body;
+    console.warn('[CSP violation]', JSON.stringify({
+        blockedUri: report?.['blocked-uri'],
+        violatedDirective: report?.['violated-directive'],
+        documentUri: report?.['document-uri'],
+        originalPolicy: report?.['original-policy']?.slice(0, 120)
+    }));
+    res.status(204).end();
 });
 
 // ===== BATCH 9: ADMIN REVENUE ANALYTICS =====
@@ -8610,15 +8666,17 @@ app.get('/search', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'search.html'));
 });
 
-// Inbox (requires login)
+// Inbox (requires login + approval — APPROVAL-001)
 app.get('/inbox', (req, res) => {
     if (!req.session || !req.session.userId) return res.redirect('/login?next=/inbox');
+    if (!req.session.isApproved) return res.redirect('/waitlist');
     res.sendFile(path.join(__dirname, 'public', 'inbox.html'));
 });
 
-// Company / brokerage dashboard
+// Company / brokerage dashboard (requires login + approval — APPROVAL-001)
 app.get('/dashboard/company', (req, res) => {
     if (!req.session || !req.session.userId) return res.redirect('/login');
+    if (!req.session.isApproved) return res.redirect('/waitlist');
     res.sendFile(path.join(__dirname, 'public', 'company-dashboard.html'));
 });
 
