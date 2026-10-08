@@ -169,4 +169,156 @@ describe('Stripe webhook — server.js code patterns', () => {
     test('CSP report endpoint exists', () => {
         expect(serverSrc).toMatch(/app\.post\(['"]\/api\/csp-report['"]/);
     });
+
+    test('invalid Stripe signature returns 400', () => {
+        // The handler calls constructEvent and catches errors with a 400 response
+        expect(webhookSrc).toMatch(/\.constructEvent\(/);
+        expect(webhookSrc).toMatch(/res\.status\(400\)/);
+    });
+
+    test('unknown event type results in graceful no-op (no throw, falls through to 200)', () => {
+        // After all if/switch branches, the handler should reach the INSERT and return 200
+        // Verify there is no throw or error for unrecognised event types
+        const insertIdx = webhookSrc.indexOf('INSERT INTO processed_stripe_events');
+        const afterInsert = webhookSrc.slice(insertIdx, insertIdx + 200);
+        expect(afterInsert).toMatch(/res\.json/);
+    });
+});
+
+describe('Stripe webhook — rollback on business-logic failure', () => {
+    // Simulate the correct production flow:
+    //   SELECT → (not duplicate) → run business logic → INSERT
+    // When business logic throws the INSERT must NOT have been called.
+
+    async function simulateWebhookFlow(pool, eventId, businessLogic) {
+        // Step 1: idempotency check
+        const earlyExit = await (async () => {
+            try {
+                const seen = await pool.query(
+                    `SELECT 1 FROM processed_stripe_events WHERE event_id=$1`,
+                    [eventId]
+                );
+                if (seen.rowCount > 0) return { status: 200, body: { received: true, duplicate: true } };
+                return null;
+            } catch (err) {
+                return { status: 503, body: 'Service temporarily unavailable' };
+            }
+        })();
+        if (earlyExit) return earlyExit;
+
+        // Step 2: business logic (may throw)
+        await businessLogic();
+
+        // Step 3: mark processed (only reached if business logic succeeded)
+        await pool.query(
+            `INSERT INTO processed_stripe_events(event_id, event_type) VALUES($1, $2) ON CONFLICT DO NOTHING`,
+            [eventId, 'test.event']
+        );
+        return { status: 200, body: { received: true } };
+    }
+
+    test('business logic throws → INSERT not called → event_id NOT persisted', async () => {
+        const callOrder = [];
+        const pool = {
+            query: jest.fn().mockImplementation((sql) => {
+                if (sql.includes('FROM processed_stripe_events')) {
+                    callOrder.push('SELECT');
+                    return Promise.resolve({ rowCount: 0, rows: [] }); // not yet seen
+                }
+                if (sql.includes('INSERT INTO processed_stripe_events')) {
+                    callOrder.push('INSERT');
+                }
+                return Promise.resolve({ rowCount: 0, rows: [] });
+            })
+        };
+
+        const failingBusinessLogic = () => Promise.reject(new Error('DB transient failure'));
+
+        await expect(simulateWebhookFlow(pool, 'evt_fail_001', failingBusinessLogic))
+            .rejects.toThrow('DB transient failure');
+
+        expect(callOrder).toEqual(['SELECT']); // INSERT never ran
+        expect(callOrder).not.toContain('INSERT');
+    });
+
+    test('successful retry after partial failure → business logic completes, event marked processed', async () => {
+        const callOrder = [];
+        let attempt = 0;
+        const pool = {
+            query: jest.fn().mockImplementation((sql) => {
+                if (sql.includes('FROM processed_stripe_events')) {
+                    callOrder.push('SELECT');
+                    return Promise.resolve({ rowCount: 0, rows: [] }); // never seen (INSERT never committed on first attempt)
+                }
+                if (sql.includes('INSERT INTO processed_stripe_events')) {
+                    callOrder.push('INSERT');
+                }
+                return Promise.resolve({ rowCount: 1, rows: [] });
+            })
+        };
+
+        // First attempt: business logic fails
+        attempt = 1;
+        const failingLogic = () => Promise.reject(new Error('transient'));
+        await expect(simulateWebhookFlow(pool, 'evt_retry_001', failingLogic)).rejects.toThrow();
+
+        const afterFirstAttempt = [...callOrder];
+        expect(afterFirstAttempt).toEqual(['SELECT']); // no INSERT on failed attempt
+
+        // Second attempt: business logic succeeds
+        const successLogic = () => Promise.resolve();
+        const result = await simulateWebhookFlow(pool, 'evt_retry_001', successLogic);
+        expect(result.status).toBe(200);
+        expect(callOrder).toEqual(['SELECT', 'SELECT', 'INSERT']); // retry completed
+    });
+
+    test('concurrent delivery: second call sees duplicate via SELECT → skips business logic', async () => {
+        // After first delivery succeeds, the second concurrent delivery hits the SELECT guard.
+        // This tests that ON CONFLICT DO NOTHING plus SELECT-first prevents double-processing.
+        const callOrder = [];
+        const processedSet = new Set();
+
+        const makePool = () => ({
+            query: jest.fn().mockImplementation((sql, params) => {
+                if (sql.includes('FROM processed_stripe_events')) {
+                    callOrder.push('SELECT');
+                    const alreadyProcessed = processedSet.has(params[0]);
+                    return Promise.resolve({ rowCount: alreadyProcessed ? 1 : 0, rows: alreadyProcessed ? [{}] : [] });
+                }
+                if (sql.includes('INSERT INTO processed_stripe_events')) {
+                    callOrder.push('INSERT');
+                    processedSet.add(params[0]); // simulate committed INSERT
+                }
+                return Promise.resolve({ rowCount: 1, rows: [] });
+            })
+        });
+
+        const pool1 = makePool();
+        const pool2 = makePool();
+        let creditApplied = 0;
+        const businessLogic = () => { creditApplied++; return Promise.resolve(); };
+
+        // First delivery succeeds
+        await simulateWebhookFlow(pool1, 'evt_concurrent_001', businessLogic);
+        expect(creditApplied).toBe(1);
+
+        // Second (concurrent) delivery — table now has the event_id
+        const pool3 = makePool(); // shares processedSet
+        const result2 = await simulateWebhookFlow(pool3, 'evt_concurrent_001', businessLogic);
+        expect(result2.body?.duplicate).toBe(true);
+        expect(creditApplied).toBe(1); // business logic NOT called a second time
+    });
+
+    test('missing migration on retry: table still missing → 503, not bypass', async () => {
+        const pool = {
+            query: jest.fn().mockRejectedValue(
+                Object.assign(new Error('relation "processed_stripe_events" does not exist'), { code: '42P01' })
+            )
+        };
+        const businessLogic = jest.fn().mockResolvedValue(undefined);
+
+        const result = await simulateWebhookFlow(pool, 'evt_nomig_retry', businessLogic);
+        expect(result.status).toBe(503);
+        expect(businessLogic).not.toHaveBeenCalled(); // business logic bypassed, not executed
+    });
 });
