@@ -67,12 +67,12 @@ CREATE TABLE IF NOT EXISTS waitlist (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create indexes for better query performance
-CREATE INDEX idx_listings_status ON listings(status);
-CREATE INDEX idx_listings_created_at ON listings(created_at DESC);
-CREATE INDEX idx_offers_listing_id ON offers(listing_id);
-CREATE INDEX idx_offers_status ON offers(status);
-CREATE INDEX idx_waitlist_created_at ON waitlist(created_at DESC);
+-- Create indexes for better query performance (IF NOT EXISTS prevents errors on re-run)
+CREATE INDEX IF NOT EXISTS idx_listings_status ON listings(status);
+CREATE INDEX IF NOT EXISTS idx_listings_created_at ON listings(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_offers_listing_id ON offers(listing_id);
+CREATE INDEX IF NOT EXISTS idx_offers_status ON offers(status);
+CREATE INDEX IF NOT EXISTS idx_waitlist_created_at ON waitlist(created_at DESC);
 
 -- Create updated_at trigger function
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -83,15 +83,27 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
--- Apply updated_at triggers
-CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+-- Apply updated_at triggers (CREATE OR REPLACE requires PG 14+; use DROP IF EXISTS for older versions)
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_users_updated_at') THEN
+        CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
+END $$;
 
-CREATE TRIGGER update_listings_updated_at BEFORE UPDATE ON listings
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_listings_updated_at') THEN
+        CREATE TRIGGER update_listings_updated_at BEFORE UPDATE ON listings
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
+END $$;
 
-CREATE TRIGGER update_offers_updated_at BEFORE UPDATE ON offers
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_offers_updated_at') THEN
+        CREATE TRIGGER update_offers_updated_at BEFORE UPDATE ON offers
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
+END $$;
 
 -- Insert sample data
 INSERT INTO listings (address, city, state, zip, price, property_type, bedrooms, bathrooms, sqft, description, owner_name, owner_email, owner_phone, created_at) VALUES
